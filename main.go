@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -22,10 +23,17 @@ type Coordinate struct {
 	Y float64
 }
 
+type Line struct {
+	StartingNail int
+	EndingNail   int
+}
+
 var (
 	NailsQuantity = 300
 	ImgSize       = 500
-	MaxLines      = 20000
+	MaxLines      = 10000
+	StartingNail  = 0
+	OutputFolder  = "output"
 )
 
 func main() {
@@ -44,7 +52,7 @@ func main() {
 	// Convert image to grayscale
 	imgGray := imaging.Grayscale(img)
 
-	// Crop it into a square if it's not already
+	// Crop it into a square if it's not already but don't distort it
 	imgSquare := imgGray
 	bounds := imgSquare.Bounds()
 	if bounds.Dx() != bounds.Dy() {
@@ -70,7 +78,7 @@ func main() {
 	circleImgMin := imaging.Resize(circleImg, ImgSize, ImgSize, imaging.Lanczos)
 
 	// Save the resulting base image to disk
-	outBaseFile, err := os.Create("output_1_base.jpg")
+	outBaseFile, err := os.Create(OutputFolder + "/output_1_base.jpg")
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +96,7 @@ func main() {
 	centerY := imagePoints.Bounds().Dy() / 2
 	r := math.Min(float64(centerX), float64(centerY)) // take the smaller dimension as the radius
 
-	nails := make([]Nail, NailsQuantity)
+	nailsList := make([]image.Point, NailsQuantity)
 	for i := 0; i < NailsQuantity; i++ {
 		// calculate the angle and the point coordinates
 		alpha := float64(i) * 2 * math.Pi / float64(NailsQuantity)
@@ -96,118 +104,169 @@ func main() {
 		y := centerY + int(r*math.Sin(alpha))
 		imagePoints.Set(x, y, color.RGBA{255, 0, 0, 255})
 
-		nails[i] = Nail{X: x, Y: y}
+		nailsList[i] = image.Point{X: x, Y: y}
 	}
 
 	// Save the image
-	outPointFile, err := os.Create("output_1_points.jpg")
+	outPointFile, err := os.Create(OutputFolder + "output_1_points.jpg")
 	if err != nil {
 		panic(err)
 	}
-
 	err = jpeg.Encode(outPointFile, imagePoints, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	// Step 2: New blank canvas
-	imagePointsBounds := imagePoints.Bounds()
-	canvas := image.NewRGBA(bounds)
-	draw.Draw(canvas, bounds, imagePoints, imagePointsBounds.Min, draw.Src)
+	// Create a new image with the same dimensions as the source image
+	canvas := image.NewGray(imagePoints.Bounds())
+	// Fill the canvas with white
+	draw.Draw(canvas, canvas.Bounds(), image.NewUniform(color.White), image.ZP, draw.Src)
+	// Set the line color to black
+	lineColor := color.Black
+	sourceImage := imagePoints
+	threadList := make([]Line, MaxLines)
+	currentNail := StartingNail
+	for threadIndex := 0; threadIndex < MaxLines; threadIndex++ {
+		// Find the best line between all the nails
+		nextNail, threadPath := findBestLine(currentNail, nailsList, sourceImage, canvas)
 
-}
+		// Draw the best line on the canvas
+		drawLine(canvas, threadPath, lineColor)
 
-func getLineTraceWithBresenham(i, j int) []Coordinate {
-	x0 := i
-	y0 := j
-	x1 := i + 1
-	y1 := j + 1
-
-	dx := math.Abs(float64(x1 - x0))
-	dy := math.Abs(float64(y1 - y0))
-
-	var sx, sy int
-	if x0 < x1 {
-		sx = 1
-	} else {
-		sx = -1
-	}
-	if y0 < y1 {
-		sy = 1
-	} else {
-		sy = -1
+		// Save the best line for later usage
+		threadList[threadIndex] = Line{StartingNail: currentNail, EndingNail: nextNail}
+		currentNail = nextNail
 	}
 
-	err := dx - dy
+	// Save the image
+	outThreadFile, err := os.Create(OutputFolder + "output_1_threads.jpg")
+	if err != nil {
+		panic(err)
+	}
+	err = jpeg.Encode(outThreadFile, canvas, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	var res []Coordinate
+	//write to txt file
+	f, err := os.Create(OutputFolder + "output_1_threads.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
 
-	for {
-		res = append(res, Coordinate{X: float64(x0), Y: float64(y0)})
-
-		if x0 == x1 && y0 == y1 {
-			break
-		}
-
-		e2 := 2 * err
-		if e2 > -dy {
-			err = err - dy
-			x0 = x0 + sx
-		}
-		if e2 < dx {
-			err = err + dx
-			y0 = y0 + sy
+	for _, thread := range threadList {
+		_, err := f.WriteString(fmt.Sprintf("%v %v\n", thread.StartingNail, thread.EndingNail))
+		if err != nil {
+			panic(err)
 		}
 	}
 
-	return res
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
+func findBestLine(currentNail int, nailsList []image.Point, sourceImage image.Image, canvas draw.Image) (int, []image.Point) {
+	var bestScore float64 = math.MaxFloat64
+	var bestPath []image.Point
+	var bestEndingNail int
 
-func findBestLine(srcImage, canvas image.Image, points []image.Point) (image.Point, image.Point) {
-	bestLine := make([]image.Point, 2)
-	maxDelta := 0.0
+	// Iterate over all the nails
+	for nailIndex, nail := range nailsList {
+		if nailIndex == currentNail {
+			continue
+		}
 
-	// Calculate the total color difference between the srcImage and canvas (I use grayscale color here)
-	srcGray := image.NewGray(srcImage.Bounds())
-	draw.Draw(srcGray, srcGray.Bounds(), srcImage, srcImage.Bounds().Min, draw.Src)
-	deltaImage := image.NewGray(canvas.Bounds())
-	for i := 0; i < len(deltaImage.Pix); i++ {
-		deltaImage.Pix[i] = uint8(math.Abs(float64(srcGray.Pix[i]) - float64(canvas.(*image.Gray).Pix[i])))
-	}
+		// Calculate the path between the two nails
+		path := calculatePathWithBresenham(nail, nailsList[currentNail], sourceImage)
 
-	// Iterate over every pair of points looking for the line that reduces the delta the most
-	for i := 0; i < len(points); i++ {
-		for j := i + 1; j < len(points); j++ {
-			currDelta := getLineScore(deltaImage, points[i], points[j]) // score lines based on how much they would reduce image delta
-			if currDelta > maxDelta {
-				maxDelta = currDelta
-				bestLine[0] = points[i]
-				bestLine[1] = points[j]
-			}
+		// Get path score
+		score := calculatePathScore(path, sourceImage, canvas)
+
+		// If the score is better than the best score, save it
+		if score < bestScore {
+			bestScore = score
+			bestPath = path
+			bestEndingNail = nailIndex
 		}
 	}
-	return bestLine[0], bestLine[1]
+
+	return bestEndingNail, bestPath
 }
 
-// Scores a line based on how much it would reduce the image delta
-// You can consider alternative scoring metrics based on color, saturation, hue, etc.
-func getLineScore(deltaImage *image.Gray, p1, p2 image.Point) float64 {
-	score := 0.0
-	for _, p := range getLineTrace(p1, p2) {
-		score += float64(deltaImage.GrayAt(p.X, p.Y).Y)
+func calculatePathWithBresenham(start, end image.Point, sourceImage image.Image) []image.Point {
+	// Calculate the path between the two nails
+	path := bresenham(start, end)
+	return path
+}
+
+func calculatePathScore(path []image.Point, sourceImage image.Image, canvas image.Image) float64 {
+	var score float64
+	for _, point := range path {
+
+		sourcePixel := color.GrayModel.Convert(sourceImage.At(point.X, point.Y)).(color.Gray).Y
+		canvasPixel := color.GrayModel.Convert(canvas.At(point.X, point.Y)).(color.Gray).Y
+
+		// check if a thread has already covered this area of the canvas
+		if canvasPixel > 0 {
+			// Penalize paths that overlap with existing thread,
+			// but still allow for potential re-threading in the case the colors are very close.
+			score -= math.Abs(float64(sourcePixel - canvasPixel))
+		} else {
+			// Weigh the score by the intensity of the pixel in the source,
+			// this will favor using darker source pixels
+			score += float64(sourcePixel)
+		}
 	}
 	return score
 }
 
-func getLineTrace(a, b image.Point) []image.Point {
-	// This should use your Bresenham's algorithm implementation to generate
-	// points along the line from `a` to `b`.
-	return []image.Point{}
+// Bresenham's line algorithm
+func bresenham(start, end image.Point) []image.Point {
+	dx := abs(end.X - start.X)
+	dy := -abs(end.Y - start.Y)
+	sx, sy := -1, -1
+	if start.X < end.X {
+		sx = 1
+	}
+	if start.Y < end.Y {
+		sy = 1
+	}
+	err := dx + dy // error value e_xy
+
+	var points []image.Point
+	for { // loop
+		points = append(points, start)
+		if start == end {
+			break
+		}
+		e2 := 2 * err
+		if e2 >= dy {
+			err += dy
+			start.X += sx
+		}
+		if e2 <= dx {
+			err += dx
+			start.Y += sy
+		}
+	}
+	return points
+}
+
+func abs(x int) int {
+	return int(math.Abs(float64(x)))
+}
+
+func drawLine(canvas draw.Image, threadPath []image.Point, lineColor color.Color) {
+	// Create a new mask image
+	mask := image.NewRGBA(canvas.Bounds())
+
+	// Define a color with a 20% alpha
+	translucentBlack := color.RGBA{R: 0, G: 0, B: 0, A: 51}
+
+	// Draw the line onto the mask
+	for _, point := range threadPath {
+		mask.Set(point.X, point.Y, translucentBlack)
+	}
+
+	// Apply the mask
+	draw.DrawMask(canvas, canvas.Bounds(), &image.Uniform{translucentBlack}, image.ZP, mask, image.ZP, draw.Over)
 }
