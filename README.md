@@ -1,6 +1,7 @@
 # Thread Art Generator
 
-![thread art generator](https://github.com/Damione1/strings-art-generator/assets/14912510/8a106b16-85ed-467d-aef7-0660e26d96e2)
+![thread art generator](https://github.com/Damione1/thread-art-generator/assets/14912510/6b6ef9e1-9bad-4dd7-8579-17fe55ae9c13)
+
 
 Thread Art Generator is a project that allows you to transform your images into unique pieces of circular thread art. This project is written in Golang, a powerful programming language renowned for its efficiency and simplicity. 
 
