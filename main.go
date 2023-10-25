@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/Damione1/strings-art-generator/threadGenerator"
+	"github.com/Damione1/thread-art-generator/threadGenerator"
 )
 
 type Nail = image.Point
@@ -79,6 +79,21 @@ func main() {
 
 	for _, line := range pathsList {
 		_, err := outThreadListFile.WriteString(fmt.Sprintf("%v	%v\n", line.StartingNail, line.EndingNail))
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	gCodeLines := tg.GetGcode()
+	// Save the thread list
+	outGcodeFile, err := os.Create(OutputFolder + "output_1_gcode.gcode")
+	if err != nil {
+		panic(err)
+	}
+	defer outGcodeFile.Close()
+
+	for _, line := range gCodeLines {
+		_, err := outGcodeFile.WriteString(line + "\n")
 		if err != nil {
 			panic(err)
 		}

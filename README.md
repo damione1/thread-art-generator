@@ -1,1 +1,1 @@
-# strings-art-generator
+# thread-art-generator

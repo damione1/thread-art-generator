@@ -1,4 +1,4 @@
-module github.com/Damione1/strings-art-generator
+module github.com/Damione1/thread-art-generator
 
 go 1.21.0
 

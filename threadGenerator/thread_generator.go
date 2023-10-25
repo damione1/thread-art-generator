@@ -385,3 +385,41 @@ func (tg *ThreadGenerator) GeneratePathsImage() (image.Image, error) {
 func (tg *ThreadGenerator) GetPathsList() []Path {
 	return tg.pathsList
 }
+
+func (tg *ThreadGenerator) GetGcode() []string {
+	gCodeLines := []string{"G28 X0 Y0 B0"} // GCode for homing X, Y, B
+	for i, path := range tg.pathsList {
+		if i == 0 {
+			gCodeLines = append(gCodeLines, fmt.Sprintf("G01 B%d ; Move to nail %d", path.StartingNail, path.StartingNail)) // Move to the starting nail
+			gCodeLines = append(gCodeLines, "M0 ; Pause")                                                                   //add a pause to allow the user to place the thread
+		}
+		gCodeLines = append(gCodeLines, tg.oneNailGcode(path.EndingNail)...)
+	}
+	return gCodeLines
+}
+
+func (tg *ThreadGenerator) oneNailGcode(nailNumber int) []string {
+	gCodeLines := []string{}
+	AxisXMax := 100
+	AxisXMin := 0
+	UnitNail := float64(tg.nailsQuantity)
+	nailOffset := 0.5
+
+	// Move to the nail position minus the offset
+	startPos := fmt.Sprintf("G01 B%.2f ; Move to nail %d", float64(nailNumber)/UnitNail+nailOffset, nailNumber)
+	gCodeLines = append(gCodeLines, startPos)
+
+	// Retract the needle
+	moveXMax := fmt.Sprintf("G01 X%d", AxisXMax)
+	gCodeLines = append(gCodeLines, moveXMax)
+
+	// Move to the nail position plus the offset to pass the thread around the nail
+	endPos := fmt.Sprintf("G01 B%.2f", float64(nailNumber)/UnitNail+nailOffset)
+	gCodeLines = append(gCodeLines, endPos)
+
+	// Move back the needle to the starting position
+	moveXMin := fmt.Sprintf("G01 X%d", AxisXMin)
+	gCodeLines = append(gCodeLines, moveXMin)
+
+	return gCodeLines
+}
