@@ -84,6 +84,21 @@ func main() {
 		}
 	}
 
+	gCodeLines := tg.GetGcode()
+	// Save the thread list
+	outGcodeFile, err := os.Create(OutputFolder + "output_1_gcode.gcode")
+	if err != nil {
+		panic(err)
+	}
+	defer outGcodeFile.Close()
+
+	for _, line := range gCodeLines {
+		_, err := outGcodeFile.WriteString(line + "\n")
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	fmt.Println("Done in", stats.TotalTime)
 	fmt.Println("Number of lines", stats.TotalLines)
 }
