@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"math"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/disintegration/imaging"
@@ -48,6 +49,12 @@ type (
 		TotalLines   int
 		ThreadLength int
 		TotalTime    time.Duration
+	}
+
+	weightResult struct {
+		Weight  int
+		Line    []image.Point
+		NailIdx int
 	}
 )
 
@@ -187,41 +194,73 @@ func (tg *ThreadGenerator) computePathsListFromImage(sourceImage image.Image, na
 	usedPaths := make(map[string]bool)
 
 	for i := 0; i < tg.maxPaths; i++ {
-		var maxWeight = 0
-		var maxLine = []image.Point{}
-		var maxnailIndex = 0
+		// create a channel to gather results
+		channel := make(chan weightResult, len(nailsList)-1)
 
+		var wg sync.WaitGroup
+		// loop through all possible next nails
 		for nextnailIndex := 0; nextnailIndex < len(nailsList); nextnailIndex++ {
+			// skip if the nail is the same
 			if nailIndex == nextnailIndex {
 				continue
 			}
 
-			difference := int(math.Abs(float64(nextnailIndex) - float64(nailIndex)))
+			wg.Add(1) // add a waitgroup before goroutine
 
-			if difference < tg.minimumDifference || difference > (len(nailsList)-tg.minimumDifference) {
-				continue
+			// calculate weight in a goroutine
+			go func(nailIdx, nextnailIdx int) {
+				defer wg.Done()
+				weight := 0
+				line := []image.Point{}
+				difference := int(math.Abs(float64(nextnailIdx) - float64(nailIdx)))
+
+				if difference < tg.minimumDifference || difference > (len(nailsList)-tg.minimumDifference) {
+					return
+				}
+
+				if _, exists := usedPaths[tg.getPairKey(nextnailIdx, nailIdx)]; exists {
+					return
+				}
+
+				line = tg.pathsDictionary[tg.getPairKey(nailIdx, nextnailIdx)]
+				weight = len(line) * 255
+
+				for _, pixelPosition := range line {
+					pixelColor := canvas.GrayAt(pixelPosition.X, pixelPosition.Y).Y
+					weight -= int(pixelColor)
+				}
+
+				weight = weight / len(line)
+
+				if weight == 0 {
+					return
+				}
+
+				// send the result through the channel
+				channel <- weightResult{
+					Weight:  weight,
+					Line:    line,
+					NailIdx: nextnailIdx,
+				}
+
+				return
+			}(nailIndex, nextnailIndex) // pass nextnailIndex as an argument to avoid data race
+		}
+
+		//initialize maxWeight outside the loop
+		maxWeight := 0
+		var maxLine = []image.Point{}
+		var maxnailIndex = 0
+		wg.Wait() // wait for all goroutines to finish
+		close(channel)
+
+		// read from channel after closing it
+		for res := range channel {
+			if res.Weight > maxWeight {
+				maxWeight = res.Weight
+				maxLine = res.Line
+				maxnailIndex = res.NailIdx
 			}
-
-			if _, exists := usedPaths[tg.getPairKey(nextnailIndex, nailIndex)]; exists {
-				continue
-			}
-
-			line := tg.pathsDictionary[tg.getPairKey(nailIndex, nextnailIndex)]
-			weight := len(line) * 255
-
-			for _, pixelPosition := range line {
-				pixelColor := canvas.GrayAt(pixelPosition.X, pixelPosition.Y).Y
-				weight -= int(pixelColor)
-			}
-
-			weight = weight / len(line)
-
-			if weight > maxWeight {
-				maxWeight = weight
-				maxLine = line
-				maxnailIndex = nextnailIndex
-			}
-
 		}
 
 		if nailIndex == maxnailIndex {
