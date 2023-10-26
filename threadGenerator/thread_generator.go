@@ -25,9 +25,12 @@ type (
 		brightnessFactor  int
 		imageName         string
 		imageContrast     float64
+		physicalRadius    float64 // Radius of the circle in mm
 		pathsDictionary   map[string][]Nail
 		pathsList         []Path
 		nailsList         []Nail
+		pixelSize         float64
+		threadLength      float64 // Length of the thread in mm
 	}
 
 	Path struct {
@@ -43,6 +46,7 @@ type (
 		MinimumDifference int
 		BrightnessFactor  int
 		ImageName         string
+		PhysicalRadius    float64
 	}
 
 	OutputStats struct {
@@ -66,6 +70,7 @@ func (tg *ThreadGenerator) getDefaults() {
 	tg.minimumDifference = 10
 	tg.brightnessFactor = 50
 	tg.imageContrast = 40
+	tg.physicalRadius = 609.6 // 24 inches
 }
 
 func (tg *ThreadGenerator) mergeArgs(args Args) error {
@@ -89,6 +94,12 @@ func (tg *ThreadGenerator) mergeArgs(args Args) error {
 	if args.BrightnessFactor > 0 {
 		tg.brightnessFactor = args.BrightnessFactor
 	}
+
+	if args.PhysicalRadius > 0 {
+		tg.physicalRadius = args.PhysicalRadius
+	}
+
+	tg.pixelSize = tg.physicalRadius / float64(tg.imgSize)
 
 	if args.ImageName != "" {
 		tg.imageName = args.ImageName
@@ -117,7 +128,7 @@ func (tg *ThreadGenerator) Generate(args Args) (*OutputStats, error) {
 
 	return &OutputStats{
 		TotalLines:   len(tg.pathsList),
-		ThreadLength: 0,
+		ThreadLength: int(tg.threadLength / 1000), //thread length from mm in meters
 		TotalTime:    time.Since(start),
 	}, nil
 }
@@ -269,6 +280,7 @@ func (tg *ThreadGenerator) computePathsListFromImage(sourceImage image.Image, na
 
 		usedPaths[tg.getPairKey(nailIndex, maxnailIndex)] = true
 		pathsList = append(pathsList, Path{nailIndex, maxnailIndex})
+		tg.threadLength += tg.lineLength(nailIndex, maxnailIndex)
 		nailIndex = maxnailIndex
 
 		// Brighthen brightness of chosen line
@@ -299,9 +311,9 @@ func (tg *ThreadGenerator) generateDictionary(nailsList []image.Point) map[strin
 
 // Bresenham's line algorithm - https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 // Returns a list of points between two points
-func (threadGen *ThreadGenerator) bresenham(startPoint, endPoint image.Point) []image.Point {
-	xDifference := threadGen.abs(endPoint.X - startPoint.X)
-	yDifference := -threadGen.abs(endPoint.Y - startPoint.Y)
+func (tg *ThreadGenerator) bresenham(startPoint, endPoint image.Point) []image.Point {
+	xDifference := tg.abs(endPoint.X - startPoint.X)
+	yDifference := -tg.abs(endPoint.Y - startPoint.Y)
 
 	signX, signY := -1, -1
 
@@ -422,4 +434,10 @@ func (tg *ThreadGenerator) oneNailGcode(nailNumber int) []string {
 	gCodeLines = append(gCodeLines, moveXMin)
 
 	return gCodeLines
+}
+
+func (tg *ThreadGenerator) lineLength(startNail, endNail int) float64 {
+	pixels := tg.pathsDictionary[tg.getPairKey(startNail, endNail)]
+	distance := float64(len(pixels)) * tg.pixelSize // multiply with the size of a pixel
+	return distance
 }

@@ -2,47 +2,25 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"image/jpeg"
 	_ "image/jpeg"
-	"math/rand"
 	"os"
 
 	"github.com/Damione1/thread-art-generator/threadGenerator"
 )
 
-type Nail = image.Point
-
-type Coordinate struct {
-	X float64
-	Y float64
-}
-
-type Line struct {
-	StartingNail int
-	EndingNail   int
-}
-
-var (
-	NailsQuantity     = 300
-	ImgSize           = 800
-	MaxLines          = 10000
-	StartingNail      = rand.Intn(NailsQuantity)
-	OutputFolder      = "output/"
-	minimumDifference = 10
-	brightnessFactor  = 50
-)
+var OutputFolder = "output/"
 
 func main() {
 	tg := new(threadGenerator.ThreadGenerator)
 
 	args := threadGenerator.Args{
-		NailsQuantity:     NailsQuantity,
-		ImgSize:           ImgSize,
-		MaxPaths:          MaxLines,
-		StartingNail:      StartingNail,
-		MinimumDifference: minimumDifference,
-		BrightnessFactor:  brightnessFactor,
+		NailsQuantity:     300,
+		ImgSize:           800,
+		MaxPaths:          10000,
+		StartingNail:      0,
+		MinimumDifference: 10,
+		BrightnessFactor:  50,
 		ImageName:         "source_1.jpg",
 	}
 
@@ -101,4 +79,5 @@ func main() {
 
 	fmt.Println("Done in", stats.TotalTime)
 	fmt.Println("Number of lines", stats.TotalLines)
+	fmt.Println(fmt.Sprintf("Estimated thread length: %d meters", stats.ThreadLength))
 }
