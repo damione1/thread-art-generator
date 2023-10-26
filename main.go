@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/Damione1/strings-art-generator/threadGenerator"
+	"github.com/Damione1/thread-art-generator/threadGenerator"
 )
 
 type Nail = image.Point
