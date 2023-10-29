@@ -6,13 +6,13 @@ meta: (18.10.2023) by Damien
 
 stepping:
   engine: I2S_STATIC
-  idle_ms: 0
+  idle_ms: 255
   pulse_us: 4
   dir_delay_us: 1
-  disable_delay_us: 0
+  disable_delay_us: 2
 
 axes:
-  X:
+  x:
     # X is the needle
     steps_per_mm: 157.750
     max_rate_mm_per_min: 12000.000
@@ -30,14 +30,14 @@ axes:
       feed_scaler: 1.100
 
     motor0:
-      limit_neg_pin: gpio.32
+      limit_neg_pin: gpio.32:low:pu
       hard_limits: false
-      pulloff_mm: 2.000
+      pulloff_mm: 4.000
       stepstick:
         step_pin: I2SO.4
         direction_pin: I2SO.5
         disable_pin: I2SO.3
-  B:
+  z:
     # B is the rotational plate
     # 1 rotation of the stepper motor is 4000 steps
     # The ratio between the motor and the gear is 6:1
@@ -46,10 +46,10 @@ axes:
     # On the plate there is 300 nails
     # So the number of motor steps between nails is 24000/300=80 steps
     steps_per_mm: 80.000
-    max_rate_mm_per_min: 18000.000
-    acceleration_mm_per_sec2: 20.000
-    max_travel_mm: 360.000
-    soft_limits: true
+    max_rate_mm_per_min: 10000.000
+    acceleration_mm_per_sec2: 200.000
+    max_travel_mm: 300.000
+    soft_limits: false
     homing:
       cycle: 0
       positive_direction: false
@@ -61,17 +61,17 @@ axes:
       feed_scaler: 1.100
 
     motor0:
-      limit_neg_pin: gpio.33
-      hard_limits: false
-      pulloff_mm: 2.000
-      stepstick:
-        step_pin: I2SO.1
-        direction_pin: I2SO.2
-        disable_pin: I2SO.0
+      limit_neg_pin: gpio.33:low:pu
+      hard_limits: true
+      pulloff_mm: 4.000
+          stepstick:
+            step_pin: I2SO.13
+            direction_pin: I2SO.14
+            disable_pin: I2SO.12
 
 
-  Y:
-    # Z is the spindle
+  y:
+    # Y is the spindle
     steps_per_mm: 157.750
     max_rate_mm_per_min: 12000.000
     acceleration_mm_per_sec2: 500.000
@@ -88,9 +88,9 @@ axes:
       feed_scaler: 1.100
 
     motor0:
-      limit_neg_pin: gpio.22
-      hard_limits: false
-      pulloff_mm: 1.000
+      limit_pos_pin: gpio.22:low:pu
+      hard_limits: true
+      pulloff_mm: 3.000
       stepstick:
         step_pin: I2SO.7
         direction_pin: I2SO.8
@@ -108,7 +108,8 @@ spi:
 
 sdcard:
   cs_pin: gpio.5
-  card_detect_pin: NO_PIN
+  # uses TH2 IO34 active low - MAKE SURE jumper J2 is set to SDDET!!!
+  card_detect_pin: gpio.34:low
 
 control:
   safety_door_pin: NO_PIN
