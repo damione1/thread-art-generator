@@ -31,6 +31,9 @@ type (
 		nailsList         []Nail
 		pixelSize         float64
 		threadLength      float64 // Length of the thread in mm
+		rotationAxis      string
+		needleAxis        string
+		spindleAxis       string
 	}
 
 	Path struct {
@@ -71,6 +74,9 @@ func (tg *ThreadGenerator) getDefaults() {
 	tg.brightnessFactor = 50
 	tg.imageContrast = 40
 	tg.physicalRadius = 609.6 // 24 inches
+	tg.rotationAxis = "A"
+	tg.needleAxis = "X"
+	tg.spindleAxis = "Y"
 }
 
 func (tg *ThreadGenerator) mergeArgs(args Args) error {
@@ -399,11 +405,12 @@ func (tg *ThreadGenerator) GetPathsList() []Path {
 }
 
 func (tg *ThreadGenerator) GetGcode() []string {
-	gCodeLines := []string{"G28 X0 Y0 Z0"} // GCode for homing X, Y, Z
-	feedRate := 300                        // Define the feed rate - adjust value as necessary
+	gCodeLines := []string{fmt.Sprintf("G28 %s5 %s0 %s0", tg.needleAxis, tg.spindleAxis, tg.rotationAxis)} // GCode for homing X, Y, Z
+	feedRate := 300                                                                                        // Define the feed rate - adjust value as necessary
 	for i, path := range tg.pathsList {
 		if i == 0 {
-			gCodeLines = append(gCodeLines, fmt.Sprintf("G01 X%d F%d; Move to nail %d", path.StartingNail, feedRate, path.StartingNail))
+			gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%d F%d;", tg.needleAxis, 0, 1000))
+			gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%d F%d; Move to nail %d", tg.spindleAxis, path.StartingNail, feedRate, path.StartingNail))
 			gCodeLines = append(gCodeLines, "M0 ; Pause")
 		}
 		// Calculate the delta between the starting and ending nails
@@ -431,19 +438,19 @@ func (tg *ThreadGenerator) pinWrapGcode(fromPin, delta, feedRate int) []string {
 	nailOffset := 0.5
 
 	// Move to the nail position minus the offset
-	startPos := fmt.Sprintf("G01 Z%.2f F%d; Move to nail %d", float64(fromPin)+nailOffset, feedRate, fromPin)
+	startPos := fmt.Sprintf("G01 %s%.2f F%d; Move to nail %d", tg.spindleAxis, float64(fromPin)+nailOffset, feedRate, fromPin)
 	gCodeLines = append(gCodeLines, startPos)
 
 	// Retract the needle
-	moveXMax := fmt.Sprintf("G01 X%d F%d", AxisXMax, feedRate*5)
+	moveXMax := fmt.Sprintf("G01 %s%d F%d", tg.needleAxis, AxisXMax, feedRate*5)
 	gCodeLines = append(gCodeLines, moveXMax)
 
 	// Move to the nail position plus the offset to pass the thread around the nail
-	endPos := fmt.Sprintf("G01 Z%.2f F%d", float64(fromPin+delta)+nailOffset, feedRate)
+	endPos := fmt.Sprintf("G01 %s%.2f F%d", tg.spindleAxis, float64(fromPin)+nailOffset, feedRate)
 	gCodeLines = append(gCodeLines, endPos)
 
 	// Move back the needle to the starting position
-	moveXMin := fmt.Sprintf("G01 X%d F%d", AxisXMin, feedRate*5)
+	moveXMin := fmt.Sprintf("G01 %s%d F%d", tg.needleAxis, AxisXMin, feedRate*5)
 	gCodeLines = append(gCodeLines, moveXMin)
 
 	return gCodeLines
