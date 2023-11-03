@@ -31,26 +31,26 @@ axes:
     motor0:
       rc_servo:
         pwm_hz: 50
-        output_pin: gpio.22
+        output_pin: gpio.15
         min_pulse_us: 1000
         max_pulse_us: 2000
-  y:
-    # Y is the spindle
-    steps_per_mm: 100.000
-    max_rate_mm_per_min: 5000.000
-    acceleration_mm_per_sec2: 100.000
-    max_travel_mm: 5.000
-    soft_limits: true
-    homing:
-      cycle: 1
-      positive_direction: true
-      mpos_mm: 5.000
-    motor0:
-      rc_servo:
-        pwm_hz: 50
-        output_pin: gpio.32
-        min_pulse_us: 1000
-        max_pulse_us: 2000
+  # y:
+  #   # Y is the spindle
+  #   steps_per_mm: 100.000
+  #   max_rate_mm_per_min: 5000.000
+  #   acceleration_mm_per_sec2: 100.000
+  #   max_travel_mm: 5.000
+  #   soft_limits: true
+  #   homing:
+  #     cycle: 1
+  #     positive_direction: true
+  #     mpos_mm: 5.000
+  #   motor0:
+  #     rc_servo:
+  #       pwm_hz: 50
+  #       output_pin: gpio.32
+  #       min_pulse_us: 1000
+  #       max_pulse_us: 2000
   a:
     # A is the rotational plate
     # 1 rotation of the stepper motor is 4000 steps
@@ -61,7 +61,7 @@ axes:
     # So the number of motor steps between nails is 24000/300=80 steps
     steps_per_mm: 80.000
     max_rate_mm_per_min: 2000.000
-    acceleration_mm_per_sec2: 200.000
+    acceleration_mm_per_sec2: 600.000
     max_travel_mm: 300.000
     soft_limits: false
     homing:
@@ -79,9 +79,9 @@ axes:
       hard_limits: true
       pulloff_mm: 4.000
       stepstick:
-        step_pin: I2SO.13
-        direction_pin: I2SO.14
-        disable_pin: I2SO.12
+        step_pin: i2so.13
+        direction_pin: i2so.14
+        disable_pin: i2so.12
 
 sdcard:
   cs_pin: gpio.5
