@@ -4,6 +4,21 @@ board: MKS TinyBee V1.0_001
 name: Thread Machine 1
 meta: (18.10.2023) by Damien
 
+i2so:
+  bck_pin: gpio.25
+  data_pin: gpio.27
+  ws_pin: gpio.26
+
+spi:
+  miso_pin: gpio.19
+  mosi_pin: gpio.23
+  sck_pin: gpio.18
+
+sdcard:
+  cs_pin: gpio.5
+  # uses TH2 IO34 active low - MAKE SURE jumper J2 is set to SDDET!!!
+  card_detect_pin: gpio.34:low
+
 stepping:
   engine: I2S_STATIC
   idle_ms: 255
@@ -11,46 +26,43 @@ stepping:
   dir_delay_us: 1
   disable_delay_us: 2
 
-i2so:
-  bck_pin: gpio.25
-  data_pin: gpio.27
-  ws_pin: gpio.26
-
 axes:
   x:
     # X is the needle
     steps_per_mm: 100.000
     max_rate_mm_per_min: 5000.000
     acceleration_mm_per_sec2: 100.000
-    max_travel_mm: 5.000
-    soft_limits: true
+    max_travel_mm: 10.000
+    soft_limits: false
     homing:
       cycle: 1
       positive_direction: true
-      mpos_mm: 5.000
+      mpos_mm: 0.000
+
     motor0:
+      limit_neg_pin: gpio.33:low
       rc_servo:
         pwm_hz: 50
         output_pin: gpio.15
         min_pulse_us: 1000
         max_pulse_us: 2000
-  # y:
-  #   # Y is the spindle
-  #   steps_per_mm: 100.000
-  #   max_rate_mm_per_min: 5000.000
-  #   acceleration_mm_per_sec2: 100.000
-  #   max_travel_mm: 5.000
-  #   soft_limits: true
-  #   homing:
-  #     cycle: 1
-  #     positive_direction: true
-  #     mpos_mm: 5.000
-  #   motor0:
-  #     rc_servo:
-  #       pwm_hz: 50
-  #       output_pin: gpio.32
-  #       min_pulse_us: 1000
-  #       max_pulse_us: 2000
+  y:
+    # Y is the spindle
+    steps_per_mm: 100.000
+    max_rate_mm_per_min: 5000.000
+    acceleration_mm_per_sec2: 100.000
+    max_travel_mm: 10.000
+    soft_limits: false
+    homing:
+      cycle: 1
+      positive_direction: true
+      mpos_mm: 0.000
+    motor0:
+      rc_servo:
+        pwm_hz: 50
+        output_pin: gpio.17
+        min_pulse_us: 1000
+        max_pulse_us: 2000
   a:
     # A is the rotational plate
     # 1 rotation of the stepper motor is 4000 steps
@@ -60,22 +72,23 @@ axes:
     # On the plate there is 300 nails
     # So the number of motor steps between nails is 24000/300=80 steps
     steps_per_mm: 80.000
-    max_rate_mm_per_min: 2000.000
-    acceleration_mm_per_sec2: 600.000
+    max_rate_mm_per_min: 10000.000
+    acceleration_mm_per_sec2: 150.000
     max_travel_mm: 300.000
     soft_limits: false
     homing:
-      cycle: 0
+      cycle: 2
+      allow_single_axis: true
       positive_direction: false
       mpos_mm: 0.000
-      feed_mm_per_min: 300.000
-      seek_mm_per_min: 5000.000
+      feed_mm_per_min: 500.000
+      seek_mm_per_min: 200.000
       settle_ms: 500
       seek_scaler: 1.100
       feed_scaler: 1.100
 
     motor0:
-      limit_neg_pin: gpio.33:low
+      limit_all_pin: gpio.32:low
       hard_limits: true
       pulloff_mm: 4.000
       stepstick:
@@ -83,18 +96,12 @@ axes:
         direction_pin: i2so.14
         disable_pin: i2so.12
 
-sdcard:
-  cs_pin: gpio.5
-  # uses TH2 IO34 active low - MAKE SURE jumper J2 is set to SDDET!!!
-  card_detect_pin: gpio.34:low
-
 control:
   safety_door_pin: NO_PIN
   reset_pin: NO_PIN
   feed_hold_pin: NO_PIN
   cycle_start_pin: NO_PIN
-  # EXP1 BTN_ENC
-  macro0_pin: gpio.4:low:pu
+  macro0_pin: NO_PIN
   macro1_pin: NO_PIN
   macro2_pin: NO_PIN
   macro3_pin: NO_PIN
