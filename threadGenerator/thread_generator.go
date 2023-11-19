@@ -433,9 +433,10 @@ func (tg *ThreadGenerator) GetGcode() []string {
 
 func (tg *ThreadGenerator) pinWrapGcode(fromPin, delta, feedRate int) []string {
 	gCodeLines := []string{}
-	AxisXMax := 10
+	AxisXMax := -10
 	AxisXMin := 0
 	nailOffset := 0.5
+	feedrateBetweenNails := 200
 
 	// Move to the nail position minus the offset
 	startPos := fmt.Sprintf("G01 %s%.2f F%d; Move to nail %d", tg.rotationAxis, float64(fromPin)-nailOffset, feedRate, fromPin)
@@ -446,12 +447,30 @@ func (tg *ThreadGenerator) pinWrapGcode(fromPin, delta, feedRate int) []string {
 	gCodeLines = append(gCodeLines, moveXMax)
 
 	// Move to the nail position plus the offset to pass the thread around the nail
-	endPos := fmt.Sprintf("G01 %s%.2f F%d", tg.rotationAxis, float64(fromPin)+nailOffset, feedRate)
+	endPos := fmt.Sprintf("G01 %s%.2f F%d", tg.rotationAxis, float64(fromPin)+nailOffset, feedrateBetweenNails)
 	gCodeLines = append(gCodeLines, endPos)
 
 	// Move back the needle to the starting position
 	moveXMin := fmt.Sprintf("G01 %s%d F%d", tg.needleAxis, AxisXMin, feedRate)
 	gCodeLines = append(gCodeLines, moveXMin)
+
+	return gCodeLines
+}
+
+func (tg *ThreadGenerator) GenerateHolesGcode() []string {
+	rotationSpeed := 200
+	feedRateIn := 100   // Define the feed rate - adjust value as necessary
+	feedRateOut := 1000 // Define the feed rate - adjust value as necessary
+	AxisYMin := 0
+	AxisYMax := -3.2
+
+	gCodeLines := []string{fmt.Sprintf("G28 %s0 %s0", tg.spindleAxis, tg.rotationAxis)} // GCode for homing
+
+	for i := 0; i < tg.nailsQuantity; i++ {
+		gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%d F%d; Move to nail %d", tg.rotationAxis, i, rotationSpeed, i))
+		gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%.2f F%d; Drill hole at nail %d", tg.spindleAxis, AxisYMax, feedRateIn, i))
+		gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%d F%d; Retract needle", tg.spindleAxis, AxisYMin, feedRateOut))
+	}
 
 	return gCodeLines
 }

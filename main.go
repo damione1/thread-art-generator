@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Save the image
-	outThreadFile, err := os.Create(OutputFolder + "output_1_threads.jpg")
+	outThreadFile, err := os.Create(OutputFolder + "result_preview.jpg")
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +49,7 @@ func main() {
 
 	pathsList := tg.GetPathsList()
 	// Save the thread list
-	outThreadListFile, err := os.Create(OutputFolder + "output_1_threads.txt")
+	outThreadListFile, err := os.Create(OutputFolder + "result_threads_list.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +64,7 @@ func main() {
 
 	gCodeLines := tg.GetGcode()
 	// Save the thread list
-	outGcodeFile, err := os.Create(OutputFolder + "output_1_gcode.gcode")
+	outGcodeFile, err := os.Create(OutputFolder + "result_gcode.gcode")
 	if err != nil {
 		panic(err)
 	}
@@ -72,6 +72,18 @@ func main() {
 
 	for _, line := range gCodeLines {
 		_, err := outGcodeFile.WriteString(line + "\n")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	outHolesGcodeFile, err := os.Create(OutputFolder + "holes_gcode.gcode")
+	if err != nil {
+		panic(err)
+	}
+	defer outHolesGcodeFile.Close()
+	for _, line := range tg.GenerateHolesGcode() {
+		_, err := outHolesGcodeFile.WriteString(line + "\n")
 		if err != nil {
 			panic(err)
 		}
