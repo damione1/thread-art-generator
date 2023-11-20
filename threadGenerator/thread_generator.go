@@ -31,6 +31,9 @@ type (
 		nailsList         []Nail
 		pixelSize         float64
 		threadLength      float64 // Length of the thread in mm
+		rotationAxis      string
+		needleAxis        string
+		spindleAxis       string
 	}
 
 	Path struct {
@@ -71,6 +74,9 @@ func (tg *ThreadGenerator) getDefaults() {
 	tg.brightnessFactor = 50
 	tg.imageContrast = 40
 	tg.physicalRadius = 609.6 // 24 inches
+	tg.rotationAxis = "A"
+	tg.needleAxis = "X"
+	tg.spindleAxis = "Y"
 }
 
 func (tg *ThreadGenerator) mergeArgs(args Args) error {
@@ -399,39 +405,92 @@ func (tg *ThreadGenerator) GetPathsList() []Path {
 }
 
 func (tg *ThreadGenerator) GetGcode() []string {
-	gCodeLines := []string{"G28 X0 Y0 B0"} // GCode for homing X, Y, B
+	gCodeLines := []string{fmt.Sprintf("G28 %s5 %s0 %s0", tg.needleAxis, tg.spindleAxis, tg.rotationAxis)} // GCode for homing
+	feedRate := 3000
+	var nailOffset float32 = 0.5
 	for i, path := range tg.pathsList {
 		if i == 0 {
-			gCodeLines = append(gCodeLines, fmt.Sprintf("G01 B%d ; Move to nail %d", path.StartingNail, path.StartingNail)) // Move to the starting nail
-			gCodeLines = append(gCodeLines, "M0 ; Pause")                                                                   //add a pause to allow the user to place the thread
+			gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%d F%d; Move to nail %d", tg.needleAxis, path.StartingNail, feedRate, path.StartingNail))
+			gCodeLines = append(gCodeLines, "M0 ; Pausing to allow for thread to be attached")
 		}
-		gCodeLines = append(gCodeLines, tg.oneNailGcode(path.EndingNail)...)
+		// Calculate the delta between the starting and ending nails
+		fromPin := path.StartingNail % tg.nailsQuantity
+		toPin := path.EndingNail
+
+		delta := toPin - (fromPin % tg.nailsQuantity)
+
+		if abs(delta) < (tg.nailsQuantity / 2) {
+			// Move directly if less than half the number of nails.
+			move := tg.moveToPin(toPin, feedRate, nailOffset)
+			gCodeLines = append(gCodeLines, move)
+		} else {
+			// Move relatively if more than half the total nails.
+			gCodeLines = append(gCodeLines, "G91 ; Switch to relative positioning mode")
+			toPinRelative := tg.nailsQuantity - (fromPin % tg.nailsQuantity) + toPin
+			if delta > 0 {
+				toPinRelative = -(tg.nailsQuantity - abs(delta))
+			}
+			gCodeLines = append(gCodeLines, tg.moveByDelta(toPinRelative, toPin, feedRate, nailOffset))
+			gCodeLines = append(gCodeLines, "G90 ; Switch back to absolute positioning mode")
+			gCodeLines = append(gCodeLines, fmt.Sprintf("G92 %s%.2f; Set current position to %.2f", tg.rotationAxis, float32(toPin)-nailOffset, float32(toPin)-nailOffset))
+		}
+		// Generate GCode lines for the thread movement
+		gCodeLines = append(gCodeLines, tg.pinWrapGcode(fromPin, toPin, nailOffset)...)
 	}
 	return gCodeLines
 }
 
-func (tg *ThreadGenerator) oneNailGcode(nailNumber int) []string {
+func (tg *ThreadGenerator) pinWrapGcode(fromPin, toPin int, nailOffset float32) []string {
 	gCodeLines := []string{}
-	AxisXMax := 100
+	AxisXMax := -10
 	AxisXMin := 0
-	UnitNail := float64(tg.nailsQuantity)
-	nailOffset := 0.5
-
-	// Move to the nail position minus the offset
-	startPos := fmt.Sprintf("G01 B%.2f ; Move to nail %d", float64(nailNumber)/UnitNail+nailOffset, nailNumber)
-	gCodeLines = append(gCodeLines, startPos)
+	feedrateBetweenNails := 200
+	nailFeedRate := 2000
 
 	// Retract the needle
-	moveXMax := fmt.Sprintf("G01 X%d", AxisXMax)
+	moveXMax := fmt.Sprintf("G01 %s%d F%d", tg.needleAxis, AxisXMax, nailFeedRate)
 	gCodeLines = append(gCodeLines, moveXMax)
 
 	// Move to the nail position plus the offset to pass the thread around the nail
-	endPos := fmt.Sprintf("G01 B%.2f", float64(nailNumber)/UnitNail+nailOffset)
+	endPos := fmt.Sprintf("G01 %s%.2f F%d", tg.rotationAxis, float32(toPin)+nailOffset, feedrateBetweenNails)
 	gCodeLines = append(gCodeLines, endPos)
 
 	// Move back the needle to the starting position
-	moveXMin := fmt.Sprintf("G01 X%d", AxisXMin)
+	moveXMin := fmt.Sprintf("G01 %s%d F%d", tg.needleAxis, AxisXMin, nailFeedRate)
 	gCodeLines = append(gCodeLines, moveXMin)
+
+	return gCodeLines
+}
+
+func (tg *ThreadGenerator) moveToPin(pin, feedrate int, nailOffset float32) string {
+	return fmt.Sprintf("G01 %s%.2f F%d; Move to nail %d", tg.rotationAxis, float32(pin)-nailOffset, feedrate, pin)
+}
+
+func (tg *ThreadGenerator) moveByDelta(delta, nail, feedrate int, nailOffset float32) string {
+	return fmt.Sprintf("G01 %s%.2f F%d; Move by delta %d (nail %d)", tg.rotationAxis, float32(delta)-nailOffset, feedrate, delta, nail)
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func (tg *ThreadGenerator) GenerateHolesGcode() []string {
+	rotationSpeed := 200
+	feedRateIn := 170
+	feedRateOut := 1000
+	AxisYMin := -0.5
+	AxisYMax := -3.20
+
+	gCodeLines := []string{fmt.Sprintf("G28 %s0 %s0", tg.spindleAxis, tg.rotationAxis)} // GCode for homing
+
+	for i := 0; i < tg.nailsQuantity; i++ {
+		gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%d F%d; Move to nail %d", tg.rotationAxis, i, rotationSpeed, i))
+		gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%.2f F%d; Drill hole at nail %d", tg.spindleAxis, AxisYMax, feedRateIn, i))
+		gCodeLines = append(gCodeLines, fmt.Sprintf("G01 %s%.2f F%d; Retract needle", tg.spindleAxis, AxisYMin, feedRateOut))
+	}
 
 	return gCodeLines
 }

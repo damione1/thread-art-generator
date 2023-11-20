@@ -1,0 +1,132 @@
+# Description: Configuration file for the MKS TinyBee V1.0_001
+# Documentation: http://wiki.fluidnc.com/
+board: MKS TinyBee V1.0_001
+name: Thread Machine 1
+meta: (18.10.2023) by Damien
+
+i2so:
+  bck_pin: gpio.25
+  data_pin: gpio.27
+  ws_pin: gpio.26
+
+spi:
+  miso_pin: gpio.19
+  mosi_pin: gpio.23
+  sck_pin: gpio.18
+
+sdcard:
+  cs_pin: gpio.5
+  # uses TH2 IO34 active low - MAKE SURE jumper J2 is set to SDDET!!!
+  card_detect_pin: gpio.34:low
+
+stepping:
+  engine: I2S_STATIC
+  idle_ms: 255
+  pulse_us: 4
+  dir_delay_us: 1
+  disable_delay_us: 2
+
+axes:
+  x:
+    # X is the needle
+    steps_per_mm: 100.000
+    max_rate_mm_per_min: 5000.000
+    acceleration_mm_per_sec2: 100.000
+    max_travel_mm: 10.000
+    soft_limits: false
+    homing:
+      cycle: 1
+      positive_direction: true
+      mpos_mm: 0.000
+
+    motor0:
+      limit_neg_pin: gpio.33:low
+      rc_servo:
+        pwm_hz: 50
+        output_pin: gpio.15
+        min_pulse_us: 1000
+        max_pulse_us: 2000
+  y:
+    # Y is the spindle
+    steps_per_mm: 100.000
+    max_rate_mm_per_min: 5000.000
+    acceleration_mm_per_sec2: 100.000
+    max_travel_mm: 10.000
+    soft_limits: false
+    homing:
+      cycle: 1
+      positive_direction: true
+      mpos_mm: 0.000
+    motor0:
+      rc_servo:
+        pwm_hz: 50
+        output_pin: gpio.17
+        min_pulse_us: 1000
+        max_pulse_us: 2000
+  a:
+    # A is the rotational plate
+    # 1 rotation of the stepper motor is 4000 steps
+    # The ratio between the motor and the gear is 6:1
+    # One full rotation of the plate is 4000*6=24000 steps on the motor
+    # To simplify, we will define the value of a milimiter in nail.
+    # On the plate there is 300 nails
+    # So the number of motor steps between nails is 24000/300=80 steps
+    steps_per_mm: 80.000
+    max_rate_mm_per_min: 10000.000
+    acceleration_mm_per_sec2: 75.000
+    max_travel_mm: 300.000
+    soft_limits: false
+    homing:
+      cycle: 2
+      allow_single_axis: true
+      positive_direction: false
+      mpos_mm: 0.000
+      feed_mm_per_min: 500.000
+      seek_mm_per_min: 200.000
+      settle_ms: 500
+      seek_scaler: 1.100
+      feed_scaler: 1.100
+
+    motor0:
+      limit_all_pin: gpio.32:low
+      hard_limits: true
+      pulloff_mm: 4.000
+      stepstick:
+        step_pin: i2so.13
+        direction_pin: i2so.14
+        disable_pin: i2so.12
+
+control:
+  safety_door_pin: NO_PIN
+  reset_pin: NO_PIN
+  feed_hold_pin: NO_PIN
+  cycle_start_pin: NO_PIN
+  macro0_pin: NO_PIN
+  macro1_pin: NO_PIN
+  macro2_pin: NO_PIN
+  macro3_pin: NO_PIN
+
+macros:
+  startup_line0:
+  startup_line1:
+  macro0: $SD/Run=drill_300_holes.gcode
+  macro1:
+  macro2:
+  macro3:
+
+user_outputs:
+  analog0_pin: NO_PIN
+  analog1_pin: NO_PIN
+  analog2_pin: NO_PIN
+  analog3_pin: NO_PIN
+  analog0_hz: 5000
+  analog1_hz: 5000
+  analog2_hz: 5000
+  analog3_hz: 5000
+  digital0_pin: NO_PIN
+  digital1_pin: NO_PIN
+  digital2_pin: NO_PIN
+  digital3_pin: NO_PIN
+
+start:
+  must_home: true
