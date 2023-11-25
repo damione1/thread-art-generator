@@ -20,7 +20,7 @@ func main() {
 		MaxPaths:          15000,
 		StartingNail:      0,
 		MinimumDifference: 10,
-		BrightnessFactor:  50,
+		BrightnessFactor:  40,
 		ImageName:         "source_1.jpg",
 	}
 

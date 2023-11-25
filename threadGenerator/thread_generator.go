@@ -479,10 +479,10 @@ func abs(x int) int {
 
 func (tg *ThreadGenerator) GenerateHolesGcode() []string {
 	rotationSpeed := 200
-	feedRateIn := 170
+	feedRateIn := 130
 	feedRateOut := 1000
 	AxisYMin := -0.5
-	AxisYMax := -3.20
+	AxisYMax := -3.3
 
 	gCodeLines := []string{fmt.Sprintf("G28 %s0 %s0", tg.spindleAxis, tg.rotationAxis)} // GCode for homing
 
