@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package pb;
+import "google/protobuf/timestamp.proto";
+
+option go_package = "portfolio-playground/pkg/proto;pb";
+
+
+message User {
+    // ID is the unique identifier for the user.
+    string id = 1;
+    // Name is the user's name.
+    string name = 2;
+    // Email is the user's email.
+    string email = 3;
+    // Password is the user's password.
+    string password = 4;
+}
+
+message CreateUserRequest {
+    // Name is the user's name.
+    string name = 1;
+    // Email is the user's email.
+    string email = 2;
+    // Password is the user's password.
+    string password = 3;
+}
+
+message CreateUserResponse {
+    // User is the created user.
+    User user = 1;
+}
+
+message GetUserRequest {
+    // ID is the unique identifier for the user.
+    string id = 1;
+}
+
+message GetUserResponse {
+    // User is the user.
+    User user = 1;
+}
+
+message UpdateUserRequest {
+    User user = 1;
+}
+
+message UpdateUserResponse {
+    // User is the updated user.
+    User user = 1;
+}
+
+message DeleteUserRequest {
+    // ID is the unique identifier for the user.
+    string id = 1;
+}
+
+message DeleteUserResponse {
+    // User is the deleted user.
+    User user = 1;
+}
+
+message LoginRequest {
+    // Email is the user's email.
+    string email = 1;
+    // Password is the user's password.
+    string password = 2;
+}
+
+message LoginResponse {
+    // User is the user.
+    User user = 1;
+    // Session ID
+    string session_id = 2;
+    // AccessToken is the access token.
+    string access_token = 3;
+    // RefreshToken is the refresh token.
+    string refresh_token = 4;
+    // AccessTokenExpiresTime is the access token expiration time.
+    google.protobuf.Timestamp access_token_expire_time = 5;
+    // RefreshTokenExpiresTime is the refresh token expiration time.
+    google.protobuf.Timestamp refresh_token_expire_time = 6;
+
+}
+
+message RefreshTokenRequest {
+    // RefreshToken is the refresh token.
+    string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+    // AccessToken is the access token.
+    string access_token = 1;
+    // RefreshToken is the refresh token.
+    string refresh_token = 2;
+    // AccessTokenExpiresTime is the access token expiration time.
+    google.protobuf.Timestamp access_token_expire_time = 3;
+    // RefreshTokenExpiresTime is the refresh token expiration time.
+    google.protobuf.Timestamp refresh_token_expire_time = 4;
+}
+
+message LogoutRequest {
+    // RefreshToken is the refresh token.
+    string refresh_token = 1;
+}
+
+message LogoutResponse {
+   bool success = 1;
+}
+
+//reset password
+message ResetPasswordRequest {
+    // Email is the user's email.
+    string email = 1;
+}
+
+message ResetPasswordResponse {
+    bool success = 1;
+}
+
+message ChangePasswordRequest {
+    // Email is the user's email.
+    string email = 1;
+    // Password is the user's password.
+    string password = 2;
+    // Token is the token.
+    string token = 3;
+}
+
+message ChangePasswordResponse {
+    bool success = 1;
+}

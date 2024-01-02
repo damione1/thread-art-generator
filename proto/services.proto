@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package pb;
+import "user.proto";
+import "post.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "portfolio-playground/pkg/proto;pb";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Thread art Generator API"
+    version: "0.0.1"
+    contact: {
+      name: "Damien Goehrig"
+      url: "github.com/Damione1/thread-art-generator"
+      email: "thread-art-generator@damiengoehrig.ca"
+    }
+  }
+  security_definitions: {
+    security: {
+      key: "Bearer"
+      value: {
+        type: TYPE_API_KEY
+        in: IN_HEADER
+        name: "Authorization"
+        description: "Access token obtained from the login endpoint. Bearer authentication should be used with the format: 'Bearer {access_token}'."
+      }
+    }
+  }
+  security: {
+    security_requirement: { key: "Bearer" value: {} }
+  }
+  tags: {
+    name: "Authentication"
+    description: "Endpoints for authentication"
+  }
+  tags: {
+    name: "Users"
+    description: "Endpoints for user management"
+  }
+  tags: {
+    name: "Arts"
+    description: "Endpoints for art management"
+  }
+};
+
+service PortfolioService {
+  rpc LoginUser (LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/v1/user/login"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Log in a user"
+      description: "Authenticate a user with their email and password and return an access token."
+      security: {};
+      tags: "Authentication";
+    };
+  }
+  rpc LogoutUser (LogoutRequest) returns (LogoutResponse) {
+    option (google.api.http) = {
+      post: "/v1/user/logout"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Log out a user"
+      description: "Revoke the access token of a logged-in user."
+      tags: "Authentication";
+    };
+  }
+  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/user/refresh"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Refresh an access token"
+      description: "Refresh an expired access token using a refresh token."
+      security: {};
+      tags: "Authentication";
+    };
+  }
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/user/create"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Create a new user"
+      description: "Add a new user to the system with the provided information."
+      security: {};
+      tags: "Users";
+    };
+  }
+  rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse) {
+    option (google.api.http) = {
+      put: "/v1/user/update"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Update a user's information"
+      description: "Modify the information of a specific user."
+      tags: "Users";
+    };
+  }
+  rpc GetUser (GetUserRequest) returns (GetUserResponse) {
+    option (google.api.http) = {
+      get: "/v1/user/get/{id}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get a user's information"
+      description: "Retrieve information for a specific user by their ID."
+      security: {};
+      tags: "Users";
+    };
+  }
+  rpc ResetPassword (ResetPasswordRequest) returns (ResetPasswordResponse) {
+    option (google.api.http) = {
+      post: "/v1/user/reset"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Reset a user's password"
+      description: "Send a password reset email to a user's registered email address."
+      security: {};
+      tags: "Users";
+    };
+  }
+  rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordResponse) {
+    option (google.api.http) = {
+      post: "/v1/user/change"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Change a user's password"
+      description: "Update the password of a specific user."
+      tags: "Users";
+    };
+  }
+  rpc CreateArt (CreateArtRequest) returns (CreateArtResponse) {
+    option (google.api.http) = {
+      post: "/v1/art/create"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Create a new art"
+      description: "Create a new art to the system."
+      tags: "Arts";
+    };
+  }
+  rpc UpdateArt (UpdateArtRequest) returns (UpdateArtResponse) {
+    option (google.api.http) = {
+      put: "/v1/art/update"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Update a post's information"
+      description: "Modify the information of a specific art."
+      tags: "Arts";
+    };
+  }
+  rpc GetArt (GetArtRequest) returns (GetArtResponse) {
+    option (google.api.http) = {
+      get: "/v1/art/get/{id}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get a arts's information"
+      description: "Retrieve information for a specific art by its ID."
+      security: {};
+      tags: "Arts";
+    };
+  }
+  rpc ListArts (ListArtRequest) returns (ListArtResponse) {
+    option (google.api.http) = {
+      post: "/v1/art/list"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "List all arts"
+      description: "Retrieve a list of all arts in the system."
+      security: {};
+      tags: "Arts";
+    };
+  }
+  rpc DeleteArt (DeleteArtRequest) returns (DeleteArtResponse) {
+    option (google.api.http) = {
+      delete: "/v1/art/delete/{id}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Delete an art"
+      description: "Remove a specific art from the system."
+      tags: "Arts";
+    };
+  }
+}

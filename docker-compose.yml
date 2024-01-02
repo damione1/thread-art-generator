@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: api  # Overriding the default CMD in the Dockerfile
+    ports:
+      - '8080:8080'
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    depends_on:
+      - postgres
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: worker  # Overriding the default CMD in the Dockerfile
+    ports:
+      - '8080:8080'
+    environment:
+      - QUEUE_HOST=rabbitmq
+    depends_on:
+      - rabbitmq
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '80:80'
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - '15672:15672'
+      - '5672:5672'
+
+  proto-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile-proto
+    command: make build-proto
+    volumes:
+      - ./:/app
+    container_name: proto-generator
+    profiles:
+    - manual
+
+volumes:
+  pgdata:
