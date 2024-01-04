@@ -38,7 +38,7 @@ func RunDBMigration(db *sql.DB) {
 		log.Fatal().Err(err).Msg("🥝 Failed to create migration driver")
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://./migrations", "postgres", driver)
+	m, err := migrate.NewWithDatabaseInstance("file://../migrations", "postgres", driver)
 	if err != nil {
 		log.Fatal().Err(err).Msg("🥝 Failed to create migration instance")
 	}

@@ -6,12 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func RunAPI() {
-	config, err := util.LoadConfig(".")
-	if err != nil {
-		log.Fatal().Err(err).Msg("👋 Failed to load config")
-	}
-
+func RunAPI(config util.Config) {
 	db, err := database.ConnectDb(&config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")

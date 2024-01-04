@@ -2,16 +2,14 @@ package main
 
 import (
 	"fmt"
+
 	"os"
 
-	api "github.com/Damione1/thread-art-generator/pkg/grpcApi"
-)
+	"github.com/rs/zerolog/log"
 
-func startAPIService() {
-	// Initialize and start your API service here
-	api.RunAPI()
-	// ...
-}
+	api "github.com/Damione1/thread-art-generator/pkg/grpcApi"
+	"github.com/Damione1/thread-art-generator/pkg/util"
+)
 
 func startWorkerService() {
 	// Initialize and start your worker service here
@@ -20,6 +18,12 @@ func startWorkerService() {
 }
 
 func main() {
+
+	config, err := util.LoadConfig(".env")
+	if err != nil {
+		log.Fatal().Err(err).Msg("👋 Failed to load config")
+	}
+
 	if len(os.Args) < 2 {
 		fmt.Println("No service specified, exiting...")
 		os.Exit(1)
@@ -27,7 +31,8 @@ func main() {
 
 	switch os.Args[1] {
 	case "api":
-		startAPIService()
+		api.RunAPI(config)
+		//startAPIService()
 	case "worker":
 		startWorkerService()
 	default:

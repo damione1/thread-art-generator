@@ -2,6 +2,7 @@ package util
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
@@ -29,17 +30,19 @@ type Config struct {
 
 // LoadConfig reads configuration from file or environment variables.
 func LoadConfig(path string) (config Config, err error) {
+	viper.SetConfigName(".")
 	viper.AddConfigPath(path)
-	viper.SetConfigName("app")
 	viper.SetConfigType("env")
 
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		return
+		return Config{}, fmt.Errorf("failed to read the config file: %w", err)
 	}
 
-	err = viper.Unmarshal(&config)
-	return
+	if err = viper.Unmarshal(&config); err != nil {
+		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+	return config, nil
 }

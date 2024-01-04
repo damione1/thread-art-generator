@@ -16,18 +16,19 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
 # Use a minimal alpine image to run the application
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+#RUN apk --nocache add ca-certificates
 
 WORKDIR /root/
 
-# Copy the pre-built binary file from the previous stage
+# Copy the pre-built binary file from the previous stage and environment variable file
 COPY --from=builder /app/main .
+COPY .env /root/.env
+COPY /pkg/db/migrations /migrations
 
 # Expose port 8080 for the API service
-EXPOSE 8080
+EXPOSE 9090
 
 # The ENTRYPOINT defines the initial command that gets executed when the container starts
-# In this case, we're leaving it flexible to be overridden by the CMD or `docker run` arguments
 ENTRYPOINT ["./main"]
 
 # Default command if no arguments are supplied to docker run
