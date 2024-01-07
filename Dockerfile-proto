@@ -1,4 +1,4 @@
-FROM golang:1.20.2
+FROM golang:1.21
 
 # Install required packages for generating proto files
 RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest

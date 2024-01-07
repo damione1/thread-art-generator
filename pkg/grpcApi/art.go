@@ -3,9 +3,9 @@ package grpcApi
 import (
 	"context"
 
-	"github.com/Damione1/thread-art-generator/pkg/pbx"
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
+	"github.com/Damione1/thread-art-generator/pkg/pbx"
 	"github.com/friendsofgo/errors"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
@@ -13,7 +13,7 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
-func (server *Server) CreatePost(ctx context.Context, req *pb.CreateArtRequest) (*pb.CreateArtResponse, error) {
+func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.CreateArtResponse, error) {
 	authorizeUserPayload, err := server.authorizeUser(ctx)
 	if err != nil {
 		return nil, unauthenticatedError(err)
@@ -28,12 +28,12 @@ func (server *Server) CreatePost(ctx context.Context, req *pb.CreateArtRequest) 
 		return nil, err
 	}
 	if user.Role != "admin" {
-		return nil, errors.Wrap(err, "Unsufficient permissions to create a post")
+		return nil, errors.Wrap(err, "Unsufficient permissions to create an art")
 	}
 
-	post := pbx.ProtoPostToDb(req.GetArt())
+	art := pbx.ProtoArtToDb(req.GetArt())
 
-	err = post.Insert(ctx, server.config.DB, boil.Infer())
+	err = art.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +47,14 @@ func validateCreateArtRequest(req *pb.CreateArtRequest) error {
 			validation.Required,
 			validation.By(
 				func(value interface{}) error {
-					return validatePost(value.(*pb.Art))
+					return validateArt(value.(*pb.Art))
 				},
 			),
 		),
 	)
 }
 
-func (server *Server) UpdatePost(ctx context.Context, req *pb.UpdateArtRequest) (*pb.UpdateArtResponse, error) {
+func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.UpdateArtResponse, error) {
 	if _, err := server.authorizeUser(ctx); err != nil {
 		return nil, unauthenticatedError(err)
 	}
@@ -63,15 +63,15 @@ func (server *Server) UpdatePost(ctx context.Context, req *pb.UpdateArtRequest) 
 		return nil, err
 	}
 
-	post := pbx.ProtoPostToDb(req.GetArt())
+	art := pbx.ProtoArtToDb(req.GetArt())
 
-	_, err := post.Update(ctx, server.config.DB, boil.Infer())
+	_, err := art.Update(ctx, server.config.DB, boil.Infer())
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.UpdateArtResponse{
-		Art: pbx.DbPostToProto(post),
+		Art: pbx.DbArtToProto(art),
 	}, nil
 }
 
@@ -81,21 +81,21 @@ func validateUpdateArtRequest(req *pb.UpdateArtRequest) error {
 			validation.Required,
 			validation.By(
 				func(value interface{}) error {
-					post := value.(*pb.Art)
-					return validation.ValidateStruct(post, validation.Field(&post.Id, validation.Required))
+					art := value.(*pb.Art)
+					return validation.ValidateStruct(art, validation.Field(&art.Id, validation.Required))
 				},
 			),
 			validation.By(
 				func(value interface{}) error {
-					return validatePost(value.(*pb.Art))
+					return validateArt(value.(*pb.Art))
 				},
 			),
 		),
 	)
 }
 
-func (server *Server) ListPosts(ctx context.Context, req *pb.ListArtRequest) (*pb.ListArtResponse, error) {
-	err := validateListPostsRequest(req)
+func (server *Server) ListArts(ctx context.Context, req *pb.ListArtRequest) (*pb.ListArtResponse, error) {
+	err := validateListArtsRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (server *Server) ListPosts(ctx context.Context, req *pb.ListArtRequest) (*p
 
 	offset := pageSize * pageToken
 
-	dbPosts, err := models.Posts(
+	dbArts, err := models.Arts(
 		qm.OrderBy("created_at desc"),
 		qm.Limit(pageSize),
 		qm.Offset(offset),
@@ -120,37 +120,37 @@ func (server *Server) ListPosts(ctx context.Context, req *pb.ListArtRequest) (*p
 		return nil, err
 	}
 
-	posts := make([]*pb.Art, 0, len(dbPosts))
-	for _, dbPost := range dbPosts {
-		posts = append(posts, pbx.DbPostToProto(dbPost))
+	arts := make([]*pb.Art, 0, len(dbArts))
+	for _, dbArt := range dbArts {
+		arts = append(arts, pbx.DbArtToProto(dbArt))
 	}
 
 	nextPageToken := 0
-	if len(dbPosts) == pageSize {
+	if len(dbArts) == pageSize {
 		nextPageToken = pageToken + 1
 	}
 
 	return &pb.ListArtResponse{
-		Arts:          posts,
+		Arts:          arts,
 		NextPageToken: int32(nextPageToken),
 	}, nil
 }
 
-func validateListPostsRequest(req *pb.ListArtRequest) error {
+func validateListArtsRequest(req *pb.ListArtRequest) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.PageSize, validation.Required, validation.Min(1), validation.Max(50)),
 		validation.Field(&req.PageToken, validation.Min(0)),
 	)
 }
 
-func (server *Server) GetPost(ctx context.Context, req *pb.GetArtRequest) (*pb.GetArtResponse, error) {
+func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.GetArtResponse, error) {
 	err := validateGetArtRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	// dbPost, err := models.Posts(
-	// 	models.PostWhere.ID.EQ(req.GetId()),
+	// dbArt, err := models.Arts(
+	// 	models.ArtWhere.ID.EQ(req.GetId()),
 	// ).One(ctx, server.config.DB)
 	// if err != nil {
 	// 	return nil, err
@@ -165,7 +165,7 @@ func validateGetArtRequest(req *pb.GetArtRequest) error {
 	)
 }
 
-func (server *Server) DeletePost(ctx context.Context, req *pb.DeleteArtRequest) (*pb.DeleteArtResponse, error) {
+func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (*pb.DeleteArtResponse, error) {
 	if _, err := server.authorizeUser(ctx); err != nil {
 		return nil, unauthenticatedError(err)
 	}
@@ -175,8 +175,8 @@ func (server *Server) DeletePost(ctx context.Context, req *pb.DeleteArtRequest) 
 		return nil, err
 	}
 
-	_, err = models.Posts(
-		models.PostWhere.ID.EQ(req.GetId()),
+	_, err = models.Arts(
+		models.ArtWhere.ID.EQ(req.GetId()),
 	).DeleteAll(ctx, server.config.DB)
 	if err != nil {
 		return nil, err
@@ -191,8 +191,8 @@ func validateDeleteArtRequest(req *pb.DeleteArtRequest) error {
 	)
 }
 
-func validatePost(post *pb.Art) error {
-	return validation.ValidateStruct(post,
-		validation.Field(&post.Title, validation.Required, validation.Length(1, 255)),
+func validateArt(art *pb.Art) error {
+	return validation.ValidateStruct(art,
+		validation.Field(&art.Title, validation.Required, validation.Length(1, 255)),
 	)
 }

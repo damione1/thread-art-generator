@@ -23,12 +23,12 @@ services:
   #   depends_on:
   #     - rabbitmq
 
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - '80:80'
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile-frontend
+    ports:
+      - '80:80'
   db:
     image: postgres:latest
     ports:
