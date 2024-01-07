@@ -6,7 +6,7 @@ import "post.proto";
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-option go_package = "portfolio-playground/pkg/proto;pb";
+option go_package = "thread-art-generator/pkg/proto;pb";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -46,7 +46,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   }
 };
 
-service PortfolioService {
+service ArtGeneratorService {
   rpc LoginUser (LoginRequest) returns (LoginResponse) {
     option (google.api.http) = {
       post: "/v1/user/login"

@@ -3,7 +3,7 @@ syntax = "proto3";
 package pb;
 import "google/protobuf/timestamp.proto";
 
-option go_package = "portfolio-playground/pkg/proto;pb";
+option go_package = "thread-art-generator/pkg/proto;pb";
 
 
 message User {

@@ -11,9 +11,6 @@
   },
   "tags": [
     {
-      "name": "PortfolioService"
-    },
-    {
       "name": "Authentication",
       "description": "Endpoints for authentication"
     },
@@ -24,6 +21,9 @@
     {
       "name": "Arts",
       "description": "Endpoints for art management"
+    },
+    {
+      "name": "PortfolioService"
     }
   ],
   "consumes": [

@@ -3,7 +3,7 @@ package grpcApi
 import (
 	"context"
 
-	"github.com/Damione1/portfolio-playground/pkg/pbx"
+	"github.com/Damione1/thread-art-generator/pkg/pbx"
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
 	"github.com/friendsofgo/errors"

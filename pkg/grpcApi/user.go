@@ -43,7 +43,7 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
 	}
 
-	user := models.User{
+	user := &models.User{
 		Email:    req.GetEmail(),
 		Password: hashedPassword,
 		Name:     req.GetName(),
@@ -57,7 +57,7 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		return nil, status.Errorf(codes.Internal, "failed to insert user: %s", err)
 	}
 
-	pbUser := pbx.DbUserToProto(&user)
+	pbUser := pbx.DbUserToProto(user)
 
 	return &pb.CreateUserResponse{
 		User: pbUser,
