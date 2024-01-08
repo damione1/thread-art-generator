@@ -23,12 +23,18 @@ services:
   #   depends_on:
   #     - rabbitmq
 
-  frontend:
+  front-end:
     build:
-      context: .
-      dockerfile: Dockerfile-frontend
+      context: frontend
+    container_name: front-end
+    working_dir: /usr/src/app
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    tty: true
     ports:
-      - '80:80'
+      - "5173:5173"
+    command: npm run dev
   db:
     image: postgres:latest
     ports:
@@ -84,14 +90,24 @@ services:
   #     - '15672:15672'
   #     - '5672:5672'
 
-  proto-generator:
+  go-proto-generator:
     build:
       context: .
       dockerfile: Dockerfile-proto
-    command: make build-proto
+    command: make build-go-proto
     volumes:
       - ./:/app
-    container_name: proto-generator
+    container_name: go-proto-generator
+    profiles:
+    - manual
+  web-proto-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile-proto
+    command: make build-web-proto
+    volumes:
+      - ./:/app
+    container_name: web-proto-generator
     profiles:
     - manual
 

@@ -1,5 +1,5 @@
 import { lazy, useEffect, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useNavigate } from 'react-router-dom';
 
 import ECommerce from './pages/Dashboard/ECommerce';
 import Analytics from './pages/Dashboard/Analytics';
@@ -52,9 +52,12 @@ const DefaultLayout = lazy(() => import('./layout/DefaultLayout'));
 
 function App() {
   const [loading, setLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
+    const token = localStorage.getItem('loginToken');
+    if (!token) navigate('/auth/signin');
   }, []);
 
   return loading ? (

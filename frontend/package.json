@@ -4,7 +4,7 @@
   "version": "1.0.7",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -19,6 +19,8 @@
     "jsvectormap": "^1.5.1",
     "localforage": "^1.10.0",
     "match-sorter": "^6.3.1",
+    "protoc-gen-grpc-web": "^1.4.2",
+    "protoc-gen-ts": "^0.8.7",
     "react": "^18.2.0",
     "react-apexcharts": "^1.4.0",
     "react-dom": "^18.2.0",
@@ -26,7 +28,8 @@
     "react-router-dom": "^6.8.1",
     "react-table": "^7.8.0",
     "sort-by": "^0.0.2",
-    "swiper": "^9.2.0"
+    "swiper": "^9.2.0",
+    "ts-proto": "^1.166.2"
   },
   "devDependencies": {
     "@types/react": "^18.0.27",

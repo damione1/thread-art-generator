@@ -4,7 +4,39 @@ import Breadcrumb from '../../components/Breadcrumbs/Breadcrumb';
 import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
 
+import { LoginRequest, User } from '../../pb/user'; // import protobuf files
+import { UserSvcClient } from '../../pb/services'; // import protobuf Service Client
+
+
 const SignIn: React.FC = () => {
+
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const service = new UserSvcClient('<your_grpc_server_endpoint>');
+
+  const handleSignIn = async () => {
+    const request = new LoginRequest();
+    request.setEmail(username);
+    request.setPassword(password);
+
+    // With metadata support, you can pass headers.
+    const metadata = {'custom-header-1': 'value1'};
+
+    const response = await service.login(request, metadata);
+    const user = response.getUser();
+    const token = response.getAccessToken();
+
+    if (response.getSessionId()) {
+      localStorage.setItem('sessionId', response.getSessionId());
+    }
+
+    localStorage.setItem('accessToken', token);
+    // do the same for the refreshToken, accessTokenExpiresTime, refreshTokenExpiresTime.
+
+    console.log(user.toObject()); // all fields are now JavaScript camel-case
+  };
+
+
   return (
     <>
       <Breadcrumb pageName="Sign In" />
