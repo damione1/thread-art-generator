@@ -1,0 +1,15 @@
+# Build stage for service 1
+FROM golang:latest AS builder1
+WORKDIR /app/api
+COPY go.mod go.sum ./
+RUN go mod download
+COPY ./api/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o cmd/api/main .
+
+# Build stage for service 2
+FROM golang:latest AS builder2
+WORKDIR /app/migrations
+COPY ./migrations/go.mod ./migrations/go.sum ./
+RUN go mod download
+COPY ./migrations/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o cmd/migrations/main .

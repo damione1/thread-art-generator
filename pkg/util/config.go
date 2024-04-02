@@ -12,7 +12,6 @@ import (
 // The values are read by viper from a config file or environment variable.
 type Config struct {
 	Environment          string        `mapstructure:"ENVIRONMENT"`
-	MigrationPath        string        `mapstructure:"MIGRATION_PATH"`
 	HTTPServerAddress    string        `mapstructure:"HTTP_SERVER_ADDRESS"`
 	GRPCServerAddress    string        `mapstructure:"GRPC_SERVER_ADDRESS"`
 	TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
@@ -29,17 +28,23 @@ type Config struct {
 }
 
 // LoadConfig reads configuration from file or environment variables.
-func LoadConfig(path string) (config Config, err error) {
-	viper.SetConfigName(".")
-	viper.AddConfigPath(path)
-	viper.SetConfigType("env")
-
+func LoadConfig() (config Config, err error) {
 	viper.AutomaticEnv()
 
-	err = viper.ReadInConfig()
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to read the config file: %w", err)
-	}
+	viper.BindEnv("ENVIRONMENT")
+	viper.BindEnv("MIGRATION_PATH")
+	viper.BindEnv("HTTP_SERVER_ADDRESS")
+	viper.BindEnv("GRPC_SERVER_ADDRESS")
+	viper.BindEnv("TOKEN_SYMMETRIC_KEY")
+	viper.BindEnv("ACCESS_TOKEN_DURATION")
+	viper.BindEnv("REFRESH_TOKEN_DURATION")
+	viper.BindEnv("EMAIL_SENDER_NAME")
+	viper.BindEnv("EMAIL_SENDER_ADDRESS")
+	viper.BindEnv("EMAIL_SENDER_PASSWORD")
+	viper.BindEnv("POSTGRES_USER")
+	viper.BindEnv("POSTGRES_PASSWORD")
+	viper.BindEnv("POSTGRES_DB")
+	viper.BindEnv("ADMIN_EMAIL")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)

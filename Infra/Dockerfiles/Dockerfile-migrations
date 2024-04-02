@@ -1,0 +1,44 @@
+# This Dockerfile is used to build a container image for running database migrations.
+# It consists of two stages: a builder stage and a runtime stage.
+
+# Builder Stage
+# Use the golang:1.22-bullseye base image as the builder stage.
+FROM golang:1.22-bullseye as builder
+
+# Set the working directory inside the container to /app.
+WORKDIR /app
+
+# Copy the go.mod and go.sum files to the working directory.
+COPY go.mod .
+COPY go.sum .
+
+# Download the Go module dependencies.
+RUN go mod download
+
+# Copy the entire project directory to the working directory.
+COPY . .
+
+# Set the GOCACHE environment variable to /root/.cache/go-build.
+ENV GOCACHE=/root/.cache/go-build
+
+# Build the application binary using the go build command.
+RUN --mount=type=cache,target="/root/.cache/go-build" go build -o app ./cmd/migrations
+
+# Runtime Stage
+# Use the ubuntu:22.04 base image as the runtime stage.
+FROM ubuntu:22.04
+
+# Create a directory named /app inside the container.
+RUN mkdir /app
+
+# Set the working directory inside the container to /app.
+WORKDIR /app
+
+# Copy the application binary from the builder stage to the /app directory in the runtime stage.
+COPY --from=builder /app/app .
+
+# Copy the database migration scripts from the project directory to the /app/migrations directory in the runtime stage.
+COPY /pkg/db/migrations /app/migrations
+
+# Set the entrypoint of the container to execute the application binary.
+ENTRYPOINT ["./app"]
