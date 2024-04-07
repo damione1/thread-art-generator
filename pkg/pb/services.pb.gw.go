@@ -31,7 +31,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
-func request_PortfolioService_LoginUser_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_LoginUser_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq LoginRequest
 	var metadata runtime.ServerMetadata
 
@@ -44,7 +44,7 @@ func request_PortfolioService_LoginUser_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_PortfolioService_LoginUser_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_LoginUser_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq LoginRequest
 	var metadata runtime.ServerMetadata
 
@@ -57,7 +57,7 @@ func local_request_PortfolioService_LoginUser_0(ctx context.Context, marshaler r
 
 }
 
-func request_PortfolioService_LogoutUser_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_LogoutUser_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq LogoutRequest
 	var metadata runtime.ServerMetadata
 
@@ -70,7 +70,7 @@ func request_PortfolioService_LogoutUser_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_PortfolioService_LogoutUser_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_LogoutUser_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq LogoutRequest
 	var metadata runtime.ServerMetadata
 
@@ -83,7 +83,7 @@ func local_request_PortfolioService_LogoutUser_0(ctx context.Context, marshaler 
 
 }
 
-func request_PortfolioService_RefreshToken_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_RefreshToken_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq RefreshTokenRequest
 	var metadata runtime.ServerMetadata
 
@@ -96,7 +96,7 @@ func request_PortfolioService_RefreshToken_0(ctx context.Context, marshaler runt
 
 }
 
-func local_request_PortfolioService_RefreshToken_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_RefreshToken_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq RefreshTokenRequest
 	var metadata runtime.ServerMetadata
 
@@ -109,7 +109,7 @@ func local_request_PortfolioService_RefreshToken_0(ctx context.Context, marshale
 
 }
 
-func request_PortfolioService_CreateUser_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_CreateUser_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CreateUserRequest
 	var metadata runtime.ServerMetadata
 
@@ -122,7 +122,7 @@ func request_PortfolioService_CreateUser_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_PortfolioService_CreateUser_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_CreateUser_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CreateUserRequest
 	var metadata runtime.ServerMetadata
 
@@ -135,7 +135,7 @@ func local_request_PortfolioService_CreateUser_0(ctx context.Context, marshaler 
 
 }
 
-func request_PortfolioService_UpdateUser_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_UpdateUser_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq UpdateUserRequest
 	var metadata runtime.ServerMetadata
 
@@ -148,7 +148,7 @@ func request_PortfolioService_UpdateUser_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_PortfolioService_UpdateUser_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_UpdateUser_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq UpdateUserRequest
 	var metadata runtime.ServerMetadata
 
@@ -161,7 +161,7 @@ func local_request_PortfolioService_UpdateUser_0(ctx context.Context, marshaler 
 
 }
 
-func request_PortfolioService_GetUser_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_GetUser_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetUserRequest
 	var metadata runtime.ServerMetadata
 
@@ -187,7 +187,7 @@ func request_PortfolioService_GetUser_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_PortfolioService_GetUser_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_GetUser_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetUserRequest
 	var metadata runtime.ServerMetadata
 
@@ -213,7 +213,7 @@ func local_request_PortfolioService_GetUser_0(ctx context.Context, marshaler run
 
 }
 
-func request_PortfolioService_ResetPassword_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_ResetPassword_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ResetPasswordRequest
 	var metadata runtime.ServerMetadata
 
@@ -226,7 +226,7 @@ func request_PortfolioService_ResetPassword_0(ctx context.Context, marshaler run
 
 }
 
-func local_request_PortfolioService_ResetPassword_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_ResetPassword_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ResetPasswordRequest
 	var metadata runtime.ServerMetadata
 
@@ -239,7 +239,7 @@ func local_request_PortfolioService_ResetPassword_0(ctx context.Context, marshal
 
 }
 
-func request_PortfolioService_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChangePasswordRequest
 	var metadata runtime.ServerMetadata
 
@@ -252,7 +252,7 @@ func request_PortfolioService_ChangePassword_0(ctx context.Context, marshaler ru
 
 }
 
-func local_request_PortfolioService_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_ChangePassword_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ChangePasswordRequest
 	var metadata runtime.ServerMetadata
 
@@ -265,7 +265,7 @@ func local_request_PortfolioService_ChangePassword_0(ctx context.Context, marsha
 
 }
 
-func request_PortfolioService_CreateArt_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_CreateArt_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CreateArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -278,7 +278,7 @@ func request_PortfolioService_CreateArt_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_PortfolioService_CreateArt_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_CreateArt_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CreateArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -291,7 +291,7 @@ func local_request_PortfolioService_CreateArt_0(ctx context.Context, marshaler r
 
 }
 
-func request_PortfolioService_UpdateArt_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_UpdateArt_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq UpdateArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -304,7 +304,7 @@ func request_PortfolioService_UpdateArt_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_PortfolioService_UpdateArt_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_UpdateArt_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq UpdateArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -317,7 +317,7 @@ func local_request_PortfolioService_UpdateArt_0(ctx context.Context, marshaler r
 
 }
 
-func request_PortfolioService_GetArt_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_GetArt_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -343,7 +343,7 @@ func request_PortfolioService_GetArt_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_PortfolioService_GetArt_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_GetArt_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -369,7 +369,7 @@ func local_request_PortfolioService_GetArt_0(ctx context.Context, marshaler runt
 
 }
 
-func request_PortfolioService_ListArts_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_ListArts_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -382,7 +382,7 @@ func request_PortfolioService_ListArts_0(ctx context.Context, marshaler runtime.
 
 }
 
-func local_request_PortfolioService_ListArts_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_ListArts_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -395,7 +395,7 @@ func local_request_PortfolioService_ListArts_0(ctx context.Context, marshaler ru
 
 }
 
-func request_PortfolioService_DeleteArt_0(ctx context.Context, marshaler runtime.Marshaler, client PortfolioServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_ArtGeneratorService_DeleteArt_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -421,7 +421,7 @@ func request_PortfolioService_DeleteArt_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_PortfolioService_DeleteArt_0(ctx context.Context, marshaler runtime.Marshaler, server PortfolioServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_ArtGeneratorService_DeleteArt_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteArtRequest
 	var metadata runtime.ServerMetadata
 
@@ -447,13 +447,13 @@ func local_request_PortfolioService_DeleteArt_0(ctx context.Context, marshaler r
 
 }
 
-// RegisterPortfolioServiceHandlerServer registers the http handlers for service PortfolioService to "mux".
-// UnaryRPC     :call PortfolioServiceServer directly.
+// RegisterArtGeneratorServiceHandlerServer registers the http handlers for service ArtGeneratorService to "mux".
+// UnaryRPC     :call ArtGeneratorServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterPortfolioServiceHandlerFromEndpoint instead.
-func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server PortfolioServiceServer) error {
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterArtGeneratorServiceHandlerFromEndpoint instead.
+func RegisterArtGeneratorServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ArtGeneratorServiceServer) error {
 
-	mux.Handle("POST", pattern_PortfolioService_LoginUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_LoginUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -461,12 +461,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/LoginUser", runtime.WithHTTPPathPattern("/v1/user/login"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/LoginUser", runtime.WithHTTPPathPattern("/v1/user/login"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_LoginUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_LoginUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -474,11 +474,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_LoginUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_LoginUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_LogoutUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_LogoutUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -486,12 +486,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/LogoutUser", runtime.WithHTTPPathPattern("/v1/user/logout"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/LogoutUser", runtime.WithHTTPPathPattern("/v1/user/logout"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_LogoutUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_LogoutUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -499,11 +499,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_LogoutUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_LogoutUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_RefreshToken_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_RefreshToken_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -511,12 +511,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/RefreshToken", runtime.WithHTTPPathPattern("/v1/user/refresh"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/RefreshToken", runtime.WithHTTPPathPattern("/v1/user/refresh"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_RefreshToken_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_RefreshToken_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -524,11 +524,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_RefreshToken_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_RefreshToken_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_CreateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_CreateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -536,12 +536,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/CreateUser", runtime.WithHTTPPathPattern("/v1/user/create"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/CreateUser", runtime.WithHTTPPathPattern("/v1/user/create"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_CreateUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_CreateUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -549,11 +549,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_CreateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_CreateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("PUT", pattern_PortfolioService_UpdateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("PUT", pattern_ArtGeneratorService_UpdateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -561,12 +561,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/UpdateUser", runtime.WithHTTPPathPattern("/v1/user/update"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/UpdateUser", runtime.WithHTTPPathPattern("/v1/user/update"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_UpdateUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_UpdateUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -574,11 +574,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_UpdateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_UpdateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_PortfolioService_GetUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_ArtGeneratorService_GetUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -586,12 +586,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/GetUser", runtime.WithHTTPPathPattern("/v1/user/get/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/GetUser", runtime.WithHTTPPathPattern("/v1/user/get/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_GetUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_GetUser_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -599,11 +599,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_GetUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_GetUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_ResetPassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_ResetPassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -611,12 +611,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/ResetPassword", runtime.WithHTTPPathPattern("/v1/user/reset"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/ResetPassword", runtime.WithHTTPPathPattern("/v1/user/reset"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_ResetPassword_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_ResetPassword_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -624,11 +624,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_ResetPassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_ResetPassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_ChangePassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_ChangePassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -636,12 +636,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/ChangePassword", runtime.WithHTTPPathPattern("/v1/user/change"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/ChangePassword", runtime.WithHTTPPathPattern("/v1/user/change"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_ChangePassword_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_ChangePassword_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -649,11 +649,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_ChangePassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_ChangePassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_CreateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_CreateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -661,12 +661,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/CreateArt", runtime.WithHTTPPathPattern("/v1/art/create"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/CreateArt", runtime.WithHTTPPathPattern("/v1/art/create"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_CreateArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_CreateArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -674,11 +674,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_CreateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_CreateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("PUT", pattern_PortfolioService_UpdateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("PUT", pattern_ArtGeneratorService_UpdateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -686,12 +686,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/UpdateArt", runtime.WithHTTPPathPattern("/v1/art/update"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/UpdateArt", runtime.WithHTTPPathPattern("/v1/art/update"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_UpdateArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_UpdateArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -699,11 +699,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_UpdateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_UpdateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_PortfolioService_GetArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_ArtGeneratorService_GetArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -711,12 +711,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/GetArt", runtime.WithHTTPPathPattern("/v1/art/get/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/GetArt", runtime.WithHTTPPathPattern("/v1/art/get/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_GetArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_GetArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -724,11 +724,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_GetArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_GetArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_ListArts_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_ListArts_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -736,12 +736,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/ListArts", runtime.WithHTTPPathPattern("/v1/art/list"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/ListArts", runtime.WithHTTPPathPattern("/v1/art/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_ListArts_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_ListArts_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -749,11 +749,11 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_ListArts_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_ListArts_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("DELETE", pattern_PortfolioService_DeleteArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("DELETE", pattern_ArtGeneratorService_DeleteArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -761,12 +761,12 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.PortfolioService/DeleteArt", runtime.WithHTTPPathPattern("/v1/art/delete/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/DeleteArt", runtime.WithHTTPPathPattern("/v1/art/delete/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_PortfolioService_DeleteArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ArtGeneratorService_DeleteArt_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -774,16 +774,16 @@ func RegisterPortfolioServiceHandlerServer(ctx context.Context, mux *runtime.Ser
 			return
 		}
 
-		forward_PortfolioService_DeleteArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_DeleteArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
 	return nil
 }
 
-// RegisterPortfolioServiceHandlerFromEndpoint is same as RegisterPortfolioServiceHandler but
+// RegisterArtGeneratorServiceHandlerFromEndpoint is same as RegisterArtGeneratorServiceHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterPortfolioServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterArtGeneratorServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.DialContext(ctx, endpoint, opts...)
 	if err != nil {
 		return err
@@ -803,305 +803,305 @@ func RegisterPortfolioServiceHandlerFromEndpoint(ctx context.Context, mux *runti
 		}()
 	}()
 
-	return RegisterPortfolioServiceHandler(ctx, mux, conn)
+	return RegisterArtGeneratorServiceHandler(ctx, mux, conn)
 }
 
-// RegisterPortfolioServiceHandler registers the http handlers for service PortfolioService to "mux".
+// RegisterArtGeneratorServiceHandler registers the http handlers for service ArtGeneratorService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterPortfolioServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterPortfolioServiceHandlerClient(ctx, mux, NewPortfolioServiceClient(conn))
+func RegisterArtGeneratorServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterArtGeneratorServiceHandlerClient(ctx, mux, NewArtGeneratorServiceClient(conn))
 }
 
-// RegisterPortfolioServiceHandlerClient registers the http handlers for service PortfolioService
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "PortfolioServiceClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "PortfolioServiceClient"
+// RegisterArtGeneratorServiceHandlerClient registers the http handlers for service ArtGeneratorService
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "ArtGeneratorServiceClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "ArtGeneratorServiceClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "PortfolioServiceClient" to call the correct interceptors.
-func RegisterPortfolioServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client PortfolioServiceClient) error {
+// "ArtGeneratorServiceClient" to call the correct interceptors.
+func RegisterArtGeneratorServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ArtGeneratorServiceClient) error {
 
-	mux.Handle("POST", pattern_PortfolioService_LoginUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_LoginUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/LoginUser", runtime.WithHTTPPathPattern("/v1/user/login"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/LoginUser", runtime.WithHTTPPathPattern("/v1/user/login"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_LoginUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_LoginUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_LoginUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_LoginUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_LogoutUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_LogoutUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/LogoutUser", runtime.WithHTTPPathPattern("/v1/user/logout"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/LogoutUser", runtime.WithHTTPPathPattern("/v1/user/logout"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_LogoutUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_LogoutUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_LogoutUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_LogoutUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_RefreshToken_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_RefreshToken_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/RefreshToken", runtime.WithHTTPPathPattern("/v1/user/refresh"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/RefreshToken", runtime.WithHTTPPathPattern("/v1/user/refresh"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_RefreshToken_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_RefreshToken_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_RefreshToken_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_RefreshToken_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_CreateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_CreateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/CreateUser", runtime.WithHTTPPathPattern("/v1/user/create"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/CreateUser", runtime.WithHTTPPathPattern("/v1/user/create"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_CreateUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_CreateUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_CreateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_CreateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("PUT", pattern_PortfolioService_UpdateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("PUT", pattern_ArtGeneratorService_UpdateUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/UpdateUser", runtime.WithHTTPPathPattern("/v1/user/update"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/UpdateUser", runtime.WithHTTPPathPattern("/v1/user/update"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_UpdateUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_UpdateUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_UpdateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_UpdateUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_PortfolioService_GetUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_ArtGeneratorService_GetUser_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/GetUser", runtime.WithHTTPPathPattern("/v1/user/get/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/GetUser", runtime.WithHTTPPathPattern("/v1/user/get/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_GetUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_GetUser_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_GetUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_GetUser_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_ResetPassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_ResetPassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/ResetPassword", runtime.WithHTTPPathPattern("/v1/user/reset"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/ResetPassword", runtime.WithHTTPPathPattern("/v1/user/reset"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_ResetPassword_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_ResetPassword_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_ResetPassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_ResetPassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_ChangePassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_ChangePassword_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/ChangePassword", runtime.WithHTTPPathPattern("/v1/user/change"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/ChangePassword", runtime.WithHTTPPathPattern("/v1/user/change"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_ChangePassword_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_ChangePassword_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_ChangePassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_ChangePassword_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_CreateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_CreateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/CreateArt", runtime.WithHTTPPathPattern("/v1/art/create"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/CreateArt", runtime.WithHTTPPathPattern("/v1/art/create"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_CreateArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_CreateArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_CreateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_CreateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("PUT", pattern_PortfolioService_UpdateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("PUT", pattern_ArtGeneratorService_UpdateArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/UpdateArt", runtime.WithHTTPPathPattern("/v1/art/update"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/UpdateArt", runtime.WithHTTPPathPattern("/v1/art/update"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_UpdateArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_UpdateArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_UpdateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_UpdateArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_PortfolioService_GetArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_ArtGeneratorService_GetArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/GetArt", runtime.WithHTTPPathPattern("/v1/art/get/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/GetArt", runtime.WithHTTPPathPattern("/v1/art/get/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_GetArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_GetArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_GetArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_GetArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("POST", pattern_PortfolioService_ListArts_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ArtGeneratorService_ListArts_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/ListArts", runtime.WithHTTPPathPattern("/v1/art/list"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/ListArts", runtime.WithHTTPPathPattern("/v1/art/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_ListArts_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_ListArts_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_ListArts_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_ListArts_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("DELETE", pattern_PortfolioService_DeleteArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("DELETE", pattern_ArtGeneratorService_DeleteArt_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.PortfolioService/DeleteArt", runtime.WithHTTPPathPattern("/v1/art/delete/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/DeleteArt", runtime.WithHTTPPathPattern("/v1/art/delete/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_PortfolioService_DeleteArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ArtGeneratorService_DeleteArt_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_PortfolioService_DeleteArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ArtGeneratorService_DeleteArt_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1109,57 +1109,57 @@ func RegisterPortfolioServiceHandlerClient(ctx context.Context, mux *runtime.Ser
 }
 
 var (
-	pattern_PortfolioService_LoginUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "login"}, ""))
+	pattern_ArtGeneratorService_LoginUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "login"}, ""))
 
-	pattern_PortfolioService_LogoutUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "logout"}, ""))
+	pattern_ArtGeneratorService_LogoutUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "logout"}, ""))
 
-	pattern_PortfolioService_RefreshToken_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "refresh"}, ""))
+	pattern_ArtGeneratorService_RefreshToken_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "refresh"}, ""))
 
-	pattern_PortfolioService_CreateUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "create"}, ""))
+	pattern_ArtGeneratorService_CreateUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "create"}, ""))
 
-	pattern_PortfolioService_UpdateUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "update"}, ""))
+	pattern_ArtGeneratorService_UpdateUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "update"}, ""))
 
-	pattern_PortfolioService_GetUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "user", "get", "id"}, ""))
+	pattern_ArtGeneratorService_GetUser_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "user", "get", "id"}, ""))
 
-	pattern_PortfolioService_ResetPassword_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "reset"}, ""))
+	pattern_ArtGeneratorService_ResetPassword_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "reset"}, ""))
 
-	pattern_PortfolioService_ChangePassword_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "change"}, ""))
+	pattern_ArtGeneratorService_ChangePassword_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "user", "change"}, ""))
 
-	pattern_PortfolioService_CreateArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "art", "create"}, ""))
+	pattern_ArtGeneratorService_CreateArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "art", "create"}, ""))
 
-	pattern_PortfolioService_UpdateArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "art", "update"}, ""))
+	pattern_ArtGeneratorService_UpdateArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "art", "update"}, ""))
 
-	pattern_PortfolioService_GetArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "art", "get", "id"}, ""))
+	pattern_ArtGeneratorService_GetArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "art", "get", "id"}, ""))
 
-	pattern_PortfolioService_ListArts_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "art", "list"}, ""))
+	pattern_ArtGeneratorService_ListArts_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "art", "list"}, ""))
 
-	pattern_PortfolioService_DeleteArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "art", "delete", "id"}, ""))
+	pattern_ArtGeneratorService_DeleteArt_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "art", "delete", "id"}, ""))
 )
 
 var (
-	forward_PortfolioService_LoginUser_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_LoginUser_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_LogoutUser_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_LogoutUser_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_RefreshToken_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_RefreshToken_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_CreateUser_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_CreateUser_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_UpdateUser_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_UpdateUser_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_GetUser_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_GetUser_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_ResetPassword_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_ResetPassword_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_ChangePassword_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_ChangePassword_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_CreateArt_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_CreateArt_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_UpdateArt_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_UpdateArt_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_GetArt_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_GetArt_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_ListArts_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_ListArts_0 = runtime.ForwardResponseMessage
 
-	forward_PortfolioService_DeleteArt_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_DeleteArt_0 = runtime.ForwardResponseMessage
 )

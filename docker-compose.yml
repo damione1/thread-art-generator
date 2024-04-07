@@ -11,6 +11,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
   api:
     build:
       context: .
@@ -22,37 +23,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      HTTP_SERVER_ADDRESS: ${HTTP_SERVER_ADDRESS}
-      GRPC_SERVER_ADDRESS: ${GRPC_SERVER_ADDRESS}
+      HTTP_SERVER_PORT: ${HTTP_SERVER_PORT}
+      GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
       TOKEN_SYMMETRIC_KEY: ${TOKEN_SYMMETRIC_KEY}
     depends_on:
       - db
       - migrations
-
-  # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: worker  # Overriding the default CMD in the Dockerfile
-  #   ports:
-  #     - '8080:8080'
-  #   environment:
-  #     - QUEUE_HOST=rabbitmq
-  #   depends_on:
-  #     - rabbitmq
-
-  # front-end:
-  #   build:
-  #     context: frontend
-  #   container_name: front-end
-  #   working_dir: /usr/src/app
-  #   volumes:
-  #     - ./frontend:/usr/src/app
-  #     - /usr/src/app/node_modules
-  #   tty: true
-  #   ports:
-  #     - "5173:5173"
-  #   command: npm run dev
   db:
     image: postgres:latest
     ports:
@@ -69,6 +45,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
   adminer:
     image: adminer:latest
     restart: always
@@ -92,8 +69,6 @@ services:
     command: make build-go-proto
     volumes:
       - ./:/app
-    profiles:
-      - manual
 
   web-proto-generator:
     build:
@@ -103,28 +78,49 @@ services:
     volumes:
       - ./:/app
     container_name: web-proto-generator
-    profiles:
-      - manual
 
   generate-models:
     build:
       context: .
-      dockerfile: Dockerfile-db-models
+      dockerfile: Infra/Dockerfiles/Dockerfile-db-models
     depends_on:
       - db
+      - migrations
     command: sqlboiler psql --add-global-variants --wipe
     volumes:
       - ./:/app
     container_name: "generate-models"
     restart: "no"
-    profiles:
-      - manual
     environment:
       PSQL_DBNAME: ${POSTGRES_DB}
       PSQL_USER: ${POSTGRES_USER}
       PSQL_PASSWORD: ${POSTGRES_PASSWORD}
       PSQL_HOST: db
 
+    # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command: worker  # Overriding the default CMD in the Dockerfile
+  #   ports:
+  #     - '8080:8080'
+  #   environment:
+  #     - QUEUE_HOST=rabbitmq
+  #   depends_on:
+  #     - rabbitmq
+
+  # front-end:
+  #   build:
+  #     context: frontend
+  #   container_name: front-end
+  #   working_dir: /usr/src/app
+  #   volumes:
+  #     - ./frontend:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   tty: true
+  #   ports:
+  #     - "5173:5173"
+  #   command: npm run dev
   # rabbitmq:
   #   image: rabbitmq:management
   #   ports:

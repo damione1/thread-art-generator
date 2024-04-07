@@ -9,7 +9,7 @@ import (
 )
 
 type Server struct {
-	pb.UnimplementedPortfolioServiceServer
+	pb.UnimplementedArtGeneratorServiceServer
 	config     util.Config
 	tokenMaker token.Maker
 }

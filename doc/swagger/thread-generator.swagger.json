@@ -23,7 +23,7 @@
       "description": "Endpoints for art management"
     },
     {
-      "name": "PortfolioService"
+      "name": "ArtGeneratorService"
     }
   ],
   "consumes": [
@@ -37,7 +37,7 @@
       "post": {
         "summary": "Create a new art",
         "description": "Create a new art to the system.",
-        "operationId": "PortfolioService_CreateArt",
+        "operationId": "ArtGeneratorService_CreateArt",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -71,7 +71,7 @@
       "delete": {
         "summary": "Delete an art",
         "description": "Remove a specific art from the system.",
-        "operationId": "PortfolioService_DeleteArt",
+        "operationId": "ArtGeneratorService_DeleteArt",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -104,7 +104,7 @@
       "get": {
         "summary": "Get a arts's information",
         "description": "Retrieve information for a specific art by its ID.",
-        "operationId": "PortfolioService_GetArt",
+        "operationId": "ArtGeneratorService_GetArt",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -138,7 +138,7 @@
       "post": {
         "summary": "List all arts",
         "description": "Retrieve a list of all arts in the system.",
-        "operationId": "PortfolioService_ListArts",
+        "operationId": "ArtGeneratorService_ListArts",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -173,7 +173,7 @@
       "put": {
         "summary": "Update a post's information",
         "description": "Modify the information of a specific art.",
-        "operationId": "PortfolioService_UpdateArt",
+        "operationId": "ArtGeneratorService_UpdateArt",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -207,7 +207,7 @@
       "post": {
         "summary": "Change a user's password",
         "description": "Update the password of a specific user.",
-        "operationId": "PortfolioService_ChangePassword",
+        "operationId": "ArtGeneratorService_ChangePassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -241,7 +241,7 @@
       "post": {
         "summary": "Create a new user",
         "description": "Add a new user to the system with the provided information.",
-        "operationId": "PortfolioService_CreateUser",
+        "operationId": "ArtGeneratorService_CreateUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -276,7 +276,7 @@
       "get": {
         "summary": "Get a user's information",
         "description": "Retrieve information for a specific user by their ID.",
-        "operationId": "PortfolioService_GetUser",
+        "operationId": "ArtGeneratorService_GetUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -310,7 +310,7 @@
       "post": {
         "summary": "Log in a user",
         "description": "Authenticate a user with their email and password and return an access token.",
-        "operationId": "PortfolioService_LoginUser",
+        "operationId": "ArtGeneratorService_LoginUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -345,7 +345,7 @@
       "post": {
         "summary": "Log out a user",
         "description": "Revoke the access token of a logged-in user.",
-        "operationId": "PortfolioService_LogoutUser",
+        "operationId": "ArtGeneratorService_LogoutUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -379,7 +379,7 @@
       "post": {
         "summary": "Refresh an access token",
         "description": "Refresh an expired access token using a refresh token.",
-        "operationId": "PortfolioService_RefreshToken",
+        "operationId": "ArtGeneratorService_RefreshToken",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -414,7 +414,7 @@
       "post": {
         "summary": "Reset a user's password",
         "description": "Send a password reset email to a user's registered email address.",
-        "operationId": "PortfolioService_ResetPassword",
+        "operationId": "ArtGeneratorService_ResetPassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -449,7 +449,7 @@
       "put": {
         "summary": "Update a user's information",
         "description": "Modify the information of a specific user.",
-        "operationId": "PortfolioService_UpdateUser",
+        "operationId": "ArtGeneratorService_UpdateUser",
         "responses": {
           "200": {
             "description": "A successful response.",

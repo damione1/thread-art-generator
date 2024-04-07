@@ -13,7 +13,7 @@ import (
 )
 
 func ConnectDb(config *util.Config) (*sql.DB, error) {
-	log.Log().Msg("🥝 Connecting to database..." + config.PostgresUser + " " + config.PostgresPassword + " " + config.PostgresDb)
+	log.Log().Msg("🥝 Connecting to database...")
 	db, err := sql.Open("postgres", fmt.Sprintf(
 		"host=db user=%s password=%s dbname=%s TimeZone=America/New_York sslmode=disable",
 		config.PostgresUser,

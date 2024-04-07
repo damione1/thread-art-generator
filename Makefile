@@ -12,7 +12,7 @@ restart:
 
 
 .PHONY: build-go-proto
-build-proto:
+build-go-proto:
 	rm -f pkg/pb/*.go
 	rm -f doc/swagger/*.swagger.json
 	protoc --go-grpc_out=pkg/pb --go_out=pkg/pb --proto_path=proto --go-grpc_opt=paths=source_relative \
