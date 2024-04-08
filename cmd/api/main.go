@@ -30,7 +30,7 @@ func main() {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
 
-	//go runGatewayServer(config, db)
+	go runGatewayServer(config, db)
 	runGrpcServer(config, db)
 
 }
@@ -49,7 +49,7 @@ func runGrpcServer(config util.Config, store *sql.DB) {
 
 	log.Print("🍩 Starting to listen on port " + config.GRPCServerPort)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", config.GRPCServerPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.GRPCServerPort))
 	if err != nil {
 		log.Print(fmt.Sprintf("🍩 Failed to listen. %v", err))
 	}
@@ -91,24 +91,15 @@ func runGatewayServer(config util.Config, store *sql.DB) {
 	mux.Handle("/swagger/", http.StripPrefix("/swagger", fs))
 	log.Print(fmt.Sprintf("🍨 Swagger UI server started on http://localhost:%s/swagger/", config.HTTPServerPort))
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%s/swagger/", config.HTTPServerPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.HTTPServerPort))
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to listen.")
 	}
 
 	log.Print(fmt.Sprintf("🍦 HTTP server started on http://localhost:%s/v1/", config.HTTPServerPort))
 	handler := grpcApi.HttpLogger(mux)
-	// Add request logging middleware
-	handler = logRequest(handler)
 	err = http.Serve(listener, handler)
 	if err != nil {
 		log.Fatal().Err(err).Msg(fmt.Sprintf("🍦 Failed to serve HTTP gateway server over port %s.", listener.Addr().String()))
 	}
-}
-
-func logRequest(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("📡 Request: %s %s", r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
-	})
 }

@@ -33,3 +33,8 @@ build-web-proto:
 		--ts_proto_opt=useOptionals=true \
 		--ts_proto_opt=unrecognizedEnum=false \
 		 `find ./proto -name '*.proto'`
+
+.PHONY: generate-sim-key
+generate-sim-key:
+	TOKEN_SYMMETRIC_KEY=$$(openssl rand -hex 16); \
+	echo "TOKEN_SYMMETRIC_KEY=$$TOKEN_SYMMETRIC_KEY" >> .env
