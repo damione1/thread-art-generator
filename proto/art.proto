@@ -14,10 +14,10 @@ message Art {
     string title = 2;
     // ImageURL is the art's image URL.
     string image_url = 3;
-    // CreatedAt is the art's creation time.
-    google.protobuf.Timestamp create_time = 6;
+    // CreatedAt is the art's creation time. Output only.
+    google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
     // UpdatedAt is the art's last update time.
-    google.protobuf.Timestamp update_time = 7;
+    google.protobuf.Timestamp update_time = 7  [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message CreateArtRequest {

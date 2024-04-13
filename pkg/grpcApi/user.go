@@ -64,6 +64,16 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	}, nil
 }
 
+func validateCreateUserRequest(req *pb.CreateUserRequest) error {
+	return validation.ValidateStruct(req,
+		// Name cannot be empty, and the length must be between 5 and 20
+		validation.Field(&req.Name, validation.Required, validation.Length(5, 20)),
+		// Email cannot be empty and should be in a valid email format
+		validation.Field(&req.Email, validation.Required, is.Email),
+		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(checkPassword)),
+	)
+}
+
 // update user
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
 	authPayload, err := server.authorizeUser(ctx)
@@ -297,15 +307,15 @@ func (server *Server) extractMetadata(ctx context.Context) *Metadata {
 	return mtdt
 }
 
-func validateCreateUserRequest(req *pb.CreateUserRequest) error {
-	return validation.ValidateStruct(req,
-		// Name cannot be empty, and the length must be between 5 and 20
-		validation.Field(&req.Name, validation.Required, validation.Length(5, 20)),
-		// Email cannot be empty and should be in a valid email format
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(checkPassword)),
-	)
-}
+// func validateCreateUserRequest(req *pb.CreateUserRequest) error {
+// 	return validation.ValidateStruct(req,
+// 		// Name cannot be empty, and the length must be between 5 and 20
+// 		validation.Field(&req.Name, validation.Required, validation.Length(5, 20)),
+// 		// Email cannot be empty and should be in a valid email format
+// 		validation.Field(&req.Email, validation.Required, is.Email),
+// 		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(checkPassword)),
+// 	)
+// }
 
 func checkPassword(value interface{}) error {
 	password, _ := value.(string)

@@ -499,12 +499,14 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "CreatedAt is the art's creation time."
+          "description": "CreatedAt is the art's creation time. Output only.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "UpdatedAt is the art's last update time."
+          "description": "UpdatedAt is the art's last update time.",
+          "readOnly": true
         }
       }
     },
