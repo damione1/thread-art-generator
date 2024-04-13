@@ -163,6 +163,8 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.
 		return nil, status.Errorf(codes.Unauthenticated, "incorrect email or password")
 	}
 
+	fmt.Println("server.config.AccessTokenDuration", server.config.AccessTokenDuration)
+
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
 		user.ID,
 		server.config.AccessTokenDuration,

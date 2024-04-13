@@ -1,46 +1,57 @@
+load('ext://restart_process', 'docker_build_with_restart')
+
+
+local_resource(
+  'api-compile',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go',
+  labels=["services"],
+  deps=['cmd/', 'db/', 'pkg/', 'threadGenerator/']
+)
+
+docker_build(
+  'api-image',
+  '.',
+  dockerfile='Infra/Dockerfiles/Dockerfile-api',
+  only=[
+    './build',
+  ],
+  live_update=[
+    sync('./build', '/app/build'),
+    restart_container ()
+  ])
+
 # Load the docker compose configuration
 docker_compose('docker-compose.yml')
 
 # Set the 'manual' resources to auto_init=False
 resources = {
+  'db': {'labels': ['database']},
   'migrations': {
     'auto_init': True,
-    'trigger_mode': TRIGGER_MODE_MANUAL
+    'trigger_mode': TRIGGER_MODE_MANUAL,
+    'labels': ['database', 'scripts'],
+    'resource_deps': ['db']
+    },
+  'generate-models': {
+    'auto_init': False,
+    'trigger_mode': TRIGGER_MODE_MANUAL,
+    'labels': ['scripts'],
+    'resource_deps': ['db']
     },
   'go-proto-generator': {
     'auto_init': False,
+    'trigger_mode': TRIGGER_MODE_MANUAL,
+    'labels': ['scripts'],
     },
-  'web-proto-generator': {'auto_init': False},
-  'generate-models': {'auto_init': False},
+  'web-proto-generator': {
+    'auto_init': False,
+    'trigger_mode': TRIGGER_MODE_MANUAL,
+    'labels': ['scripts']
+    },
+  'api': {'labels': ['services'], 'resource_deps': ['api-compile', 'db']},
+  'adminer': {'labels': ['database'], 'resource_deps': ['db']},
 }
 
-# docker_build(
-#   # Image name - must match the image in the docker-compose file
-#   'tilt.dev/express-redis-app',
-#   # Docker context
-#   '.',
-#   live_update = [
-#     # Sync local files into the container.
-#     sync('.', '/var/www/app'),
-
-#     # Re-run npm install whenever package.json changes.
-#     run('npm i', trigger='package.json'),
-
-#     # Restart the process to pick up the changed files.
-#     restart_container()
-#   ])
-
-
-dc_resource('api', labels=["services"])
-#dc_resource('worker', labels=["worker"])
-
-dc_resource('db', labels=["database"])
-dc_resource('adminer', labels=["database"])
-dc_resource('migrations', labels=["database", "scripts"])
-
-dc_resource('go-proto-generator', labels=["scripts"])
-dc_resource('generate-models', labels=["scripts"])
-dc_resource('web-proto-generator', labels=["scripts"])
 
 for resource_name, resource_config in resources.items():
     dc_resource(

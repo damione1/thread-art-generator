@@ -24,7 +24,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to load config")
 	}
-
 	db, err := database.ConnectDb(&config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")

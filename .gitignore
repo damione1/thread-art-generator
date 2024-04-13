@@ -1,3 +1,4 @@
 *.jpg
 output/*
 .env
+build/
