@@ -1,5 +1,5 @@
+# Dockerfile-api
 FROM alpine
 WORKDIR /app
-ADD build build
+ADD build/api build/api
 ENTRYPOINT build/api
-CMD ["go", "run", "api"]

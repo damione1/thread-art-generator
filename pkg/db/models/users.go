@@ -32,7 +32,7 @@ type User struct {
 	Active    null.Bool   `boil:"active" json:"active,omitempty" toml:"active" yaml:"active,omitempty"`
 	CreatedAt null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
 	UpdatedAt null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
-	Role      string      `boil:"role" json:"role" toml:"role" yaml:"role"`
+	Role      RoleEnum    `boil:"role" json:"role" toml:"role" yaml:"role"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -108,6 +108,41 @@ func (w whereHelpernull_Bool) GTE(x null.Bool) qm.QueryMod {
 func (w whereHelpernull_Bool) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_Bool) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
+type whereHelperRoleEnum struct{ field string }
+
+func (w whereHelperRoleEnum) EQ(x RoleEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelperRoleEnum) NEQ(x RoleEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelperRoleEnum) LT(x RoleEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelperRoleEnum) LTE(x RoleEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelperRoleEnum) GT(x RoleEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelperRoleEnum) GTE(x RoleEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelperRoleEnum) IN(slice []RoleEnum) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperRoleEnum) NIN(slice []RoleEnum) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
 var UserWhere = struct {
 	ID        whereHelperstring
 	Email     whereHelperstring
@@ -117,7 +152,7 @@ var UserWhere = struct {
 	Active    whereHelpernull_Bool
 	CreatedAt whereHelpernull_Time
 	UpdatedAt whereHelpernull_Time
-	Role      whereHelperstring
+	Role      whereHelperRoleEnum
 }{
 	ID:        whereHelperstring{field: "\"users\".\"id\""},
 	Email:     whereHelperstring{field: "\"users\".\"email\""},
@@ -127,7 +162,7 @@ var UserWhere = struct {
 	Active:    whereHelpernull_Bool{field: "\"users\".\"active\""},
 	CreatedAt: whereHelpernull_Time{field: "\"users\".\"created_at\""},
 	UpdatedAt: whereHelpernull_Time{field: "\"users\".\"updated_at\""},
-	Role:      whereHelperstring{field: "\"users\".\"role\""},
+	Role:      whereHelperRoleEnum{field: "\"users\".\"role\""},
 }
 
 // UserRels is where relationship names are stored.

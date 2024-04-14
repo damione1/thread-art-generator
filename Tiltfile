@@ -2,9 +2,9 @@ load('ext://restart_process', 'docker_build_with_restart')
 
 
 local_resource(
-  'api-compile',
-  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go',
-  labels=["services"],
+  'go-compile',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go',
+  labels=["scripts"],
   deps=['cmd/', 'db/', 'pkg/', 'threadGenerator/']
 )
 
@@ -13,11 +13,24 @@ docker_build(
   '.',
   dockerfile='Infra/Dockerfiles/Dockerfile-api',
   only=[
-    './build',
+    './build/api',
   ],
   live_update=[
     sync('./build', '/app/build'),
     restart_container ()
+  ])
+
+docker_build(
+  'migrations-image',
+  '.',
+  dockerfile='Infra/Dockerfiles/Dockerfile-migrations',
+  only=[
+    './build/migrations',
+    './pkg/db/migrations',
+  ],
+  live_update=[
+    sync('./build', '/app/build'),
+    sync('./pkg/db/migrations', '/migrations'),
   ])
 
 # Load the docker compose configuration
@@ -29,8 +42,8 @@ resources = {
   'migrations': {
     'auto_init': True,
     'trigger_mode': TRIGGER_MODE_MANUAL,
-    'labels': ['database', 'scripts'],
-    'resource_deps': ['db']
+    'labels': ['database'],
+    'resource_deps': ['go-compile', 'db']
     },
   'generate-models': {
     'auto_init': False,
@@ -48,7 +61,7 @@ resources = {
     'trigger_mode': TRIGGER_MODE_MANUAL,
     'labels': ['scripts']
     },
-  'api': {'labels': ['services'], 'resource_deps': ['api-compile', 'db']},
+  'api': {'labels': ['services'], 'resource_deps': ['go-compile', 'db', 'migrations']},
   'adminer': {'labels': ['database'], 'resource_deps': ['db']},
 }
 

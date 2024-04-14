@@ -11,15 +11,18 @@ import (
 )
 
 func main() {
+	log.Info().Msg("👋 Starting migration")
 	config, err := util.LoadConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to load config")
 	}
+	log.Info().Msg("👋 Config loaded")
 
 	db, err := database.ConnectDb(&config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
+	log.Info().Msg("👋 Connected to database")
 
 	RunDBMigration(&config, db)
 }

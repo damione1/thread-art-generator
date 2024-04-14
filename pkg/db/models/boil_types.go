@@ -50,3 +50,47 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	strmangle.PutBuffer(buf)
 	return str
 }
+
+type RoleEnum string
+
+// Enum values for RoleEnum
+const (
+	RoleEnumUser       RoleEnum = "user"
+	RoleEnumAdmin      RoleEnum = "admin"
+	RoleEnumSuperAdmin RoleEnum = "super_admin"
+)
+
+func AllRoleEnum() []RoleEnum {
+	return []RoleEnum{
+		RoleEnumUser,
+		RoleEnumAdmin,
+		RoleEnumSuperAdmin,
+	}
+}
+
+func (e RoleEnum) IsValid() error {
+	switch e {
+	case RoleEnumUser, RoleEnumAdmin, RoleEnumSuperAdmin:
+		return nil
+	default:
+		return errors.New("enum is not valid")
+	}
+}
+
+func (e RoleEnum) String() string {
+	return string(e)
+}
+
+func (e RoleEnum) Ordinal() int {
+	switch e {
+	case RoleEnumUser:
+		return 0
+	case RoleEnumAdmin:
+		return 1
+	case RoleEnumSuperAdmin:
+		return 2
+
+	default:
+		panic(errors.New("enum is not valid"))
+	}
+}
