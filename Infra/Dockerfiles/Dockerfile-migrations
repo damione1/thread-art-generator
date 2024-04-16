@@ -2,9 +2,5 @@
 FROM alpine
 WORKDIR /app
 ADD build/migrations build/migrations
-RUN ls build -a
-
 COPY pkg/db/migrations migrations
-RUN ls build -a
-
 ENTRYPOINT build/migrations

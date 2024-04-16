@@ -3,17 +3,21 @@ syntax = "proto3";
 package pb;
 import "google/protobuf/timestamp.proto";
 import "google/api/field_behavior.proto";
+import "user.proto";
 
 option go_package = "thread-art-generator/pkg/proto;pb";
 
-
 message Art {
     // ID is the unique identifier for the art.
-    string id = 1;
+    string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
     // Title is the art's title.
-    string title = 2;
+    string title = 2 [(google.api.field_behavior) = REQUIRED];
     // ImageURL is the art's image URL.
     string image_url = 3;
+    // Author is the art's author.
+    string author_id = 4 [(google.api.field_behavior) = REQUIRED, (google.api.field_behavior) = INPUT_ONLY];
+    // Author is the art's author.
+    User author = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
     // CreatedAt is the art's creation time. Output only.
     google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
     // UpdatedAt is the art's last update time.

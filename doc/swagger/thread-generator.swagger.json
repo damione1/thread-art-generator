@@ -486,7 +486,8 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "ID is the unique identifier for the art."
+          "description": "ID is the unique identifier for the art.",
+          "readOnly": true
         },
         "title": {
           "type": "string",
@@ -495,6 +496,15 @@
         "imageUrl": {
           "type": "string",
           "description": "ImageURL is the art's image URL."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Author is the art's author."
+        },
+        "author": {
+          "$ref": "#/definitions/pbUser",
+          "description": "Author is the art's author.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
@@ -508,7 +518,11 @@
           "description": "UpdatedAt is the art's last update time.",
           "readOnly": true
         }
-      }
+      },
+      "required": [
+        "title",
+        "authorId"
+      ]
     },
     "pbChangePasswordRequest": {
       "type": "object",

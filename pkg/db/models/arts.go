@@ -28,8 +28,8 @@ type Art struct {
 	Title     string      `boil:"title" json:"title" toml:"title" yaml:"title"`
 	ImageID   null.String `boil:"image_id" json:"image_id,omitempty" toml:"image_id" yaml:"image_id,omitempty"`
 	AuthorID  string      `boil:"author_id" json:"author_id" toml:"author_id" yaml:"author_id"`
-	CreatedAt null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
-	UpdatedAt null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
+	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	DeletedAt null.Time   `boil:"deleted_at" json:"deleted_at,omitempty" toml:"deleted_at" yaml:"deleted_at,omitempty"`
 
 	R *artR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -79,16 +79,16 @@ var ArtWhere = struct {
 	Title     whereHelperstring
 	ImageID   whereHelpernull_String
 	AuthorID  whereHelperstring
-	CreatedAt whereHelpernull_Time
-	UpdatedAt whereHelpernull_Time
+	CreatedAt whereHelpertime_Time
+	UpdatedAt whereHelpertime_Time
 	DeletedAt whereHelpernull_Time
 }{
 	ID:        whereHelperstring{field: "\"arts\".\"id\""},
 	Title:     whereHelperstring{field: "\"arts\".\"title\""},
 	ImageID:   whereHelpernull_String{field: "\"arts\".\"image_id\""},
 	AuthorID:  whereHelperstring{field: "\"arts\".\"author_id\""},
-	CreatedAt: whereHelpernull_Time{field: "\"arts\".\"created_at\""},
-	UpdatedAt: whereHelpernull_Time{field: "\"arts\".\"updated_at\""},
+	CreatedAt: whereHelpertime_Time{field: "\"arts\".\"created_at\""},
+	UpdatedAt: whereHelpertime_Time{field: "\"arts\".\"updated_at\""},
 	DeletedAt: whereHelpernull_Time{field: "\"arts\".\"deleted_at\""},
 }
 
@@ -1233,11 +1233,11 @@ func (o *Art) Insert(ctx context.Context, exec boil.ContextExecutor, columns boi
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if queries.MustTime(o.CreatedAt).IsZero() {
-			queries.SetScanner(&o.CreatedAt, currTime)
+		if o.CreatedAt.IsZero() {
+			o.CreatedAt = currTime
 		}
-		if queries.MustTime(o.UpdatedAt).IsZero() {
-			queries.SetScanner(&o.UpdatedAt, currTime)
+		if o.UpdatedAt.IsZero() {
+			o.UpdatedAt = currTime
 		}
 	}
 
@@ -1324,7 +1324,7 @@ func (o *Art) Update(ctx context.Context, exec boil.ContextExecutor, columns boi
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		queries.SetScanner(&o.UpdatedAt, currTime)
+		o.UpdatedAt = currTime
 	}
 
 	var err error
@@ -1475,10 +1475,10 @@ func (o *Art) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCon
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if queries.MustTime(o.CreatedAt).IsZero() {
-			queries.SetScanner(&o.CreatedAt, currTime)
+		if o.CreatedAt.IsZero() {
+			o.CreatedAt = currTime
 		}
-		queries.SetScanner(&o.UpdatedAt, currTime)
+		o.UpdatedAt = currTime
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

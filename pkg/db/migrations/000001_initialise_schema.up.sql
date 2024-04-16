@@ -15,9 +15,9 @@ CREATE TABLE users (
   password VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
   avatar_id uuid REFERENCES media(id),
-  active BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  active BOOLEAN DEFAULT FALSE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   role VARCHAR(255) NOT NULL DEFAULT 'user'
 );
 CREATE INDEX users_email_idx ON users (email);
@@ -28,11 +28,11 @@ CREATE TABLE arts (
   title VARCHAR(255) NOT NULL,
   image_id uuid REFERENCES media(id),
   author_id uuid NOT NULL REFERENCES users(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   deleted_at TIMESTAMP WITH TIME ZONE
 );
-CREATE INDEX ON arts (image_id);
+CREATE INDEX arts_author_idx ON arts (author_id);
 
 -- Generated variations
 CREATE TABLE art_variations (
@@ -40,8 +40,8 @@ CREATE TABLE art_variations (
   art_id uuid REFERENCES arts(id),
   image_id uuid REFERENCES media(id),
   author_id uuid NOT NULL REFERENCES users(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   deleted_at TIMESTAMP WITH TIME ZONE
 );
 

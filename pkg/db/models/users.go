@@ -29,9 +29,9 @@ type User struct {
 	Password  string      `boil:"password" json:"password" toml:"password" yaml:"password"`
 	Name      string      `boil:"name" json:"name" toml:"name" yaml:"name"`
 	AvatarID  null.String `boil:"avatar_id" json:"avatar_id,omitempty" toml:"avatar_id" yaml:"avatar_id,omitempty"`
-	Active    null.Bool   `boil:"active" json:"active,omitempty" toml:"active" yaml:"active,omitempty"`
-	CreatedAt null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
-	UpdatedAt null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
+	Active    bool        `boil:"active" json:"active" toml:"active" yaml:"active"`
+	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	Role      RoleEnum    `boil:"role" json:"role" toml:"role" yaml:"role"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -84,30 +84,6 @@ var UserTableColumns = struct {
 
 // Generated where
 
-type whereHelpernull_Bool struct{ field string }
-
-func (w whereHelpernull_Bool) EQ(x null.Bool) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_Bool) NEQ(x null.Bool) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_Bool) LT(x null.Bool) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_Bool) LTE(x null.Bool) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_Bool) GT(x null.Bool) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_Bool) GTE(x null.Bool) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-func (w whereHelpernull_Bool) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Bool) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 type whereHelperRoleEnum struct{ field string }
 
 func (w whereHelperRoleEnum) EQ(x RoleEnum) qm.QueryMod {
@@ -149,9 +125,9 @@ var UserWhere = struct {
 	Password  whereHelperstring
 	Name      whereHelperstring
 	AvatarID  whereHelpernull_String
-	Active    whereHelpernull_Bool
-	CreatedAt whereHelpernull_Time
-	UpdatedAt whereHelpernull_Time
+	Active    whereHelperbool
+	CreatedAt whereHelpertime_Time
+	UpdatedAt whereHelpertime_Time
 	Role      whereHelperRoleEnum
 }{
 	ID:        whereHelperstring{field: "\"users\".\"id\""},
@@ -159,9 +135,9 @@ var UserWhere = struct {
 	Password:  whereHelperstring{field: "\"users\".\"password\""},
 	Name:      whereHelperstring{field: "\"users\".\"name\""},
 	AvatarID:  whereHelpernull_String{field: "\"users\".\"avatar_id\""},
-	Active:    whereHelpernull_Bool{field: "\"users\".\"active\""},
-	CreatedAt: whereHelpernull_Time{field: "\"users\".\"created_at\""},
-	UpdatedAt: whereHelpernull_Time{field: "\"users\".\"updated_at\""},
+	Active:    whereHelperbool{field: "\"users\".\"active\""},
+	CreatedAt: whereHelpertime_Time{field: "\"users\".\"created_at\""},
+	UpdatedAt: whereHelpertime_Time{field: "\"users\".\"updated_at\""},
 	Role:      whereHelperRoleEnum{field: "\"users\".\"role\""},
 }
 
@@ -1614,11 +1590,11 @@ func (o *User) Insert(ctx context.Context, exec boil.ContextExecutor, columns bo
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if queries.MustTime(o.CreatedAt).IsZero() {
-			queries.SetScanner(&o.CreatedAt, currTime)
+		if o.CreatedAt.IsZero() {
+			o.CreatedAt = currTime
 		}
-		if queries.MustTime(o.UpdatedAt).IsZero() {
-			queries.SetScanner(&o.UpdatedAt, currTime)
+		if o.UpdatedAt.IsZero() {
+			o.UpdatedAt = currTime
 		}
 	}
 
@@ -1705,7 +1681,7 @@ func (o *User) Update(ctx context.Context, exec boil.ContextExecutor, columns bo
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		queries.SetScanner(&o.UpdatedAt, currTime)
+		o.UpdatedAt = currTime
 	}
 
 	var err error
@@ -1856,10 +1832,10 @@ func (o *User) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCo
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if queries.MustTime(o.CreatedAt).IsZero() {
-			queries.SetScanner(&o.CreatedAt, currTime)
+		if o.CreatedAt.IsZero() {
+			o.CreatedAt = currTime
 		}
-		queries.SetScanner(&o.UpdatedAt, currTime)
+		o.UpdatedAt = currTime
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

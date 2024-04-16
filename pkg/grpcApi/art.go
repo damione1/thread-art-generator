@@ -2,43 +2,56 @@ package grpcApi
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
 	"github.com/Damione1/thread-art-generator/pkg/pbx"
-	"github.com/friendsofgo/errors"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
+	"github.com/pkg/errors"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.CreateArtResponse, error) {
+	fmt.Println("🌻 start")
 	authorizeUserPayload, err := server.authorizeUser(ctx)
 	if err != nil {
 		return nil, unauthenticatedError(err)
 	}
+	fmt.Println("🌻 authorized")
 
 	if err := validateCreateArtRequest(req); err != nil {
 		return nil, err
 	}
 
-	user, err := models.FindUser(ctx, server.config.DB, authorizeUserPayload.ID.String())
+	fmt.Println("🌻 authorizeUserPayload.UserID", authorizeUserPayload.UserID)
+	user, err := models.Users(
+		models.UserWhere.ID.EQ(authorizeUserPayload.UserID),
+	).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, err
-	}
-	if user.Role != "admin" {
-		return nil, errors.Wrap(err, "Unsufficient permissions to create an art")
+		return nil, errors.Wrap(err, "Failed to get user")
 	}
 
-	art := pbx.ProtoArtToDb(req.GetArt())
+	fmt.Println("🌻 check role", user.Role)
+	if user.Role != models.RoleEnumUser {
+		return nil, rolePermissionError(errors.New("Only admin can create art"))
+	}
+
+	art := &models.Art{
+		Title:    req.GetArt().GetTitle(),
+		AuthorID: user.ID,
+	}
 
 	err = art.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		return nil, err
+		return nil, internalError(errors.Wrap(err, "Failed to insert art"))
 	}
 
-	return &pb.CreateArtResponse{}, nil
+	return &pb.CreateArtResponse{
+		Art: pbx.DbArtToProto(art),
+	}, nil
 }
 
 func validateCreateArtRequest(req *pb.CreateArtRequest) error {
@@ -47,7 +60,7 @@ func validateCreateArtRequest(req *pb.CreateArtRequest) error {
 			validation.Required,
 			validation.By(
 				func(value interface{}) error {
-					return validateArt(value.(*pb.Art))
+					return validateArt(value.(*pb.Art), true)
 				},
 			),
 		),
@@ -87,7 +100,7 @@ func validateUpdateArtRequest(req *pb.UpdateArtRequest) error {
 			),
 			validation.By(
 				func(value interface{}) error {
-					return validateArt(value.(*pb.Art))
+					return validateArt(value.(*pb.Art), false)
 				},
 			),
 		),
@@ -191,8 +204,15 @@ func validateDeleteArtRequest(req *pb.DeleteArtRequest) error {
 	)
 }
 
-func validateArt(art *pb.Art) error {
-	return validation.ValidateStruct(art,
-		validation.Field(&art.Title, validation.Required, validation.Length(1, 255)),
-	)
+func validateArt(art *pb.Art, isNew bool) error {
+	if isNew {
+		return validation.ValidateStruct(art,
+			validation.Field(&art.Title, validation.Required, validation.Length(1, 255)),
+		)
+	} else {
+		return validation.ValidateStruct(art,
+			validation.Field(&art.Title, validation.Required, validation.Length(1, 255)),
+			validation.Field(&art.Id, is.Int),
+		)
+	}
 }

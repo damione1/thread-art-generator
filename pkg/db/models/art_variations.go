@@ -28,8 +28,8 @@ type ArtVariation struct {
 	ArtID     null.String `boil:"art_id" json:"art_id,omitempty" toml:"art_id" yaml:"art_id,omitempty"`
 	ImageID   null.String `boil:"image_id" json:"image_id,omitempty" toml:"image_id" yaml:"image_id,omitempty"`
 	AuthorID  string      `boil:"author_id" json:"author_id" toml:"author_id" yaml:"author_id"`
-	CreatedAt null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
-	UpdatedAt null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
+	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	DeletedAt null.Time   `boil:"deleted_at" json:"deleted_at,omitempty" toml:"deleted_at" yaml:"deleted_at,omitempty"`
 
 	R *artVariationR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -151,6 +151,27 @@ func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
 func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
+type whereHelpertime_Time struct{ field string }
+
+func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 type whereHelpernull_Time struct{ field string }
 
 func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
@@ -180,16 +201,16 @@ var ArtVariationWhere = struct {
 	ArtID     whereHelpernull_String
 	ImageID   whereHelpernull_String
 	AuthorID  whereHelperstring
-	CreatedAt whereHelpernull_Time
-	UpdatedAt whereHelpernull_Time
+	CreatedAt whereHelpertime_Time
+	UpdatedAt whereHelpertime_Time
 	DeletedAt whereHelpernull_Time
 }{
 	ID:        whereHelperstring{field: "\"art_variations\".\"id\""},
 	ArtID:     whereHelpernull_String{field: "\"art_variations\".\"art_id\""},
 	ImageID:   whereHelpernull_String{field: "\"art_variations\".\"image_id\""},
 	AuthorID:  whereHelperstring{field: "\"art_variations\".\"author_id\""},
-	CreatedAt: whereHelpernull_Time{field: "\"art_variations\".\"created_at\""},
-	UpdatedAt: whereHelpernull_Time{field: "\"art_variations\".\"updated_at\""},
+	CreatedAt: whereHelpertime_Time{field: "\"art_variations\".\"created_at\""},
+	UpdatedAt: whereHelpertime_Time{field: "\"art_variations\".\"updated_at\""},
 	DeletedAt: whereHelpernull_Time{field: "\"art_variations\".\"deleted_at\""},
 }
 
@@ -1283,11 +1304,11 @@ func (o *ArtVariation) Insert(ctx context.Context, exec boil.ContextExecutor, co
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if queries.MustTime(o.CreatedAt).IsZero() {
-			queries.SetScanner(&o.CreatedAt, currTime)
+		if o.CreatedAt.IsZero() {
+			o.CreatedAt = currTime
 		}
-		if queries.MustTime(o.UpdatedAt).IsZero() {
-			queries.SetScanner(&o.UpdatedAt, currTime)
+		if o.UpdatedAt.IsZero() {
+			o.UpdatedAt = currTime
 		}
 	}
 
@@ -1374,7 +1395,7 @@ func (o *ArtVariation) Update(ctx context.Context, exec boil.ContextExecutor, co
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		queries.SetScanner(&o.UpdatedAt, currTime)
+		o.UpdatedAt = currTime
 	}
 
 	var err error
@@ -1525,10 +1546,10 @@ func (o *ArtVariation) Upsert(ctx context.Context, exec boil.ContextExecutor, up
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if queries.MustTime(o.CreatedAt).IsZero() {
-			queries.SetScanner(&o.CreatedAt, currTime)
+		if o.CreatedAt.IsZero() {
+			o.CreatedAt = currTime
 		}
-		queries.SetScanner(&o.UpdatedAt, currTime)
+		o.UpdatedAt = currTime
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

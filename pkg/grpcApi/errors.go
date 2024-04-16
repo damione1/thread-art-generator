@@ -28,3 +28,11 @@ func invalidArgumentError(violations []*errdetails.BadRequest_FieldViolation) er
 func unauthenticatedError(err error) error {
 	return status.Errorf(codes.Unauthenticated, "unauthorized: %s", err)
 }
+
+func rolePermissionError(err error) error {
+	return status.Errorf(codes.PermissionDenied, "role permission error: %s", err)
+}
+
+func internalError(err error) error {
+	return status.Errorf(codes.Internal, "internal error: %s", err)
+}

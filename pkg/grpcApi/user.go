@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
@@ -51,8 +52,8 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 
 	err = user.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		if err.Error() == "pq: duplicate key value violates unique constraint \"users_email_key\"" {
-			return nil, status.Errorf(codes.AlreadyExists, "email already exists")
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return nil, status.Errorf(codes.AlreadyExists, "user already exists")
 		}
 		return nil, status.Errorf(codes.Internal, "failed to insert user: %s", err)
 	}
@@ -66,15 +67,12 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 
 func validateCreateUserRequest(req *pb.CreateUserRequest) error {
 	return validation.ValidateStruct(req,
-		// Name cannot be empty, and the length must be between 5 and 20
 		validation.Field(&req.Name, validation.Required, validation.Length(5, 20)),
-		// Email cannot be empty and should be in a valid email format
 		validation.Field(&req.Email, validation.Required, is.Email),
 		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(checkPassword)),
 	)
 }
 
-// update user
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
 	authPayload, err := server.authorizeUser(ctx)
 	if err != nil {
@@ -141,7 +139,6 @@ func validateUpdateUserRequest(req *pb.UpdateUserRequest) error {
 	)
 }
 
-// login user
 func (server *Server) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	err := validateLoginUserRequest(req)
 	if err != nil {
@@ -163,7 +160,9 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.
 		return nil, status.Errorf(codes.Unauthenticated, "incorrect email or password")
 	}
 
-	fmt.Println("server.config.AccessTokenDuration", server.config.AccessTokenDuration)
+	if !user.Active {
+		return nil, status.Errorf(codes.PermissionDenied, "user is not active")
+	}
 
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
 		user.ID,
@@ -205,7 +204,13 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.
 
 }
 
-// refresh token service
+func validateLoginUserRequest(req *pb.LoginRequest) error {
+	return validation.ValidateStruct(req,
+		validation.Field(&req.Email, validation.Required, is.Email),
+		validation.Field(&req.Password, validation.Required),
+	)
+}
+
 func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
 	err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required))
 	if err != nil {
@@ -256,7 +261,6 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 
 }
 
-// logout
 func (server *Server) LogoutUser(ctx context.Context, req *pb.LogoutRequest) (*pb.LogoutResponse, error) {
 
 	err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required))
@@ -309,16 +313,6 @@ func (server *Server) extractMetadata(ctx context.Context) *Metadata {
 	return mtdt
 }
 
-// func validateCreateUserRequest(req *pb.CreateUserRequest) error {
-// 	return validation.ValidateStruct(req,
-// 		// Name cannot be empty, and the length must be between 5 and 20
-// 		validation.Field(&req.Name, validation.Required, validation.Length(5, 20)),
-// 		// Email cannot be empty and should be in a valid email format
-// 		validation.Field(&req.Email, validation.Required, is.Email),
-// 		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(checkPassword)),
-// 	)
-// }
-
 func checkPassword(value interface{}) error {
 	password, _ := value.(string)
 	if !regexp.MustCompile(`[a-z]`).MatchString(password) {
@@ -331,12 +325,4 @@ func checkPassword(value interface{}) error {
 		return fmt.Errorf("password must contain at least one digit")
 	}
 	return nil
-}
-
-func validateLoginUserRequest(req *pb.LoginRequest) error {
-	return validation.ValidateStruct(req,
-		// Email cannot be empty and should be in a valid email format
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.Password, validation.Required),
-	)
 }

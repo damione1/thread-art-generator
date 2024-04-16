@@ -14,9 +14,11 @@ docker_build(
   dockerfile='Infra/Dockerfiles/Dockerfile-api',
   only=[
     './build/api',
+    './doc/swagger',
   ],
   live_update=[
     sync('./build', '/app/build'),
+    sync('./doc/swagger', '/doc/swagger'),
     restart_container ()
   ])
 
