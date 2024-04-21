@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,38 +20,40 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ArtGeneratorService_LoginUser_FullMethodName      = "/pb.ArtGeneratorService/LoginUser"
-	ArtGeneratorService_LogoutUser_FullMethodName     = "/pb.ArtGeneratorService/LogoutUser"
-	ArtGeneratorService_RefreshToken_FullMethodName   = "/pb.ArtGeneratorService/RefreshToken"
-	ArtGeneratorService_CreateUser_FullMethodName     = "/pb.ArtGeneratorService/CreateUser"
-	ArtGeneratorService_UpdateUser_FullMethodName     = "/pb.ArtGeneratorService/UpdateUser"
-	ArtGeneratorService_GetUser_FullMethodName        = "/pb.ArtGeneratorService/GetUser"
-	ArtGeneratorService_ResetPassword_FullMethodName  = "/pb.ArtGeneratorService/ResetPassword"
-	ArtGeneratorService_ChangePassword_FullMethodName = "/pb.ArtGeneratorService/ChangePassword"
-	ArtGeneratorService_CreateArt_FullMethodName      = "/pb.ArtGeneratorService/CreateArt"
-	ArtGeneratorService_UpdateArt_FullMethodName      = "/pb.ArtGeneratorService/UpdateArt"
-	ArtGeneratorService_GetArt_FullMethodName         = "/pb.ArtGeneratorService/GetArt"
-	ArtGeneratorService_ListArts_FullMethodName       = "/pb.ArtGeneratorService/ListArts"
-	ArtGeneratorService_DeleteArt_FullMethodName      = "/pb.ArtGeneratorService/DeleteArt"
+	ArtGeneratorService_CreateSession_FullMethodName = "/pb.ArtGeneratorService/CreateSession"
+	ArtGeneratorService_DeleteSession_FullMethodName = "/pb.ArtGeneratorService/DeleteSession"
+	ArtGeneratorService_RefreshToken_FullMethodName  = "/pb.ArtGeneratorService/RefreshToken"
+	ArtGeneratorService_UpdateUser_FullMethodName    = "/pb.ArtGeneratorService/UpdateUser"
+	ArtGeneratorService_GetUser_FullMethodName       = "/pb.ArtGeneratorService/GetUser"
+	ArtGeneratorService_ListUsers_FullMethodName     = "/pb.ArtGeneratorService/ListUsers"
+	ArtGeneratorService_CreateUser_FullMethodName    = "/pb.ArtGeneratorService/CreateUser"
+	ArtGeneratorService_DeleteUser_FullMethodName    = "/pb.ArtGeneratorService/DeleteUser"
+	ArtGeneratorService_ResetPassword_FullMethodName = "/pb.ArtGeneratorService/ResetPassword"
+	ArtGeneratorService_CreateArt_FullMethodName     = "/pb.ArtGeneratorService/CreateArt"
+	ArtGeneratorService_GetArt_FullMethodName        = "/pb.ArtGeneratorService/GetArt"
+	ArtGeneratorService_UpdateArt_FullMethodName     = "/pb.ArtGeneratorService/UpdateArt"
+	ArtGeneratorService_ListArts_FullMethodName      = "/pb.ArtGeneratorService/ListArts"
+	ArtGeneratorService_DeleteArt_FullMethodName     = "/pb.ArtGeneratorService/DeleteArt"
 )
 
 // ArtGeneratorServiceClient is the client API for ArtGeneratorService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ArtGeneratorServiceClient interface {
-	LoginUser(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	LogoutUser(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error)
+	DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
-	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
-	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
-	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
-	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
-	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
-	CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*CreateArtResponse, error)
-	UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*UpdateArtResponse, error)
-	GetArt(ctx context.Context, in *GetArtRequest, opts ...grpc.CallOption) (*GetArtResponse, error)
-	ListArts(ctx context.Context, in *ListArtRequest, opts ...grpc.CallOption) (*ListArtResponse, error)
-	DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*DeleteArtResponse, error)
+	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*User, error)
+	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*User, error)
+	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error)
+	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*Art, error)
+	GetArt(ctx context.Context, in *GetArtRequest, opts ...grpc.CallOption) (*Art, error)
+	UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*Art, error)
+	ListArts(ctx context.Context, in *ListArtsRequest, opts ...grpc.CallOption) (*ListArtsResponse, error)
+	DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type artGeneratorServiceClient struct {
@@ -61,18 +64,18 @@ func NewArtGeneratorServiceClient(cc grpc.ClientConnInterface) ArtGeneratorServi
 	return &artGeneratorServiceClient{cc}
 }
 
-func (c *artGeneratorServiceClient) LoginUser(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
-	out := new(LoginResponse)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_LoginUser_FullMethodName, in, out, opts...)
+func (c *artGeneratorServiceClient) CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error) {
+	out := new(CreateSessionResponse)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_CreateSession_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) LogoutUser(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
-	out := new(LogoutResponse)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_LogoutUser_FullMethodName, in, out, opts...)
+func (c *artGeneratorServiceClient) DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_DeleteSession_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,17 +91,8 @@ func (c *artGeneratorServiceClient) RefreshToken(ctx context.Context, in *Refres
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error) {
-	out := new(CreateUserResponse)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_CreateUser_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
-	out := new(UpdateUserResponse)
+func (c *artGeneratorServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_UpdateUser_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -106,8 +100,8 @@ func (c *artGeneratorServiceClient) UpdateUser(ctx context.Context, in *UpdateUs
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
-	out := new(GetUserResponse)
+func (c *artGeneratorServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_GetUser_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -115,8 +109,35 @@ func (c *artGeneratorServiceClient) GetUser(ctx context.Context, in *GetUserRequ
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error) {
-	out := new(ResetPasswordResponse)
+func (c *artGeneratorServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
+	out := new(ListUsersResponse)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_ListUsers_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_CreateUser_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_DeleteUser_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_ResetPassword_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -124,17 +145,8 @@ func (c *artGeneratorServiceClient) ResetPassword(ctx context.Context, in *Reset
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error) {
-	out := new(ChangePasswordResponse)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_ChangePassword_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*CreateArtResponse, error) {
-	out := new(CreateArtResponse)
+func (c *artGeneratorServiceClient) CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*Art, error) {
+	out := new(Art)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_CreateArt_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -142,17 +154,8 @@ func (c *artGeneratorServiceClient) CreateArt(ctx context.Context, in *CreateArt
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*UpdateArtResponse, error) {
-	out := new(UpdateArtResponse)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_UpdateArt_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) GetArt(ctx context.Context, in *GetArtRequest, opts ...grpc.CallOption) (*GetArtResponse, error) {
-	out := new(GetArtResponse)
+func (c *artGeneratorServiceClient) GetArt(ctx context.Context, in *GetArtRequest, opts ...grpc.CallOption) (*Art, error) {
+	out := new(Art)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_GetArt_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -160,8 +163,17 @@ func (c *artGeneratorServiceClient) GetArt(ctx context.Context, in *GetArtReques
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) ListArts(ctx context.Context, in *ListArtRequest, opts ...grpc.CallOption) (*ListArtResponse, error) {
-	out := new(ListArtResponse)
+func (c *artGeneratorServiceClient) UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*Art, error) {
+	out := new(Art)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_UpdateArt_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) ListArts(ctx context.Context, in *ListArtsRequest, opts ...grpc.CallOption) (*ListArtsResponse, error) {
+	out := new(ListArtsResponse)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_ListArts_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -169,8 +181,8 @@ func (c *artGeneratorServiceClient) ListArts(ctx context.Context, in *ListArtReq
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*DeleteArtResponse, error) {
-	out := new(DeleteArtResponse)
+func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_DeleteArt_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -182,19 +194,20 @@ func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, in *DeleteArt
 // All implementations must embed UnimplementedArtGeneratorServiceServer
 // for forward compatibility
 type ArtGeneratorServiceServer interface {
-	LoginUser(context.Context, *LoginRequest) (*LoginResponse, error)
-	LogoutUser(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error)
+	DeleteSession(context.Context, *DeleteSessionRequest) (*emptypb.Empty, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
-	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
-	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
-	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
-	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
-	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
-	CreateArt(context.Context, *CreateArtRequest) (*CreateArtResponse, error)
-	UpdateArt(context.Context, *UpdateArtRequest) (*UpdateArtResponse, error)
-	GetArt(context.Context, *GetArtRequest) (*GetArtResponse, error)
-	ListArts(context.Context, *ListArtRequest) (*ListArtResponse, error)
-	DeleteArt(context.Context, *DeleteArtRequest) (*DeleteArtResponse, error)
+	UpdateUser(context.Context, *UpdateUserRequest) (*User, error)
+	GetUser(context.Context, *GetUserRequest) (*User, error)
+	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	CreateUser(context.Context, *CreateUserRequest) (*User, error)
+	DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error)
+	ResetPassword(context.Context, *ResetPasswordRequest) (*emptypb.Empty, error)
+	CreateArt(context.Context, *CreateArtRequest) (*Art, error)
+	GetArt(context.Context, *GetArtRequest) (*Art, error)
+	UpdateArt(context.Context, *UpdateArtRequest) (*Art, error)
+	ListArts(context.Context, *ListArtsRequest) (*ListArtsResponse, error)
+	DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedArtGeneratorServiceServer()
 }
 
@@ -202,43 +215,46 @@ type ArtGeneratorServiceServer interface {
 type UnimplementedArtGeneratorServiceServer struct {
 }
 
-func (UnimplementedArtGeneratorServiceServer) LoginUser(context.Context, *LoginRequest) (*LoginResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LoginUser not implemented")
+func (UnimplementedArtGeneratorServiceServer) CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSession not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) LogoutUser(context.Context, *LogoutRequest) (*LogoutResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LogoutUser not implemented")
+func (UnimplementedArtGeneratorServiceServer) DeleteSession(context.Context, *DeleteSessionRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSession not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshToken not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
+func (UnimplementedArtGeneratorServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
+func (UnimplementedArtGeneratorServiceServer) GetUser(context.Context, *GetUserRequest) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+func (UnimplementedArtGeneratorServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) CreateUser(context.Context, *CreateUserRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResetPassword not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) CreateArt(context.Context, *CreateArtRequest) (*CreateArtResponse, error) {
+func (UnimplementedArtGeneratorServiceServer) CreateArt(context.Context, *CreateArtRequest) (*Art, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateArt not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) UpdateArt(context.Context, *UpdateArtRequest) (*UpdateArtResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateArt not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) GetArt(context.Context, *GetArtRequest) (*GetArtResponse, error) {
+func (UnimplementedArtGeneratorServiceServer) GetArt(context.Context, *GetArtRequest) (*Art, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetArt not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) ListArts(context.Context, *ListArtRequest) (*ListArtResponse, error) {
+func (UnimplementedArtGeneratorServiceServer) UpdateArt(context.Context, *UpdateArtRequest) (*Art, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateArt not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) ListArts(context.Context, *ListArtsRequest) (*ListArtsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListArts not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) DeleteArt(context.Context, *DeleteArtRequest) (*DeleteArtResponse, error) {
+func (UnimplementedArtGeneratorServiceServer) DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteArt not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) mustEmbedUnimplementedArtGeneratorServiceServer() {}
@@ -254,38 +270,38 @@ func RegisterArtGeneratorServiceServer(s grpc.ServiceRegistrar, srv ArtGenerator
 	s.RegisterService(&ArtGeneratorService_ServiceDesc, srv)
 }
 
-func _ArtGeneratorService_LoginUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LoginRequest)
+func _ArtGeneratorService_CreateSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSessionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).LoginUser(ctx, in)
+		return srv.(ArtGeneratorServiceServer).CreateSession(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ArtGeneratorService_LoginUser_FullMethodName,
+		FullMethod: ArtGeneratorService_CreateSession_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).LoginUser(ctx, req.(*LoginRequest))
+		return srv.(ArtGeneratorServiceServer).CreateSession(ctx, req.(*CreateSessionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ArtGeneratorService_LogoutUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LogoutRequest)
+func _ArtGeneratorService_DeleteSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSessionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).LogoutUser(ctx, in)
+		return srv.(ArtGeneratorServiceServer).DeleteSession(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ArtGeneratorService_LogoutUser_FullMethodName,
+		FullMethod: ArtGeneratorService_DeleteSession_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).LogoutUser(ctx, req.(*LogoutRequest))
+		return srv.(ArtGeneratorServiceServer).DeleteSession(ctx, req.(*DeleteSessionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -304,24 +320,6 @@ func _ArtGeneratorService_RefreshToken_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ArtGeneratorServiceServer).RefreshToken(ctx, req.(*RefreshTokenRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).CreateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_CreateUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).CreateUser(ctx, req.(*CreateUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -362,6 +360,60 @@ func _ArtGeneratorService_GetUser_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ArtGeneratorService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).ListUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_ListUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).ListUsers(ctx, req.(*ListUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ArtGeneratorService_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).CreateUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_CreateUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).CreateUser(ctx, req.(*CreateUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ArtGeneratorService_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).DeleteUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_DeleteUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).DeleteUser(ctx, req.(*DeleteUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ArtGeneratorService_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResetPasswordRequest)
 	if err := dec(in); err != nil {
@@ -376,24 +428,6 @@ func _ArtGeneratorService_ResetPassword_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ArtGeneratorServiceServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ChangePasswordRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).ChangePassword(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_ChangePassword_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -416,24 +450,6 @@ func _ArtGeneratorService_CreateArt_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ArtGeneratorService_UpdateArt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateArtRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).UpdateArt(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_UpdateArt_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).UpdateArt(ctx, req.(*UpdateArtRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ArtGeneratorService_GetArt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetArtRequest)
 	if err := dec(in); err != nil {
@@ -452,8 +468,26 @@ func _ArtGeneratorService_GetArt_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ArtGeneratorService_UpdateArt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateArtRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).UpdateArt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_UpdateArt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).UpdateArt(ctx, req.(*UpdateArtRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ArtGeneratorService_ListArts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListArtRequest)
+	in := new(ListArtsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -465,7 +499,7 @@ func _ArtGeneratorService_ListArts_Handler(srv interface{}, ctx context.Context,
 		FullMethod: ArtGeneratorService_ListArts_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).ListArts(ctx, req.(*ListArtRequest))
+		return srv.(ArtGeneratorServiceServer).ListArts(ctx, req.(*ListArtsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -496,20 +530,16 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ArtGeneratorServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "LoginUser",
-			Handler:    _ArtGeneratorService_LoginUser_Handler,
+			MethodName: "CreateSession",
+			Handler:    _ArtGeneratorService_CreateSession_Handler,
 		},
 		{
-			MethodName: "LogoutUser",
-			Handler:    _ArtGeneratorService_LogoutUser_Handler,
+			MethodName: "DeleteSession",
+			Handler:    _ArtGeneratorService_DeleteSession_Handler,
 		},
 		{
 			MethodName: "RefreshToken",
 			Handler:    _ArtGeneratorService_RefreshToken_Handler,
-		},
-		{
-			MethodName: "CreateUser",
-			Handler:    _ArtGeneratorService_CreateUser_Handler,
 		},
 		{
 			MethodName: "UpdateUser",
@@ -520,24 +550,32 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ArtGeneratorService_GetUser_Handler,
 		},
 		{
-			MethodName: "ResetPassword",
-			Handler:    _ArtGeneratorService_ResetPassword_Handler,
+			MethodName: "ListUsers",
+			Handler:    _ArtGeneratorService_ListUsers_Handler,
 		},
 		{
-			MethodName: "ChangePassword",
-			Handler:    _ArtGeneratorService_ChangePassword_Handler,
+			MethodName: "CreateUser",
+			Handler:    _ArtGeneratorService_CreateUser_Handler,
+		},
+		{
+			MethodName: "DeleteUser",
+			Handler:    _ArtGeneratorService_DeleteUser_Handler,
+		},
+		{
+			MethodName: "ResetPassword",
+			Handler:    _ArtGeneratorService_ResetPassword_Handler,
 		},
 		{
 			MethodName: "CreateArt",
 			Handler:    _ArtGeneratorService_CreateArt_Handler,
 		},
 		{
-			MethodName: "UpdateArt",
-			Handler:    _ArtGeneratorService_UpdateArt_Handler,
-		},
-		{
 			MethodName: "GetArt",
 			Handler:    _ArtGeneratorService_GetArt_Handler,
+		},
+		{
+			MethodName: "UpdateArt",
+			Handler:    _ArtGeneratorService_UpdateArt_Handler,
 		},
 		{
 			MethodName: "ListArts",

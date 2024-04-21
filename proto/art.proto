@@ -2,75 +2,98 @@ syntax = "proto3";
 
 package pb;
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 import "google/api/field_behavior.proto";
-import "user.proto";
+import "google/api/resource.proto";
 
 option go_package = "thread-art-generator/pkg/proto;pb";
 
 message Art {
-    // ID is the unique identifier for the art.
-    string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+    // The name of the Art resource.
+    // For example: "arts/123"
+    string name = 1 [
+        (google.api.field_behavior) = OUTPUT_ONLY,
+        (google.api.resource_reference) = {type: "art.example.com/Art"}
+        ];
+
     // Title is the art's title.
     string title = 2 [(google.api.field_behavior) = REQUIRED];
+
     // ImageURL is the art's image URL.
     string image_url = 3;
-    // Author is the art's author.
-    string author_id = 4 [(google.api.field_behavior) = REQUIRED, (google.api.field_behavior) = INPUT_ONLY];
-    // Author is the art's author.
-    User author = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // The name of the User resource who is the author of the art.
+    // For example: "users/456"
+    string author = 4 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/User"}
+    ];
+
     // CreatedAt is the art's creation time. Output only.
-    google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+    google.protobuf.Timestamp create_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
     // UpdatedAt is the art's last update time.
-    google.protobuf.Timestamp update_time = 7  [(google.api.field_behavior) = OUTPUT_ONLY];
+    google.protobuf.Timestamp update_time = 6  [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message CreateArtRequest {
-    // Art is the art.
-    Art art = 1 [(google.api.field_behavior) = REQUIRED];
-}
-message CreateArtResponse {
-    // Art is the art.
-    Art art = 1;
+    // The parent which owns the arts.
+    // For example: "users/456"
+    string parent = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/User"}
+    ];
+
+    // The art to create.
+    Art art = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message UpdateArtRequest {
-    // Art is the art.
+    // The Art resource to update.
     Art art = 1 [(google.api.field_behavior) = REQUIRED];
-}
-message UpdateArtResponse {
-    // Art is the art.
-    Art art = 1;
-}
 
+    // The update mask applies to the resource.
+    google.protobuf.FieldMask update_mask = 2;
+}
 
 message GetArtRequest {
-    // ID is the unique identifier for the art.
-    string id = 1;
-}
-message GetArtResponse {
-    // Art is the art.
-    Art art = 1;
+    // The name of the Art resource.
+    // For example: "users/{user}/arts/{art}"
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/Art"}
+    ];
 }
 
-message ListArtRequest {
-    // PageToken is the page token.
-    int32 page_token = 1;
-    // PageSize is the page size.
+message ListArtsRequest {
+    // The parent which owns the arts.
+    // For example: "users/456"
+    string parent = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/User"}
+    ];
+
+    // The maximum number of arts to return. The service may return fewer than this value.
     int32 page_size = 2;
+
+    // A page token, received from a previous `ListArts` call.
+    string page_token = 3;
 }
 
-message ListArtResponse {
-    // Arts is the list of arts.
+message ListArtsResponse {
+    // The arts returned.
     repeated Art arts = 1;
-    // NextPageToken is the next page token.
-    int32 next_page_token = 2;
+
+    // A token to retrieve next page of results.
+    // Pass this value in ListArtsRequest.page_token field in the subsequent call to `ListArts` method to retrieve the next page of results.
+    string next_page_token = 2;
 }
 
 message DeleteArtRequest {
-    // ID is the unique identifier for the art.
-    string id = 1;
-}
-message DeleteArtResponse {
-    // Art is the art.
-    Art art = 1;
+    // The name of the Art resource.
+    // For example: "arts/123"
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "pb.Art"}
+    ];
 }

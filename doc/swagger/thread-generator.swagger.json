@@ -33,289 +33,16 @@
     "application/json"
   ],
   "paths": {
-    "/v1/art/create": {
-      "post": {
-        "summary": "Create a new art",
-        "description": "Create a new art to the system.",
-        "operationId": "ArtGeneratorService_CreateArt",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbCreateArtResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbCreateArtRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Arts"
-        ]
-      }
-    },
-    "/v1/art/delete/{id}": {
-      "delete": {
-        "summary": "Delete an art",
-        "description": "Remove a specific art from the system.",
-        "operationId": "ArtGeneratorService_DeleteArt",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbDeleteArtResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "ID is the unique identifier for the art.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Arts"
-        ]
-      }
-    },
-    "/v1/art/get/{id}": {
-      "get": {
-        "summary": "Get a arts's information",
-        "description": "Retrieve information for a specific art by its ID.",
-        "operationId": "ArtGeneratorService_GetArt",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbGetArtResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "ID is the unique identifier for the art.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Arts"
-        ],
-        "security": []
-      }
-    },
-    "/v1/art/list": {
-      "post": {
-        "summary": "List all arts",
-        "description": "Retrieve a list of all arts in the system.",
-        "operationId": "ArtGeneratorService_ListArts",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbListArtResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbListArtRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Arts"
-        ],
-        "security": []
-      }
-    },
-    "/v1/art/update": {
-      "put": {
-        "summary": "Update a post's information",
-        "description": "Modify the information of a specific art.",
-        "operationId": "ArtGeneratorService_UpdateArt",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbUpdateArtResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbUpdateArtRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Arts"
-        ]
-      }
-    },
-    "/v1/user/change": {
-      "post": {
-        "summary": "Change a user's password",
-        "description": "Update the password of a specific user.",
-        "operationId": "ArtGeneratorService_ChangePassword",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbChangePasswordResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbChangePasswordRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Users"
-        ]
-      }
-    },
-    "/v1/user/create": {
-      "post": {
-        "summary": "Create a new user",
-        "description": "Add a new user to the system with the provided information.",
-        "operationId": "ArtGeneratorService_CreateUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbCreateUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbCreateUserRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Users"
-        ],
-        "security": []
-      }
-    },
-    "/v1/user/get/{id}": {
-      "get": {
-        "summary": "Get a user's information",
-        "description": "Retrieve information for a specific user by their ID.",
-        "operationId": "ArtGeneratorService_GetUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbGetUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "ID is the unique identifier for the user.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Users"
-        ],
-        "security": []
-      }
-    },
-    "/v1/user/login": {
+    "/v1/sessions": {
       "post": {
         "summary": "Log in a user",
         "description": "Authenticate a user with their email and password and return an access token.",
-        "operationId": "ArtGeneratorService_LoginUser",
+        "operationId": "ArtGeneratorService_CreateSession",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/pbLoginResponse"
+              "$ref": "#/definitions/pbCreateSessionResponse"
             }
           },
           "default": {
@@ -331,7 +58,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/pbLoginRequest"
+              "$ref": "#/definitions/pbCreateSessionRequest"
             }
           }
         ],
@@ -341,16 +68,17 @@
         "security": []
       }
     },
-    "/v1/user/logout": {
-      "post": {
-        "summary": "Log out a user",
-        "description": "Revoke the access token of a logged-in user.",
-        "operationId": "ArtGeneratorService_LogoutUser",
+    "/v1/sessions/{refreshToken}": {
+      "delete": {
+        "summary": "Logout a user",
+        "description": "Delete a user's session, effectively logging them out.",
+        "operationId": "ArtGeneratorService_DeleteSession",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/pbLogoutResponse"
+              "type": "object",
+              "properties": {}
             }
           },
           "default": {
@@ -362,23 +90,22 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
+            "name": "refreshToken",
+            "description": "RefreshToken is the refresh token of the session that needs to be deleted.",
+            "in": "path",
             "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbLogoutRequest"
-            }
+            "type": "string"
           }
         ],
         "tags": [
-          "Authentication"
+          "Users"
         ]
       }
     },
-    "/v1/user/refresh": {
+    "/v1/tokens:refresh": {
       "post": {
-        "summary": "Refresh an access token",
-        "description": "Refresh an expired access token using a refresh token.",
+        "summary": "Refresh a user's token",
+        "description": "Refresh a user's authentication token.",
         "operationId": "ArtGeneratorService_RefreshToken",
         "responses": {
           "200": {
@@ -405,12 +132,88 @@
           }
         ],
         "tags": [
-          "Authentication"
-        ],
-        "security": []
+          "Users"
+        ]
       }
     },
-    "/v1/user/reset": {
+    "/v1/users": {
+      "get": {
+        "summary": "List all users",
+        "description": "Retrieve a list of all users in the system.",
+        "operationId": "ArtGeneratorService_ListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbListUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageToken",
+            "description": "PageToken is the token to retrieve the next page of results.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "PageSize is the number of users to return in a single page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      },
+      "post": {
+        "summary": "Create a new user",
+        "description": "Create a new user in the system.",
+        "operationId": "ArtGeneratorService_CreateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user",
+            "description": "User is the user to be created.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbUser",
+              "required": [
+                "user"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users/{email}:resetPassword": {
       "post": {
         "summary": "Reset a user's password",
         "description": "Send a password reset email to a user's registered email address.",
@@ -419,7 +222,8 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/pbResetPasswordResponse"
+              "type": "object",
+              "properties": {}
             }
           },
           "default": {
@@ -431,46 +235,18 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
+            "name": "email",
+            "description": "The email of the user who wants to reset the password.",
+            "in": "path",
             "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbResetPasswordRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Users"
-        ],
-        "security": []
-      }
-    },
-    "/v1/user/update": {
-      "put": {
-        "summary": "Update a user's information",
-        "description": "Modify the information of a specific user.",
-        "operationId": "ArtGeneratorService_UpdateUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbUpdateUserResponse"
-            }
+            "type": "string"
           },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
           {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/pbUpdateUserRequest"
+              "$ref": "#/definitions/ArtGeneratorServiceResetPasswordBody"
             }
           }
         ],
@@ -478,15 +254,390 @@
           "Users"
         ]
       }
+    },
+    "/v1/users/{name}": {
+      "get": {
+        "summary": "Get a user's information",
+        "description": "Retrieve information for a specific user by their ID.",
+        "operationId": "ArtGeneratorService_GetUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "Name is the unique identifier for the user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      },
+      "delete": {
+        "summary": "Delete a user",
+        "description": "Remove a specific user from the system.",
+        "operationId": "ArtGeneratorService_DeleteUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "Name is the unique identifier for the user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users/{user.name}": {
+      "patch": {
+        "summary": "Update a user's information",
+        "description": "Modify the information of a specific user.",
+        "operationId": "ArtGeneratorService_UpdateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user.name",
+            "description": "Name is the unique identifier for the user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "user",
+            "description": "User is the user to be updated.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "description": "Username is the user's username."
+                },
+                "firstName": {
+                  "type": "string",
+                  "description": "FirstName is the user's first name."
+                },
+                "lastName": {
+                  "type": "string",
+                  "description": "LastName is the user's last name."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Email is the user's email."
+                },
+                "password": {
+                  "type": "string",
+                  "description": "Password is the user's password."
+                }
+              },
+              "title": "User is the user to be updated.",
+              "required": [
+                "username",
+                "firstName",
+                "lastName",
+                "email",
+                "password"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/{art.name}": {
+      "patch": {
+        "summary": "Update a post's information",
+        "description": "Modify the information of a specific art.",
+        "operationId": "ArtGeneratorService_UpdateArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "art.name",
+            "description": "The name of the Art resource.\nFor example: \"arts/123\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "art",
+            "description": "The Art resource to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Title is the art's title."
+                },
+                "imageUrl": {
+                  "type": "string",
+                  "description": "ImageURL is the art's image URL."
+                },
+                "author": {
+                  "type": "string",
+                  "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\""
+                },
+                "createTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "CreatedAt is the art's creation time. Output only.",
+                  "readOnly": true
+                },
+                "updateTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "UpdatedAt is the art's last update time.",
+                  "readOnly": true
+                }
+              },
+              "title": "The Art resource to update.",
+              "required": [
+                "title",
+                "author"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      }
+    },
+    "/v1/{name}": {
+      "get": {
+        "summary": "Get a arts's information",
+        "description": "Retrieve information for a specific art by its ID.",
+        "operationId": "ArtGeneratorService_GetArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Art resource.\nFor example: \"users/{user}/arts/{art}\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "authors/[^/]+/arts/[^/]+"
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      },
+      "delete": {
+        "summary": "Delete an art",
+        "description": "Remove a specific art from the system.",
+        "operationId": "ArtGeneratorService_DeleteArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Art resource.\nFor example: \"arts/123\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      }
+    },
+    "/v1/{parent}/arts": {
+      "get": {
+        "summary": "List all arts",
+        "description": "Retrieve a list of all arts in the system.",
+        "operationId": "ArtGeneratorService_ListArts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbListArtsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "parent",
+            "description": "The parent which owns the arts.\nFor example: \"users/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+"
+          },
+          {
+            "name": "pageSize",
+            "description": "The maximum number of arts to return. The service may return fewer than this value.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "A page token, received from a previous `ListArts` call.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      },
+      "post": {
+        "summary": "Create a new art",
+        "description": "Create a new art to the system.",
+        "operationId": "ArtGeneratorService_CreateArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "parent",
+            "description": "The parent which owns the arts.\nFor example: \"users/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+"
+          },
+          {
+            "name": "art",
+            "description": "The art to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbArt",
+              "required": [
+                "art"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      }
     }
   },
   "definitions": {
+    "ArtGeneratorServiceResetPasswordBody": {
+      "type": "object",
+      "title": "reset password"
+    },
     "pbArt": {
       "type": "object",
       "properties": {
-        "id": {
+        "name": {
           "type": "string",
-          "description": "ID is the unique identifier for the art.",
+          "title": "The name of the Art resource.\nFor example: \"arts/123\"",
           "readOnly": true
         },
         "title": {
@@ -497,14 +648,9 @@
           "type": "string",
           "description": "ImageURL is the art's image URL."
         },
-        "authorId": {
-          "type": "string",
-          "description": "Author is the art's author."
-        },
         "author": {
-          "$ref": "#/definitions/pbUser",
-          "description": "Author is the art's author.",
-          "readOnly": true
+          "type": "string",
+          "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\""
         },
         "createTime": {
           "type": "string",
@@ -521,10 +667,10 @@
       },
       "required": [
         "title",
-        "authorId"
+        "author"
       ]
     },
-    "pbChangePasswordRequest": {
+    "pbCreateSessionRequest": {
       "type": "object",
       "properties": {
         "email": {
@@ -534,111 +680,51 @@
         "password": {
           "type": "string",
           "description": "Password is the user's password."
-        },
-        "token": {
-          "type": "string",
-          "description": "Token is the token."
-        }
-      }
-    },
-    "pbChangePasswordResponse": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        }
-      }
-    },
-    "pbCreateArtRequest": {
-      "type": "object",
-      "properties": {
-        "art": {
-          "$ref": "#/definitions/pbArt",
-          "description": "Art is the art."
         }
       },
       "required": [
-        "art"
+        "email",
+        "password"
       ]
     },
-    "pbCreateArtResponse": {
-      "type": "object",
-      "properties": {
-        "art": {
-          "$ref": "#/definitions/pbArt",
-          "description": "Art is the art."
-        }
-      }
-    },
-    "pbCreateUserRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Name is the user's name."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email is the user's email."
-        },
-        "password": {
-          "type": "string",
-          "description": "Password is the user's password."
-        }
-      }
-    },
-    "pbCreateUserResponse": {
+    "pbCreateSessionResponse": {
       "type": "object",
       "properties": {
         "user": {
           "$ref": "#/definitions/pbUser",
-          "description": "User is the created user."
-        }
-      }
-    },
-    "pbDeleteArtResponse": {
-      "type": "object",
-      "properties": {
-        "art": {
-          "$ref": "#/definitions/pbArt",
-          "description": "Art is the art."
-        }
-      }
-    },
-    "pbGetArtResponse": {
-      "type": "object",
-      "properties": {
-        "art": {
-          "$ref": "#/definitions/pbArt",
-          "description": "Art is the art."
-        }
-      }
-    },
-    "pbGetUserResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/pbUser",
-          "description": "User is the user."
-        }
-      }
-    },
-    "pbListArtRequest": {
-      "type": "object",
-      "properties": {
-        "pageToken": {
-          "type": "integer",
-          "format": "int32",
-          "description": "PageToken is the page token."
+          "description": "User is the user.",
+          "readOnly": true
         },
-        "pageSize": {
-          "type": "integer",
-          "format": "int32",
-          "description": "PageSize is the page size."
+        "sessionId": {
+          "type": "string",
+          "title": "Session ID",
+          "readOnly": true
+        },
+        "accessToken": {
+          "type": "string",
+          "description": "AccessToken is the access token.",
+          "readOnly": true
+        },
+        "refreshToken": {
+          "type": "string",
+          "description": "RefreshToken is the refresh token.",
+          "readOnly": true
+        },
+        "accessTokenExpireTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "AccessTokenExpiresTime is the access token expiration time.",
+          "readOnly": true
+        },
+        "refreshTokenExpireTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RefreshTokenExpiresTime is the refresh token expiration time.",
+          "readOnly": true
         }
       }
     },
-    "pbListArtResponse": {
+    "pbListArtsResponse": {
       "type": "object",
       "properties": {
         "arts": {
@@ -647,73 +733,28 @@
             "type": "object",
             "$ref": "#/definitions/pbArt"
           },
-          "description": "Arts is the list of arts."
+          "description": "The arts returned."
         },
         "nextPageToken": {
-          "type": "integer",
-          "format": "int32",
-          "description": "NextPageToken is the next page token."
+          "type": "string",
+          "description": "A token to retrieve next page of results.\nPass this value in ListArtsRequest.page_token field in the subsequent call to `ListArts` method to retrieve the next page of results."
         }
       }
     },
-    "pbLoginRequest": {
+    "pbListUsersResponse": {
       "type": "object",
       "properties": {
-        "email": {
-          "type": "string",
-          "description": "Email is the user's email."
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/pbUser"
+          },
+          "description": "Users is the list of users."
         },
-        "password": {
+        "nextPageToken": {
           "type": "string",
-          "description": "Password is the user's password."
-        }
-      }
-    },
-    "pbLoginResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/pbUser",
-          "description": "User is the user."
-        },
-        "sessionId": {
-          "type": "string",
-          "title": "Session ID"
-        },
-        "accessToken": {
-          "type": "string",
-          "description": "AccessToken is the access token."
-        },
-        "refreshToken": {
-          "type": "string",
-          "description": "RefreshToken is the refresh token."
-        },
-        "accessTokenExpireTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "AccessTokenExpiresTime is the access token expiration time."
-        },
-        "refreshTokenExpireTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "RefreshTokenExpiresTime is the refresh token expiration time."
-        }
-      }
-    },
-    "pbLogoutRequest": {
-      "type": "object",
-      "properties": {
-        "refreshToken": {
-          "type": "string",
-          "description": "RefreshToken is the refresh token."
-        }
-      }
-    },
-    "pbLogoutResponse": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
+          "description": "NextPageToken is the token to retrieve the next page of results."
         }
       }
     },
@@ -722,99 +763,59 @@
       "properties": {
         "refreshToken": {
           "type": "string",
-          "description": "RefreshToken is the refresh token."
+          "description": "RefreshToken is the refresh token that the user provides."
         }
-      }
+      },
+      "required": [
+        "refreshToken"
+      ]
     },
     "pbRefreshTokenResponse": {
       "type": "object",
       "properties": {
         "accessToken": {
           "type": "string",
-          "description": "AccessToken is the access token."
+          "description": "AccessToken is the new access token that the user can use for authentication.",
+          "readOnly": true
         },
         "refreshToken": {
           "type": "string",
-          "description": "RefreshToken is the refresh token."
+          "description": "RefreshToken is the new refresh token that the user can use to get a new access token when the current one expires.",
+          "readOnly": true
         },
         "accessTokenExpireTime": {
           "type": "string",
           "format": "date-time",
-          "description": "AccessTokenExpiresTime is the access token expiration time."
+          "description": "AccessTokenExpiresTime is the access token expiration time.",
+          "readOnly": true
         },
         "refreshTokenExpireTime": {
           "type": "string",
           "format": "date-time",
-          "description": "RefreshTokenExpiresTime is the refresh token expiration time."
-        }
-      }
-    },
-    "pbResetPasswordRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string",
-          "description": "Email is the user's email."
-        }
-      },
-      "title": "reset password"
-    },
-    "pbResetPasswordResponse": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        }
-      }
-    },
-    "pbUpdateArtRequest": {
-      "type": "object",
-      "properties": {
-        "art": {
-          "$ref": "#/definitions/pbArt",
-          "description": "Art is the art."
-        }
-      },
-      "required": [
-        "art"
-      ]
-    },
-    "pbUpdateArtResponse": {
-      "type": "object",
-      "properties": {
-        "art": {
-          "$ref": "#/definitions/pbArt",
-          "description": "Art is the art."
-        }
-      }
-    },
-    "pbUpdateUserRequest": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/pbUser"
-        }
-      }
-    },
-    "pbUpdateUserResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/pbUser",
-          "description": "User is the updated user."
+          "description": "RefreshTokenExpiresTime is the refresh token expiration time.",
+          "readOnly": true
         }
       }
     },
     "pbUser": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "ID is the unique identifier for the user."
-        },
         "name": {
           "type": "string",
-          "description": "Name is the user's name."
+          "description": "Name is the unique identifier for the user.",
+          "readOnly": true
+        },
+        "username": {
+          "type": "string",
+          "description": "Username is the user's username."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "FirstName is the user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "LastName is the user's last name."
         },
         "email": {
           "type": "string",
@@ -824,7 +825,14 @@
           "type": "string",
           "description": "Password is the user's password."
         }
-      }
+      },
+      "required": [
+        "username",
+        "firstName",
+        "lastName",
+        "email",
+        "password"
+      ]
     },
     "protobufAny": {
       "type": "object",
