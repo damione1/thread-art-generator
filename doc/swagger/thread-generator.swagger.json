@@ -355,10 +355,6 @@
             "schema": {
               "type": "object",
               "properties": {
-                "username": {
-                  "type": "string",
-                  "description": "Username is the user's username."
-                },
                 "firstName": {
                   "type": "string",
                   "description": "FirstName is the user's first name."
@@ -378,7 +374,6 @@
               },
               "title": "User is the user to be updated.",
               "required": [
-                "username",
                 "firstName",
                 "lastName",
                 "email",
@@ -438,7 +433,8 @@
                 },
                 "author": {
                   "type": "string",
-                  "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\""
+                  "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\"",
+                  "readOnly": true
                 },
                 "createTime": {
                   "type": "string",
@@ -455,8 +451,7 @@
               },
               "title": "The Art resource to update.",
               "required": [
-                "title",
-                "author"
+                "title"
               ]
             }
           }
@@ -574,7 +569,8 @@
             "description": "A page token, received from a previous `ListArts` call.",
             "in": "query",
             "required": false,
-            "type": "string"
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "tags": [
@@ -650,7 +646,8 @@
         },
         "author": {
           "type": "string",
-          "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\""
+          "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\"",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
@@ -666,8 +663,7 @@
         }
       },
       "required": [
-        "title",
-        "author"
+        "title"
       ]
     },
     "pbCreateSessionRequest": {
@@ -736,7 +732,8 @@
           "description": "The arts returned."
         },
         "nextPageToken": {
-          "type": "string",
+          "type": "integer",
+          "format": "int32",
           "description": "A token to retrieve next page of results.\nPass this value in ListArtsRequest.page_token field in the subsequent call to `ListArts` method to retrieve the next page of results."
         }
       }
@@ -805,10 +802,6 @@
           "description": "Name is the unique identifier for the user.",
           "readOnly": true
         },
-        "username": {
-          "type": "string",
-          "description": "Username is the user's username."
-        },
         "firstName": {
           "type": "string",
           "description": "FirstName is the user's first name."
@@ -827,7 +820,6 @@
         }
       },
       "required": [
-        "username",
         "firstName",
         "lastName",
         "email",

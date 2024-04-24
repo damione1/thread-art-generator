@@ -36,3 +36,7 @@ func rolePermissionError(err error) error {
 func internalError(err error) error {
 	return status.Errorf(codes.Internal, "internal error: %s", err)
 }
+
+func notFoundError(err error) error {
+	return status.Errorf(codes.NotFound, "not found: %s", err)
+}

@@ -5,7 +5,7 @@ import (
 
 	database "github.com/Damione1/thread-art-generator/pkg/db"
 	"github.com/Damione1/thread-art-generator/pkg/util"
-	"github.com/golang-migrate/migrate/v4"
+	migrate "github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/rs/zerolog/log"
 )
@@ -43,15 +43,29 @@ func RunDBMigration(config *util.Config, db *sql.DB) {
 		err = m.Up()
 		if err != nil {
 			if err == migrate.ErrNoChange {
-				log.Print("🥝 No migration to run")
+				log.Info().Msg("🥝 No migration to run")
 				return
-			} else {
-				log.Warn().Err(err).Msgf("🥝 Migration failed (attempt %d/%d)", i, retryCount)
-				if revertErr := m.Down(); revertErr != nil {
-					log.Error().Err(revertErr).Msg("🥝 Failed to revert migration")
-				}
+			}
+
+			version, dirty, errVersion := m.Version()
+			if errVersion != nil {
+				log.Error().Err(errVersion).Msg("🥝 Error retrieving version information")
 				continue
 			}
+
+			if dirty {
+				log.Warn().Err(err).Msg("🥝 Database in a dirty state")
+				forceErr := m.Force(int(version))
+				if forceErr != nil {
+					log.Error().Err(forceErr).Msg("🥝 Failed to force version to clean state")
+					continue
+				}
+				log.Info().Msg("🥝 Dirty state resolved by force. Retrying...")
+				continue
+			}
+
+			log.Warn().Err(err).Msgf("🥝 Migration failed (attempt %d/%d)", i, retryCount)
+			continue
 		}
 		log.Info().Msg("🥝 Migration ran successfully")
 		return

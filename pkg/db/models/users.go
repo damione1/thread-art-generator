@@ -27,12 +27,13 @@ type User struct {
 	ID        string      `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Email     string      `boil:"email" json:"email" toml:"email" yaml:"email"`
 	Password  string      `boil:"password" json:"password" toml:"password" yaml:"password"`
-	Name      string      `boil:"name" json:"name" toml:"name" yaml:"name"`
 	AvatarID  null.String `boil:"avatar_id" json:"avatar_id,omitempty" toml:"avatar_id" yaml:"avatar_id,omitempty"`
 	Active    bool        `boil:"active" json:"active" toml:"active" yaml:"active"`
 	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	Role      RoleEnum    `boil:"role" json:"role" toml:"role" yaml:"role"`
+	FirstName string      `boil:"first_name" json:"first_name" toml:"first_name" yaml:"first_name"`
+	LastName  null.String `boil:"last_name" json:"last_name,omitempty" toml:"last_name" yaml:"last_name,omitempty"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -42,44 +43,48 @@ var UserColumns = struct {
 	ID        string
 	Email     string
 	Password  string
-	Name      string
 	AvatarID  string
 	Active    string
 	CreatedAt string
 	UpdatedAt string
 	Role      string
+	FirstName string
+	LastName  string
 }{
 	ID:        "id",
 	Email:     "email",
 	Password:  "password",
-	Name:      "name",
 	AvatarID:  "avatar_id",
 	Active:    "active",
 	CreatedAt: "created_at",
 	UpdatedAt: "updated_at",
 	Role:      "role",
+	FirstName: "first_name",
+	LastName:  "last_name",
 }
 
 var UserTableColumns = struct {
 	ID        string
 	Email     string
 	Password  string
-	Name      string
 	AvatarID  string
 	Active    string
 	CreatedAt string
 	UpdatedAt string
 	Role      string
+	FirstName string
+	LastName  string
 }{
 	ID:        "users.id",
 	Email:     "users.email",
 	Password:  "users.password",
-	Name:      "users.name",
 	AvatarID:  "users.avatar_id",
 	Active:    "users.active",
 	CreatedAt: "users.created_at",
 	UpdatedAt: "users.updated_at",
 	Role:      "users.role",
+	FirstName: "users.first_name",
+	LastName:  "users.last_name",
 }
 
 // Generated where
@@ -123,22 +128,24 @@ var UserWhere = struct {
 	ID        whereHelperstring
 	Email     whereHelperstring
 	Password  whereHelperstring
-	Name      whereHelperstring
 	AvatarID  whereHelpernull_String
 	Active    whereHelperbool
 	CreatedAt whereHelpertime_Time
 	UpdatedAt whereHelpertime_Time
 	Role      whereHelperRoleEnum
+	FirstName whereHelperstring
+	LastName  whereHelpernull_String
 }{
 	ID:        whereHelperstring{field: "\"users\".\"id\""},
 	Email:     whereHelperstring{field: "\"users\".\"email\""},
 	Password:  whereHelperstring{field: "\"users\".\"password\""},
-	Name:      whereHelperstring{field: "\"users\".\"name\""},
 	AvatarID:  whereHelpernull_String{field: "\"users\".\"avatar_id\""},
 	Active:    whereHelperbool{field: "\"users\".\"active\""},
 	CreatedAt: whereHelpertime_Time{field: "\"users\".\"created_at\""},
 	UpdatedAt: whereHelpertime_Time{field: "\"users\".\"updated_at\""},
 	Role:      whereHelperRoleEnum{field: "\"users\".\"role\""},
+	FirstName: whereHelperstring{field: "\"users\".\"first_name\""},
+	LastName:  whereHelpernull_String{field: "\"users\".\"last_name\""},
 }
 
 // UserRels is where relationship names are stored.
@@ -209,9 +216,9 @@ func (r *userR) GetSessions() SessionSlice {
 type userL struct{}
 
 var (
-	userAllColumns            = []string{"id", "email", "password", "name", "avatar_id", "active", "created_at", "updated_at", "role"}
-	userColumnsWithoutDefault = []string{"email", "password", "name"}
-	userColumnsWithDefault    = []string{"id", "avatar_id", "active", "created_at", "updated_at", "role"}
+	userAllColumns            = []string{"id", "email", "password", "avatar_id", "active", "created_at", "updated_at", "role", "first_name", "last_name"}
+	userColumnsWithoutDefault = []string{"email", "password", "first_name"}
+	userColumnsWithDefault    = []string{"id", "avatar_id", "active", "created_at", "updated_at", "role", "last_name"}
 	userPrimaryKeyColumns     = []string{"id"}
 	userGeneratedColumns      = []string{}
 )

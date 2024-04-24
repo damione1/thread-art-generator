@@ -25,7 +25,7 @@ message Art {
     // The name of the User resource who is the author of the art.
     // For example: "users/456"
     string author = 4 [
-        (google.api.field_behavior) = REQUIRED,
+        (google.api.field_behavior) = OUTPUT_ONLY,
         (google.api.resource_reference) = {type: "art.example.com/User"}
     ];
 
@@ -40,7 +40,7 @@ message CreateArtRequest {
     // The parent which owns the arts.
     // For example: "users/456"
     string parent = 1 [
-        (google.api.field_behavior) = REQUIRED,
+        (google.api.field_behavior) = OUTPUT_ONLY,
         (google.api.resource_reference) = {type: "art.example.com/User"}
     ];
 
@@ -77,7 +77,7 @@ message ListArtsRequest {
     int32 page_size = 2;
 
     // A page token, received from a previous `ListArts` call.
-    string page_token = 3;
+    int32 page_token = 3;
 }
 
 message ListArtsResponse {
@@ -86,7 +86,7 @@ message ListArtsResponse {
 
     // A token to retrieve next page of results.
     // Pass this value in ListArtsRequest.page_token field in the subsequent call to `ListArts` method to retrieve the next page of results.
-    string next_page_token = 2;
+    int32 next_page_token = 2;
 }
 
 message DeleteArtRequest {

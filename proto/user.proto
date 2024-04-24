@@ -20,8 +20,6 @@ message User {
         (google.api.field_behavior) = OUTPUT_ONLY,
         (google.api.resource_reference).type = "art.example.com/User"
         ];
-    // Username is the user's username.
-    string username = 2 [(google.api.field_behavior) = REQUIRED];
     // FirstName is the user's first name.
     string first_name = 3 [(google.api.field_behavior) = REQUIRED];
     // LastName is the user's last name.

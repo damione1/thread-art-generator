@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -34,23 +35,23 @@ const (
 	xForwardedForHeader        = "x-forwarded-for"
 )
 
-func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
 	if err := validateCreateUserRequest(req); err != nil {
 		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
-	hashedPassword, err := util.HashPassword(req.GetPassword())
+	pbUser := req.GetUser()
+
+	hashedPassword, err := util.HashPassword(pbUser.GetPassword())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
 	}
 
-	user := &models.User{
-		Email:    req.GetEmail(),
-		Password: hashedPassword,
-		Name:     req.GetName(),
-	}
+	pbUser.Name = "" // name is not allowed to be set by the user
+	dbUser := pbx.ProtoUserToDb(pbUser)
+	dbUser.Password = hashedPassword
 
-	err = user.Insert(ctx, server.config.DB, boil.Infer())
+	err = dbUser.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil, status.Errorf(codes.AlreadyExists, "user already exists")
@@ -58,22 +59,29 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		return nil, status.Errorf(codes.Internal, "failed to insert user: %s", err)
 	}
 
-	pbUser := pbx.DbUserToProto(user)
+	pbUser = pbx.DbUserToProto(dbUser)
 
-	return &pb.CreateUserResponse{
-		User: pbUser,
-	}, nil
+	return pbUser, nil
 }
 
 func validateCreateUserRequest(req *pb.CreateUserRequest) error {
 	return validation.ValidateStruct(req,
-		validation.Field(&req.Name, validation.Required, validation.Length(5, 20)),
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(checkPassword)),
+		validation.Field(&req.User, validation.Required, validation.By(
+			func(value interface{}) error {
+				user := value.(*pb.User)
+				return validation.ValidateStruct(user,
+					validation.Field(&user.Email, validation.Required, is.Email),
+					validation.Field(&user.Password, validation.By(checkPassword)),
+					validation.Field(&user.Name, validation.Length(0, 0)), // name is not allowed to be set by the user
+					validation.Field(&user.FirstName, validation.Required, validation.Length(1, 255)),
+					validation.Field(&user.LastName, validation.NilOrNotEmpty, validation.Length(1, 255)),
+				)
+			},
+		)),
 	)
 }
 
-func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
+func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	authPayload, err := server.authorizeUser(ctx)
 	if err != nil {
 		return nil, unauthenticatedError(err)
@@ -81,15 +89,20 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 
 	if err = validateUpdateUserRequest(req); err != nil {
 		return nil, err
-	}
 
+	}
 	pbUser := req.GetUser()
 
-	if authPayload.UserID != pbUser.GetId() {
+	userId, err := pbx.GetResourceIDByType(pbUser.GetName(), pbx.RessourceTypeUsers)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid ressource name: %s", err)
+	}
+
+	if userId != authPayload.UserID {
 		return nil, status.Errorf(codes.PermissionDenied, "cannot update other user's info")
 	}
 
-	user, err := models.Users(models.UserWhere.Email.EQ(pbUser.GetEmail())).One(ctx, server.config.DB)
+	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "user not found")
@@ -97,31 +110,43 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, status.Error(codes.Internal, "failed to get user")
 	}
 
-	if pbUser.GetPassword() == "" {
-		hashedPassword, err := util.HashPassword(pbUser.GetPassword())
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
+	updateMask := req.GetUpdateMask()
+	if updateMask != nil && len(updateMask.GetPaths()) > 0 {
+		for _, path := range updateMask.GetPaths() {
+			switch path {
+			case "password":
+				if pbUser.GetPassword() != "" {
+					hashedPassword, err := util.HashPassword(pbUser.GetPassword())
+					if err != nil {
+						return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
+					}
+					user.Password = hashedPassword
+				}
+			case "first_name":
+				if pbUser.GetFirstName() != "" {
+					user.FirstName = pbUser.GetFirstName()
+				}
+			case "last_name":
+				user.LastName.String = pbUser.GetLastName()
+				user.LastName.Valid = false
+				if pbUser.GetLastName() != "" {
+					user.LastName.Valid = true
+				}
+			case "email":
+				if pbUser.GetEmail() != "" {
+					user.Email = pbUser.GetEmail()
+				}
+			default:
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid field: %s", path)
+			}
 		}
-		user.Password = hashedPassword
 	}
 
-	if pbUser.GetName() != "" {
-		user.Name = pbUser.GetName()
-	}
-
-	if pbUser.GetEmail() != "" {
-		user.Email = pbUser.GetEmail()
-	}
-
-	_, err = user.Update(ctx, server.config.DB, boil.Infer())
-	if err != nil {
+	if _, err = user.Update(ctx, server.config.DB, boil.Infer()); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update user: %s", err)
 	}
 
-	return &pb.UpdateUserResponse{
-		User: pbx.DbUserToProto(user),
-	}, nil
-
+	return pbx.DbUserToProto(user), nil
 }
 
 func validateUpdateUserRequest(req *pb.UpdateUserRequest) error {
@@ -130,17 +155,17 @@ func validateUpdateUserRequest(req *pb.UpdateUserRequest) error {
 			func(value interface{}) error {
 				user := value.(*pb.User)
 				return validation.ValidateStruct(user,
-					validation.Field(&user.Email, validation.Required, is.Email),
 					validation.Field(&user.Name, validation.Required),
-					validation.Field(&user.Password, validation.Length(8, 100), validation.Match(regexp.MustCompile(`^(?=.*[A-Z].*[A-Z])(?=.*[!@#$&*])(?=.*[0-9].*[0-9])(?=.*[a-z].*[a-z].*[a-z]).{8}$`))),
+					validation.Field(&user.Email, validation.Required, is.Email),
+					validation.Field(&user.Password, validation.By(checkPassword)),
 				)
 			},
 		)),
 	)
 }
 
-func (server *Server) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	err := validateLoginUserRequest(req)
+func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
+	err := validateCreateSessionRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +218,7 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.
 		return nil, status.Errorf(codes.Internal, "failed to insert session: %s", err)
 	}
 
-	return &pb.LoginResponse{
+	return &pb.CreateSessionResponse{
 		User:                   pbx.DbUserToProto(user),
 		SessionId:              session.ID,
 		AccessToken:            accessToken,
@@ -201,10 +226,9 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.
 		AccessTokenExpireTime:  timestamppb.New(accessPayload.ExpireTime),
 		RefreshTokenExpireTime: timestamppb.New(refreshPayload.ExpireTime),
 	}, nil
-
 }
 
-func validateLoginUserRequest(req *pb.LoginRequest) error {
+func validateCreateSessionRequest(req *pb.CreateSessionRequest) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 		validation.Field(&req.Password, validation.Required),
@@ -261,16 +285,15 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 
 }
 
-func (server *Server) LogoutUser(ctx context.Context, req *pb.LogoutRequest) (*pb.LogoutResponse, error) {
-
-	err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required))
-	if err != nil {
+func (server *Server) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*emptypb.Empty, error) {
+	if err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required)); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err)
 	}
 
 	if req.GetRefreshToken() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "refresh token is required")
 	}
+
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -284,9 +307,7 @@ func (server *Server) LogoutUser(ctx context.Context, req *pb.LogoutRequest) (*p
 		return nil, status.Errorf(codes.Internal, "failed to delete session: %s", err)
 	}
 
-	return &pb.LogoutResponse{
-		Success: true,
-	}, nil
+	return &emptypb.Empty{}, nil
 }
 
 func (server *Server) extractMetadata(ctx context.Context) *Metadata {
@@ -323,6 +344,9 @@ func checkPassword(value interface{}) error {
 	}
 	if !regexp.MustCompile(`\d`).MatchString(password) {
 		return fmt.Errorf("password must contain at least one digit")
+	}
+	if len(password) < 10 || len(password) > 255 {
+		return fmt.Errorf("password must be between 10 and 255 characters")
 	}
 	return nil
 }

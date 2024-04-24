@@ -7,17 +7,40 @@ import (
 
 func DbUserToProto(user *models.User) *pb.User {
 	userPb := &pb.User{
-		Id:    user.ID,
-		Email: user.Email,
-		Name:  user.Name,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		Password:  "", // never return password
 	}
+
+	if user.LastName.Valid {
+		userPb.LastName = user.LastName.String
+	}
+
+	userPb.Name = GetResourceName([]Resource{
+		{Type: RessourceTypeUsers, ID: user.ID},
+	})
+
 	return userPb
 }
 
 func ProtoUserToDb(user *pb.User) *models.User {
-	return &models.User{
-		ID:    user.GetId(),
-		Email: user.GetEmail(),
-		Name:  user.GetName(),
+	userDb := &models.User{
+		Email:     user.GetEmail(),
+		FirstName: user.GetFirstName(),
 	}
+
+	if user.GetName() != "" {
+		userId, err := GetResourceIDByType(user.GetName(), RessourceTypeUsers)
+		if err != nil {
+			return nil
+		}
+		userDb.ID = userId
+	}
+
+	if user.GetLastName() != "" {
+		userDb.LastName.String = user.GetLastName()
+		userDb.LastName.Valid = true
+	}
+
+	return userDb
 }
