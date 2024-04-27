@@ -20,7 +20,6 @@ require (
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.16.2
 	github.com/volatiletech/strmangle v0.0.6
-	go.einride.tech/aip v0.67.1
 	golang.org/x/crypto v0.18.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240123012728-ef4313101c80
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80
