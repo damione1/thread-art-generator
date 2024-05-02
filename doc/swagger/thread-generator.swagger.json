@@ -33,6 +33,47 @@
     "application/json"
   ],
   "paths": {
+    "/v1/medias": {
+      "post": {
+        "summary": "Upload a new media",
+        "description": "Upload a new media to the system.",
+        "operationId": "ArtGeneratorService_CreateMedia",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbMedia"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mediaChunk.chunk",
+            "description": "The bytes of the chunk.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "mediaChunk.name",
+            "description": "The name of the media.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Medias"
+        ]
+      }
+    },
     "/v1/sessions": {
       "post": {
         "summary": "Log in a user",
@@ -688,52 +729,6 @@
           "Arts"
         ]
       }
-    },
-    "/v1/{parent}/medias": {
-      "post": {
-        "summary": "Create a new media",
-        "description": "Create a new media to the system.",
-        "operationId": "ArtGeneratorService_CreateMedia",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbMedia"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "parent",
-            "description": "The parent which owns the medias.\nFor example: \"users/456\"",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "pattern": "users/[^/]+"
-          },
-          {
-            "name": "media",
-            "description": "The media to create.",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbMedia",
-              "required": [
-                "media"
-              ]
-            }
-          }
-        ],
-        "tags": [
-          "Medias"
-        ]
-      }
     }
   },
   "definitions": {
@@ -902,6 +897,21 @@
           "readOnly": true
         }
       }
+    },
+    "pbMediaChunk": {
+      "type": "object",
+      "properties": {
+        "chunk": {
+          "type": "string",
+          "format": "byte",
+          "description": "The bytes of the chunk."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the media."
+        }
+      },
+      "description": "MediaChunk represents a chunk of a media file."
     },
     "pbRefreshTokenRequest": {
       "type": "object",

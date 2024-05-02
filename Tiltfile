@@ -65,6 +65,7 @@ resources = {
     },
   'api': {'labels': ['services'], 'resource_deps': ['go-compile', 'db', 'migrations']},
   'adminer': {'labels': ['database'], 'resource_deps': ['db']},
+  'minio': {'labels': ['database'], 'resource_deps': ['db']},
 }
 
 

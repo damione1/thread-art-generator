@@ -219,17 +219,15 @@ service ArtGeneratorService {
     option (google.api.method_signature) = "name";
   }
 
-  rpc CreateMedia (CreateMediaRequest) returns (Media) {
+  rpc CreateMedia (stream UploadMediaRequest) returns (Media) {
     option (google.api.http) = {
-      post: "/v1/{parent=users/*}/medias"
-      body: "media"
+      post: "/v1/medias"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Create a new media"
-      description: "Create a new media to the system."
+      summary: "Upload a new media"
+      description: "Upload a new media to the system."
       tags: "Medias";
     };
-    option (google.api.method_signature) = "parent,media";
   }
 
   rpc GetMedia (GetMediaRequest) returns (Media) {

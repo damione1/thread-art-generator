@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   migrations:
     image: migrations-image
@@ -24,6 +22,7 @@ services:
       TOKEN_SYMMETRIC_KEY: ${TOKEN_SYMMETRIC_KEY}
       ACCESS_TOKEN_DURATION: ${ACCESS_TOKEN_DURATION}
       REFRESH_TOKEN_DURATION: ${REFRESH_TOKEN_DURATION}
+      ENVIRONMENT: ${ENVIRONMENT}
     depends_on:
       - db
       - migrations
@@ -94,6 +93,17 @@ services:
       PSQL_USER: ${POSTGRES_USER}
       PSQL_PASSWORD: ${POSTGRES_PASSWORD}
       PSQL_HOST: db
+
+  minio:
+    image: "bitnami/minio:latest"
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_DEFAULT_BUCKETS: local
 
     # worker:
   #   build:

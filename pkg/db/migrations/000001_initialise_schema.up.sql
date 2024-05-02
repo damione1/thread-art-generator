@@ -1,6 +1,7 @@
 CREATE EXTENSION "uuid-ossp";
+
 -- Media table
-CREATE TABLE media (
+CREATE TABLE medias (
   id UUID DEFAULT uuid_generate_v1mc() PRIMARY KEY,
   original_filename VARCHAR(255) NOT NULL,
   original_url VARCHAR(255) NOT NULL,
@@ -20,6 +21,7 @@ CREATE TABLE users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   role VARCHAR(255) NOT NULL DEFAULT 'user'
 );
+
 CREATE INDEX users_email_idx ON users (email);
 
 -- Arts table
@@ -32,6 +34,7 @@ CREATE TABLE arts (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   deleted_at TIMESTAMP WITH TIME ZONE
 );
+
 CREATE INDEX arts_author_idx ON arts (author_id);
 
 -- Generated variations
@@ -56,6 +59,7 @@ CREATE TABLE sessions (
   expires_at timestamptz NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
 CREATE INDEX sessions_refresh_token_idx ON sessions (refresh_token);
 
 -- Password reset table

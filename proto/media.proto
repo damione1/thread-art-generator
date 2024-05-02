@@ -36,16 +36,19 @@ message Media {
     google.protobuf.Timestamp update_time = 7  [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-message CreateMediaRequest {
-    // The parent which owns the medias.
-    // For example: "users/456"
-    string parent = 1 [
-        (google.api.field_behavior) = OUTPUT_ONLY,
-        (google.api.resource_reference) = {type: "art.example.com/User"}
-    ];
 
-    // The media to create.
-    Media media = 2 [(google.api.field_behavior) = REQUIRED];
+// MediaChunk represents a chunk of a media file.
+message MediaChunk {
+    // The bytes of the chunk.
+    bytes chunk = 1;
+
+    // The name of the media.
+    string name = 2;
+}
+
+message UploadMediaRequest {
+    // The media to upload.
+    MediaChunk media_chunk = 1;
 }
 
 message GetMediaRequest {

@@ -165,7 +165,7 @@ var UserRels = struct {
 
 // userR is where relationships are stored.
 type userR struct {
-	Avatar              *Medium            `boil:"Avatar" json:"Avatar" toml:"Avatar" yaml:"Avatar"`
+	Avatar              *Media             `boil:"Avatar" json:"Avatar" toml:"Avatar" yaml:"Avatar"`
 	AuthorArtVariations ArtVariationSlice  `boil:"AuthorArtVariations" json:"AuthorArtVariations" toml:"AuthorArtVariations" yaml:"AuthorArtVariations"`
 	AuthorArts          ArtSlice           `boil:"AuthorArts" json:"AuthorArts" toml:"AuthorArts" yaml:"AuthorArts"`
 	PasswordResets      PasswordResetSlice `boil:"PasswordResets" json:"PasswordResets" toml:"PasswordResets" yaml:"PasswordResets"`
@@ -177,7 +177,7 @@ func (*userR) NewStruct() *userR {
 	return &userR{}
 }
 
-func (r *userR) GetAvatar() *Medium {
+func (r *userR) GetAvatar() *Media {
 	if r == nil {
 		return nil
 	}
@@ -549,14 +549,14 @@ func (q userQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 }
 
 // Avatar pointed to by the foreign key.
-func (o *User) Avatar(mods ...qm.QueryMod) mediumQuery {
+func (o *User) Avatar(mods ...qm.QueryMod) mediaQuery {
 	queryMods := []qm.QueryMod{
 		qm.Where("\"id\" = ?", o.AvatarID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Media(queryMods...)
+	return Medias(queryMods...)
 }
 
 // AuthorArtVariations retrieves all the art_variation's ArtVariations with an executor via author_id column.
@@ -677,8 +677,8 @@ func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bo
 	}
 
 	query := NewQuery(
-		qm.From(`media`),
-		qm.WhereIn(`media.id in ?`, argsSlice...),
+		qm.From(`medias`),
+		qm.WhereIn(`medias.id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -686,22 +686,22 @@ func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bo
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load Medium")
+		return errors.Wrap(err, "failed to eager load Media")
 	}
 
-	var resultSlice []*Medium
+	var resultSlice []*Media
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Medium")
+		return errors.Wrap(err, "failed to bind eager loaded slice Media")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for media")
+		return errors.Wrap(err, "failed to close results of eager load for medias")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for media")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for medias")
 	}
 
-	if len(mediumAfterSelectHooks) != 0 {
+	if len(mediaAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -717,7 +717,7 @@ func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bo
 		foreign := resultSlice[0]
 		object.R.Avatar = foreign
 		if foreign.R == nil {
-			foreign.R = &mediumR{}
+			foreign.R = &mediaR{}
 		}
 		foreign.R.AvatarUsers = append(foreign.R.AvatarUsers, object)
 		return nil
@@ -728,7 +728,7 @@ func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bo
 			if queries.Equal(local.AvatarID, foreign.ID) {
 				local.R.Avatar = foreign
 				if foreign.R == nil {
-					foreign.R = &mediumR{}
+					foreign.R = &mediaR{}
 				}
 				foreign.R.AvatarUsers = append(foreign.R.AvatarUsers, local)
 				break
@@ -1195,14 +1195,14 @@ func (userL) LoadSessions(ctx context.Context, e boil.ContextExecutor, singular 
 // Sets o.R.Avatar to related.
 // Adds o to related.R.AvatarUsers.
 // Uses the global database handle.
-func (o *User) SetAvatarG(ctx context.Context, insert bool, related *Medium) error {
+func (o *User) SetAvatarG(ctx context.Context, insert bool, related *Media) error {
 	return o.SetAvatar(ctx, boil.GetContextDB(), insert, related)
 }
 
 // SetAvatar of the user to the related item.
 // Sets o.R.Avatar to related.
 // Adds o to related.R.AvatarUsers.
-func (o *User) SetAvatar(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Medium) error {
+func (o *User) SetAvatar(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Media) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -1236,7 +1236,7 @@ func (o *User) SetAvatar(ctx context.Context, exec boil.ContextExecutor, insert 
 	}
 
 	if related.R == nil {
-		related.R = &mediumR{
+		related.R = &mediaR{
 			AvatarUsers: UserSlice{o},
 		}
 	} else {
@@ -1250,14 +1250,14 @@ func (o *User) SetAvatar(ctx context.Context, exec boil.ContextExecutor, insert 
 // Sets o.R.Avatar to nil.
 // Removes o from all passed in related items' relationships struct.
 // Uses the global database handle.
-func (o *User) RemoveAvatarG(ctx context.Context, related *Medium) error {
+func (o *User) RemoveAvatarG(ctx context.Context, related *Media) error {
 	return o.RemoveAvatar(ctx, boil.GetContextDB(), related)
 }
 
 // RemoveAvatar relationship.
 // Sets o.R.Avatar to nil.
 // Removes o from all passed in related items' relationships struct.
-func (o *User) RemoveAvatar(ctx context.Context, exec boil.ContextExecutor, related *Medium) error {
+func (o *User) RemoveAvatar(ctx context.Context, exec boil.ContextExecutor, related *Media) error {
 	var err error
 
 	queries.SetScanner(&o.AvatarID, nil)

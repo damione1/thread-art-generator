@@ -227,9 +227,9 @@ var ArtVariationRels = struct {
 
 // artVariationR is where relationships are stored.
 type artVariationR struct {
-	Art    *Art    `boil:"Art" json:"Art" toml:"Art" yaml:"Art"`
-	Author *User   `boil:"Author" json:"Author" toml:"Author" yaml:"Author"`
-	Image  *Medium `boil:"Image" json:"Image" toml:"Image" yaml:"Image"`
+	Art    *Art   `boil:"Art" json:"Art" toml:"Art" yaml:"Art"`
+	Author *User  `boil:"Author" json:"Author" toml:"Author" yaml:"Author"`
+	Image  *Media `boil:"Image" json:"Image" toml:"Image" yaml:"Image"`
 }
 
 // NewStruct creates a new relationship struct
@@ -251,7 +251,7 @@ func (r *artVariationR) GetAuthor() *User {
 	return r.Author
 }
 
-func (r *artVariationR) GetImage() *Medium {
+func (r *artVariationR) GetImage() *Media {
 	if r == nil {
 		return nil
 	}
@@ -617,14 +617,14 @@ func (o *ArtVariation) Author(mods ...qm.QueryMod) userQuery {
 }
 
 // Image pointed to by the foreign key.
-func (o *ArtVariation) Image(mods ...qm.QueryMod) mediumQuery {
+func (o *ArtVariation) Image(mods ...qm.QueryMod) mediaQuery {
 	queryMods := []qm.QueryMod{
 		qm.Where("\"id\" = ?", o.ImageID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Media(queryMods...)
+	return Medias(queryMods...)
 }
 
 // LoadArt allows an eager lookup of values, cached into the
@@ -933,8 +933,8 @@ func (artVariationL) LoadImage(ctx context.Context, e boil.ContextExecutor, sing
 	}
 
 	query := NewQuery(
-		qm.From(`media`),
-		qm.WhereIn(`media.id in ?`, argsSlice...),
+		qm.From(`medias`),
+		qm.WhereIn(`medias.id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -942,22 +942,22 @@ func (artVariationL) LoadImage(ctx context.Context, e boil.ContextExecutor, sing
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load Medium")
+		return errors.Wrap(err, "failed to eager load Media")
 	}
 
-	var resultSlice []*Medium
+	var resultSlice []*Media
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Medium")
+		return errors.Wrap(err, "failed to bind eager loaded slice Media")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for media")
+		return errors.Wrap(err, "failed to close results of eager load for medias")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for media")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for medias")
 	}
 
-	if len(mediumAfterSelectHooks) != 0 {
+	if len(mediaAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -973,7 +973,7 @@ func (artVariationL) LoadImage(ctx context.Context, e boil.ContextExecutor, sing
 		foreign := resultSlice[0]
 		object.R.Image = foreign
 		if foreign.R == nil {
-			foreign.R = &mediumR{}
+			foreign.R = &mediaR{}
 		}
 		foreign.R.ImageArtVariations = append(foreign.R.ImageArtVariations, object)
 		return nil
@@ -984,7 +984,7 @@ func (artVariationL) LoadImage(ctx context.Context, e boil.ContextExecutor, sing
 			if queries.Equal(local.ImageID, foreign.ID) {
 				local.R.Image = foreign
 				if foreign.R == nil {
-					foreign.R = &mediumR{}
+					foreign.R = &mediaR{}
 				}
 				foreign.R.ImageArtVariations = append(foreign.R.ImageArtVariations, local)
 				break
@@ -1150,14 +1150,14 @@ func (o *ArtVariation) SetAuthor(ctx context.Context, exec boil.ContextExecutor,
 // Sets o.R.Image to related.
 // Adds o to related.R.ImageArtVariations.
 // Uses the global database handle.
-func (o *ArtVariation) SetImageG(ctx context.Context, insert bool, related *Medium) error {
+func (o *ArtVariation) SetImageG(ctx context.Context, insert bool, related *Media) error {
 	return o.SetImage(ctx, boil.GetContextDB(), insert, related)
 }
 
 // SetImage of the artVariation to the related item.
 // Sets o.R.Image to related.
 // Adds o to related.R.ImageArtVariations.
-func (o *ArtVariation) SetImage(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Medium) error {
+func (o *ArtVariation) SetImage(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Media) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -1191,7 +1191,7 @@ func (o *ArtVariation) SetImage(ctx context.Context, exec boil.ContextExecutor, 
 	}
 
 	if related.R == nil {
-		related.R = &mediumR{
+		related.R = &mediaR{
 			ImageArtVariations: ArtVariationSlice{o},
 		}
 	} else {
@@ -1205,14 +1205,14 @@ func (o *ArtVariation) SetImage(ctx context.Context, exec boil.ContextExecutor, 
 // Sets o.R.Image to nil.
 // Removes o from all passed in related items' relationships struct.
 // Uses the global database handle.
-func (o *ArtVariation) RemoveImageG(ctx context.Context, related *Medium) error {
+func (o *ArtVariation) RemoveImageG(ctx context.Context, related *Media) error {
 	return o.RemoveImage(ctx, boil.GetContextDB(), related)
 }
 
 // RemoveImage relationship.
 // Sets o.R.Image to nil.
 // Removes o from all passed in related items' relationships struct.
-func (o *ArtVariation) RemoveImage(ctx context.Context, exec boil.ContextExecutor, related *Medium) error {
+func (o *ArtVariation) RemoveImage(ctx context.Context, exec boil.ContextExecutor, related *Media) error {
 	var err error
 
 	queries.SetScanner(&o.ImageID, nil)
