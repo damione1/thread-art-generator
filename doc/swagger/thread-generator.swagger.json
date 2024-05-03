@@ -832,19 +832,18 @@
     "pbUploadArtRequest": {
       "type": "object",
       "properties": {
-        "parent": {
+        "name": {
           "type": "string",
-          "title": "The parent which owns the arts.\nFor example: \"users/456\""
-        },
-        "artName": {
-          "type": "string",
-          "description": "This is the art name",
-          "title": "The name of the art"
+          "title": "The name of the Art resource.\nFor example: \"users/{user}/arts/{art}\""
         },
         "data": {
           "type": "string",
           "format": "byte",
           "title": "The data of the art"
+        },
+        "mimeType": {
+          "type": "string",
+          "title": "The mime type of the uploaded file"
         }
       }
     },

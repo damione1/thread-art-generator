@@ -99,13 +99,11 @@ message DeleteArtRequest {
 }
 
 message UploadArtRequest {
-    // The parent which owns the arts.
-    // For example: "users/456"
-    string parent = 1;
-
-    // The name of the art
-    string art_name = 2; // This is the art name
-
+    // The name of the Art resource.
+    // For example: "users/{user}/arts/{art}"
+    string name = 1;
     // The data of the art
-    bytes data = 3;
+    bytes data = 2;
+    // The mime type of the uploaded file
+    string mimeType = 3;
 }
