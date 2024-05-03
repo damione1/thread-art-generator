@@ -2,7 +2,6 @@ package grpcApi
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
@@ -17,67 +16,37 @@ import (
 )
 
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
-	// authorizeUserPayload, err := server.authorizeUser(ctx)
-	// if err != nil {
-	// 	return nil, unauthenticatedError(err)
-	// }
-
-	// if err := validateCreateArtRequest(req); err != nil {
-	// 	return nil, err
-	// }
-
-	// Create a new file in the blob.bucket
-	file, err := server.bucket.NewWriter(ctx, "hello.txt", nil)
+	authorizeUserPayload, err := server.authorizeUser(ctx)
 	if err != nil {
-		return nil, internalError(errors.Wrap(err, "Failed to create file"))
+		return nil, unauthenticatedError(err)
 	}
 
-	// Write content to the file
-	content := []byte("Hello, world!")
-	_, err = file.Write(content)
-
-	if err != nil {
-		return nil, internalError(errors.Wrap(err, "Failed to write to file"))
+	if err := validateCreateArtRequest(req); err != nil {
+		return nil, err
 	}
 
-	// Close the file
-	err = file.Close()
+	user, err := models.Users(
+		models.UserWhere.ID.EQ(authorizeUserPayload.UserID),
+	).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, internalError(errors.Wrap(err, "Failed to close file"))
+		return nil, errors.Wrap(err, "Failed to get user")
 	}
 
-	// Get the URL of the file
-	url, err := server.bucket.SignedURL(ctx, "hello.txt", nil)
-	if err != nil {
-		return nil, internalError(errors.Wrap(err, "Failed to get file URL"))
+	if user.Role != models.RoleEnumUser {
+		return nil, rolePermissionError(errors.New("Only admin can create art"))
 	}
-	// Print the URL
-	fmt.Println("File URL:", url)
 
-	return nil, nil
+	art := &models.Art{
+		Title:    req.GetArt().GetTitle(),
+		AuthorID: user.ID,
+	}
 
-	// user, err := models.Users(
-	// 	models.UserWhere.ID.EQ(authorizeUserPayload.UserID),
-	// ).One(ctx, server.config.DB)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "Failed to get user")
-	// }
+	err = art.Insert(ctx, server.config.DB, boil.Infer())
+	if err != nil {
+		return nil, internalError(errors.Wrap(err, "Failed to insert art"))
+	}
 
-	// if user.Role != models.RoleEnumUser {
-	// 	return nil, rolePermissionError(errors.New("Only admin can create art"))
-	// }
-
-	// art := &models.Art{
-	// 	Title:    req.GetArt().GetTitle(),
-	// 	AuthorID: user.ID,
-	// }
-
-	// err = art.Insert(ctx, server.config.DB, boil.Infer())
-	// if err != nil {
-	// 	return nil, internalError(errors.Wrap(err, "Failed to insert art"))
-	// }
-
-	// return pbx.DbArtToProto(art), nil
+	return pbx.DbArtToProto(art), nil
 }
 
 func validateCreateArtRequest(req *pb.CreateArtRequest) error {

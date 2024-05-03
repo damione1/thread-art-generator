@@ -97,3 +97,15 @@ message DeleteArtRequest {
         (google.api.resource_reference) = {type: "pb.Art"}
     ];
 }
+
+message UploadArtRequest {
+    // The parent which owns the arts.
+    // For example: "users/456"
+    string parent = 1;
+
+    // The name of the art
+    string art_name = 2; // This is the art name
+
+    // The data of the art
+    bytes data = 3;
+}

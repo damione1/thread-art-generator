@@ -34,9 +34,7 @@ const (
 	ArtGeneratorService_UpdateArt_FullMethodName     = "/pb.ArtGeneratorService/UpdateArt"
 	ArtGeneratorService_ListArts_FullMethodName      = "/pb.ArtGeneratorService/ListArts"
 	ArtGeneratorService_DeleteArt_FullMethodName     = "/pb.ArtGeneratorService/DeleteArt"
-	ArtGeneratorService_CreateMedia_FullMethodName   = "/pb.ArtGeneratorService/CreateMedia"
-	ArtGeneratorService_GetMedia_FullMethodName      = "/pb.ArtGeneratorService/GetMedia"
-	ArtGeneratorService_DeleteMedia_FullMethodName   = "/pb.ArtGeneratorService/DeleteMedia"
+	ArtGeneratorService_UploadArt_FullMethodName     = "/pb.ArtGeneratorService/UploadArt"
 )
 
 // ArtGeneratorServiceClient is the client API for ArtGeneratorService service.
@@ -57,9 +55,7 @@ type ArtGeneratorServiceClient interface {
 	UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*Art, error)
 	ListArts(ctx context.Context, in *ListArtsRequest, opts ...grpc.CallOption) (*ListArtsResponse, error)
 	DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	CreateMedia(ctx context.Context, opts ...grpc.CallOption) (ArtGeneratorService_CreateMediaClient, error)
-	GetMedia(ctx context.Context, in *GetMediaRequest, opts ...grpc.CallOption) (*Media, error)
-	DeleteMedia(ctx context.Context, in *DeleteMediaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UploadArt(ctx context.Context, opts ...grpc.CallOption) (ArtGeneratorService_UploadArtClient, error)
 }
 
 type artGeneratorServiceClient struct {
@@ -196,56 +192,38 @@ func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, in *DeleteArt
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) CreateMedia(ctx context.Context, opts ...grpc.CallOption) (ArtGeneratorService_CreateMediaClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ArtGeneratorService_ServiceDesc.Streams[0], ArtGeneratorService_CreateMedia_FullMethodName, opts...)
+func (c *artGeneratorServiceClient) UploadArt(ctx context.Context, opts ...grpc.CallOption) (ArtGeneratorService_UploadArtClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ArtGeneratorService_ServiceDesc.Streams[0], ArtGeneratorService_UploadArt_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &artGeneratorServiceCreateMediaClient{stream}
+	x := &artGeneratorServiceUploadArtClient{stream}
 	return x, nil
 }
 
-type ArtGeneratorService_CreateMediaClient interface {
-	Send(*UploadMediaRequest) error
-	CloseAndRecv() (*Media, error)
+type ArtGeneratorService_UploadArtClient interface {
+	Send(*UploadArtRequest) error
+	CloseAndRecv() (*Art, error)
 	grpc.ClientStream
 }
 
-type artGeneratorServiceCreateMediaClient struct {
+type artGeneratorServiceUploadArtClient struct {
 	grpc.ClientStream
 }
 
-func (x *artGeneratorServiceCreateMediaClient) Send(m *UploadMediaRequest) error {
+func (x *artGeneratorServiceUploadArtClient) Send(m *UploadArtRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *artGeneratorServiceCreateMediaClient) CloseAndRecv() (*Media, error) {
+func (x *artGeneratorServiceUploadArtClient) CloseAndRecv() (*Art, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(Media)
+	m := new(Art)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
-}
-
-func (c *artGeneratorServiceClient) GetMedia(ctx context.Context, in *GetMediaRequest, opts ...grpc.CallOption) (*Media, error) {
-	out := new(Media)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_GetMedia_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) DeleteMedia(ctx context.Context, in *DeleteMediaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_DeleteMedia_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 // ArtGeneratorServiceServer is the server API for ArtGeneratorService service.
@@ -266,9 +244,7 @@ type ArtGeneratorServiceServer interface {
 	UpdateArt(context.Context, *UpdateArtRequest) (*Art, error)
 	ListArts(context.Context, *ListArtsRequest) (*ListArtsResponse, error)
 	DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error)
-	CreateMedia(ArtGeneratorService_CreateMediaServer) error
-	GetMedia(context.Context, *GetMediaRequest) (*Media, error)
-	DeleteMedia(context.Context, *DeleteMediaRequest) (*emptypb.Empty, error)
+	UploadArt(ArtGeneratorService_UploadArtServer) error
 	mustEmbedUnimplementedArtGeneratorServiceServer()
 }
 
@@ -318,14 +294,8 @@ func (UnimplementedArtGeneratorServiceServer) ListArts(context.Context, *ListArt
 func (UnimplementedArtGeneratorServiceServer) DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteArt not implemented")
 }
-func (UnimplementedArtGeneratorServiceServer) CreateMedia(ArtGeneratorService_CreateMediaServer) error {
-	return status.Errorf(codes.Unimplemented, "method CreateMedia not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) GetMedia(context.Context, *GetMediaRequest) (*Media, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMedia not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) DeleteMedia(context.Context, *DeleteMediaRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteMedia not implemented")
+func (UnimplementedArtGeneratorServiceServer) UploadArt(ArtGeneratorService_UploadArtServer) error {
+	return status.Errorf(codes.Unimplemented, "method UploadArt not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) mustEmbedUnimplementedArtGeneratorServiceServer() {}
 
@@ -592,66 +562,30 @@ func _ArtGeneratorService_DeleteArt_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ArtGeneratorService_CreateMedia_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ArtGeneratorServiceServer).CreateMedia(&artGeneratorServiceCreateMediaServer{stream})
+func _ArtGeneratorService_UploadArt_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ArtGeneratorServiceServer).UploadArt(&artGeneratorServiceUploadArtServer{stream})
 }
 
-type ArtGeneratorService_CreateMediaServer interface {
-	SendAndClose(*Media) error
-	Recv() (*UploadMediaRequest, error)
+type ArtGeneratorService_UploadArtServer interface {
+	SendAndClose(*Art) error
+	Recv() (*UploadArtRequest, error)
 	grpc.ServerStream
 }
 
-type artGeneratorServiceCreateMediaServer struct {
+type artGeneratorServiceUploadArtServer struct {
 	grpc.ServerStream
 }
 
-func (x *artGeneratorServiceCreateMediaServer) SendAndClose(m *Media) error {
+func (x *artGeneratorServiceUploadArtServer) SendAndClose(m *Art) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *artGeneratorServiceCreateMediaServer) Recv() (*UploadMediaRequest, error) {
-	m := new(UploadMediaRequest)
+func (x *artGeneratorServiceUploadArtServer) Recv() (*UploadArtRequest, error) {
+	m := new(UploadArtRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
-}
-
-func _ArtGeneratorService_GetMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetMediaRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).GetMedia(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_GetMedia_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).GetMedia(ctx, req.(*GetMediaRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_DeleteMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteMediaRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).DeleteMedia(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_DeleteMedia_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).DeleteMedia(ctx, req.(*DeleteMediaRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 // ArtGeneratorService_ServiceDesc is the grpc.ServiceDesc for ArtGeneratorService service.
@@ -717,19 +651,11 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteArt",
 			Handler:    _ArtGeneratorService_DeleteArt_Handler,
 		},
-		{
-			MethodName: "GetMedia",
-			Handler:    _ArtGeneratorService_GetMedia_Handler,
-		},
-		{
-			MethodName: "DeleteMedia",
-			Handler:    _ArtGeneratorService_DeleteMedia_Handler,
-		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "CreateMedia",
-			Handler:       _ArtGeneratorService_CreateMedia_Handler,
+			StreamName:    "UploadArt",
+			Handler:       _ArtGeneratorService_UploadArt_Handler,
 			ClientStreams: true,
 		},
 	},

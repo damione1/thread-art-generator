@@ -3,7 +3,6 @@ syntax = "proto3";
 package pb;
 import "user.proto";
 import "art.proto";
-import "media.proto";
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/protobuf/empty.proto";
@@ -219,38 +218,16 @@ service ArtGeneratorService {
     option (google.api.method_signature) = "name";
   }
 
-  rpc CreateMedia (stream UploadMediaRequest) returns (Media) {
+  rpc UploadArt (stream UploadArtRequest) returns (Art) {
     option (google.api.http) = {
-      post: "/v1/medias"
+      post: "/v1/arts:upload"
+      body: "*"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Upload a new media"
-      description: "Upload a new media to the system."
-      tags: "Medias";
+      summary: "Upload an art"
+      description: "Upload an art to the system."
+      tags: "Arts";
     };
-  }
-
-  rpc GetMedia (GetMediaRequest) returns (Media) {
-    option (google.api.http) = {
-      get: "/v1/{name=authors/*/medias/*}"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Get a medias's information"
-      description: "Retrieve information for a specific media by its ID."
-      tags: "Medias";
-    };
-    option (google.api.method_signature) = "name";
-  }
-
-  rpc DeleteMedia (DeleteMediaRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/v1/{name=users/*/medias/*}"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Delete an media"
-      description: "Remove a specific media from the system."
-      tags: "Medias";
-    };
-    option (google.api.method_signature) = "name";
+    option (google.api.method_signature) = "parent";
   }
 }
