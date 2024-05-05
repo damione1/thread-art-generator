@@ -1,15 +1,17 @@
 package pbx
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
+	"github.com/rs/zerolog/log"
+	"gocloud.dev/blob"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func DbArtToProto(post *models.Art) *pb.Art {
-
+func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, post *models.Art) *pb.Art {
 	artPb := &pb.Art{
 		Title:      post.Title,
 		Author:     fmt.Sprintf("users/%s", post.AuthorID),
@@ -20,6 +22,19 @@ func DbArtToProto(post *models.Art) *pb.Art {
 		{Type: RessourceTypeUsers, ID: post.AuthorID},
 		{Type: RessourceTypeArts, ID: post.ID},
 	})
+
+	if post.ImageID.Valid {
+		//The image is stored in the bucket with the key "users/{authorId}/arts/{artId}.{extension}"
+		imageKey := GetResourceName([]Resource{
+			{Type: RessourceTypeUsers, ID: post.AuthorID},
+			{Type: RessourceTypeArts, ID: post.ImageID.String},
+		})
+		imageUrl, err := bucket.SignedURL(ctx, imageKey, nil)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get signed URL for image")
+		}
+		artPb.ImageUrl = imageUrl
+	}
 
 	return artPb
 }
