@@ -1,11 +1,18 @@
-FROM golang:1.21
+# Use the golang base image
+FROM golang:latest
 
-# Go Proto
-RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
-RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
-RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+# Set the working directory inside the container
+WORKDIR /app
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y protobuf-compiler
 
-WORKDIR /app
+# Install Go dependencies for proto handling
+# Combining these into a single RUN command reduces the number of layers
+RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest && \
+    go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+
+# Copy the rest of your project files into the container.
 COPY . .

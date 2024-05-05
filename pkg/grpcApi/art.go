@@ -2,14 +2,19 @@ package grpcApi
 
 import (
 	"context"
+	"fmt"
+	"mime"
 
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
 	"github.com/Damione1/thread-art-generator/pkg/pbx"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"gocloud.dev/blob"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -36,17 +41,17 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 		return nil, rolePermissionError(errors.New("Only admin can create art"))
 	}
 
-	art := &models.Art{
+	artDb := &models.Art{
 		Title:    req.GetArt().GetTitle(),
 		AuthorID: user.ID,
 	}
 
-	err = art.Insert(ctx, server.config.DB, boil.Infer())
+	err = artDb.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
 		return nil, internalError(errors.Wrap(err, "Failed to insert art"))
 	}
 
-	return pbx.DbArtToProto(art), nil
+	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
 }
 
 func validateCreateArtRequest(req *pb.CreateArtRequest) error {
@@ -104,17 +109,12 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		}
 	}
 
-	// Update the art
-	if req.GetArt().GetTitle() != "" {
-		artDb.Title = req.GetArt().GetTitle()
-	}
-
 	_, err = artDb.Update(ctx, server.config.DB, boil.Infer())
 	if err != nil {
 		return nil, err
 	}
 
-	return pbx.DbArtToProto(artDb), nil
+	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
 }
 
 func validateUpdateArtRequest(req *pb.UpdateArtRequest) error {
@@ -181,13 +181,13 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 	}
 
 	// Convert the arts to protobuf format
-	pbArts := make([]*pb.Art, 0, len(arts))
-	for _, dbArt := range arts {
-		pbArts = append(pbArts, pbx.DbArtToProto(dbArt))
+	artPbs := make([]*pb.Art, 0, len(arts))
+	for _, artDb := range arts {
+		artPbs = append(artPbs, pbx.ArtDbToProto(ctx, server.bucket, artDb))
 	}
 
 	return &pb.ListArtsResponse{
-		Arts:          pbArts,
+		Arts:          artPbs,
 		NextPageToken: req.PageToken + int32(pageSize),
 	}, nil
 }
@@ -218,7 +218,6 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, rolePermissionError(errors.New("Only the author can get the art"))
 	}
 
-	// Check if the art exists
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(artId),
 		models.ArtWhere.AuthorID.EQ(authorId),
@@ -227,7 +226,7 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, notFoundError(errors.Wrap(err, "Failed to get art"))
 	}
 
-	return pbx.DbArtToProto(artDb), nil
+	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
 }
 
 func validateGetArtRequest(req *pb.GetArtRequest) error {
@@ -235,7 +234,6 @@ func validateGetArtRequest(req *pb.GetArtRequest) error {
 
 }
 
-// emptu response
 func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (*emptypb.Empty, error) {
 	authorizeUserPayload, err := server.authorizeUser(ctx)
 	if err != nil {
@@ -269,6 +267,19 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, internalError(errors.Wrap(err, "Failed to delete art"))
 	}
 
+	//delete the image from the bucket
+	if artDb.ImageID.Valid {
+		imageKey := pbx.GetResourceName([]pbx.Resource{
+			{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
+			{Type: pbx.RessourceTypeArts, ID: artDb.ImageID.String},
+		})
+		err = server.bucket.Delete(ctx, imageKey)
+		if err != nil {
+			log.Error().Err(err).Msg(fmt.Sprintf("Failed to delete image %s", artDb.ImageID.String))
+			return &emptypb.Empty{}, nil // Don't return a public error if the image deletion fails
+		}
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
@@ -276,6 +287,88 @@ func validateDeleteArtRequest(req *pb.DeleteArtRequest) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Name, validation.Required),
 	)
+}
+
+func (server *Server) UploadArt(stream pb.ArtGeneratorService_UploadArtServer) error {
+	// Receive the metadata
+	art, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+
+	ctx := stream.Context()
+	authorizeUserPayload, err := server.authorizeUser(ctx)
+	if err != nil {
+		return unauthenticatedError(err)
+	}
+
+	authorId, artId, err := pbx.ParseArtResourceName(art.Name)
+	if err != nil {
+		return notFoundError(errors.Wrap(err, "Failed to parse resource name"))
+	}
+
+	if authorId != authorizeUserPayload.UserID {
+		return rolePermissionError(errors.New("Only the author can update the art"))
+	}
+
+	// Check if the art exists
+	artDb, err := models.Arts(
+		models.ArtWhere.ID.EQ(artId),
+		models.ArtWhere.AuthorID.EQ(authorId),
+	).One(ctx, server.config.DB)
+	if err != nil {
+		return notFoundError(errors.Wrap(err, "Failed to get art"))
+	}
+
+	//If the art already has an image, throw an error
+	if artDb.ImageID.Valid {
+		return status.Errorf(codes.InvalidArgument, "Art already has an image")
+	}
+
+	// Get the file extension from the mimetype
+	extension, err := mime.ExtensionsByType(art.MimeType)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get extension")
+	}
+
+	// Validate the image
+	if art.MimeType != "image/jpeg" && art.MimeType != "image/png" {
+		return errors.New("invalid image type")
+	}
+
+	//filename + extension
+	artFilename := fmt.Sprintf("%s%s", art.Name, extension[0])
+
+	//validate the art data size between 0 and 10MB
+	if len(art.Data) == 0 || len(art.Data) > 10*1024*1024 {
+		return internalError(errors.New("Invalid image size"))
+	}
+
+	// Create a new blob with the art's filename and extension
+	writer, err := server.bucket.NewWriter(ctx, artFilename, &blob.WriterOptions{})
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+
+	// Write the image to the blob
+	if _, err := writer.Write(art.Data); err != nil {
+		return err
+	}
+
+	// Update the art with the new image ID
+	artDb.ImageID = null.StringFrom(artFilename)
+	_, err = artDb.Update(ctx, server.config.DB, boil.Infer())
+	if err != nil {
+		return internalError(errors.Wrap(err, "Failed to update art"))
+	}
+
+	// Send response back to client
+	if err := stream.SendAndClose(pbx.ArtDbToProto(ctx, server.bucket, artDb)); err != nil {
+		return errors.Wrap(err, "Failed to send response")
+	}
+
+	return nil
 }
 
 func validateArt(art *pb.Art, isNew bool) error {

@@ -25,6 +25,7 @@ type Config struct {
 	PostgresDb           string        `mapstructure:"POSTGRES_DB"`
 	DB                   *sql.DB       `mapstructure:"-"`
 	AdminEmail           string        `mapstructure:"ADMIN_EMAIL"`
+	GCSBucketName        string        `mapstructure:"GCS_BUCKET_NAME"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -45,6 +46,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("POSTGRES_PASSWORD")
 	viper.BindEnv("POSTGRES_DB")
 	viper.BindEnv("ADMIN_EMAIL")
+	viper.BindEnv("GCS_BUCKET_NAME")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)

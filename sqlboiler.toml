@@ -11,5 +11,9 @@ add-enum-types = true
   schema = "public"
   sslmode  = "disable"
   blacklist = ["migrations", "other"]
-[aliases]
-  tables = "psql"
+
+[aliases.tables.medias]
+  up_plural     = "Medias"
+  up_singular   = "Media"
+  down_plural   = "medias"
+  down_singular = "media"

@@ -6,7 +6,7 @@ package models
 var TableNames = struct {
 	ArtVariations    string
 	Arts             string
-	Media            string
+	Medias           string
 	PasswordResets   string
 	SchemaMigrations string
 	Sessions         string
@@ -14,7 +14,7 @@ var TableNames = struct {
 }{
 	ArtVariations:    "art_variations",
 	Arts:             "arts",
-	Media:            "media",
+	Medias:           "medias",
 	PasswordResets:   "password_resets",
 	SchemaMigrations: "schema_migrations",
 	Sessions:         "sessions",

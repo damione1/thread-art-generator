@@ -217,4 +217,17 @@ service ArtGeneratorService {
     };
     option (google.api.method_signature) = "name";
   }
+
+  rpc UploadArt (stream UploadArtRequest) returns (Art) {
+    option (google.api.http) = {
+      post: "/v1/arts:upload"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Upload an art"
+      description: "Upload an art to the system."
+      tags: "Arts";
+    };
+    option (google.api.method_signature) = "parent";
+  }
 }

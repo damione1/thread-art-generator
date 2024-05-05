@@ -40,6 +40,7 @@ func runGrpcServer(config util.Config, store *sql.DB) {
 	if err != nil {
 		log.Print(fmt.Sprintf("Failed to create gRPC server. %v", err))
 	}
+	defer server.Close()
 	log.Print("🍩 gRPC server created")
 	gprcLogger := grpc.UnaryInterceptor(grpcApi.GrpcLogger)
 	grpcServer := grpc.NewServer(gprcLogger)
@@ -65,6 +66,7 @@ func runGatewayServer(config util.Config, store *sql.DB) {
 	if err != nil {
 		log.Print(fmt.Sprintf("🍦 Failed to create HTTP server. %v", err))
 	}
+	defer server.Close()
 
 	grpcMux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{

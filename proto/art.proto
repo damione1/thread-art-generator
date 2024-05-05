@@ -97,3 +97,13 @@ message DeleteArtRequest {
         (google.api.resource_reference) = {type: "pb.Art"}
     ];
 }
+
+message UploadArtRequest {
+    // The name of the Art resource.
+    // For example: "users/{user}/arts/{art}"
+    string name = 1;
+    // The data of the art
+    bytes data = 2;
+    // The mime type of the uploaded file
+    string mimeType = 3;
+}
