@@ -155,6 +155,29 @@ service ArtGeneratorService {
     };
   }
 
+  rpc ValidateEmail (ValidateEmailRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/users/{email}:validateEmail"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Validate a user's email"
+      description: "Enter a validation number received by email to validate a user's email address."
+      tags: "Users";
+    };
+  }
+
+  rpc SendValidationEmail (SendValidationEmailRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/users/{email}:sendValidationEmail"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Send a validation email"
+      description: "Ask the system to send a validation email to a user's registered email address."
+      tags: "Users";
+    };
+  }
 
   rpc CreateArt (CreateArtRequest) returns (Art) {
     option (google.api.http) = {

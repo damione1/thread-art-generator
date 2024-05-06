@@ -37,20 +37,19 @@ const (
 )
 
 func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
+	var err error
 	if err := validateCreateUserRequest(req); err != nil {
 		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	pbUser := req.GetUser()
+	pbUser.Name = "" // name is not allowed to be set by the user
+	dbUser := pbx.ProtoUserToDb(pbUser)
 
-	hashedPassword, err := util.HashPassword(pbUser.GetPassword())
+	dbUser.Password, err = util.HashPassword(pbUser.GetPassword())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
 	}
-
-	pbUser.Name = "" // name is not allowed to be set by the user
-	dbUser := pbx.ProtoUserToDb(pbUser)
-	dbUser.Password = hashedPassword
 
 	err = dbUser.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
@@ -58,6 +57,19 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 			return nil, status.Errorf(codes.AlreadyExists, "user already exists")
 		}
 		return nil, status.Errorf(codes.Internal, "failed to insert user: %s", err)
+	}
+
+	accountActivation := &models.AccountActivation{
+		UserID:          dbUser.ID,
+		UserEmail:       dbUser.Email,
+		ActivationToken: util.RandomInt(1000000, 9999999),
+	}
+	if err = accountActivation.Insert(ctx, server.config.DB, boil.Infer()); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to insert account validation: %s", err)
+	}
+
+	if err := server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
+		status.Errorf(codes.Internal, "failed to send email: %s", err)
 	}
 
 	pbUser = pbx.DbUserToProto(dbUser)
@@ -350,4 +362,96 @@ func checkPassword(value interface{}) error {
 		return fmt.Errorf("password must be between 10 and 255 characters")
 	}
 	return nil
+}
+
+func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRequest) (*emptypb.Empty, error) {
+	if err := validateValidateEmail(req); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err)
+	}
+
+	activation, err := models.AccountActivations(
+		models.AccountActivationWhere.UserEmail.EQ(req.GetEmail()),
+		models.AccountActivationWhere.ActivationToken.EQ(int(req.GetValidationNumber())),
+	).One(ctx, server.config.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "account activation not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get account activation: %s", err)
+	}
+
+	user, err := models.Users(models.UserWhere.ID.EQ(activation.UserID)).One(ctx, server.config.DB)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get user: %s", err)
+	}
+
+	user.Active = true
+	_, err = user.Update(ctx, server.config.DB, boil.Infer())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update user: %s", err)
+	}
+
+	_, err = activation.Delete(ctx, server.config.DB)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete account activation: %s", err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func validateValidateEmail(req *pb.ValidateEmailRequest) error {
+	return validation.ValidateStruct(req,
+		validation.Field(&req.Email, validation.Required, is.Email),
+		validation.Field(&req.ValidationNumber, validation.Required, validation.By(
+			func(value interface{}) error {
+				validationNumber := value.(int64)
+				if validationNumber < 1000000 || validationNumber > 9999999 {
+					return fmt.Errorf("validation number must be 7 digits")
+				}
+				return nil
+			},
+		)),
+	)
+}
+
+func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValidationEmailRequest) (*emptypb.Empty, error) {
+	if err := validation.ValidateStruct(req,
+		validation.Field(&req.Email, validation.Required, is.Email),
+	); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err)
+	}
+
+	dbUser, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get user: %s", err)
+	}
+	if dbUser.Active {
+		return nil, status.Errorf(codes.PermissionDenied, "user is already active")
+	}
+
+	if activationsRequestCount, err := models.AccountActivations(
+		models.AccountActivationWhere.UserEmail.EQ(req.GetEmail()),
+	).Count(ctx, server.config.DB); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to count account activations: %s", err)
+	} else if activationsRequestCount > 5 {
+		return nil, status.Errorf(codes.PermissionDenied, "too many requests")
+	}
+
+	accountActivation := &models.AccountActivation{
+		UserID:          dbUser.ID,
+		UserEmail:       dbUser.Email,
+		ActivationToken: util.RandomInt(1000000, 9999999),
+	}
+	if err = accountActivation.Insert(ctx, server.config.DB, boil.Infer()); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to insert account validation: %s", err)
+	}
+
+	if err := server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
+		status.Errorf(codes.Internal, "failed to send email: %s", err)
+	}
+
+	return &emptypb.Empty{}, nil
 }

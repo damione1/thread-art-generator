@@ -121,3 +121,16 @@ message ResetPasswordRequest {
     // The email of the user who wants to reset the password.
     string email = 1 [(google.api.field_behavior) = REQUIRED];
 }
+
+//validate email
+message ValidateEmailRequest {
+    // The email of the user who wants to validate the email.
+    string email = 1 [(google.api.field_behavior) = REQUIRED];
+    // The validation number that the user needs to input.
+    int64 validationNumber = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SendValidationEmailRequest {
+    // The email of the user who wants to validate the email.
+    string email = 1 [(google.api.field_behavior) = REQUIRED];
+}

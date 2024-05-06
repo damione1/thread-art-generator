@@ -290,6 +290,90 @@
         ]
       }
     },
+    "/v1/users/{email}:sendValidationEmail": {
+      "post": {
+        "summary": "Send a validation email",
+        "description": "Send a validation email to a user's registered email address.",
+        "operationId": "ArtGeneratorService_SendValidationEmail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "email",
+            "description": "The email of the user who wants to validate the email.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ArtGeneratorServiceSendValidationEmailBody"
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users/{email}:validateEmail": {
+      "post": {
+        "summary": "Validate a user's email",
+        "description": "Enter a validation number received by email to validate a user's email address.",
+        "operationId": "ArtGeneratorService_ValidateEmail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "email",
+            "description": "The email of the user who wants to validate the email.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ArtGeneratorServiceValidateEmailBody"
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/v1/users/{name}": {
       "get": {
         "summary": "Get a user's information",
@@ -662,6 +746,23 @@
     "ArtGeneratorServiceResetPasswordBody": {
       "type": "object",
       "title": "reset password"
+    },
+    "ArtGeneratorServiceSendValidationEmailBody": {
+      "type": "object"
+    },
+    "ArtGeneratorServiceValidateEmailBody": {
+      "type": "object",
+      "properties": {
+        "validationNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "The validation number that the user needs to input."
+        }
+      },
+      "title": "validate email",
+      "required": [
+        "validationNumber"
+      ]
     },
     "pbArt": {
       "type": "object",
