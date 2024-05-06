@@ -150,13 +150,13 @@ var UserWhere = struct {
 
 // UserRels is where relationship names are stored.
 var UserRels = struct {
-	Avatar              string
+	AccountActivations  string
 	AuthorArtVariations string
 	AuthorArts          string
 	PasswordResets      string
 	Sessions            string
 }{
-	Avatar:              "Avatar",
+	AccountActivations:  "AccountActivations",
 	AuthorArtVariations: "AuthorArtVariations",
 	AuthorArts:          "AuthorArts",
 	PasswordResets:      "PasswordResets",
@@ -165,11 +165,11 @@ var UserRels = struct {
 
 // userR is where relationships are stored.
 type userR struct {
-	Avatar              *Media             `boil:"Avatar" json:"Avatar" toml:"Avatar" yaml:"Avatar"`
-	AuthorArtVariations ArtVariationSlice  `boil:"AuthorArtVariations" json:"AuthorArtVariations" toml:"AuthorArtVariations" yaml:"AuthorArtVariations"`
-	AuthorArts          ArtSlice           `boil:"AuthorArts" json:"AuthorArts" toml:"AuthorArts" yaml:"AuthorArts"`
-	PasswordResets      PasswordResetSlice `boil:"PasswordResets" json:"PasswordResets" toml:"PasswordResets" yaml:"PasswordResets"`
-	Sessions            SessionSlice       `boil:"Sessions" json:"Sessions" toml:"Sessions" yaml:"Sessions"`
+	AccountActivations  AccountActivationSlice `boil:"AccountActivations" json:"AccountActivations" toml:"AccountActivations" yaml:"AccountActivations"`
+	AuthorArtVariations ArtVariationSlice      `boil:"AuthorArtVariations" json:"AuthorArtVariations" toml:"AuthorArtVariations" yaml:"AuthorArtVariations"`
+	AuthorArts          ArtSlice               `boil:"AuthorArts" json:"AuthorArts" toml:"AuthorArts" yaml:"AuthorArts"`
+	PasswordResets      PasswordResetSlice     `boil:"PasswordResets" json:"PasswordResets" toml:"PasswordResets" yaml:"PasswordResets"`
+	Sessions            SessionSlice           `boil:"Sessions" json:"Sessions" toml:"Sessions" yaml:"Sessions"`
 }
 
 // NewStruct creates a new relationship struct
@@ -177,11 +177,11 @@ func (*userR) NewStruct() *userR {
 	return &userR{}
 }
 
-func (r *userR) GetAvatar() *Media {
+func (r *userR) GetAccountActivations() AccountActivationSlice {
 	if r == nil {
 		return nil
 	}
-	return r.Avatar
+	return r.AccountActivations
 }
 
 func (r *userR) GetAuthorArtVariations() ArtVariationSlice {
@@ -548,15 +548,18 @@ func (q userQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 	return count > 0, nil
 }
 
-// Avatar pointed to by the foreign key.
-func (o *User) Avatar(mods ...qm.QueryMod) mediaQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.AvatarID),
+// AccountActivations retrieves all the account_activation's AccountActivations with an executor.
+func (o *User) AccountActivations(mods ...qm.QueryMod) accountActivationQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
 	}
 
-	queryMods = append(queryMods, mods...)
+	queryMods = append(queryMods,
+		qm.Where("\"account_activations\".\"user_id\"=?", o.ID),
+	)
 
-	return Medias(queryMods...)
+	return AccountActivations(queryMods...)
 }
 
 // AuthorArtVariations retrieves all the art_variation's ArtVariations with an executor via author_id column.
@@ -615,9 +618,9 @@ func (o *User) Sessions(mods ...qm.QueryMod) sessionQuery {
 	return Sessions(queryMods...)
 }
 
-// LoadAvatar allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+// LoadAccountActivations allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadAccountActivations(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
 	var slice []*User
 	var object *User
 
@@ -648,20 +651,13 @@ func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bo
 		if object.R == nil {
 			object.R = &userR{}
 		}
-		if !queries.IsNil(object.AvatarID) {
-			args[object.AvatarID] = struct{}{}
-		}
-
+		args[object.ID] = struct{}{}
 	} else {
 		for _, obj := range slice {
 			if obj.R == nil {
 				obj.R = &userR{}
 			}
-
-			if !queries.IsNil(obj.AvatarID) {
-				args[obj.AvatarID] = struct{}{}
-			}
-
+			args[obj.ID] = struct{}{}
 		}
 	}
 
@@ -677,8 +673,8 @@ func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bo
 	}
 
 	query := NewQuery(
-		qm.From(`medias`),
-		qm.WhereIn(`medias.id in ?`, argsSlice...),
+		qm.From(`account_activations`),
+		qm.WhereIn(`account_activations.user_id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -686,51 +682,47 @@ func (userL) LoadAvatar(ctx context.Context, e boil.ContextExecutor, singular bo
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load Media")
+		return errors.Wrap(err, "failed to eager load account_activations")
 	}
 
-	var resultSlice []*Media
+	var resultSlice []*AccountActivation
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Media")
+		return errors.Wrap(err, "failed to bind eager loaded slice account_activations")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for medias")
+		return errors.Wrap(err, "failed to close results in eager load on account_activations")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for medias")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for account_activations")
 	}
 
-	if len(mediaAfterSelectHooks) != 0 {
+	if len(accountActivationAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
 			}
 		}
 	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
 	if singular {
-		foreign := resultSlice[0]
-		object.R.Avatar = foreign
-		if foreign.R == nil {
-			foreign.R = &mediaR{}
+		object.R.AccountActivations = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &accountActivationR{}
+			}
+			foreign.R.User = object
 		}
-		foreign.R.AvatarUsers = append(foreign.R.AvatarUsers, object)
 		return nil
 	}
 
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if queries.Equal(local.AvatarID, foreign.ID) {
-				local.R.Avatar = foreign
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.UserID {
+				local.R.AccountActivations = append(local.R.AccountActivations, foreign)
 				if foreign.R == nil {
-					foreign.R = &mediaR{}
+					foreign.R = &accountActivationR{}
 				}
-				foreign.R.AvatarUsers = append(foreign.R.AvatarUsers, local)
+				foreign.R.User = local
 				break
 			}
 		}
@@ -1191,98 +1183,64 @@ func (userL) LoadSessions(ctx context.Context, e boil.ContextExecutor, singular 
 	return nil
 }
 
-// SetAvatarG of the user to the related item.
-// Sets o.R.Avatar to related.
-// Adds o to related.R.AvatarUsers.
+// AddAccountActivationsG adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.AccountActivations.
+// Sets related.R.User appropriately.
 // Uses the global database handle.
-func (o *User) SetAvatarG(ctx context.Context, insert bool, related *Media) error {
-	return o.SetAvatar(ctx, boil.GetContextDB(), insert, related)
+func (o *User) AddAccountActivationsG(ctx context.Context, insert bool, related ...*AccountActivation) error {
+	return o.AddAccountActivations(ctx, boil.GetContextDB(), insert, related...)
 }
 
-// SetAvatar of the user to the related item.
-// Sets o.R.Avatar to related.
-// Adds o to related.R.AvatarUsers.
-func (o *User) SetAvatar(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Media) error {
+// AddAccountActivations adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.AccountActivations.
+// Sets related.R.User appropriately.
+func (o *User) AddAccountActivations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AccountActivation) error {
 	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
+	for _, rel := range related {
+		if insert {
+			rel.UserID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"account_activations\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, accountActivationPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.UserID = o.ID
 		}
 	}
 
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"users\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"avatar_id"}),
-		strmangle.WhereClause("\"", "\"", 2, userPrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	queries.Assign(&o.AvatarID, related.ID)
 	if o.R == nil {
 		o.R = &userR{
-			Avatar: related,
+			AccountActivations: related,
 		}
 	} else {
-		o.R.Avatar = related
+		o.R.AccountActivations = append(o.R.AccountActivations, related...)
 	}
 
-	if related.R == nil {
-		related.R = &mediaR{
-			AvatarUsers: UserSlice{o},
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &accountActivationR{
+				User: o,
+			}
+		} else {
+			rel.R.User = o
 		}
-	} else {
-		related.R.AvatarUsers = append(related.R.AvatarUsers, o)
-	}
-
-	return nil
-}
-
-// RemoveAvatarG relationship.
-// Sets o.R.Avatar to nil.
-// Removes o from all passed in related items' relationships struct.
-// Uses the global database handle.
-func (o *User) RemoveAvatarG(ctx context.Context, related *Media) error {
-	return o.RemoveAvatar(ctx, boil.GetContextDB(), related)
-}
-
-// RemoveAvatar relationship.
-// Sets o.R.Avatar to nil.
-// Removes o from all passed in related items' relationships struct.
-func (o *User) RemoveAvatar(ctx context.Context, exec boil.ContextExecutor, related *Media) error {
-	var err error
-
-	queries.SetScanner(&o.AvatarID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("avatar_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.Avatar = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.AvatarUsers {
-		if queries.Equal(o.AvatarID, ri.AvatarID) {
-			continue
-		}
-
-		ln := len(related.R.AvatarUsers)
-		if ln > 1 && i < ln-1 {
-			related.R.AvatarUsers[i] = related.R.AvatarUsers[ln-1]
-		}
-		related.R.AvatarUsers = related.R.AvatarUsers[:ln-1]
-		break
 	}
 	return nil
 }

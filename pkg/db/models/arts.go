@@ -95,18 +95,15 @@ var ArtWhere = struct {
 // ArtRels is where relationship names are stored.
 var ArtRels = struct {
 	Author        string
-	Image         string
 	ArtVariations string
 }{
 	Author:        "Author",
-	Image:         "Image",
 	ArtVariations: "ArtVariations",
 }
 
 // artR is where relationships are stored.
 type artR struct {
 	Author        *User             `boil:"Author" json:"Author" toml:"Author" yaml:"Author"`
-	Image         *Media            `boil:"Image" json:"Image" toml:"Image" yaml:"Image"`
 	ArtVariations ArtVariationSlice `boil:"ArtVariations" json:"ArtVariations" toml:"ArtVariations" yaml:"ArtVariations"`
 }
 
@@ -120,13 +117,6 @@ func (r *artR) GetAuthor() *User {
 		return nil
 	}
 	return r.Author
-}
-
-func (r *artR) GetImage() *Media {
-	if r == nil {
-		return nil
-	}
-	return r.Image
 }
 
 func (r *artR) GetArtVariations() ArtVariationSlice {
@@ -483,17 +473,6 @@ func (o *Art) Author(mods ...qm.QueryMod) userQuery {
 	return Users(queryMods...)
 }
 
-// Image pointed to by the foreign key.
-func (o *Art) Image(mods ...qm.QueryMod) mediaQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.ImageID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Medias(queryMods...)
-}
-
 // ArtVariations retrieves all the art_variation's ArtVariations with an executor.
 func (o *Art) ArtVariations(mods ...qm.QueryMod) artVariationQuery {
 	var queryMods []qm.QueryMod
@@ -620,130 +599,6 @@ func (artL) LoadAuthor(ctx context.Context, e boil.ContextExecutor, singular boo
 					foreign.R = &userR{}
 				}
 				foreign.R.AuthorArts = append(foreign.R.AuthorArts, local)
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
-// LoadImage allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (artL) LoadImage(ctx context.Context, e boil.ContextExecutor, singular bool, maybeArt interface{}, mods queries.Applicator) error {
-	var slice []*Art
-	var object *Art
-
-	if singular {
-		var ok bool
-		object, ok = maybeArt.(*Art)
-		if !ok {
-			object = new(Art)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeArt)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeArt))
-			}
-		}
-	} else {
-		s, ok := maybeArt.(*[]*Art)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeArt)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeArt))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &artR{}
-		}
-		if !queries.IsNil(object.ImageID) {
-			args[object.ImageID] = struct{}{}
-		}
-
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &artR{}
-			}
-
-			if !queries.IsNil(obj.ImageID) {
-				args[obj.ImageID] = struct{}{}
-			}
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`medias`),
-		qm.WhereIn(`medias.id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Media")
-	}
-
-	var resultSlice []*Media
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Media")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for medias")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for medias")
-	}
-
-	if len(mediaAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Image = foreign
-		if foreign.R == nil {
-			foreign.R = &mediaR{}
-		}
-		foreign.R.ImageArts = append(foreign.R.ImageArts, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if queries.Equal(local.ImageID, foreign.ID) {
-				local.R.Image = foreign
-				if foreign.R == nil {
-					foreign.R = &mediaR{}
-				}
-				foreign.R.ImageArts = append(foreign.R.ImageArts, local)
 				break
 			}
 		}
@@ -917,102 +772,6 @@ func (o *Art) SetAuthor(ctx context.Context, exec boil.ContextExecutor, insert b
 		related.R.AuthorArts = append(related.R.AuthorArts, o)
 	}
 
-	return nil
-}
-
-// SetImageG of the art to the related item.
-// Sets o.R.Image to related.
-// Adds o to related.R.ImageArts.
-// Uses the global database handle.
-func (o *Art) SetImageG(ctx context.Context, insert bool, related *Media) error {
-	return o.SetImage(ctx, boil.GetContextDB(), insert, related)
-}
-
-// SetImage of the art to the related item.
-// Sets o.R.Image to related.
-// Adds o to related.R.ImageArts.
-func (o *Art) SetImage(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Media) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"arts\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"image_id"}),
-		strmangle.WhereClause("\"", "\"", 2, artPrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	queries.Assign(&o.ImageID, related.ID)
-	if o.R == nil {
-		o.R = &artR{
-			Image: related,
-		}
-	} else {
-		o.R.Image = related
-	}
-
-	if related.R == nil {
-		related.R = &mediaR{
-			ImageArts: ArtSlice{o},
-		}
-	} else {
-		related.R.ImageArts = append(related.R.ImageArts, o)
-	}
-
-	return nil
-}
-
-// RemoveImageG relationship.
-// Sets o.R.Image to nil.
-// Removes o from all passed in related items' relationships struct.
-// Uses the global database handle.
-func (o *Art) RemoveImageG(ctx context.Context, related *Media) error {
-	return o.RemoveImage(ctx, boil.GetContextDB(), related)
-}
-
-// RemoveImage relationship.
-// Sets o.R.Image to nil.
-// Removes o from all passed in related items' relationships struct.
-func (o *Art) RemoveImage(ctx context.Context, exec boil.ContextExecutor, related *Media) error {
-	var err error
-
-	queries.SetScanner(&o.ImageID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("image_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.Image = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.ImageArts {
-		if queries.Equal(o.ImageID, ri.ImageID) {
-			continue
-		}
-
-		ln := len(related.R.ImageArts)
-		if ln > 1 && i < ln-1 {
-			related.R.ImageArts[i] = related.R.ImageArts[ln-1]
-		}
-		related.R.ImageArts = related.R.ImageArts[:ln-1]
-		break
-	}
 	return nil
 }
 

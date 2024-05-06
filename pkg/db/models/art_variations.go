@@ -74,33 +74,6 @@ var ArtVariationTableColumns = struct {
 
 // Generated where
 
-type whereHelperstring struct{ field string }
-
-func (w whereHelperstring) EQ(x string) qm.QueryMod     { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperstring) NEQ(x string) qm.QueryMod    { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperstring) LT(x string) qm.QueryMod     { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperstring) LTE(x string) qm.QueryMod    { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperstring) GT(x string) qm.QueryMod     { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperstring) GTE(x string) qm.QueryMod    { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperstring) LIKE(x string) qm.QueryMod   { return qm.Where(w.field+" LIKE ?", x) }
-func (w whereHelperstring) NLIKE(x string) qm.QueryMod  { return qm.Where(w.field+" NOT LIKE ?", x) }
-func (w whereHelperstring) ILIKE(x string) qm.QueryMod  { return qm.Where(w.field+" ILIKE ?", x) }
-func (w whereHelperstring) NILIKE(x string) qm.QueryMod { return qm.Where(w.field+" NOT ILIKE ?", x) }
-func (w whereHelperstring) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
 type whereHelpernull_String struct{ field string }
 
 func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
@@ -151,51 +124,6 @@ func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
 func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
-type whereHelpertime_Time struct{ field string }
-
-func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-type whereHelpernull_Time struct{ field string }
-
-func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 var ArtVariationWhere = struct {
 	ID        whereHelperstring
 	ArtID     whereHelpernull_String
@@ -218,18 +146,15 @@ var ArtVariationWhere = struct {
 var ArtVariationRels = struct {
 	Art    string
 	Author string
-	Image  string
 }{
 	Art:    "Art",
 	Author: "Author",
-	Image:  "Image",
 }
 
 // artVariationR is where relationships are stored.
 type artVariationR struct {
-	Art    *Art   `boil:"Art" json:"Art" toml:"Art" yaml:"Art"`
-	Author *User  `boil:"Author" json:"Author" toml:"Author" yaml:"Author"`
-	Image  *Media `boil:"Image" json:"Image" toml:"Image" yaml:"Image"`
+	Art    *Art  `boil:"Art" json:"Art" toml:"Art" yaml:"Art"`
+	Author *User `boil:"Author" json:"Author" toml:"Author" yaml:"Author"`
 }
 
 // NewStruct creates a new relationship struct
@@ -249,13 +174,6 @@ func (r *artVariationR) GetAuthor() *User {
 		return nil
 	}
 	return r.Author
-}
-
-func (r *artVariationR) GetImage() *Media {
-	if r == nil {
-		return nil
-	}
-	return r.Image
 }
 
 // artVariationL is where Load methods for each relationship are stored.
@@ -616,17 +534,6 @@ func (o *ArtVariation) Author(mods ...qm.QueryMod) userQuery {
 	return Users(queryMods...)
 }
 
-// Image pointed to by the foreign key.
-func (o *ArtVariation) Image(mods ...qm.QueryMod) mediaQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.ImageID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Medias(queryMods...)
-}
-
 // LoadArt allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (artVariationL) LoadArt(ctx context.Context, e boil.ContextExecutor, singular bool, maybeArtVariation interface{}, mods queries.Applicator) error {
@@ -871,130 +778,6 @@ func (artVariationL) LoadAuthor(ctx context.Context, e boil.ContextExecutor, sin
 	return nil
 }
 
-// LoadImage allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (artVariationL) LoadImage(ctx context.Context, e boil.ContextExecutor, singular bool, maybeArtVariation interface{}, mods queries.Applicator) error {
-	var slice []*ArtVariation
-	var object *ArtVariation
-
-	if singular {
-		var ok bool
-		object, ok = maybeArtVariation.(*ArtVariation)
-		if !ok {
-			object = new(ArtVariation)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeArtVariation)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeArtVariation))
-			}
-		}
-	} else {
-		s, ok := maybeArtVariation.(*[]*ArtVariation)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeArtVariation)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeArtVariation))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &artVariationR{}
-		}
-		if !queries.IsNil(object.ImageID) {
-			args[object.ImageID] = struct{}{}
-		}
-
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &artVariationR{}
-			}
-
-			if !queries.IsNil(obj.ImageID) {
-				args[obj.ImageID] = struct{}{}
-			}
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`medias`),
-		qm.WhereIn(`medias.id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Media")
-	}
-
-	var resultSlice []*Media
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Media")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for medias")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for medias")
-	}
-
-	if len(mediaAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Image = foreign
-		if foreign.R == nil {
-			foreign.R = &mediaR{}
-		}
-		foreign.R.ImageArtVariations = append(foreign.R.ImageArtVariations, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if queries.Equal(local.ImageID, foreign.ID) {
-				local.R.Image = foreign
-				if foreign.R == nil {
-					foreign.R = &mediaR{}
-				}
-				foreign.R.ImageArtVariations = append(foreign.R.ImageArtVariations, local)
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
 // SetArtG of the artVariation to the related item.
 // Sets o.R.Art to related.
 // Adds o to related.R.ArtVariations.
@@ -1143,102 +926,6 @@ func (o *ArtVariation) SetAuthor(ctx context.Context, exec boil.ContextExecutor,
 		related.R.AuthorArtVariations = append(related.R.AuthorArtVariations, o)
 	}
 
-	return nil
-}
-
-// SetImageG of the artVariation to the related item.
-// Sets o.R.Image to related.
-// Adds o to related.R.ImageArtVariations.
-// Uses the global database handle.
-func (o *ArtVariation) SetImageG(ctx context.Context, insert bool, related *Media) error {
-	return o.SetImage(ctx, boil.GetContextDB(), insert, related)
-}
-
-// SetImage of the artVariation to the related item.
-// Sets o.R.Image to related.
-// Adds o to related.R.ImageArtVariations.
-func (o *ArtVariation) SetImage(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Media) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"art_variations\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"image_id"}),
-		strmangle.WhereClause("\"", "\"", 2, artVariationPrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	queries.Assign(&o.ImageID, related.ID)
-	if o.R == nil {
-		o.R = &artVariationR{
-			Image: related,
-		}
-	} else {
-		o.R.Image = related
-	}
-
-	if related.R == nil {
-		related.R = &mediaR{
-			ImageArtVariations: ArtVariationSlice{o},
-		}
-	} else {
-		related.R.ImageArtVariations = append(related.R.ImageArtVariations, o)
-	}
-
-	return nil
-}
-
-// RemoveImageG relationship.
-// Sets o.R.Image to nil.
-// Removes o from all passed in related items' relationships struct.
-// Uses the global database handle.
-func (o *ArtVariation) RemoveImageG(ctx context.Context, related *Media) error {
-	return o.RemoveImage(ctx, boil.GetContextDB(), related)
-}
-
-// RemoveImage relationship.
-// Sets o.R.Image to nil.
-// Removes o from all passed in related items' relationships struct.
-func (o *ArtVariation) RemoveImage(ctx context.Context, exec boil.ContextExecutor, related *Media) error {
-	var err error
-
-	queries.SetScanner(&o.ImageID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("image_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.Image = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.ImageArtVariations {
-		if queries.Equal(o.ImageID, ri.ImageID) {
-			continue
-		}
-
-		ln := len(related.R.ImageArtVariations)
-		if ln > 1 && i < ln-1 {
-			related.R.ImageArtVariations[i] = related.R.ImageArtVariations[ln-1]
-		}
-		related.R.ImageArtVariations = related.R.ImageArtVariations[:ln-1]
-		break
-	}
 	return nil
 }
 

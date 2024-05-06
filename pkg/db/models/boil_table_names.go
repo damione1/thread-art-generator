@@ -4,19 +4,19 @@
 package models
 
 var TableNames = struct {
-	ArtVariations    string
-	Arts             string
-	Medias           string
-	PasswordResets   string
-	SchemaMigrations string
-	Sessions         string
-	Users            string
+	AccountActivations string
+	ArtVariations      string
+	Arts               string
+	PasswordResets     string
+	SchemaMigrations   string
+	Sessions           string
+	Users              string
 }{
-	ArtVariations:    "art_variations",
-	Arts:             "arts",
-	Medias:           "medias",
-	PasswordResets:   "password_resets",
-	SchemaMigrations: "schema_migrations",
-	Sessions:         "sessions",
-	Users:            "users",
+	AccountActivations: "account_activations",
+	ArtVariations:      "art_variations",
+	Arts:               "arts",
+	PasswordResets:     "password_resets",
+	SchemaMigrations:   "schema_migrations",
+	Sessions:           "sessions",
+	Users:              "users",
 }

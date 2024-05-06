@@ -792,6 +792,112 @@ func (x *ResetPasswordRequest) GetEmail() string {
 	return ""
 }
 
+//validate email
+type ValidateEmailRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// The email of the user who wants to validate the email.
+	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	// The validation number that the user needs to input.
+	ValidationNumber int64 `protobuf:"varint,2,opt,name=validationNumber,proto3" json:"validationNumber,omitempty"`
+}
+
+func (x *ValidateEmailRequest) Reset() {
+	*x = ValidateEmailRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_user_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ValidateEmailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateEmailRequest) ProtoMessage() {}
+
+func (x *ValidateEmailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateEmailRequest.ProtoReflect.Descriptor instead.
+func (*ValidateEmailRequest) Descriptor() ([]byte, []int) {
+	return file_user_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ValidateEmailRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *ValidateEmailRequest) GetValidationNumber() int64 {
+	if x != nil {
+		return x.ValidationNumber
+	}
+	return 0
+}
+
+type SendValidationEmailRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// The email of the user who wants to validate the email.
+	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+}
+
+func (x *SendValidationEmailRequest) Reset() {
+	*x = SendValidationEmailRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_user_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SendValidationEmailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendValidationEmailRequest) ProtoMessage() {}
+
+func (x *SendValidationEmailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendValidationEmailRequest.ProtoReflect.Descriptor instead.
+func (*SendValidationEmailRequest) Descriptor() ([]byte, []int) {
+	return file_user_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SendValidationEmailRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
 var File_user_proto protoreflect.FileDescriptor
 
 var file_user_proto_rawDesc = []byte{
@@ -906,9 +1012,19 @@ var file_user_proto_rawDesc = []byte{
 	0x0a, 0x14, 0x52, 0x65, 0x73, 0x65, 0x74, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x52,
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x19, 0x0a, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x03, 0xe0, 0x41, 0x02, 0x52, 0x05, 0x65, 0x6d, 0x61, 0x69,
-	0x6c, 0x42, 0x23, 0x5a, 0x21, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64, 0x2d, 0x61, 0x72, 0x74, 0x2d,
-	0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6c, 0x22, 0x62, 0x0a, 0x14, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x45, 0x6d, 0x61,
+	0x69, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x19, 0x0a, 0x05, 0x65, 0x6d, 0x61,
+	0x69, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x03, 0xe0, 0x41, 0x02, 0x52, 0x05, 0x65,
+	0x6d, 0x61, 0x69, 0x6c, 0x12, 0x2f, 0x0a, 0x10, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x42, 0x03,
+	0xe0, 0x41, 0x02, 0x52, 0x10, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x4e,
+	0x75, 0x6d, 0x62, 0x65, 0x72, 0x22, 0x37, 0x0a, 0x1a, 0x53, 0x65, 0x6e, 0x64, 0x56, 0x61, 0x6c,
+	0x69, 0x64, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x45, 0x6d, 0x61, 0x69, 0x6c, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x12, 0x19, 0x0a, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x42, 0x03, 0xe0, 0x41, 0x02, 0x52, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x42, 0x23,
+	0x5a, 0x21, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64, 0x2d, 0x61, 0x72, 0x74, 0x2d, 0x67, 0x65, 0x6e,
+	0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -923,34 +1039,36 @@ func file_user_proto_rawDescGZIP() []byte {
 	return file_user_proto_rawDescData
 }
 
-var file_user_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_user_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_user_proto_goTypes = []interface{}{
-	(*User)(nil),                  // 0: pb.User
-	(*CreateUserRequest)(nil),     // 1: pb.CreateUserRequest
-	(*GetUserRequest)(nil),        // 2: pb.GetUserRequest
-	(*UpdateUserRequest)(nil),     // 3: pb.UpdateUserRequest
-	(*ListUsersRequest)(nil),      // 4: pb.ListUsersRequest
-	(*ListUsersResponse)(nil),     // 5: pb.ListUsersResponse
-	(*DeleteUserRequest)(nil),     // 6: pb.DeleteUserRequest
-	(*CreateSessionRequest)(nil),  // 7: pb.CreateSessionRequest
-	(*CreateSessionResponse)(nil), // 8: pb.CreateSessionResponse
-	(*RefreshTokenRequest)(nil),   // 9: pb.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),  // 10: pb.RefreshTokenResponse
-	(*DeleteSessionRequest)(nil),  // 11: pb.DeleteSessionRequest
-	(*ResetPasswordRequest)(nil),  // 12: pb.ResetPasswordRequest
-	(*fieldmaskpb.FieldMask)(nil), // 13: google.protobuf.FieldMask
-	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
+	(*User)(nil),                       // 0: pb.User
+	(*CreateUserRequest)(nil),          // 1: pb.CreateUserRequest
+	(*GetUserRequest)(nil),             // 2: pb.GetUserRequest
+	(*UpdateUserRequest)(nil),          // 3: pb.UpdateUserRequest
+	(*ListUsersRequest)(nil),           // 4: pb.ListUsersRequest
+	(*ListUsersResponse)(nil),          // 5: pb.ListUsersResponse
+	(*DeleteUserRequest)(nil),          // 6: pb.DeleteUserRequest
+	(*CreateSessionRequest)(nil),       // 7: pb.CreateSessionRequest
+	(*CreateSessionResponse)(nil),      // 8: pb.CreateSessionResponse
+	(*RefreshTokenRequest)(nil),        // 9: pb.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),       // 10: pb.RefreshTokenResponse
+	(*DeleteSessionRequest)(nil),       // 11: pb.DeleteSessionRequest
+	(*ResetPasswordRequest)(nil),       // 12: pb.ResetPasswordRequest
+	(*ValidateEmailRequest)(nil),       // 13: pb.ValidateEmailRequest
+	(*SendValidationEmailRequest)(nil), // 14: pb.SendValidationEmailRequest
+	(*fieldmaskpb.FieldMask)(nil),      // 15: google.protobuf.FieldMask
+	(*timestamppb.Timestamp)(nil),      // 16: google.protobuf.Timestamp
 }
 var file_user_proto_depIdxs = []int32{
 	0,  // 0: pb.CreateUserRequest.user:type_name -> pb.User
 	0,  // 1: pb.UpdateUserRequest.user:type_name -> pb.User
-	13, // 2: pb.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
+	15, // 2: pb.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
 	0,  // 3: pb.ListUsersResponse.users:type_name -> pb.User
 	0,  // 4: pb.CreateSessionResponse.user:type_name -> pb.User
-	14, // 5: pb.CreateSessionResponse.access_token_expire_time:type_name -> google.protobuf.Timestamp
-	14, // 6: pb.CreateSessionResponse.refresh_token_expire_time:type_name -> google.protobuf.Timestamp
-	14, // 7: pb.RefreshTokenResponse.access_token_expire_time:type_name -> google.protobuf.Timestamp
-	14, // 8: pb.RefreshTokenResponse.refresh_token_expire_time:type_name -> google.protobuf.Timestamp
+	16, // 5: pb.CreateSessionResponse.access_token_expire_time:type_name -> google.protobuf.Timestamp
+	16, // 6: pb.CreateSessionResponse.refresh_token_expire_time:type_name -> google.protobuf.Timestamp
+	16, // 7: pb.RefreshTokenResponse.access_token_expire_time:type_name -> google.protobuf.Timestamp
+	16, // 8: pb.RefreshTokenResponse.refresh_token_expire_time:type_name -> google.protobuf.Timestamp
 	9,  // [9:9] is the sub-list for method output_type
 	9,  // [9:9] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
@@ -1120,6 +1238,30 @@ func file_user_proto_init() {
 				return nil
 			}
 		}
+		file_user_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ValidateEmailRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_user_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SendValidationEmailRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1127,7 +1269,7 @@ func file_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_user_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
