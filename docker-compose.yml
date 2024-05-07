@@ -48,7 +48,7 @@ services:
   go-proto-generator:
     build:
       context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-proto
+      dockerfile: Infra/Dockerfiles/Dockerfile-go-proto
     command: make build-go-proto
     volumes:
       - ./:/app
@@ -56,7 +56,7 @@ services:
   web-proto-generator:
     build:
       context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-proto
+      dockerfile: Infra/Dockerfiles/Dockerfile-web-proto
     command: make build-web-proto
     volumes:
       - ./:/app
