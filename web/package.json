@@ -9,8 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.10.7",
+    "google-protobuf": "^3.21.2",
+    "grpc-web": "^1.5.0",
     "next": "14.2.3",
     "protoc-gen-grpc-web": "^1.5.0",
+    "protoc-gen-js": "^3.21.2",
     "protoc-gen-ts": "^0.8.7",
     "react": "^18",
     "react-dom": "^18",

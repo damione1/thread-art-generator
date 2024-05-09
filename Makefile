@@ -23,16 +23,12 @@ build-go-proto:
 
 .PHONY: build-web-proto
 build-web-proto:
-	rm -rf web/src/pb/*
+	rm -rf web/grpc/*
 	protoc --proto_path ./proto \
 		--plugin=protoc-gen-grpc-web=web/node_modules/.bin/protoc-gen-grpc-web \
-		--plugin=protoc-gen-ts_proto=web/node_modules/.bin/protoc-gen-ts_proto \
-		--ts_out=import_style=commonjs,binary:web/src/pb \
-		--grpc-web_out=import_style=typescript,mode=grpcwebtext:web/src/pb \
-		--ts_proto_out=./web/src/pb \
-		--ts_proto_opt=env=browser \
-		--ts_proto_opt=useOptionals=true \
-		--ts_proto_opt=unrecognizedEnum=false \
+		--plugin=protoc-gen-js=web/node_modules/.bin/protoc-gen-js \
+		--js_out=import_style=commonjs,binary:web/grpc \
+		--grpc-web_out=import_style=typescript,mode=grpcweb:web/grpc \
 		 `find ./proto -name '*.proto'`
 
 .PHONY: generate-sim-key

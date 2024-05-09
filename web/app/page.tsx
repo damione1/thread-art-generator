@@ -1,6 +1,36 @@
+"use client";
+import * as grpcWeb from "grpc-web";
+import { CreateSessionRequest, CreateSessionResponse } from "@/grpc/user_pb";
 import Image from "next/image";
+import { ArtGeneratorServiceClient } from "@/grpc/ServicesServiceClientPb";
 
 export default function Home() {
+  const client = new ArtGeneratorServiceClient(
+    "http://localhost:8080",
+    null,
+    null
+  );
+
+  var sessionRequest = new CreateSessionRequest();
+  sessionRequest.setEmail("");
+  sessionRequest.setPassword("");
+
+  const call = client.createSession(
+    sessionRequest,
+    {},
+    (err: grpcWeb.RpcError, response: CreateSessionResponse) => {
+      console.log("access token: ", response.getAccessToken());
+      console.log("refresh token: ", response.getRefreshToken());
+    }
+  );
+  call.on("status", (status: grpcWeb.Status) => {
+    // ...
+  });
+
+  call.on("error", (error: grpcWeb.RpcError) => {
+    console.error("error", error);
+  });
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">

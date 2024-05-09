@@ -66,6 +66,7 @@ resources = {
   'api': {'labels': ['services'], 'resource_deps': ['go-compile', 'db', 'migrations']},
   'minio': {'labels': ['database'], 'resource_deps': ['db']},
   'web': {'labels': ['web'], 'resource_deps': ['api']},
+  'envoy': {'labels': ['services'], 'resource_deps': ['api']},
 }
 
 

@@ -111,6 +111,13 @@ services:
       - ./web:/app
       - /app/node_modules
 
+  envoy:
+    image: envoyproxy/envoy:v1.30-latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
+
   # rabbitmq:
   #   image: rabbitmq:management
   #   ports:
