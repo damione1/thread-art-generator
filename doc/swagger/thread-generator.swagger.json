@@ -293,7 +293,7 @@
     "/v1/users/{email}:sendValidationEmail": {
       "post": {
         "summary": "Send a validation email",
-        "description": "Send a validation email to a user's registered email address.",
+        "description": "Ask the system to send a validation email to a user's registered email address.",
         "operationId": "ArtGeneratorService_SendValidationEmail",
         "responses": {
           "200": {
