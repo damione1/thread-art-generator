@@ -53,15 +53,6 @@ services:
     volumes:
       - ./:/app
 
-  web-proto-generator:
-    build:
-      context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-web-proto
-    command: make build-web-proto
-    volumes:
-      - ./:/app
-    container_name: web-proto-generator
-
   generate-models:
     build:
       context: .
