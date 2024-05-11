@@ -24,7 +24,7 @@ services:
       REFRESH_TOKEN_DURATION: ${REFRESH_TOKEN_DURATION}
       ENVIRONMENT: ${ENVIRONMENT}
       SENDINBLUE_API_KEY: ${SENDINBLUE_API_KEY}
-      DOMAIN: ${DOMAIN}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
     depends_on:
       - db
       - migrations
@@ -101,6 +101,11 @@ services:
     volumes:
       - ./web:/app
       - /app/node_modules
+    environment:
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXT_PUBLIC_GRPC_API: ${NEXT_PUBLIC_GRPC_API}
+      NEXT_HTTP_API: ${NEXT_HTTP_API}
 
   envoy:
     image: envoyproxy/envoy:v1.30-latest

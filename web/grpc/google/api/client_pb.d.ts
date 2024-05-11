@@ -1,32 +1,45 @@
-import * as jspb from 'google-protobuf'
+import * as jspb from "google-protobuf";
 
-import * as google_api_launch_stage_pb from '../../google/api/launch_stage_pb'; // proto import: "google/api/launch_stage.proto"
-import * as google_protobuf_descriptor_pb from 'google-protobuf/google/protobuf/descriptor_pb'; // proto import: "google/protobuf/descriptor.proto"
-import * as google_protobuf_duration_pb from 'google-protobuf/google/protobuf/duration_pb'; // proto import: "google/protobuf/duration.proto"
-
+import * as google_api_launch_stage_pb from "./launch_stage_pb"; // proto import: "google/api/launch_stage.proto"
+import * as google_protobuf_descriptor_pb from "google-protobuf/google/protobuf/descriptor_pb"; // proto import: "google/protobuf/descriptor.proto"
+import * as google_protobuf_duration_pb from "google-protobuf/google/protobuf/duration_pb"; // proto import: "google/protobuf/duration.proto"
 
 export class CommonLanguageSettings extends jspb.Message {
   getReferenceDocsUri(): string;
   setReferenceDocsUri(value: string): CommonLanguageSettings;
 
   getDestinationsList(): Array<ClientLibraryDestination>;
-  setDestinationsList(value: Array<ClientLibraryDestination>): CommonLanguageSettings;
+  setDestinationsList(
+    value: Array<ClientLibraryDestination>
+  ): CommonLanguageSettings;
   clearDestinationsList(): CommonLanguageSettings;
-  addDestinations(value: ClientLibraryDestination, index?: number): CommonLanguageSettings;
+  addDestinations(
+    value: ClientLibraryDestination,
+    index?: number
+  ): CommonLanguageSettings;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CommonLanguageSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: CommonLanguageSettings): CommonLanguageSettings.AsObject;
-  static serializeBinaryToWriter(message: CommonLanguageSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: CommonLanguageSettings
+  ): CommonLanguageSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: CommonLanguageSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): CommonLanguageSettings;
-  static deserializeBinaryFromReader(message: CommonLanguageSettings, reader: jspb.BinaryReader): CommonLanguageSettings;
+  static deserializeBinaryFromReader(
+    message: CommonLanguageSettings,
+    reader: jspb.BinaryReader
+  ): CommonLanguageSettings;
 }
 
 export namespace CommonLanguageSettings {
   export type AsObject = {
-    referenceDocsUri: string,
-    destinationsList: Array<ClientLibraryDestination>,
-  }
+    referenceDocsUri: string;
+    destinationsList: Array<ClientLibraryDestination>;
+  };
 }
 
 export class ClientLibrarySettings extends jspb.Message {
@@ -34,7 +47,9 @@ export class ClientLibrarySettings extends jspb.Message {
   setVersion(value: string): ClientLibrarySettings;
 
   getLaunchStage(): google_api_launch_stage_pb.LaunchStage;
-  setLaunchStage(value: google_api_launch_stage_pb.LaunchStage): ClientLibrarySettings;
+  setLaunchStage(
+    value: google_api_launch_stage_pb.LaunchStage
+  ): ClientLibrarySettings;
 
   getRestNumericEnums(): boolean;
   setRestNumericEnums(value: boolean): ClientLibrarySettings;
@@ -81,26 +96,35 @@ export class ClientLibrarySettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ClientLibrarySettings.AsObject;
-  static toObject(includeInstance: boolean, msg: ClientLibrarySettings): ClientLibrarySettings.AsObject;
-  static serializeBinaryToWriter(message: ClientLibrarySettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: ClientLibrarySettings
+  ): ClientLibrarySettings.AsObject;
+  static serializeBinaryToWriter(
+    message: ClientLibrarySettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): ClientLibrarySettings;
-  static deserializeBinaryFromReader(message: ClientLibrarySettings, reader: jspb.BinaryReader): ClientLibrarySettings;
+  static deserializeBinaryFromReader(
+    message: ClientLibrarySettings,
+    reader: jspb.BinaryReader
+  ): ClientLibrarySettings;
 }
 
 export namespace ClientLibrarySettings {
   export type AsObject = {
-    version: string,
-    launchStage: google_api_launch_stage_pb.LaunchStage,
-    restNumericEnums: boolean,
-    javaSettings?: JavaSettings.AsObject,
-    cppSettings?: CppSettings.AsObject,
-    phpSettings?: PhpSettings.AsObject,
-    pythonSettings?: PythonSettings.AsObject,
-    nodeSettings?: NodeSettings.AsObject,
-    dotnetSettings?: DotnetSettings.AsObject,
-    rubySettings?: RubySettings.AsObject,
-    goSettings?: GoSettings.AsObject,
-  }
+    version: string;
+    launchStage: google_api_launch_stage_pb.LaunchStage;
+    restNumericEnums: boolean;
+    javaSettings?: JavaSettings.AsObject;
+    cppSettings?: CppSettings.AsObject;
+    phpSettings?: PhpSettings.AsObject;
+    pythonSettings?: PythonSettings.AsObject;
+    nodeSettings?: NodeSettings.AsObject;
+    dotnetSettings?: DotnetSettings.AsObject;
+    rubySettings?: RubySettings.AsObject;
+    goSettings?: GoSettings.AsObject;
+  };
 }
 
 export class Publishing extends jspb.Message {
@@ -135,7 +159,10 @@ export class Publishing extends jspb.Message {
   getLibrarySettingsList(): Array<ClientLibrarySettings>;
   setLibrarySettingsList(value: Array<ClientLibrarySettings>): Publishing;
   clearLibrarySettingsList(): Publishing;
-  addLibrarySettings(value?: ClientLibrarySettings, index?: number): ClientLibrarySettings;
+  addLibrarySettings(
+    value?: ClientLibrarySettings,
+    index?: number
+  ): ClientLibrarySettings;
 
   getProtoReferenceDocumentationUri(): string;
   setProtoReferenceDocumentationUri(value: string): Publishing;
@@ -145,26 +172,35 @@ export class Publishing extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Publishing.AsObject;
-  static toObject(includeInstance: boolean, msg: Publishing): Publishing.AsObject;
-  static serializeBinaryToWriter(message: Publishing, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: Publishing
+  ): Publishing.AsObject;
+  static serializeBinaryToWriter(
+    message: Publishing,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): Publishing;
-  static deserializeBinaryFromReader(message: Publishing, reader: jspb.BinaryReader): Publishing;
+  static deserializeBinaryFromReader(
+    message: Publishing,
+    reader: jspb.BinaryReader
+  ): Publishing;
 }
 
 export namespace Publishing {
   export type AsObject = {
-    methodSettingsList: Array<MethodSettings.AsObject>,
-    newIssueUri: string,
-    documentationUri: string,
-    apiShortName: string,
-    githubLabel: string,
-    codeownerGithubTeamsList: Array<string>,
-    docTagPrefix: string,
-    organization: ClientLibraryOrganization,
-    librarySettingsList: Array<ClientLibrarySettings.AsObject>,
-    protoReferenceDocumentationUri: string,
-    restReferenceDocumentationUri: string,
-  }
+    methodSettingsList: Array<MethodSettings.AsObject>;
+    newIssueUri: string;
+    documentationUri: string;
+    apiShortName: string;
+    githubLabel: string;
+    codeownerGithubTeamsList: Array<string>;
+    docTagPrefix: string;
+    organization: ClientLibraryOrganization;
+    librarySettingsList: Array<ClientLibrarySettings.AsObject>;
+    protoReferenceDocumentationUri: string;
+    restReferenceDocumentationUri: string;
+  };
 }
 
 export class JavaSettings extends jspb.Message {
@@ -181,18 +217,27 @@ export class JavaSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): JavaSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: JavaSettings): JavaSettings.AsObject;
-  static serializeBinaryToWriter(message: JavaSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: JavaSettings
+  ): JavaSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: JavaSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): JavaSettings;
-  static deserializeBinaryFromReader(message: JavaSettings, reader: jspb.BinaryReader): JavaSettings;
+  static deserializeBinaryFromReader(
+    message: JavaSettings,
+    reader: jspb.BinaryReader
+  ): JavaSettings;
 }
 
 export namespace JavaSettings {
   export type AsObject = {
-    libraryPackage: string,
-    serviceClassNamesMap: Array<[string, string]>,
-    common?: CommonLanguageSettings.AsObject,
-  }
+    libraryPackage: string;
+    serviceClassNamesMap: Array<[string, string]>;
+    common?: CommonLanguageSettings.AsObject;
+  };
 }
 
 export class CppSettings extends jspb.Message {
@@ -203,16 +248,25 @@ export class CppSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CppSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: CppSettings): CppSettings.AsObject;
-  static serializeBinaryToWriter(message: CppSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: CppSettings
+  ): CppSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: CppSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): CppSettings;
-  static deserializeBinaryFromReader(message: CppSettings, reader: jspb.BinaryReader): CppSettings;
+  static deserializeBinaryFromReader(
+    message: CppSettings,
+    reader: jspb.BinaryReader
+  ): CppSettings;
 }
 
 export namespace CppSettings {
   export type AsObject = {
-    common?: CommonLanguageSettings.AsObject,
-  }
+    common?: CommonLanguageSettings.AsObject;
+  };
 }
 
 export class PhpSettings extends jspb.Message {
@@ -223,16 +277,25 @@ export class PhpSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): PhpSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: PhpSettings): PhpSettings.AsObject;
-  static serializeBinaryToWriter(message: PhpSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: PhpSettings
+  ): PhpSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: PhpSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): PhpSettings;
-  static deserializeBinaryFromReader(message: PhpSettings, reader: jspb.BinaryReader): PhpSettings;
+  static deserializeBinaryFromReader(
+    message: PhpSettings,
+    reader: jspb.BinaryReader
+  ): PhpSettings;
 }
 
 export namespace PhpSettings {
   export type AsObject = {
-    common?: CommonLanguageSettings.AsObject,
-  }
+    common?: CommonLanguageSettings.AsObject;
+  };
 }
 
 export class PythonSettings extends jspb.Message {
@@ -243,16 +306,25 @@ export class PythonSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): PythonSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: PythonSettings): PythonSettings.AsObject;
-  static serializeBinaryToWriter(message: PythonSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: PythonSettings
+  ): PythonSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: PythonSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): PythonSettings;
-  static deserializeBinaryFromReader(message: PythonSettings, reader: jspb.BinaryReader): PythonSettings;
+  static deserializeBinaryFromReader(
+    message: PythonSettings,
+    reader: jspb.BinaryReader
+  ): PythonSettings;
 }
 
 export namespace PythonSettings {
   export type AsObject = {
-    common?: CommonLanguageSettings.AsObject,
-  }
+    common?: CommonLanguageSettings.AsObject;
+  };
 }
 
 export class NodeSettings extends jspb.Message {
@@ -263,16 +335,25 @@ export class NodeSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): NodeSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: NodeSettings): NodeSettings.AsObject;
-  static serializeBinaryToWriter(message: NodeSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: NodeSettings
+  ): NodeSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: NodeSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): NodeSettings;
-  static deserializeBinaryFromReader(message: NodeSettings, reader: jspb.BinaryReader): NodeSettings;
+  static deserializeBinaryFromReader(
+    message: NodeSettings,
+    reader: jspb.BinaryReader
+  ): NodeSettings;
 }
 
 export namespace NodeSettings {
   export type AsObject = {
-    common?: CommonLanguageSettings.AsObject,
-  }
+    common?: CommonLanguageSettings.AsObject;
+  };
 }
 
 export class DotnetSettings extends jspb.Message {
@@ -304,21 +385,30 @@ export class DotnetSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): DotnetSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: DotnetSettings): DotnetSettings.AsObject;
-  static serializeBinaryToWriter(message: DotnetSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: DotnetSettings
+  ): DotnetSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: DotnetSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): DotnetSettings;
-  static deserializeBinaryFromReader(message: DotnetSettings, reader: jspb.BinaryReader): DotnetSettings;
+  static deserializeBinaryFromReader(
+    message: DotnetSettings,
+    reader: jspb.BinaryReader
+  ): DotnetSettings;
 }
 
 export namespace DotnetSettings {
   export type AsObject = {
-    common?: CommonLanguageSettings.AsObject,
-    renamedServicesMap: Array<[string, string]>,
-    renamedResourcesMap: Array<[string, string]>,
-    ignoredResourcesList: Array<string>,
-    forcedNamespaceAliasesList: Array<string>,
-    handwrittenSignaturesList: Array<string>,
-  }
+    common?: CommonLanguageSettings.AsObject;
+    renamedServicesMap: Array<[string, string]>;
+    renamedResourcesMap: Array<[string, string]>;
+    ignoredResourcesList: Array<string>;
+    forcedNamespaceAliasesList: Array<string>;
+    handwrittenSignaturesList: Array<string>;
+  };
 }
 
 export class RubySettings extends jspb.Message {
@@ -329,16 +419,25 @@ export class RubySettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RubySettings.AsObject;
-  static toObject(includeInstance: boolean, msg: RubySettings): RubySettings.AsObject;
-  static serializeBinaryToWriter(message: RubySettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: RubySettings
+  ): RubySettings.AsObject;
+  static serializeBinaryToWriter(
+    message: RubySettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): RubySettings;
-  static deserializeBinaryFromReader(message: RubySettings, reader: jspb.BinaryReader): RubySettings;
+  static deserializeBinaryFromReader(
+    message: RubySettings,
+    reader: jspb.BinaryReader
+  ): RubySettings;
 }
 
 export namespace RubySettings {
   export type AsObject = {
-    common?: CommonLanguageSettings.AsObject,
-  }
+    common?: CommonLanguageSettings.AsObject;
+  };
 }
 
 export class GoSettings extends jspb.Message {
@@ -349,16 +448,25 @@ export class GoSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GoSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: GoSettings): GoSettings.AsObject;
-  static serializeBinaryToWriter(message: GoSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: GoSettings
+  ): GoSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: GoSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): GoSettings;
-  static deserializeBinaryFromReader(message: GoSettings, reader: jspb.BinaryReader): GoSettings;
+  static deserializeBinaryFromReader(
+    message: GoSettings,
+    reader: jspb.BinaryReader
+  ): GoSettings;
 }
 
 export namespace GoSettings {
   export type AsObject = {
-    common?: CommonLanguageSettings.AsObject,
-  }
+    common?: CommonLanguageSettings.AsObject;
+  };
 }
 
 export class MethodSettings extends jspb.Message {
@@ -377,22 +485,33 @@ export class MethodSettings extends jspb.Message {
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): MethodSettings.AsObject;
-  static toObject(includeInstance: boolean, msg: MethodSettings): MethodSettings.AsObject;
-  static serializeBinaryToWriter(message: MethodSettings, writer: jspb.BinaryWriter): void;
+  static toObject(
+    includeInstance: boolean,
+    msg: MethodSettings
+  ): MethodSettings.AsObject;
+  static serializeBinaryToWriter(
+    message: MethodSettings,
+    writer: jspb.BinaryWriter
+  ): void;
   static deserializeBinary(bytes: Uint8Array): MethodSettings;
-  static deserializeBinaryFromReader(message: MethodSettings, reader: jspb.BinaryReader): MethodSettings;
+  static deserializeBinaryFromReader(
+    message: MethodSettings,
+    reader: jspb.BinaryReader
+  ): MethodSettings;
 }
 
 export namespace MethodSettings {
   export type AsObject = {
-    selector: string,
-    longRunning?: MethodSettings.LongRunning.AsObject,
-    autoPopulatedFieldsList: Array<string>,
-  }
+    selector: string;
+    longRunning?: MethodSettings.LongRunning.AsObject;
+    autoPopulatedFieldsList: Array<string>;
+  };
 
   export class LongRunning extends jspb.Message {
     getInitialPollDelay(): google_protobuf_duration_pb.Duration | undefined;
-    setInitialPollDelay(value?: google_protobuf_duration_pb.Duration): LongRunning;
+    setInitialPollDelay(
+      value?: google_protobuf_duration_pb.Duration
+    ): LongRunning;
     hasInitialPollDelay(): boolean;
     clearInitialPollDelay(): LongRunning;
 
@@ -405,30 +524,40 @@ export namespace MethodSettings {
     clearMaxPollDelay(): LongRunning;
 
     getTotalPollTimeout(): google_protobuf_duration_pb.Duration | undefined;
-    setTotalPollTimeout(value?: google_protobuf_duration_pb.Duration): LongRunning;
+    setTotalPollTimeout(
+      value?: google_protobuf_duration_pb.Duration
+    ): LongRunning;
     hasTotalPollTimeout(): boolean;
     clearTotalPollTimeout(): LongRunning;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): LongRunning.AsObject;
-    static toObject(includeInstance: boolean, msg: LongRunning): LongRunning.AsObject;
-    static serializeBinaryToWriter(message: LongRunning, writer: jspb.BinaryWriter): void;
+    static toObject(
+      includeInstance: boolean,
+      msg: LongRunning
+    ): LongRunning.AsObject;
+    static serializeBinaryToWriter(
+      message: LongRunning,
+      writer: jspb.BinaryWriter
+    ): void;
     static deserializeBinary(bytes: Uint8Array): LongRunning;
-    static deserializeBinaryFromReader(message: LongRunning, reader: jspb.BinaryReader): LongRunning;
+    static deserializeBinaryFromReader(
+      message: LongRunning,
+      reader: jspb.BinaryReader
+    ): LongRunning;
   }
 
   export namespace LongRunning {
     export type AsObject = {
-      initialPollDelay?: google_protobuf_duration_pb.Duration.AsObject,
-      pollDelayMultiplier: number,
-      maxPollDelay?: google_protobuf_duration_pb.Duration.AsObject,
-      totalPollTimeout?: google_protobuf_duration_pb.Duration.AsObject,
-    }
+      initialPollDelay?: google_protobuf_duration_pb.Duration.AsObject;
+      pollDelayMultiplier: number;
+      maxPollDelay?: google_protobuf_duration_pb.Duration.AsObject;
+      totalPollTimeout?: google_protobuf_duration_pb.Duration.AsObject;
+    };
   }
-
 }
 
-export enum ClientLibraryOrganization { 
+export enum ClientLibraryOrganization {
   CLIENT_LIBRARY_ORGANIZATION_UNSPECIFIED = 0,
   CLOUD = 1,
   ADS = 2,
@@ -438,7 +567,7 @@ export enum ClientLibraryOrganization {
   GEO = 6,
   GENERATIVE_AI = 7,
 }
-export enum ClientLibraryDestination { 
+export enum ClientLibraryDestination {
   CLIENT_LIBRARY_DESTINATION_UNSPECIFIED = 0,
   GITHUB = 10,
   PACKAGE_MANAGER = 20,

@@ -14,6 +14,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/o1egl/paseto v1.0.0
 	github.com/pkg/errors v0.9.1
+	github.com/rs/cors v1.11.0
 	github.com/rs/zerolog v1.31.0
 	github.com/sendinblue/APIv3-go-library/v2 v2.1.2
 	github.com/spf13/viper v1.12.0

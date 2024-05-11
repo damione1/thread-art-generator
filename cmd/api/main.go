@@ -99,7 +99,18 @@ func runGatewayServer(config util.Config, store *sql.DB) {
 
 	log.Print(fmt.Sprintf("🍦 HTTP server started on http://localhost:%s/v1/", config.HTTPServerPort))
 	handler := grpcApi.HttpLogger(mux)
-	err = http.Serve(listener, handler)
+
+	// Set CORS headers
+	corsHandler := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", config.FrontendUrl)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			h.ServeHTTP(w, r)
+		})
+	}
+
+	err = http.Serve(listener, corsHandler(handler))
 	if err != nil {
 		log.Fatal().Err(err).Msg(fmt.Sprintf("🍦 Failed to serve HTTP gateway server over port %s.", listener.Addr().String()))
 	}
