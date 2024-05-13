@@ -1,12 +1,13 @@
 "use client";
-import { ArtGeneratorServiceClient } from "@/grpc/ServicesServiceClientPb";
 import React, { useState } from "react";
+import { ArtGeneratorServiceClient } from "../../grpc/ServicesServiceClientPb";
 
 const GrpcContext = React.createContext<{
   client: ArtGeneratorServiceClient;
 } | null>(null);
 
 export function GrpcProvider({ children }: { children: React.ReactNode }) {
+
   const client = new ArtGeneratorServiceClient("http://localhost:8080");
 
   return (

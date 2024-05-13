@@ -3,6 +3,7 @@ package pbx
 import (
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
+	"github.com/Damione1/thread-art-generator/pkg/util"
 )
 
 func DbUserToProto(user *models.User) *pb.User {
@@ -10,6 +11,7 @@ func DbUserToProto(user *models.User) *pb.User {
 		Email:     user.Email,
 		FirstName: user.FirstName,
 		Password:  "", // never return password
+		Avatar:    util.NewGravatarFromEmail(user.Email).GetURL(),
 	}
 
 	if user.LastName.Valid {

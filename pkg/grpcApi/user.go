@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -135,11 +136,11 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 					}
 					user.Password = hashedPassword
 				}
-			case "first_name":
+			case "firstName":
 				if pbUser.GetFirstName() != "" {
 					user.FirstName = pbUser.GetFirstName()
 				}
-			case "last_name":
+			case "lastName":
 				user.LastName.String = pbUser.GetLastName()
 				user.LastName.Valid = false
 				if pbUser.GetLastName() != "" {
@@ -164,13 +165,30 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 
 func validateUpdateUserRequest(req *pb.UpdateUserRequest) error {
 	return validation.ValidateStruct(req,
+		validation.Field(&req.UpdateMask, validation.Required),
 		validation.Field(&req.User, validation.Required, validation.By(
 			func(value interface{}) error {
 				user := value.(*pb.User)
 				return validation.ValidateStruct(user,
 					validation.Field(&user.Name, validation.Required),
-					validation.Field(&user.Email, validation.Required, is.Email),
-					validation.Field(&user.Password, validation.By(checkPassword)),
+					validation.Field(&user.Email, validation.By(func(value interface{}) error {
+						if slices.Contains(req.GetUpdateMask().GetPaths(), "email") {
+							return validation.Required.Validate(value)
+						}
+						return nil
+					}), is.Email),
+					validation.Field(&user.FirstName, validation.By(func(value interface{}) error {
+						if slices.Contains(req.GetUpdateMask().GetPaths(), "firstName") {
+							return validation.Required.Validate(value)
+						}
+						return nil
+					})),
+					validation.Field(&user.LastName, validation.By(func(value interface{}) error {
+						if slices.Contains(req.GetUpdateMask().GetPaths(), "lastName") {
+							return validation.Required.Validate(value)
+						}
+						return nil
+					})),
 				)
 			},
 		)),
@@ -454,4 +472,30 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+	authPayload, err := server.authorizeUser(ctx)
+	if err != nil {
+		return nil, unauthenticatedError(err)
+	}
+
+	userId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid ressource name: %s", err)
+	}
+
+	if userId != authPayload.UserID {
+		return nil, status.Errorf(codes.PermissionDenied, "cannot get other user's info")
+	}
+
+	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "user not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get user")
+	}
+
+	return pbx.DbUserToProto(user), nil
 }

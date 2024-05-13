@@ -489,6 +489,10 @@
                 "password": {
                   "type": "string",
                   "description": "Password is the user's password."
+                },
+                "avatar": {
+                  "type": "string",
+                  "description": "Avatar is the user's avatar url."
                 }
               },
               "title": "User is the user to be updated.",
@@ -496,7 +500,8 @@
                 "firstName",
                 "lastName",
                 "email",
-                "password"
+                "password",
+                "avatar"
               ]
             }
           }
@@ -971,13 +976,18 @@
         "password": {
           "type": "string",
           "description": "Password is the user's password."
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Avatar is the user's avatar url."
         }
       },
       "required": [
         "firstName",
         "lastName",
         "email",
-        "password"
+        "password",
+        "avatar"
       ]
     },
     "protobufAny": {

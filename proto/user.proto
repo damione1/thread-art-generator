@@ -31,6 +31,8 @@ message User {
         (google.api.field_behavior) = REQUIRED,
         (google.api.field_behavior) = INPUT_ONLY
         ];
+    // Avatar is the user's avatar url.
+    string avatar = 7 [(google.api.field_behavior) = REQUIRED];
 }
 
 message CreateUserRequest {

@@ -395,7 +395,8 @@ proto.pb.User.toObject = function(includeInstance, msg) {
     firstName: jspb.Message.getFieldWithDefault(msg, 3, ""),
     lastName: jspb.Message.getFieldWithDefault(msg, 4, ""),
     email: jspb.Message.getFieldWithDefault(msg, 5, ""),
-    password: jspb.Message.getFieldWithDefault(msg, 6, "")
+    password: jspb.Message.getFieldWithDefault(msg, 6, ""),
+    avatar: jspb.Message.getFieldWithDefault(msg, 7, "")
   };
 
   if (includeInstance) {
@@ -451,6 +452,10 @@ proto.pb.User.deserializeBinaryFromReader = function(msg, reader) {
     case 6:
       var value = /** @type {string} */ (reader.readString());
       msg.setPassword(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setAvatar(value);
       break;
     default:
       reader.skipField();
@@ -513,6 +518,13 @@ proto.pb.User.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       6,
+      f
+    );
+  }
+  f = message.getAvatar();
+  if (f.length > 0) {
+    writer.writeString(
+      7,
       f
     );
   }
@@ -606,6 +618,24 @@ proto.pb.User.prototype.getPassword = function() {
  */
 proto.pb.User.prototype.setPassword = function(value) {
   return jspb.Message.setProto3StringField(this, 6, value);
+};
+
+
+/**
+ * optional string avatar = 7;
+ * @return {string}
+ */
+proto.pb.User.prototype.getAvatar = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.pb.User} returns this
+ */
+proto.pb.User.prototype.setAvatar = function(value) {
+  return jspb.Message.setProto3StringField(this, 7, value);
 };
 
 
