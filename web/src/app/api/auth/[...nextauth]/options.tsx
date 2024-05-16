@@ -110,15 +110,13 @@ export const authOptions: NextAuthOptions = {
           refreshTokenExpires: user.refreshTokenExpires,
         } as JWT["backendTokens"];
       }
+
       // Ensure that the token object always has a user and backendTokens properties
       token.user = token.user || {};
       token.backendTokens = token.backendTokens || {};
 
-
       // Return previous token if the refresh token has not expired yet
-      if (
-        Date.now() > new Date(token.backendTokens.refreshTokenExpires).getTime()
-      ) {
+      if (Date.now() > new Date(token.backendTokens.refreshTokenExpires).getTime()) {
         console.error("refresh token expired " + new Date(token.backendTokens.refreshTokenExpires).getTime() + " " + Date.now().toLocaleString());
         return {
           ...token,
@@ -127,18 +125,15 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Return previous token if the access token has not expired yet
-      if (
-        Date.now() < new Date(token.backendTokens.accessTokenExpires).getTime()
-      ) {
+      if (Date.now() < new Date(token.backendTokens.accessTokenExpires).getTime()) {
         console.log("access token not expired " + new Date(token.backendTokens.accessTokenExpires).getTime() + " " + Date.now());
         return token;
       }
       console.log("access token expired " + new Date(token.backendTokens.accessTokenExpires).getTime() + " " + Date.now());
 
       // Access token has expired, try to update it
-      token = await refreshAccessToken(token);
-      return token;
-    },
+      return await refreshAccessToken(token);
+    }
   },
 };
 
@@ -158,14 +153,15 @@ async function refreshAccessToken(token: any) {
 
   console.log("decodedResponse", decodedResponse);
   if (response.ok && decodedResponse) {
-    const backendTokens={
-      accessToken: decodedResponse.access_token,
-      accessTokenExpires: decodedResponse.access_token_expire_time,
-      refreshToken: decodedResponse.refresh_token,
-      refreshTokenExpires: decodedResponse.refresh_token_expire_time,
-    }
-    token.backendTokens = backendTokens;
-    return token;
+    return {
+      ...token,
+      backendTokens: {
+        accessToken: decodedResponse.access_token,
+        accessTokenExpires: decodedResponse.access_token_expire_time,
+        refreshToken: decodedResponse.refresh_token,
+        refreshTokenExpires: decodedResponse.refresh_token_expire_time,
+      },
+    };
   }
   console.error("RefreshAccessTokenError", decodedResponse);
 
