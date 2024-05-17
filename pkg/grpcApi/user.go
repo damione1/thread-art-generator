@@ -136,11 +136,11 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 					}
 					user.Password = hashedPassword
 				}
-			case "firstName":
+			case "first_name":
 				if pbUser.GetFirstName() != "" {
 					user.FirstName = pbUser.GetFirstName()
 				}
-			case "lastName":
+			case "last_name":
 				user.LastName.String = pbUser.GetLastName()
 				user.LastName.Valid = false
 				if pbUser.GetLastName() != "" {
@@ -151,7 +151,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 					user.Email = pbUser.GetEmail()
 				}
 			default:
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid field: %s", path)
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid field mask: %s", path)
 			}
 		}
 	}
@@ -164,35 +164,41 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 }
 
 func validateUpdateUserRequest(req *pb.UpdateUserRequest) error {
-	return validation.ValidateStruct(req,
+	// Ensure the UpdateMask and User fields are provided
+	err := validation.ValidateStruct(req,
 		validation.Field(&req.UpdateMask, validation.Required),
-		validation.Field(&req.User, validation.Required, validation.By(
-			func(value interface{}) error {
-				user := value.(*pb.User)
-				return validation.ValidateStruct(user,
-					validation.Field(&user.Name, validation.Required),
-					validation.Field(&user.Email, validation.By(func(value interface{}) error {
-						if slices.Contains(req.GetUpdateMask().GetPaths(), "email") {
-							return validation.Required.Validate(value)
-						}
-						return nil
-					}), is.Email),
-					validation.Field(&user.FirstName, validation.By(func(value interface{}) error {
-						if slices.Contains(req.GetUpdateMask().GetPaths(), "firstName") {
-							return validation.Required.Validate(value)
-						}
-						return nil
-					})),
-					validation.Field(&user.LastName, validation.By(func(value interface{}) error {
-						if slices.Contains(req.GetUpdateMask().GetPaths(), "lastName") {
-							return validation.Required.Validate(value)
-						}
-						return nil
-					})),
-				)
-			},
-		)),
+		validation.Field(&req.User, validation.Required),
 	)
+	if err != nil {
+		return err
+	}
+
+	user := req.GetUser()
+	updateMaskPaths := req.GetUpdateMask().GetPaths()
+
+	// Dynamically build validation rules based on the fields present in the UpdateMask
+	var rules []*validation.FieldRules
+
+	rules = append(rules, validation.Field(&user.Name, validation.Required))
+
+	if slices.Contains(updateMaskPaths, "email") {
+		rules = append(rules, validation.Field(&user.Email, validation.Required, is.Email))
+	}
+
+	if slices.Contains(updateMaskPaths, "first_name") {
+		rules = append(rules, validation.Field(&user.FirstName, validation.Required, validation.Length(2, 255)))
+	}
+
+	if slices.Contains(updateMaskPaths, "last_name") {
+		rules = append(rules, validation.Field(&user.LastName, validation.Length(0, 255)))
+	}
+
+	if slices.Contains(updateMaskPaths, "password") {
+		rules = append(rules, validation.Field(&user.Password, validation.Required, validation.By(checkPassword)))
+	}
+
+	// Validate the user struct based on the dynamically built rules
+	return validation.ValidateStruct(user, rules...)
 }
 
 func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {

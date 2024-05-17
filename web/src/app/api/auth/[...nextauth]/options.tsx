@@ -65,7 +65,7 @@ export const authOptions: NextAuthOptions = {
             email: authToken.user.email as string,
             name: `${authToken.user.first_name} ${authToken.user.last_name}`,
             firstName: authToken.user.last_name as string,
-            lastName: authToken.user.last_name as string,
+            lastName: authToken.user.last_name as string || "",
             image: authToken.user.avatar as string,
             accessToken: authToken.access_token as string,
             refreshToken: authToken.refresh_token as string,
@@ -84,7 +84,18 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       return url;
     },
-    async session({ session, token }) {
+    async session({ session, token, trigger, newSession }) {
+      if (trigger === "update") {
+        if (newSession?.user?.name) {
+          session.user.name = newSession.user.name;
+        }
+        if (newSession?.user?.email) {
+          session.user.email = newSession.user.email;
+        }
+        if (newSession?.user?.image) {
+          session.user.image = newSession.user.image;
+        }
+      }
       return {
         ...session,
         user: {
@@ -96,11 +107,9 @@ export const authOptions: NextAuthOptions = {
         },
       };
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, trigger, session }) {
       // Persist the OAuth access_token and or the user id to the token right after signin
       if (user) {
-        console.log("jwt user", user);
-        console.log("jwt token", token);
         //only when user is signing in
         token.id = user.id;
         token.backendTokens = {
@@ -114,6 +123,18 @@ export const authOptions: NextAuthOptions = {
       // Ensure that the token object always has a user and backendTokens properties
       token.user = token.user || {};
       token.backendTokens = token.backendTokens || {};
+
+      if (trigger === "update") {
+        if (session?.user?.name) {
+          token.name = session.user.name;
+        }
+        if (session?.user?.email) {
+          token.email = session.user.email;
+        }
+        if (session?.user?.image) {
+          token.image = session.user.image;
+        }
+      }
 
       // Return previous token if the refresh token has not expired yet
       if (Date.now() > new Date(token.backendTokens.refreshTokenExpires).getTime()) {

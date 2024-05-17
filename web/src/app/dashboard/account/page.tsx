@@ -12,14 +12,14 @@ export default  function EditAccount() {
   const { data: session, status } = useSession()
 
   const [defaultValues, setDefaultValues] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     email: '',
   } as any);
 
   const [loading, setLoading] = useState(true);
 
-  const client = new ArtGeneratorServiceClient("http://localhost:8080");
+  const client = new ArtGeneratorServiceClient(process.env.NEXT_PUBLIC_GRPC_API as string);
   const metadata = {
     'Authorization': 'Bearer ' + session?.backendTokens.accessToken
   }
@@ -31,8 +31,8 @@ export default  function EditAccount() {
     client.getUser(getUserRequest, metadata)
       .then((response) => {
         setDefaultValues({
-          firstName: response.getFirstName(),
-          lastName: response.getLastName(),
+          first_name: response.getFirstName(),
+          last_name: response.getLastName(),
           email: response.getEmail(),
         });
 
@@ -46,14 +46,12 @@ export default  function EditAccount() {
 
   return (
     <div>
-      <Breadcrumb pageName="Edit Project" />
+      <Breadcrumb pageName="Edit account" />
 
       <div className="grid grid-cols-1 gap-9">
         <div className="flex flex-col gap-9">
           {loading ?(
-            <span className="animate-spin mr-4">
-              <Loader2 />
-            </span>
+            <Loader2 className="animate-spin mr-4" />
           ) : (
             <EditProfile defaultValues={defaultValues} />
           ) }
