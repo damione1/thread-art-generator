@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import EditProfile from "./form";
 
 export default  function EditAccount() {
-  const { data: session, status } = useSession()
+  const { data: session, status } = useSession({ required: true })
 
   const [defaultValues, setDefaultValues] = useState({
     first_name: '',

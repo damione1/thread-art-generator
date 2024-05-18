@@ -3,7 +3,7 @@
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import Loader from "@/components/common/Loader";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import { createContext, useEffect, useState } from "react";
 
 export const ThemeContext = createContext({});
@@ -14,14 +14,19 @@ export default function ThemeProvider({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const { data: session, status } = useSession({ required: true })
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // if (status === "authenticated") {
+    //   setLoading(false);
+    // }else if (status === "loading") {
+    //   setLoading(true);
+    // }
     setTimeout(() => setLoading(false), 1000);
-  }, []);
+  }, [status]);
   return (
-    <SessionProvider>
+<>
       {loading ? (
         <Loader />
       ) : (
@@ -47,6 +52,7 @@ export default function ThemeProvider({
           {/* <!-- ===== Content Area End ===== --> */}
         </div>
       )}
-    </SessionProvider>
+    </>
+
   );
 }

@@ -1,8 +1,9 @@
+"use client";
 import "./globals.css";
 import "./data-tables-css.css";
 import "./satoshi.css";
 import ThemeProvider from "./template-provider";
-import { GrpcProvider } from "@/lib/grpc-context";
+import { SessionProvider } from "next-auth/react";
 
 export default function DashboardLayout({
   children,
@@ -11,7 +12,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="dark:bg-boxdark-2 dark:text-bodydark">
-      <GrpcProvider><ThemeProvider>{children}</ThemeProvider></GrpcProvider>
+     <SessionProvider><ThemeProvider>{children}</ThemeProvider></SessionProvider>
     </div>
   );
 }

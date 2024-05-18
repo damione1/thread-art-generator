@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { FieldMask } from "../../../../grpc/google/protobuf/field_mask_pb";
 import { ArtGeneratorServiceClient } from "../../../../grpc/ServicesServiceClientPb";
+import parseError from "../../../../util/errors";
 
 export default function EditProfile({defaultValues}: {defaultValues: any}) {
   const { data: session, status, update } = useSession()
@@ -30,7 +31,7 @@ export default function EditProfile({defaultValues}: {defaultValues: any}) {
     control,
     setValue,
     setFocus,
-    setError  // Add setError from react-hook-form
+    setError
   } = useForm<FormValues>({ defaultValues });
 
   async function onSubmit(fields: FormValues) {
@@ -56,6 +57,7 @@ export default function EditProfile({defaultValues}: {defaultValues: any}) {
     const client = new ArtGeneratorServiceClient(process.env.NEXT_PUBLIC_GRPC_API as string);
 
     client.updateUser(updateUserRequest, {'Authorization': 'Bearer ' + session?.backendTokens.accessToken}).then((response) => {
+      // Update the session with the new user details
       update({user:{
         name: `${response.getFirstName()} ${response.getLastName()}`,
         email: response.getEmail(),
@@ -63,16 +65,7 @@ export default function EditProfile({defaultValues}: {defaultValues: any}) {
       }});
     }).catch((error) => {
       console.error("Error updating user", error);
-      const errorMessages: string[] = error.message.split(';').map((err: string) => err.trim());
-      errorMessages.forEach((errMsg: string) => {
-        const [field, message] = errMsg.split(':').map((part: string) => part.trim());
-
-        if (field && message) {
-          setError(field as keyof FormValues, { message }, { shouldFocus: true });
-        } else {
-          setError("root", { message: error.message });
-        }
-      });
+      parseError(error, setError)
     });
   }
 
@@ -187,11 +180,6 @@ export default function EditProfile({defaultValues}: {defaultValues: any}) {
             {errors.root && (
                 <div className="rounded-sm bg-red-50 border border-red-300 text-red-700 p-4 mb-6 mt-5">
                   {errors.root.message}
-                </div>
-              )}
-              {isSubmitSuccessful && (
-                <div className="rounded-sm bg-green-50 border border-green-300 text-green-700 p-4 mb-6 mt-5">
-                  Your profile has been updated successfully.
                 </div>
               )}
           <div className="grid grid-cols-3 gap-3 mt-4">

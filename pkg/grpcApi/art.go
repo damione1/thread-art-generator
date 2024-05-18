@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime"
+	"slices"
 
 	"github.com/Damione1/thread-art-generator/pkg/db/models"
 	"github.com/Damione1/thread-art-generator/pkg/pb"
@@ -104,7 +105,7 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 					artDb.Title = req.GetArt().GetTitle()
 				}
 			default:
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid field: %s", path)
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid field mask: %s", path)
 			}
 		}
 	}
@@ -118,23 +119,29 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 }
 
 func validateUpdateArtRequest(req *pb.UpdateArtRequest) error {
-	return validation.ValidateStruct(&req,
-		validation.Field(&req.Art,
-			validation.Required,
-			validation.By(
-				func(value interface{}) error {
-					art := value.(*pb.Art)
-					return validation.ValidateStruct(art, validation.Field(&art.Name, validation.Required))
-				},
-			),
-			validation.By(
-				func(value interface{}) error {
-					return validateArt(value.(*pb.Art), false)
-				},
-			),
-		),
+	// Ensure the UpdateMask and Arts fields are provided
+	err := validation.ValidateStruct(req,
 		validation.Field(&req.UpdateMask, validation.Required),
+		validation.Field(&req.Art, validation.Required),
 	)
+	if err != nil {
+		return err
+	}
+
+	user := req.GetArt()
+	updateMaskPaths := req.GetUpdateMask().GetPaths()
+
+	// Dynamically build validation rules based on the fields present in the UpdateMask
+	var rules []*validation.FieldRules
+
+	rules = append(rules, validation.Field(&user.Name, validation.Required))
+
+	if slices.Contains(updateMaskPaths, "title") {
+		rules = append(rules, validation.Field(&user.Title, validation.Required, validation.Length(1, 255)))
+	}
+
+	// Validate the user struct based on the dynamically built rules
+	return validation.ValidateStruct(user, rules...)
 }
 
 func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {

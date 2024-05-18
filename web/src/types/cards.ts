@@ -5,4 +5,5 @@ export type CardItemProps = {
   cardImageSrc?: string;
   cardTitle?: string;
   cardContent?: string;
+  cardLink?: string;
 };
