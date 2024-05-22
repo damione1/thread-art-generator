@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,10 +12,11 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	database "github.com/Damione1/thread-art-generator/pkg/db"
-	"github.com/Damione1/thread-art-generator/pkg/grpcApi"
-	"github.com/Damione1/thread-art-generator/pkg/pb"
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	database "github.com/Damione1/thread-art-generator/core/db"
+	"github.com/Damione1/thread-art-generator/core/interceptors"
+	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/service"
+	"github.com/Damione1/thread-art-generator/core/util"
 )
 
 func main() {
@@ -24,26 +24,32 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to load config")
 	}
-	db, err := database.ConnectDb(&config)
+
+	_, err = database.ConnectDb(&config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
 
-	go runGatewayServer(config, db)
-	runGrpcServer(config, db)
+	go runHttperver(config)
+	runGrpcServer(config)
 
 }
 
-func runGrpcServer(config util.Config, store *sql.DB) {
+func runGrpcServer(config util.Config) {
 	log.Print("🍩 Starting gRPC server...")
-	server, err := grpcApi.NewServer(config)
+	server, err := service.NewServer(config)
 	if err != nil {
 		log.Print(fmt.Sprintf("Failed to create gRPC server. %v", err))
 	}
 	defer server.Close()
 	log.Print("🍩 gRPC server created")
-	gprcLogger := grpc.UnaryInterceptor(grpcApi.GrpcLogger)
-	grpcServer := grpc.NewServer(gprcLogger)
+
+	// Pass the tokenMaker to the AuthInterceptor
+	chainedInterceptors := grpc.ChainUnaryInterceptor(
+		interceptors.GrpcLogger,
+		interceptors.AuthInterceptor(server.GetTokenMaker()),
+	)
+	grpcServer := grpc.NewServer(chainedInterceptors)
 	pb.RegisterArtGeneratorServiceServer(grpcServer, server)
 	reflection.Register(grpcServer)
 
@@ -60,9 +66,9 @@ func runGrpcServer(config util.Config, store *sql.DB) {
 	}
 }
 
-func runGatewayServer(config util.Config, store *sql.DB) {
+func runHttperver(config util.Config) {
 	log.Print("🍦 Starting HTTP server...")
-	server, err := grpcApi.NewServer(config)
+	server, err := service.NewServer(config)
 	if err != nil {
 		log.Print(fmt.Sprintf("🍦 Failed to create HTTP server. %v", err))
 	}
@@ -92,13 +98,15 @@ func runGatewayServer(config util.Config, store *sql.DB) {
 	mux.Handle("/swagger/", http.StripPrefix("/swagger", fs))
 	log.Print(fmt.Sprintf("🍨 Swagger UI server started on http://localhost:%s/swagger/", config.HTTPServerPort))
 
+	//mux.HandleFunc("/v1/upload", grpcApi.HandleBinaryFileUpload)
+
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.HTTPServerPort))
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to listen.")
 	}
 
 	log.Print(fmt.Sprintf("🍦 HTTP server started on http://localhost:%s/v1/", config.HTTPServerPort))
-	handler := grpcApi.HttpLogger(mux)
+	handler := interceptors.HttpLogger(mux)
 
 	// Set CORS headers
 	corsHandler := func(h http.Handler) http.Handler {

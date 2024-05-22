@@ -36,7 +36,6 @@ const (
 	ArtGeneratorService_UpdateArt_FullMethodName           = "/pb.ArtGeneratorService/UpdateArt"
 	ArtGeneratorService_ListArts_FullMethodName            = "/pb.ArtGeneratorService/ListArts"
 	ArtGeneratorService_DeleteArt_FullMethodName           = "/pb.ArtGeneratorService/DeleteArt"
-	ArtGeneratorService_UploadArt_FullMethodName           = "/pb.ArtGeneratorService/UploadArt"
 )
 
 // ArtGeneratorServiceClient is the client API for ArtGeneratorService service.
@@ -59,7 +58,6 @@ type ArtGeneratorServiceClient interface {
 	UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*Art, error)
 	ListArts(ctx context.Context, in *ListArtsRequest, opts ...grpc.CallOption) (*ListArtsResponse, error)
 	DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	UploadArt(ctx context.Context, opts ...grpc.CallOption) (ArtGeneratorService_UploadArtClient, error)
 }
 
 type artGeneratorServiceClient struct {
@@ -214,40 +212,6 @@ func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, in *DeleteArt
 	return out, nil
 }
 
-func (c *artGeneratorServiceClient) UploadArt(ctx context.Context, opts ...grpc.CallOption) (ArtGeneratorService_UploadArtClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ArtGeneratorService_ServiceDesc.Streams[0], ArtGeneratorService_UploadArt_FullMethodName, opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &artGeneratorServiceUploadArtClient{stream}
-	return x, nil
-}
-
-type ArtGeneratorService_UploadArtClient interface {
-	Send(*UploadArtRequest) error
-	CloseAndRecv() (*Art, error)
-	grpc.ClientStream
-}
-
-type artGeneratorServiceUploadArtClient struct {
-	grpc.ClientStream
-}
-
-func (x *artGeneratorServiceUploadArtClient) Send(m *UploadArtRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *artGeneratorServiceUploadArtClient) CloseAndRecv() (*Art, error) {
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	m := new(Art)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // ArtGeneratorServiceServer is the server API for ArtGeneratorService service.
 // All implementations must embed UnimplementedArtGeneratorServiceServer
 // for forward compatibility
@@ -268,7 +232,6 @@ type ArtGeneratorServiceServer interface {
 	UpdateArt(context.Context, *UpdateArtRequest) (*Art, error)
 	ListArts(context.Context, *ListArtsRequest) (*ListArtsResponse, error)
 	DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error)
-	UploadArt(ArtGeneratorService_UploadArtServer) error
 	mustEmbedUnimplementedArtGeneratorServiceServer()
 }
 
@@ -323,9 +286,6 @@ func (UnimplementedArtGeneratorServiceServer) ListArts(context.Context, *ListArt
 }
 func (UnimplementedArtGeneratorServiceServer) DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteArt not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) UploadArt(ArtGeneratorService_UploadArtServer) error {
-	return status.Errorf(codes.Unimplemented, "method UploadArt not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) mustEmbedUnimplementedArtGeneratorServiceServer() {}
 
@@ -628,32 +588,6 @@ func _ArtGeneratorService_DeleteArt_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ArtGeneratorService_UploadArt_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ArtGeneratorServiceServer).UploadArt(&artGeneratorServiceUploadArtServer{stream})
-}
-
-type ArtGeneratorService_UploadArtServer interface {
-	SendAndClose(*Art) error
-	Recv() (*UploadArtRequest, error)
-	grpc.ServerStream
-}
-
-type artGeneratorServiceUploadArtServer struct {
-	grpc.ServerStream
-}
-
-func (x *artGeneratorServiceUploadArtServer) SendAndClose(m *Art) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *artGeneratorServiceUploadArtServer) Recv() (*UploadArtRequest, error) {
-	m := new(UploadArtRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // ArtGeneratorService_ServiceDesc is the grpc.ServiceDesc for ArtGeneratorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -726,12 +660,6 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ArtGeneratorService_DeleteArt_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "UploadArt",
-			Handler:       _ArtGeneratorService_UploadArt_Handler,
-			ClientStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "services.proto",
 }

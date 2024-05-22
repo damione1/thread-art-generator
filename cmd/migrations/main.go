@@ -3,8 +3,8 @@ package main
 import (
 	"database/sql"
 
-	database "github.com/Damione1/thread-art-generator/pkg/db"
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	database "github.com/Damione1/thread-art-generator/core/db"
+	"github.com/Damione1/thread-art-generator/core/util"
 	migrate "github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/rs/zerolog/log"

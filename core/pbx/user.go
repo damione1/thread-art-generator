@@ -1,9 +1,9 @@
 package pbx
 
 import (
-	"github.com/Damione1/thread-art-generator/pkg/db/models"
-	"github.com/Damione1/thread-art-generator/pkg/pb"
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	"github.com/Damione1/thread-art-generator/core/db/models"
+	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/util"
 )
 
 func DbUserToProto(user *models.User) *pb.User {

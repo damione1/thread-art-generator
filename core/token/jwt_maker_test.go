@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/require"
 )

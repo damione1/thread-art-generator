@@ -6,7 +6,7 @@ import "google/protobuf/field_mask.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 
-option go_package = "thread-art-generator/pkg/proto;pb";
+option go_package = "thread-art-generator/core/proto;pb";
 
 
 message User {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	"github.com/Damione1/thread-art-generator/core/util"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	"github.com/volatiletech/sqlboiler/v4/boil"

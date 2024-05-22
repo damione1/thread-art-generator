@@ -9,7 +9,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/descriptor.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-option go_package = "thread-art-generator/pkg/proto;pb";
+option go_package = "thread-art-generator/core/proto;pb";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -46,6 +46,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   tags: {
     name: "Arts"
     description: "Endpoints for art management"
+  }
+  tags: {
+    name: "Media"
+    description: "Endpoints for media management"
   }
 };
 
@@ -239,18 +243,5 @@ service ArtGeneratorService {
       tags: "Arts";
     };
     option (google.api.method_signature) = "name";
-  }
-
-  rpc UploadArt (stream UploadArtRequest) returns (Art) {
-    option (google.api.http) = {
-      post: "/v1/arts:upload"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Upload an art"
-      description: "Upload an art to the system."
-      tags: "Arts";
-    };
-    option (google.api.method_signature) = "parent";
   }
 }

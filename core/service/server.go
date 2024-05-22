@@ -1,15 +1,15 @@
-package grpcApi
+package service
 
 import (
 	"fmt"
 
 	"gocloud.dev/blob"
 
-	mailService "github.com/Damione1/thread-art-generator/pkg/mail"
-	"github.com/Damione1/thread-art-generator/pkg/pb"
-	"github.com/Damione1/thread-art-generator/pkg/storage"
-	"github.com/Damione1/thread-art-generator/pkg/token"
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	mailService "github.com/Damione1/thread-art-generator/core/mail"
+	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/storage"
+	"github.com/Damione1/thread-art-generator/core/token"
+	"github.com/Damione1/thread-art-generator/core/util"
 )
 
 type Server struct {
@@ -49,6 +49,10 @@ func NewServer(config util.Config) (*Server, error) {
 	}
 
 	return server, nil
+}
+
+func (s *Server) GetTokenMaker() token.Maker {
+	return s.tokenMaker
 }
 
 func (s *Server) Close() error {

@@ -1,4 +1,4 @@
-package grpcApi
+package service
 
 import (
 	"context"
@@ -11,10 +11,11 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/Damione1/thread-art-generator/pkg/db/models"
-	"github.com/Damione1/thread-art-generator/pkg/pb"
-	"github.com/Damione1/thread-art-generator/pkg/pbx"
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	"github.com/Damione1/thread-art-generator/core/db/models"
+	"github.com/Damione1/thread-art-generator/core/middleware"
+	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/pbx"
+	"github.com/Damione1/thread-art-generator/core/util"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -96,12 +97,7 @@ func validateCreateUserRequest(req *pb.CreateUserRequest) error {
 }
 
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
-	authPayload, err := server.authorizeUser(ctx)
-	if err != nil {
-		return nil, unauthenticatedError(err)
-	}
-
-	if err = validateUpdateUserRequest(req); err != nil {
+	if err := validateUpdateUserRequest(req); err != nil {
 		return nil, err
 
 	}
@@ -112,7 +108,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "invalid ressource name: %s", err)
 	}
 
-	if userId != authPayload.UserID {
+	if userId != middleware.FromAdminContext(ctx).UserPayload.UserID {
 		return nil, status.Errorf(codes.PermissionDenied, "cannot update other user's info")
 	}
 
@@ -206,6 +202,8 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("CreateSessionRequest: ", req)
 
 	user, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
 	if err != nil {
@@ -481,17 +479,12 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 }
 
 func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
-	authPayload, err := server.authorizeUser(ctx)
-	if err != nil {
-		return nil, unauthenticatedError(err)
-	}
-
 	userId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid ressource name: %s", err)
 	}
 
-	if userId != authPayload.UserID {
+	if userId != middleware.FromAdminContext(ctx).UserPayload.UserID {
 		return nil, status.Errorf(codes.PermissionDenied, "cannot get other user's info")
 	}
 

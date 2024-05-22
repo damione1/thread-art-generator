@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Damione1/thread-art-generator/pkg/db/models"
-	"github.com/Damione1/thread-art-generator/pkg/pb"
+	"github.com/Damione1/thread-art-generator/core/db/models"
+	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/rs/zerolog/log"
 	"gocloud.dev/blob"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -32,6 +32,7 @@ func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, post *models.Art) *p
 		imageUrl, err := bucket.SignedURL(ctx, imageKey, nil)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get signed URL for image")
+			artPb.ImageUrl = ""
 		}
 		artPb.ImageUrl = imageUrl
 	}
