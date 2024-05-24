@@ -24,12 +24,7 @@ func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, post *models.Art) *p
 	})
 
 	if post.ImageID.Valid {
-		//The image is stored in the bucket with the key "users/{authorId}/arts/{artId}.{extension}"
-		imageKey := GetResourceName([]Resource{
-			{Type: RessourceTypeUsers, ID: post.AuthorID},
-			{Type: RessourceTypeArts, ID: post.ImageID.String},
-		})
-		imageUrl, err := bucket.SignedURL(ctx, imageKey, nil)
+		imageUrl, err := bucket.SignedURL(ctx, post.ImageID.String, &blob.SignedURLOptions{Method: "GET", Expiry: 0})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get signed URL for image")
 			artPb.ImageUrl = ""

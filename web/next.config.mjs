@@ -10,6 +10,9 @@ const nextConfig = {
             },
             {
                 hostname: "www.gravatar.com",
+            },
+            {
+                hostname: "minio",
             }
         ],
     },

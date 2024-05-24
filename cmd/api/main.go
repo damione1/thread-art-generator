@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/zerolog/log"
@@ -30,7 +33,7 @@ func main() {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
 
-	go runHttperver(config)
+	go runHttpServer(config)
 	runGrpcServer(config)
 
 }
@@ -66,11 +69,12 @@ func runGrpcServer(config util.Config) {
 	}
 }
 
-func runHttperver(config util.Config) {
+func runHttpServer(config util.Config) {
 	log.Print("🍦 Starting HTTP server...")
+
 	server, err := service.NewServer(config)
 	if err != nil {
-		log.Print(fmt.Sprintf("🍦 Failed to create HTTP server. %v", err))
+		log.Fatal().Err(err).Msg("🍦 Failed to create HTTP server.")
 	}
 	defer server.Close()
 
@@ -84,10 +88,11 @@ func runHttperver(config util.Config) {
 			},
 		}),
 	)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	err = pb.RegisterArtGeneratorServiceHandlerServer(ctx, grpcMux, server)
-	if err != nil {
+
+	if err := pb.RegisterArtGeneratorServiceHandlerServer(ctx, grpcMux, server); err != nil {
 		log.Fatal().Err(err).Msg("🍦 Failed to register HTTP gateway server.")
 	}
 
@@ -98,7 +103,8 @@ func runHttperver(config util.Config) {
 	mux.Handle("/swagger/", http.StripPrefix("/swagger", fs))
 	log.Print(fmt.Sprintf("🍨 Swagger UI server started on http://localhost:%s/swagger/", config.HTTPServerPort))
 
-	//mux.HandleFunc("/v1/upload", grpcApi.HandleBinaryFileUpload)
+	// Pass the server to the file upload handler
+	mux.Handle("/v1/upload", service.HandleBinaryFileUpload(server))
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.HTTPServerPort))
 	if err != nil {
@@ -106,7 +112,9 @@ func runHttperver(config util.Config) {
 	}
 
 	log.Print(fmt.Sprintf("🍦 HTTP server started on http://localhost:%s/v1/", config.HTTPServerPort))
+
 	handler := interceptors.HttpLogger(mux)
+	handler = interceptors.HttpAuthInterceptor(server.GetTokenMaker(), handler)
 
 	// Set CORS headers
 	corsHandler := func(h http.Handler) http.Handler {
@@ -114,12 +122,35 @@ func runHttperver(config util.Config) {
 			w.Header().Set("Access-Control-Allow-Origin", config.FrontendUrl)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 			h.ServeHTTP(w, r)
 		})
 	}
 
-	err = http.Serve(listener, corsHandler(handler))
-	if err != nil {
-		log.Fatal().Err(err).Msg(fmt.Sprintf("🍦 Failed to serve HTTP gateway server over port %s.", listener.Addr().String()))
+	// Graceful shutdown
+	srv := &http.Server{
+		Handler: corsHandler(handler),
 	}
+
+	go func() {
+		if err := srv.Serve(listener); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg(fmt.Sprintf("🍦 Failed to serve HTTP gateway server over port %s.", listener.Addr().String()))
+		}
+	}()
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt)
+	<-shutdown
+
+	log.Print("🍦 Shutting down HTTP server...")
+
+	timeoutCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelShutdown()
+	if err := srv.Shutdown(timeoutCtx); err != nil {
+		log.Fatal().Err(err).Msg("🍦 HTTP server graceful shutdown failed.")
+	}
+	log.Print("🍦 HTTP server gracefully stopped.")
 }

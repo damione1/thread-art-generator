@@ -21,6 +21,7 @@ require (
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.16.2
 	github.com/volatiletech/strmangle v0.0.6
+	go.einride.tech/aip v0.67.1
 	gocloud.dev v0.37.0
 	golang.org/x/crypto v0.23.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240521202816-d264139d666e
@@ -31,6 +32,7 @@ require (
 
 require (
 	cloud.google.com/go/iam v1.1.8 // indirect
+	cloud.google.com/go/storage v1.40.0 // indirect
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da // indirect
 	github.com/aead/chacha20poly1305 v0.0.0-20201124145622-1a5aba2a8b29 // indirect
 	github.com/aead/poly1305 v0.0.0-20180717145839-3fee0db0b635 // indirect
@@ -59,6 +61,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/google/martian/v3 v3.3.3 // indirect
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

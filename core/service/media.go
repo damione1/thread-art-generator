@@ -1,132 +1,175 @@
 package service
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"mime"
-// 	"net/http"
-// 	"time"
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"mime"
+	"net/http"
+	"strings"
 
-// 	"github.com/Damione1/thread-art-generator/core/db/models"
-// 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
-// 	"github.com/Damione1/thread-art-generator/core/middleware"
-// 	"github.com/Damione1/thread-art-generator/core/pb"
-// 	"github.com/Damione1/thread-art-generator/core/pbx"
-// 	"github.com/friendsofgo/errors"
-// 	validation "github.com/go-ozzo/ozzo-validation"
-// 	"github.com/volatiletech/null/v8"
-// 	"github.com/volatiletech/sqlboiler/v4/boil"
-// 	"gocloud.dev/blob"
-// 	"google.golang.org/grpc/codes"
-// 	"google.golang.org/grpc/status"
-// )
+	"github.com/Damione1/thread-art-generator/core/middleware"
+	"github.com/Damione1/thread-art-generator/core/resource"
+	"github.com/Damione1/thread-art-generator/core/token"
+	"github.com/friendsofgo/errors"
+	validation "github.com/go-ozzo/ozzo-validation"
+)
 
-// func (server *Server) GetMediaUploadUrl(ctx context.Context, req *pb.GetMediaUploadUrlRequest) (*pb.GetMediaUploadUrlResponse, error) {
-// 	var ressourceType string
-// 	var ressourceId string
-// 	var signedUrl string
+/*
+* The code below is the implementation of the HandleBinaryFileUpload function.
+* This function is responsible for handling image upload. It validates the upload request, checks if the user is authorized to upload the file in a valid ressource, and updates the database with the uploaded file.
+* The code also includes the implementation of the Resource interface and the Art struct.
+* The ressource interface defines two methods: Validate and UpdateDB. They are meant to be implemented by the specific resource types if needed in the future.
+ */
 
-// 	userPayload := middleware.FromAdminContext(ctx).UserPayload
+// Constants
+const (
+	MaxUploadSize     = 10 * 1024 * 1024 // 10MB
+	MultipartFormData = "multipart/form-data"
+)
 
-// 	if err := validateGetMediaUploadUrlRequest(req); err != nil {
-// 		return nil, err
-// 	}
+// Validate upload request
+func validateUploadRequest(r *http.Request) error {
+	contentType := r.Header.Get("Content-Type")
 
-// 	authorId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	// Check if the content type is multipart/form-data
+	if !strings.HasPrefix(contentType, MultipartFormData) {
+		return errors.New(fmt.Sprintf("Content type is not %s", MultipartFormData))
+	}
 
-// 	if authorId != userPayload.UserID {
-// 		return nil, pbErrors.RolePermissionError(errors.New("Only the author can upload the image"))
-// 	}
+	err := r.ParseMultipartForm(MaxUploadSize)
+	if err != nil {
+		return errors.New("The uploaded file is too big. Please choose an appropriate size")
+	}
 
-// 	if ressourceId, err = pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeArts); err == nil {
-// 		ressourceType = pbx.RessourceNameArts
-// 	}
+	resourceName := r.FormValue("name")
+	if resourceName == "" {
+		return errors.New("Resource name is required")
+	}
 
-// 	switch ressourceType {
-// 	case pbx.RessourceNameArts:
-// 		// Check if the art exists
-// 		art, err := models.Arts(
-// 			models.ArtWhere.ID.EQ(ressourceId),
-// 			models.ArtWhere.AuthorID.EQ(authorId),
-// 		).One(ctx, server.config.DB)
-// 		if err != nil {
-// 			return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to get art"))
-// 		}
+	if r.MultipartForm.File["file"] == nil {
+		return errors.New("File is required")
+	}
 
-// 		blobKey := fmt.Sprintf("users/%s/arts/%s.%s", authorId, ressourceId, req.GetExtension())
-// 		// Creating a new blob signed URL
-// 		signedUrl, err = server.bucket.SignedURL(ctx, blobKey, &blob.SignedURLOptions{
-// 			Method:      "PUT",
-// 			Expiry:      time.Duration(1) * time.Minute,
-// 			ContentType: req.GetContentType(),
-// 			BeforeSign: func(asFunc func(interface{}) bool) error {
-// 				return nil
-// 			},
-// 		})
-// 		if err != nil {
-// 			return nil, pbErrors.InternalError(errors.Wrap(err, "Failed to create signed URL"))
-// 		}
+	return nil
+}
 
-// 		// Update the art with the new image URL
-// 		art.ImageID = null.NewString(ressourceId, true)
-// 		if _, err = art.Update(ctx, server.config.DB, boil.Infer()); err != nil {
-// 			return nil, pbErrors.InternalError(errors.Wrap(err, "Failed to update art"))
-// 		}
-// 	default:
-// 		return nil, status.Errorf(codes.InvalidArgument, "Invalid resource type: %s", ressourceType)
-// 	}
+func validateGetMediaUploadUrlRequest(r *http.Request) error {
+	return validation.Errors{
+		"name": validation.Validate(r.FormValue("name"), validation.Required, validation.Length(5, 20)),
+	}.Filter()
+}
 
-// 	// Return the upload URL
-// 	return &pb.GetMediaUploadUrlResponse{
-// 		UploadUrl: signedUrl,
-// 	}, nil
-// }
+// Validate content type and extension of the uploaded file
+func validateFile(contentType, extension string) error {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return errors.New("Invalid content type")
+	}
+	if mediaType != "image/jpeg" && mediaType != "image/png" {
+		return errors.New("Invalid content type")
+	}
+	if extension != ".jpeg" && extension != ".png" {
+		return errors.New("Invalid extension")
+	}
+	return nil
+}
 
-// func validateGetMediaUploadUrlRequest(req *pb.GetMediaUploadUrlRequest) error {
-// 	return validation.ValidateStruct(req,
-// 		validation.Field(&req.Name, validation.Required),
-// 		validation.Field(&req.ContentType, validation.Required, validation.By(func(value interface{}) error {
-// 			mediaType, _, err := mime.ParseMediaType(value.(string))
-// 			if err != nil {
-// 				return errors.New("invalid content type")
-// 			}
-// 			if mediaType != "image/jpeg" && mediaType != "image/png" {
-// 				return errors.New("invalid content type")
-// 			}
-// 			return nil
-// 		})),
-// 		validation.Field(&req.Extension, validation.Required, validation.By(func(value interface{}) error {
-// 			if value.(string) != ".jpeg" && value.(string) != ".png" {
-// 				return errors.New("invalid extension")
-// 			}
-// 			return nil
-// 		})),
-// 		validation.Field(&req.Md5, validation.By(func(value interface{}) error {
-// 			//to be implemented
-// 			return nil
-// 		})),
-// 	)
-// }
+// HandleBinaryFileUpload handles binary file upload
+func HandleBinaryFileUpload(server *Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		// Get the authenticated user payload from the context
+		userPayload := middleware.FromAdminContext(ctx).UserPayload
 
-// func HandleBinaryFileUpload(w http.ResponseWriter, r *http.Request) {
-// 	// err := r.ParseForm()
-// 	// if err != nil {
-// 	// 	http.Error(w, fmt.Sprintf("failed to parse form: %s", err.Error()), http.StatusBadRequest)
-// 	// 	return
-// 	// }
+		// Validate the upload request
+		if err := validateUploadRequest(r); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-// 	// f, header, err := r.FormFile("attachment")
-// 	// if err != nil {
-// 	// 	http.Error(w, fmt.Sprintf("failed to get file 'attachment': %s", err.Error()), http.StatusBadRequest)
-// 	// 	return
-// 	// }
-// 	// defer f.Close()
+		resourceName := r.FormValue("name")
 
-// 	// //
-// 	// // Now do something with the io.Reader in `f`, i.e. read it into a buffer or stream it to a gRPC client side stream.
-// 	// // Also `header` will contain the filename, size etc of the original file.
-// 	// //
-// }
+		uploadedResource, err := newUploadedResource(ctx, server.config.DB, resourceName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := uploadedResource.Validate(userPayload); err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+
+		file, fileHeader, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, "Failed to get uploaded file", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		if fileHeader.Size > MaxUploadSize {
+			http.Error(w, "The uploaded file is too large. Please choose a file under 10MB", http.StatusBadRequest)
+			return
+		}
+
+		contentType := fileHeader.Header.Get("Content-Type")
+		extension := fileHeader.Filename[strings.LastIndex(fileHeader.Filename, "."):]
+		if err := validateFile(contentType, extension); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		fileKey := fmt.Sprintf("%s%s", resourceName, extension)
+
+		writer, err := server.bucket.NewWriter(ctx, fileKey, nil)
+		if err != nil {
+			http.Error(w, "Failed to create a new writer", http.StatusInternalServerError)
+			return
+		}
+		defer writer.Close()
+
+		_, err = writer.ReadFrom(file)
+		if err != nil {
+			http.Error(w, "Failed to write to the bucket", http.StatusInternalServerError)
+			return
+		}
+
+		if err := uploadedResource.UpdateDB(fileKey); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// Add a case for 'anotherResource' in the factory function
+func newUploadedResource(ctx context.Context, db *sql.DB, resourceName string) (Resource, error) {
+	rp, err := resource.NewResourceParser(resourceName)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := rp.Parse()
+	if err != nil {
+		return nil, err
+	}
+
+	switch ressourceType := res.(type) {
+	case *resource.Art:
+		return &Art{
+			Ctx:    ctx,
+			Db:     db,
+			ArtID:  ressourceType.ArtID,
+			UserID: ressourceType.UserID,
+		}, nil
+	default:
+		return nil, errors.New("Unknown resource type")
+	}
+}
+
+type Resource interface {
+	Validate(userPayload *token.Payload) error
+	UpdateDB(fileKey string) error
+}
