@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/Damione1/thread-art-generator/core/cache"
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/interceptors"
 	"github.com/Damione1/thread-art-generator/core/pb"
@@ -34,6 +35,7 @@ func main() {
 	}
 
 	go runHttpServer(config)
+	go cache.CleanExpiredCacheEntries()
 	runGrpcServer(config)
 
 }

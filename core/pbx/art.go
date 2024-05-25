@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Damione1/thread-art-generator/core/cache"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/rs/zerolog/log"
@@ -24,12 +25,13 @@ func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, post *models.Art) *p
 	})
 
 	if post.ImageID.Valid {
-		imageUrl, err := bucket.SignedURL(ctx, post.ImageID.String, &blob.SignedURLOptions{Method: "GET", Expiry: 0})
+		imageUrl, err := cache.GetOrCreateSignedImageURL(ctx, bucket, post.ImageID.String, 10)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get signed URL for image")
 			artPb.ImageUrl = ""
+		} else {
+			artPb.ImageUrl = imageUrl
 		}
-		artPb.ImageUrl = imageUrl
 	}
 
 	return artPb
