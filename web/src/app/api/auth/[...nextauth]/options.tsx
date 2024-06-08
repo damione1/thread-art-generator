@@ -1,4 +1,4 @@
-import { DefaultSession, NextAuthOptions, Session } from "next-auth";
+import { NextAuthOptions, Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import { signOut } from "next-auth/react";
 
@@ -47,7 +47,8 @@ export const authOptions: NextAuthOptions = {
         if (!credentials || !credentials.email || !credentials.password) {
           return null;
         }
-        const authResponse = await fetch(`http://api:9091/v1/sessions`, {//using the http api for authentication via the backend
+
+        const authResponse = await fetch(`http://api:9091/v1/sessions`, {
           method: "POST",
           body: JSON.stringify({
             email: credentials.email,
@@ -59,16 +60,17 @@ export const authOptions: NextAuthOptions = {
           },
         });
         const authToken = await authResponse.json();
+
         if (authResponse.ok && authToken) {
           return {
-            id: authToken.user.name as string,
-            email: authToken.user.email as string,
+            id: authToken.user.id,
+            email: authToken.user.email,
             name: `${authToken.user.first_name} ${authToken.user.last_name}`,
-            firstName: authToken.user.last_name as string,
-            lastName: authToken.user.last_name as string || "",
-            image: authToken.user.avatar as string,
-            accessToken: authToken.access_token as string,
-            refreshToken: authToken.refresh_token as string,
+            firstName: authToken.user.first_name,
+            lastName: authToken.user.last_name || "",
+            image: authToken.user.avatar,
+            accessToken: authToken.access_token,
+            refreshToken: authToken.refresh_token,
             accessTokenExpires: new Date(authToken.access_token_expire_time),
             refreshTokenExpires: new Date(authToken.refresh_token_expire_time),
           };
@@ -84,110 +86,87 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       return url;
     },
-    async session({ session, token, trigger, newSession }) {
-      if (trigger === "update") {
-        if (newSession?.user?.name) {
-          session.user.name = newSession.user.name;
-        }
-        if (newSession?.user?.email) {
-          session.user.email = newSession.user.email;
-        }
-        if (newSession?.user?.image) {
-          session.user.image = newSession.user.image;
-        }
-      }
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: token.id,
-        },
-        backendTokens: {
-          accessToken: token.backendTokens.accessToken,
-        },
+    async session({ session, token }) {
+      session.user = {
+        ...session.user,
+        id: token.user.id,
+        email: token.user.email,
+        name: token.user.name,
+        image: token.user.image,
       };
+      session.backendTokens = {
+        accessToken: token.backendTokens.accessToken,
+        accessTokenExpires: token.backendTokens.accessTokenExpires,
+        refreshToken: token.backendTokens.refreshToken,
+        refreshTokenExpires: token.backendTokens.refreshTokenExpires,
+      };
+      return session;
     },
-    async jwt({ token, user, trigger, session }) {
-      // Persist the OAuth access_token and or the user id to the token right after signin
+    async jwt({ token, user }) {
+      // Initial sign-in
       if (user) {
-        //only when user is signing in
-        token.id = user.id;
+        token.user = user;
         token.backendTokens = {
           accessToken: user.accessToken,
           accessTokenExpires: user.accessTokenExpires,
           refreshToken: user.refreshToken,
           refreshTokenExpires: user.refreshTokenExpires,
-        } as JWT["backendTokens"];
+        };
       }
 
-      // Ensure that the token object always has a user and backendTokens properties
-      token.user = token.user || {};
-      token.backendTokens = token.backendTokens || {};
-
-      if (trigger === "update") {
-        if (session?.user?.name) {
-          token.name = session.user.name;
-        }
-        if (session?.user?.email) {
-          token.email = session.user.email;
-        }
-        if (session?.user?.image) {
-          token.image = session.user.image;
-        }
-      }
-
-      // Return previous token if the refresh token has not expired yet
+      // If refresh token Expired, log out user
       if (Date.now() > new Date(token.backendTokens.refreshTokenExpires).getTime()) {
-        console.error("refresh token expired " + new Date(token.backendTokens.refreshTokenExpires).getTime() + " " + Date.now().toLocaleString());
+        console.error("Refresh token expired");
         return {
           ...token,
           error: "RefreshTokenExpired",
         };
       }
 
-      // Return previous token if the access token has not expired yet
+      // If access token has not expired yet
       if (Date.now() < new Date(token.backendTokens.accessTokenExpires).getTime()) {
-        console.log("access token not expired " + new Date(token.backendTokens.accessTokenExpires).getTime() + " " + Date.now());
         return token;
       }
-      console.log("access token expired " + new Date(token.backendTokens.accessTokenExpires).getTime() + " " + Date.now());
 
-      // Access token has expired, try to update it
+      // Access token has expired, try to refresh it
       return await refreshAccessToken(token);
-    }
+    },
   },
 };
 
 async function refreshAccessToken(token: any) {
-  console.log("refreshing access token", token);
-  const response = await fetch(`http://api:9091/v1/tokens:refresh`, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      refreshToken: token.backendTokens.refreshToken,
-    }),
-    method: "POST",
-  });
+  try {
+    console.log("Refreshing access token");
+    const response = await fetch(`http://api:9091/v1/tokens:refresh`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        refreshToken: token.backendTokens.refreshToken,
+      }),
+      method: "POST",
+    });
 
-  const decodedResponse = await response.json();
+    const refreshedTokens = await response.json();
 
-  console.log("decodedResponse", decodedResponse);
-  if (response.ok && decodedResponse) {
+    if (!response.ok) {
+      throw new Error("Failed to refresh access token");
+    }
+
     return {
       ...token,
       backendTokens: {
-        accessToken: decodedResponse.access_token,
-        accessTokenExpires: decodedResponse.access_token_expire_time,
-        refreshToken: decodedResponse.refresh_token,
-        refreshTokenExpires: decodedResponse.refresh_token_expire_time,
+        accessToken: refreshedTokens.access_token,
+        accessTokenExpires: refreshedTokens.access_token_expire_time,
+        refreshToken: refreshedTokens.refresh_token,
+        refreshTokenExpires: refreshedTokens.refresh_token_expire_time,
       },
     };
+  } catch (error) {
+    console.error("RefreshAccessTokenError", error);
+    return {
+      ...token,
+      error: "RefreshAccessTokenError",
+    };
   }
-  console.error("RefreshAccessTokenError", decodedResponse);
-
-  return {
-    ...token,
-    error: "RefreshAccessTokenError",
-  };
 }

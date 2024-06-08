@@ -34,9 +34,9 @@ func (a *Art) Validate(userPayload *token.Payload) error {
 		return errors.New("Failed to get art")
 	}
 
-	if a.artDb.ImageID.Valid {
-		return errors.New("The art already has an image")
-	}
+	// if a.artDb.ImageID.Valid {
+	// 	return errors.New("The art already has an image")
+	// }
 	return nil
 }
 

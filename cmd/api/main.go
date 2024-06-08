@@ -113,17 +113,15 @@ func runHttpServer(config util.Config) {
 		log.Fatal().Err(err).Msg("Failed to listen.")
 	}
 
-	log.Print(fmt.Sprintf("🍦 HTTP server started on http://localhost:%s/v1/", config.HTTPServerPort))
-
-	handler := interceptors.HttpLogger(mux)
-	handler = interceptors.HttpAuthInterceptor(server.GetTokenMaker(), handler)
+	handler := interceptors.HttpAuthInterceptor(server.GetTokenMaker(), interceptors.HttpLogger(mux))
 
 	// Set CORS headers
 	corsHandler := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", config.FrontendUrl)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusOK)
 				return
@@ -132,11 +130,15 @@ func runHttpServer(config util.Config) {
 		})
 	}
 
+	// Ensure everything wraps into corsHandler
+	handlerWithCors := corsHandler(handler)
+
 	// Graceful shutdown
 	srv := &http.Server{
-		Handler: corsHandler(handler),
+		Handler: handlerWithCors,
 	}
 
+	log.Print(fmt.Sprintf("🍦 HTTP server started on http://localhost:%s/v1/", config.HTTPServerPort))
 	go func() {
 		if err := srv.Serve(listener); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg(fmt.Sprintf("🍦 Failed to serve HTTP gateway server over port %s.", listener.Addr().String()))

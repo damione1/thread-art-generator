@@ -104,8 +104,8 @@ services:
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXT_PUBLIC_GRPC_API: ${NEXT_PUBLIC_GRPC_API}
-      NEXT_HTTP_API: ${NEXT_HTTP_API}
+      NEXT_PUBLIC_GRPC_API: ${GRPC_API}
+      NEXT_PUBLIC_HTTP_API: ${HTTP_API}
 
   envoy:
     image: envoyproxy/envoy:v1.30-latest

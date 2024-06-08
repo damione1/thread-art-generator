@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { FieldMask } from "../../../../grpc/google/protobuf/field_mask_pb";
 import { ArtGeneratorServiceClient } from "../../../../grpc/ServicesServiceClientPb";
 import parseError from "../../../../util/errors";
+import ImageCropUpload from "./image-upload";
 
 export function AddEditArt({ art }: { art: Art | null }) {
   const { data: session, status, update } = useSession()
@@ -72,6 +73,32 @@ export function AddEditArt({ art }: { art: Art | null }) {
     });
   }
 
+  const handleImageChange = async function(croppedImageBlob: Blob)  {
+    const formData = new FormData();
+
+    const filename = `${art.getName()}.png`; // Or use any other desired extension
+    const file = new File([croppedImageBlob], filename, { type: croppedImageBlob.type });
+
+    formData.append('file', file);
+    formData.append('name', art.getName());
+
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_HTTP_API}/v1/upload`, {
+            method: "POST",
+            body: formData,
+            headers: {
+                Authorization: `Bearer ${session?.backendTokens?.accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        console.log('File uploaded successfully', response);
+        return true;
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        return false;
+    }
+  };
+
 
 
   return (
@@ -95,34 +122,33 @@ export function AddEditArt({ art }: { art: Art | null }) {
                 <div className="invalid-feedback mt-2">{errors.title?.message}</div>
               </div>
 
+              {errors.root && (
+                    <div className="rounded-sm bg-red-50 border border-red-300 text-red-700 p-4 mb-6 mt-5">
+                      {errors.root.message}
+                    </div>
+                  )}
+              <div className="grid grid-cols-4 col-span-3 gap-1 mt-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center justify-center rounded-md bg-primary px-10 py-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
+                >
+                  {isSubmitting && (
+                    <Loader2 className="animate-spin mr-4" />
+                  )}
+                  Save
+                </button>
+              </div>
             </div>
-          </div>
-          {errors.root && (
-                <div className="rounded-sm bg-red-50 border border-red-300 text-red-700 p-4 mb-6 mt-5">
-                  {errors.root.message}
-                </div>
-              )}
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-10 py-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
-            >
-              {isSubmitting && (
-                <Loader2 className="animate-spin mr-4" />
-              )}
-              Save
-            </button>
           </div>
         </form>
       </div>
       <div className="col-span-5 xl:col-span-2">
-        {/* <ImageUploadForm
-          defaultImage={art?.cover_image ?? null}
-          setImageId={setImageId}
-          title="art Cover Image"
-          subtitle="Upload a cover image for your art"
-        ></ImageUploadForm> */}
+        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+          <div className="flex flex-col gap-5.5 p-6.5">
+            <ImageCropUpload sourceImage={art?.getImageUrl() ?? ''} handleImageChange={handleImageChange} />
+          </div>
+        </div>
       </div>
     </div>
   );

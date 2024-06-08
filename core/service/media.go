@@ -102,7 +102,7 @@ func HandleBinaryFileUpload(server *Server) http.HandlerFunc {
 		}
 
 		file, fileHeader, err := r.FormFile("file")
-		if err != nil {
+		if err != nil || file == nil || fileHeader == nil {
 			http.Error(w, "Failed to get uploaded file", http.StatusBadRequest)
 			return
 		}
@@ -114,7 +114,15 @@ func HandleBinaryFileUpload(server *Server) http.HandlerFunc {
 		}
 
 		contentType := fileHeader.Header.Get("Content-Type")
-		extension := fileHeader.Filename[strings.LastIndex(fileHeader.Filename, "."):]
+
+		fileHeader.Filename = strings.TrimSpace(fileHeader.Filename)
+		index := strings.LastIndex(fileHeader.Filename, ".")
+		if index == -1 || index == len(fileHeader.Filename)-1 {
+			http.Error(w, "invalid file extension", http.StatusBadRequest)
+			return
+		}
+
+		extension := fileHeader.Filename[index:]
 		if err := validateFile(contentType, extension); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
