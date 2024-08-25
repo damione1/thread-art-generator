@@ -5,7 +5,7 @@ local_resource(
   'go-compile',
   cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go',
   labels=["scripts"],
-  deps=['cmd/', 'db/', 'pkg/', 'threadGenerator/']
+  deps=['cmd/', 'db/', 'core/', 'threadGenerator/']
 )
 
 docker_build(
@@ -28,11 +28,11 @@ docker_build(
   dockerfile='Infra/Dockerfiles/Dockerfile-migrations',
   only=[
     './build/migrations',
-    './pkg/db/migrations',
+    './core/db/migrations',
   ],
   live_update=[
     sync('./build', '/app/build'),
-    sync('./pkg/db/migrations', '/migrations'),
+    sync('./core/db/migrations', '/migrations'),
   ])
 
 # Load the docker compose configuration

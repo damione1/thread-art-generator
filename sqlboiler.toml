@@ -1,4 +1,4 @@
-output   = "pkg/db/models"
+output   = "core/db/models"
 wipe     = true
 no-tests = true
 add-enum-types = true

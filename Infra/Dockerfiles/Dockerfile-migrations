@@ -2,5 +2,5 @@
 FROM alpine
 WORKDIR /app
 ADD build/migrations build/migrations
-COPY pkg/db/migrations migrations
+COPY core/db/migrations migrations
 ENTRYPOINT build/migrations

@@ -23,6 +23,10 @@
       "description": "Endpoints for art management"
     },
     {
+      "name": "Media",
+      "description": "Endpoints for media management"
+    },
+    {
       "name": "ArtGeneratorService"
     }
   ],
@@ -33,41 +37,6 @@
     "application/json"
   ],
   "paths": {
-    "/v1/arts:upload": {
-      "post": {
-        "summary": "Upload an art",
-        "description": "Upload an art to the system.",
-        "operationId": "ArtGeneratorService_UploadArt",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbArt"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": " (streaming inputs)",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbUploadArtRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Arts"
-        ]
-      }
-    },
     "/v1/sessions": {
       "post": {
         "summary": "Log in a user",
@@ -489,6 +458,10 @@
                 "password": {
                   "type": "string",
                   "description": "Password is the user's password."
+                },
+                "avatar": {
+                  "type": "string",
+                  "description": "Avatar is the user's avatar url."
                 }
               },
               "title": "User is the user to be updated.",
@@ -496,7 +469,8 @@
                 "firstName",
                 "lastName",
                 "email",
-                "password"
+                "password",
+                "avatar"
               ]
             }
           }
@@ -930,24 +904,6 @@
         }
       }
     },
-    "pbUploadArtRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "title": "The name of the Art resource.\nFor example: \"users/{user}/arts/{art}\""
-        },
-        "data": {
-          "type": "string",
-          "format": "byte",
-          "title": "The data of the art"
-        },
-        "mimeType": {
-          "type": "string",
-          "title": "The mime type of the uploaded file"
-        }
-      }
-    },
     "pbUser": {
       "type": "object",
       "properties": {
@@ -971,13 +927,18 @@
         "password": {
           "type": "string",
           "description": "Password is the user's password."
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Avatar is the user's avatar url."
         }
       },
       "required": [
         "firstName",
         "lastName",
         "email",
-        "password"
+        "password",
+        "avatar"
       ]
     },
     "protobufAny": {

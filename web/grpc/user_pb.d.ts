@@ -22,6 +22,9 @@ export class User extends jspb.Message {
   getPassword(): string;
   setPassword(value: string): User;
 
+  getAvatar(): string;
+  setAvatar(value: string): User;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): User.AsObject;
   static toObject(includeInstance: boolean, msg: User): User.AsObject;
@@ -37,6 +40,7 @@ export namespace User {
     lastName: string,
     email: string,
     password: string,
+    avatar: string,
   }
 }
 
