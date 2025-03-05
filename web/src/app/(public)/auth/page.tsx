@@ -1,31 +1,49 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-
 import { signIn } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Toast from "@/components/Notification/Toast";
 
 export default function Login() {
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
+
   async function onSubmit(formData: FormData) {
-    const email = formData.get("email");
-    const password = formData.get("password");
+    setErrors({});
+    setToast(null);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      email: email,
-      password: password,
-    });
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: email,
+        password: password,
+      });
 
-    if (!result?.error) {
-      redirect("/dashboard");
-    } else {
-      console.log("Login error", result.error);
+      if (!result?.error) {
+        redirect("/dashboard");
+      } else {
+        // Display the error message from the backend
+        setToast({
+          type: 'error',
+          message: result.error
+        });
+        console.log("Sign-in error:", result.error);
+      }
+    } catch (error: any) {
+      setToast({
+        type: 'error',
+        message: error.message || 'An unexpected error occurred'
+      });
+      console.error("Sign-in error:", error);
     }
   }
 
   return (
-    <div>
+    <>
       <Breadcrumb pageName="Sign In" />
 
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -173,9 +191,11 @@ export default function Login() {
                       type="email"
                       name="email"
                       placeholder="Enter your email"
-                      className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                      className={`w-full rounded-lg border ${errors.email ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
                     />
-
+                    {errors.email && (
+                      <span className="text-red-500 text-sm mt-1">{errors.email}</span>
+                    )}
                     <span className="absolute right-4 top-4">
                       <svg
                         className="fill-current"
@@ -198,16 +218,18 @@ export default function Login() {
 
                 <div className="mb-6">
                   <label className="mb-2.5 block font-medium text-black dark:text-white">
-                    Re-type Password
+                    Password
                   </label>
                   <div className="relative">
                     <input
                       type="password"
                       name="password"
-                      placeholder="6+ Characters, 1 Capital letter"
-                      className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                      placeholder="Enter your password"
+                      className={`w-full rounded-lg border ${errors.password ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
                     />
-
+                    {errors.password && (
+                      <span className="text-red-500 text-sm mt-1">{errors.password}</span>
+                    )}
                     <span className="absolute right-4 top-4">
                       <svg
                         className="fill-current"
@@ -241,7 +263,7 @@ export default function Login() {
                 </div>
                 <div className="mt-6 text-center">
                   <p>
-                    Don’t have any account?{" "}
+                    Don't have any account?{" "}
                     <Link href="/auth/signup" className="text-primary">
                       Sign Up
                     </Link>
@@ -252,6 +274,14 @@ export default function Login() {
           </div>
         </div>
       </div>
-    </div>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </>
   );
 }

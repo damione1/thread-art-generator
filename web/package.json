@@ -24,7 +24,7 @@
     "@types/node": "20.11.19",
     "@types/react": "18.2.57",
     "@types/react-dom": "18.2.19",
-    "apexcharts": "^3.41.1",
+    "apexcharts": "^4.0.0",
     "autoprefixer": "10.4.14",
     "eslint": "8.46.0",
     "eslint-config-next": "13.4.12",
@@ -41,7 +41,7 @@
     "protoc-gen-js": "^3.21.2",
     "protoc-gen-ts": "^0.8.7",
     "react": "^18",
-    "react-apexcharts": "^1.4.1",
+    "react-apexcharts": "^1.7.0",
     "react-datepicker": "^6.1.0",
     "react-dom": "^18",
     "react-dropzone": "^14.2.3",
@@ -55,6 +55,8 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/next": "^8.0.7",
+    "@types/next-auth": "^3.13.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-datepicker": "^6.0.1",

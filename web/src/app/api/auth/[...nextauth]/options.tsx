@@ -45,42 +45,50 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials || !credentials.email || !credentials.password) {
-          return null;
+          throw new Error("Email and password are required");
         }
 
-        const authResponse = await fetch(`http://api:9091/v1/sessions`, {
-          method: "POST",
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        });
-        const authToken = await authResponse.json();
+        try {
+          const authResponse = await fetch(`http://api:9091/v1/sessions`, {
+            method: "POST",
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          });
 
-        if (authResponse.ok && authToken) {
-          return {
-            id: authToken.user.id,
-            email: authToken.user.email,
-            name: `${authToken.user.first_name} ${authToken.user.last_name}`,
-            firstName: authToken.user.first_name,
-            lastName: authToken.user.last_name || "",
-            image: authToken.user.avatar,
-            accessToken: authToken.access_token,
-            refreshToken: authToken.refresh_token,
-            accessTokenExpires: new Date(authToken.access_token_expire_time),
-            refreshTokenExpires: new Date(authToken.refresh_token_expire_time),
-          };
+          const data = await authResponse.json();
+
+          if (authResponse.ok && data) {
+            return {
+              id: data.user.id,
+              email: data.user.email,
+              name: `${data.user.first_name} ${data.user.last_name}`,
+              firstName: data.user.first_name,
+              lastName: data.user.last_name || "",
+              image: data.user.avatar,
+              accessToken: data.access_token,
+              refreshToken: data.refresh_token,
+              accessTokenExpires: new Date(data.access_token_expire_time),
+              refreshTokenExpires: new Date(data.refresh_token_expire_time),
+            };
+          }
+
+          // Pass through the backend error message
+          throw new Error(data.error || data.message || "Authentication failed");
+        } catch (error: any) {
+          // Pass through any error messages from the backend
+          throw new Error(error.message || "Authentication failed");
         }
-        return null;
       },
     },
   ],
   pages: {
-    signIn: "/auth/signin",
+    signIn: "/auth",
   },
   callbacks: {
     async redirect({ url, baseUrl }) {

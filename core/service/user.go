@@ -56,7 +56,12 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	err = dbUser.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			return nil, status.Errorf(codes.AlreadyExists, "user already exists")
+			err := validation.Errors{
+				"user": validation.Errors{
+					"email": errors.New("email already exists"),
+				},
+			}
+			return nil, fmt.Errorf("failed to validate request: %w", err)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to insert user: %s", err)
 	}

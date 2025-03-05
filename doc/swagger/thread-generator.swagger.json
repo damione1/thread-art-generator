@@ -470,7 +470,8 @@
                 "lastName",
                 "email",
                 "password",
-                "avatar"
+                "avatar",
+                "user"
               ]
             }
           }
@@ -544,7 +545,8 @@
               },
               "title": "The Art resource to update.",
               "required": [
-                "title"
+                "title",
+                "art"
               ]
             }
           }
