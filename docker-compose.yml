@@ -107,13 +107,6 @@ services:
       NEXT_PUBLIC_GRPC_API: ${GRPC_API}
       NEXT_PUBLIC_HTTP_API: ${HTTP_API}
 
-  envoy:
-    image: envoyproxy/envoy:v1.30-latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./envoy.yaml:/etc/envoy/envoy.yaml
-
   # rabbitmq:
   #   image: rabbitmq:management
   #   ports:
