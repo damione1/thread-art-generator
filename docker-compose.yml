@@ -24,7 +24,7 @@ services:
       REFRESH_TOKEN_DURATION: ${REFRESH_TOKEN_DURATION}
       ENVIRONMENT: ${ENVIRONMENT}
       SENDINBLUE_API_KEY: ${SENDINBLUE_API_KEY}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
     depends_on:
       - db
       - migrations
@@ -36,6 +36,7 @@ services:
     environment:
       HTTP_SERVER_PORT: ${WEB_SERVER_PORT}
       GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
+      FRONTEND_URL: ${FRONTEND_URL}
       ENVIRONMENT: ${ENVIRONMENT}
     depends_on:
       - api

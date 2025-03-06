@@ -3,7 +3,6 @@ FROM alpine:latest
 WORKDIR /app
 
 COPY build/web /app/build/web
-COPY web/templates /app/web/templates
 COPY web/static /app/web/static
 
 EXPOSE 8080

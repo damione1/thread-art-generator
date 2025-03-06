@@ -23,7 +23,7 @@ type GrpcClient struct {
 func NewGrpcClient(config util.Config) (*GrpcClient, error) {
 	// Set up a connection to the server
 	addr := fmt.Sprintf("api:%s", config.GRPCServerPort)
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to gRPC server: %w", err)
 	}

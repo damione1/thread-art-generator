@@ -53,13 +53,10 @@ docker_build(
   dockerfile='Infra/Dockerfiles/Dockerfile-web',
   only=[
     './build/web',
-    './web/templates',
     './web/static',
   ],
-  ignore=['./web/templates/**/*.go'],  # Ignore templ-generated Go files
   live_update=[
     sync('./build/web', '/app/build/web'),
-    sync('./web/templates', '/app/web/templates'),
     sync('./web/static', '/app/web/static'),
     restart_container()
   ])

@@ -27,7 +27,7 @@ type Config struct {
 	AdminEmail           string        `mapstructure:"ADMIN_EMAIL"`
 	GCSBucketName        string        `mapstructure:"GCS_BUCKET_NAME"`
 	SendInBlueAPIKey     string        `mapstructure:"SENDINBLUE_API_KEY"`
-	FrontendUrl          string        `mapstructure:"NEXTAUTH_URL"`
+	FrontendUrl          string        `mapstructure:"FRONTEND_URL"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -50,7 +50,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("ADMIN_EMAIL")
 	viper.BindEnv("GCS_BUCKET_NAME")
 	viper.BindEnv("SENDINBLUE_API_KEY")
-	viper.BindEnv("NEXTAUTH_URL")
+	viper.BindEnv("FRONTEND_URL")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)

@@ -1,6 +1,29 @@
 package templates
 
-templ Layout(title string) {
+import (
+	"crypto/md5"
+	"fmt"
+	"strings"
+
+	"github.com/Damione1/thread-art-generator/core/pb"
+)
+
+// getGravatarURL returns the Gravatar URL for the given email
+func getGravatarURL(email string) string {
+	email = strings.ToLower(strings.TrimSpace(email))
+	hash := md5.Sum([]byte(email))
+	return fmt.Sprintf("https://www.gravatar.com/avatar/%x?s=80&d=identicon", hash)
+}
+
+// getFullName returns the full name of the user
+func getFullName(user *pb.User) string {
+	if user.LastName != "" {
+		return fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+	}
+	return user.FirstName
+}
+
+templ Layout(title string, user *pb.User) {
 	<!DOCTYPE html>
 	<html lang="en" class="h-full bg-gray-900">
 		<head>
@@ -9,6 +32,34 @@ templ Layout(title string) {
 			<title>{ title } - Thread Art Generator</title>
 			<script src="https://cdn.tailwindcss.com"></script>
 			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+			<script>
+				// Toggle dropdown
+				document.addEventListener('DOMContentLoaded', function() {
+					const userMenuButton = document.getElementById('user-menu-button');
+					const userMenu = document.getElementById('user-menu');
+					if (userMenuButton) {
+						userMenuButton.addEventListener('click', function() {
+							userMenu.classList.toggle('hidden');
+						});
+					}
+
+					// Close dropdown when clicking outside
+					document.addEventListener('click', function(event) {
+						if (userMenuButton && userMenu && !userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
+							userMenu.classList.add('hidden');
+						}
+					});
+
+					// Toggle mobile menu
+					const mobileMenuButton = document.getElementById('mobile-menu-button');
+					const mobileMenu = document.getElementById('mobile-menu');
+					if (mobileMenuButton) {
+						mobileMenuButton.addEventListener('click', function() {
+							mobileMenu.classList.toggle('hidden');
+						});
+					}
+				});
+			</script>
 		</head>
 		<body class="h-full">
 			<div class="min-h-full">
@@ -27,11 +78,73 @@ templ Layout(title string) {
 								</div>
 							</div>
 							<div class="hidden md:block">
-								<div class="ml-4 flex items-center md:ml-6">
-									<a href="/login" class="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Login</a>
-									<a href="/register" class="ml-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md px-3 py-2 text-sm font-medium">Register</a>
-								</div>
+								if user == nil {
+									<div class="ml-4 flex items-center md:ml-6">
+										<a href="/login" class="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Login</a>
+										<a href="/register" class="ml-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md px-3 py-2 text-sm font-medium">Register</a>
+									</div>
+								} else {
+									<div class="ml-4 flex items-center md:ml-6">
+										<!-- Profile dropdown -->
+										<div class="relative ml-3">
+											<div class="flex items-center">
+												<span class="text-gray-300 mr-3">{ getFullName(user) }</span>
+												<button type="button" id="user-menu-button" class="relative flex max-w-xs items-center rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800" aria-expanded="false" aria-haspopup="true">
+													<span class="absolute -inset-1.5"></span>
+													<span class="sr-only">Open user menu</span>
+													<img class="h-8 w-8 rounded-full" src={ getGravatarURL(user.Email) } alt="User avatar"/>
+												</button>
+											</div>
+											<div id="user-menu" class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
+												<a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" tabindex="-1">Your Profile</a>
+												<a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" tabindex="-1">Settings</a>
+												<a href="/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" tabindex="-1">Sign out</a>
+											</div>
+										</div>
+									</div>
+								}
 							</div>
+							<div class="md:hidden">
+								<button id="mobile-menu-button" type="button" class="relative inline-flex items-center justify-center rounded-md bg-gray-800 p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800" aria-controls="mobile-menu" aria-expanded="false">
+									<span class="absolute -inset-0.5"></span>
+									<span class="sr-only">Open main menu</span>
+									<svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
+					</div>
+					<!-- Mobile menu, show/hide based on menu state. -->
+					<div id="mobile-menu" class="hidden md:hidden">
+						<div class="space-y-1 px-2 pb-3 pt-2 sm:px-3">
+							<a href="/" class="text-gray-300 hover:bg-gray-700 hover:text-white block rounded-md px-3 py-2 text-base font-medium">Home</a>
+							<a href="/dashboard" class="text-gray-300 hover:bg-gray-700 hover:text-white block rounded-md px-3 py-2 text-base font-medium">Dashboard</a>
+						</div>
+						<div class="border-t border-gray-700 pb-3 pt-4">
+							if user == nil {
+								<div class="px-2">
+									<a href="/login" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Login</a>
+									<a href="/register" class="mt-1 block rounded-md bg-indigo-600 px-3 py-2 text-base font-medium text-white hover:bg-indigo-500">Register</a>
+								</div>
+							} else {
+								<div class="px-2">
+									<div class="flex items-center px-4">
+										<div class="flex-shrink-0">
+											<img class="h-10 w-10 rounded-full" src={ getGravatarURL(user.Email) } alt="User avatar"/>
+										</div>
+										<div class="ml-3">
+											<div class="text-base font-medium leading-none text-white">{ getFullName(user) }</div>
+											<div class="text-sm font-medium leading-none text-gray-400">{ user.Email }</div>
+										</div>
+									</div>
+									<div class="mt-3 space-y-1 px-2">
+										<a href="/profile" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Your Profile</a>
+										<a href="/settings" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Settings</a>
+										<a href="/logout" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Sign out</a>
+									</div>
+								</div>
+							}
 						</div>
 					</div>
 				</nav>

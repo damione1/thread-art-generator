@@ -8,7 +8,9 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-func Dashboard() templ.Component {
+import "github.com/Damione1/thread-art-generator/core/pb"
+
+func Dashboard(user *pb.User) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -41,13 +43,26 @@ func Dashboard() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"py-10\"><header><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><h1 class=\"text-3xl font-bold leading-tight tracking-tight text-white\">Dashboard</h1></div></header><main><div class=\"mx-auto max-w-7xl sm:px-6 lg:px-8\"><div class=\"px-4 py-8 sm:px-0\"><div class=\"rounded-lg border-4 border-dashed border-gray-700 p-4 text-white\"><h2 class=\"text-xl font-semibold mb-4\">Welcome to Your Dashboard</h2><p class=\"mb-6\">This is where you can manage your thread art projects and create new designs.</p><div class=\"bg-gray-800 rounded-lg p-6 mb-6\"><h3 class=\"text-lg font-medium mb-3\">Your Projects</h3><p class=\"text-gray-300 mb-4\">You don't have any projects yet. Create your first one!</p><button class=\"bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md\">Create New Project</button></div><div class=\"grid grid-cols-1 md:grid-cols-2 gap-6\"><div class=\"bg-gray-800 rounded-lg p-6\"><h3 class=\"text-lg font-medium mb-3\">Recent Activity</h3><p class=\"text-gray-300\">No recent activity to display.</p></div><div class=\"bg-gray-800 rounded-lg p-6\"><h3 class=\"text-lg font-medium mb-3\">Quick Tips</h3><ul class=\"list-disc list-inside text-gray-300 space-y-2\"><li>Upload a high-contrast image for best results</li><li>Start with a simple design for your first project</li><li>Experiment with different thread counts</li></ul></div></div></div></div></div></main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"py-10\"><header><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><h1 class=\"text-3xl font-bold leading-tight tracking-tight text-white\">Dashboard</h1></div></header><main><div class=\"mx-auto max-w-7xl sm:px-6 lg:px-8\"><div class=\"px-4 py-8 sm:px-0\"><div class=\"rounded-lg border-4 border-dashed border-gray-700 p-4 text-white\"><h2 class=\"text-xl font-semibold mb-4\">Welcome, ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(user.FirstName)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 17, Col: 71}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "!</h2><p class=\"mb-6\">This is where you can manage your thread art projects and create new designs.</p><div class=\"bg-gray-800 rounded-lg p-6 mb-6\"><h3 class=\"text-lg font-medium mb-3\">Your Projects</h3><p class=\"text-gray-300 mb-4\">You don't have any projects yet. Create your first one!</p><button class=\"bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md\">Create New Project</button></div><div class=\"grid grid-cols-1 md:grid-cols-2 gap-6\"><div class=\"bg-gray-800 rounded-lg p-6\"><h3 class=\"text-lg font-medium mb-3\">Recent Activity</h3><p class=\"text-gray-300\">No recent activity to display.</p></div><div class=\"bg-gray-800 rounded-lg p-6\"><h3 class=\"text-lg font-medium mb-3\">Quick Tips</h3><ul class=\"list-disc list-inside text-gray-300 space-y-2\"><li>Upload a high-contrast image for best results</li><li>Start with a simple design for your first project</li><li>Experiment with different thread counts</li></ul></div></div></div></div></div></main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Dashboard").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Dashboard", user).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

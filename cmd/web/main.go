@@ -48,9 +48,12 @@ func main() {
 
 	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
+	// Listen for SIGINT and SIGTERM signals
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("Shutting down server...")
+
+	// Block until a signal is received
+	sig := <-quit
+	log.Printf("Received signal: %v. Shutting down server...", sig)
 
 	// Create a deadline to wait for
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
