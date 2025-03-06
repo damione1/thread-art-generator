@@ -9,6 +9,7 @@
  * 2. "failed to validate request: (email: cannot be blank; password: cannot be blank)"
  * 3. "failed to validate request: email already exists"
  * 4. "failed to validate request: invalid resource name: ..."
+ * 5. gRPC error details format with field violations
  *
  * @param errorMessage The error message from the backend
  * @returns An object with field names as keys and error messages as values
@@ -18,6 +19,34 @@ export function parseValidationErrors(errorMessage: string): { [key: string]: st
 
     // Check if it's a validation error
     if (!errorMessage || !errorMessage.includes('failed to validate request')) {
+        // Check if it's a gRPC error with field violations
+        try {
+            const errorObj = JSON.parse(errorMessage);
+            if (errorObj.details && Array.isArray(errorObj.details)) {
+                for (const detail of errorObj.details) {
+                    if (detail.fieldViolations && Array.isArray(detail.fieldViolations)) {
+                        for (const violation of detail.fieldViolations) {
+                            if (violation.field && violation.description) {
+                                // Convert backend field names to frontend field names
+                                const fieldMapping: { [key: string]: string } = {
+                                    'first_name': 'firstName',
+                                    'last_name': 'lastName',
+                                    'validation_number': 'validationNumber',
+                                    'refresh_token': 'refreshToken',
+                                };
+                                const frontendFieldName = fieldMapping[violation.field] || violation.field;
+                                errors[frontendFieldName] = violation.description;
+                            }
+                        }
+                    }
+                }
+                if (Object.keys(errors).length > 0) {
+                    return errors;
+                }
+            }
+        } catch (e) {
+            // Not a JSON object, continue with regular parsing
+        }
         return errors;
     }
 

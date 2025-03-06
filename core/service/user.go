@@ -20,6 +20,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
@@ -59,7 +60,9 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			err := validation.Errors{
 				"user": validation.Errors{
-					"email": errors.New(pbErrors.ErrEmailAlreadyExists),
+					"email": validation.Errors{
+						"email": errors.New(pbErrors.ErrEmailAlreadyExists),
+					},
 				},
 			}
 			return nil, pbErrors.FormatValidationError(err)
@@ -292,19 +295,19 @@ func validateCreateSessionRequest(req *pb.CreateSessionRequest) error {
 func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
 	err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required))
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "session not found")
+			return nil, pbErrors.NewNotFoundError(pbErrors.ErrSessionNotFound)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get session: %s", err)
+		return nil, pbErrors.NewInternalError("failed to get session", err)
 	}
 
 	if session.IsBlocked {
-		return nil, status.Errorf(codes.PermissionDenied, "session is blocked")
+		return nil, pbErrors.RolePermissionError(errors.New(pbErrors.ErrSessionBlocked))
 	}
 
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
@@ -312,7 +315,7 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		server.config.AccessTokenDuration,
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create access token: %s", err)
+		return nil, pbErrors.NewInternalError("failed to create access token", err)
 	}
 
 	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(
@@ -320,14 +323,14 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		server.config.RefreshTokenDuration,
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create refresh token: %s", err)
+		return nil, pbErrors.NewInternalError("failed to create refresh token", err)
 	}
 
 	session.RefreshToken = refreshToken
 	session.ExpiresAt = refreshPayload.ExpireTime
 	_, err = session.Update(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update session: %s", err)
+		return nil, pbErrors.NewInternalError("failed to update session", err)
 	}
 
 	return &pb.RefreshTokenResponse{
@@ -340,27 +343,27 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 
 func (server *Server) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*emptypb.Empty, error) {
 	if err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required)); err != nil {
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	if req.GetRefreshToken() == "" {
 		err := validation.Errors{
 			"refresh_token": errors.New("refresh token is required"),
 		}
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "session not found")
+			return nil, pbErrors.NewNotFoundError(pbErrors.ErrSessionNotFound)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get session: %s", err)
+		return nil, pbErrors.NewInternalError("failed to get session", err)
 	}
 
 	_, err = session.Delete(ctx, server.config.DB)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete session: %s", err)
+		return nil, pbErrors.NewInternalError("failed to delete session", err)
 	}
 
 	return &emptypb.Empty{}, nil
@@ -409,7 +412,7 @@ func checkPassword(value interface{}) error {
 
 func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRequest) (*emptypb.Empty, error) {
 	if err := validateValidateEmail(req); err != nil {
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	activation, err := models.AccountActivations(
@@ -418,29 +421,30 @@ func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRe
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err := validation.Errors{
-				"email":             errors.New("account activation not found"),
-				"validation_number": errors.New("account activation not found"),
+			// Create field violations for both email and validation_number
+			violations := []*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("email", errors.New("account activation not found")),
+				pbErrors.FieldViolation("validationNumber", errors.New("account activation not found")),
 			}
-			return nil, fmt.Errorf("failed to validate request: %w", err)
+			return nil, pbErrors.InvalidArgumentError(violations)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get account activation: %s", err)
+		return nil, pbErrors.InternalError(fmt.Errorf("failed to get account activation: %w", err))
 	}
 
 	user, err := models.Users(models.UserWhere.ID.EQ(activation.UserID)).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get user: %s", err)
+		return nil, pbErrors.InternalError(fmt.Errorf("failed to get user: %w", err))
 	}
 
 	user.Active = true
 	_, err = user.Update(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update user: %s", err)
+		return nil, pbErrors.InternalError(fmt.Errorf("failed to update user: %w", err))
 	}
 
 	_, err = activation.Delete(ctx, server.config.DB)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete account activation: %s", err)
+		return nil, pbErrors.InternalError(fmt.Errorf("failed to delete account activation: %w", err))
 	}
 
 	return &emptypb.Empty{}, nil
@@ -465,35 +469,35 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 	if err := validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 	); err != nil {
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	dbUser, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err := validation.Errors{
-				"email": errors.New("user not found"),
+				"email": errors.New(pbErrors.ErrUserNotFound),
 			}
-			return nil, fmt.Errorf("failed to validate request: %w", err)
+			return nil, pbErrors.FormatValidationError(err)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get user: %s", err)
+		return nil, pbErrors.NewInternalError("failed to get user", err)
 	}
 	if dbUser.Active {
 		err := validation.Errors{
 			"email": errors.New("user is already active"),
 		}
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	if activationsRequestCount, err := models.AccountActivations(
 		models.AccountActivationWhere.UserEmail.EQ(req.GetEmail()),
 	).Count(ctx, server.config.DB); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to count account activations: %s", err)
+		return nil, pbErrors.NewInternalError("failed to count account activations", err)
 	} else if activationsRequestCount > 5 {
 		err := validation.Errors{
-			"email": errors.New("too many validation requests"),
+			"email": errors.New(pbErrors.ErrTooManyValidationRequests),
 		}
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	accountActivation := &models.AccountActivation{
@@ -502,11 +506,11 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 		ActivationToken: util.RandomInt(1000000, 9999999),
 	}
 	if err = accountActivation.Insert(ctx, server.config.DB, boil.Infer()); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to insert account validation: %s", err)
+		return nil, pbErrors.NewInternalError("failed to insert account validation", err)
 	}
 
 	if err := server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
-		status.Errorf(codes.Internal, "failed to send email: %s", err)
+		return nil, pbErrors.NewInternalError("failed to send email", err)
 	}
 
 	return &emptypb.Empty{}, nil
