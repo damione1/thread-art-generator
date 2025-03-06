@@ -1,0 +1,46 @@
+package templates
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en" class="h-full bg-gray-900">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - Thread Art Generator</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+		</head>
+		<body class="h-full">
+			<div class="min-h-full">
+				<nav class="bg-gray-800">
+					<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+						<div class="flex h-16 items-center justify-between">
+							<div class="flex items-center">
+								<div class="flex-shrink-0">
+									<a href="/" class="text-white font-bold text-xl">Thread Art Generator</a>
+								</div>
+								<div class="hidden md:block">
+									<div class="ml-10 flex items-baseline space-x-4">
+										<a href="/" class="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Home</a>
+										<a href="/dashboard" class="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Dashboard</a>
+									</div>
+								</div>
+							</div>
+							<div class="hidden md:block">
+								<div class="ml-4 flex items-center md:ml-6">
+									<a href="/login" class="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Login</a>
+									<a href="/register" class="ml-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md px-3 py-2 text-sm font-medium">Register</a>
+								</div>
+							</div>
+						</div>
+					</div>
+				</nav>
+				<main>
+					<div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+						{ children... }
+					</div>
+				</main>
+			</div>
+		</body>
+	</html>
+}

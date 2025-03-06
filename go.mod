@@ -1,11 +1,15 @@
 module github.com/Damione1/thread-art-generator
 
-go 1.22.3
+go 1.23
+
+toolchain go1.23.4
 
 require (
+	github.com/a-h/templ v0.3.833
 	github.com/aws/aws-sdk-go v1.53.7
 	github.com/disintegration/imaging v1.6.2
 	github.com/friendsofgo/errors v0.9.2
+	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-migrate/migrate/v4 v4.17.1
@@ -23,7 +27,7 @@ require (
 	github.com/volatiletech/strmangle v0.0.6
 	go.einride.tech/aip v0.67.1
 	gocloud.dev v0.37.0
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.31.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240521202816-d264139d666e
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240521202816-d264139d666e
 	google.golang.org/grpc v1.64.0
@@ -89,10 +93,10 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/image v0.16.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.20.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/api v0.181.0 // indirect
 	google.golang.org/genproto v0.0.0-20240521202816-d264139d666e // indirect

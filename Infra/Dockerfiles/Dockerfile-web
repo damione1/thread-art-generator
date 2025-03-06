@@ -1,11 +1,11 @@
-FROM node:18-alpine
+FROM alpine:latest
 
 WORKDIR /app
 
-COPY web/package.json ./
+COPY build/web /app/build/web
+COPY web/templates /app/web/templates
+COPY web/static /app/web/static
 
-RUN npm install
+EXPOSE 8080
 
-COPY . .
-
-CMD ["npm", "run", "dev"]
+CMD ["/app/build/web"]

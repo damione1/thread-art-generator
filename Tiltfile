@@ -3,9 +3,21 @@ load('ext://restart_process', 'docker_build_with_restart')
 
 local_resource(
   'go-compile',
-  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/web cmd/web/main.go',
   labels=["scripts"],
-  deps=['cmd/', 'db/', 'core/', 'threadGenerator/']
+  deps=['cmd/', 'core/', 'threadGenerator/', 'web/**/*.go'],
+  ignore=['web/templates/**/*.go']  # Ignore templ-generated Go files
+)
+
+# Add templ compiler to generate Go code from .templ files
+local_resource(
+  'templ-compiler',
+  cmd='go run github.com/a-h/templ/cmd/templ@latest generate',
+  labels=["scripts"],
+  deps=['web/templates/**/*.templ'],
+  resource_deps=[],
+  ignore=['web/templates/**/*.go'],  # Ignore generated Go files
+  auto_init=True
 )
 
 docker_build(
@@ -17,9 +29,9 @@ docker_build(
     './doc/swagger',
   ],
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/api', '/app/build/api'),
     sync('./doc/swagger', '/doc/swagger'),
-    restart_container ()
+    restart_container()
   ])
 
 docker_build(
@@ -31,8 +43,25 @@ docker_build(
     './core/db/migrations',
   ],
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/migrations', '/app/build/migrations'),
     sync('./core/db/migrations', '/migrations'),
+  ])
+
+docker_build(
+  'web-image',
+  '.',
+  dockerfile='Infra/Dockerfiles/Dockerfile-web',
+  only=[
+    './build/web',
+    './web/templates',
+    './web/static',
+  ],
+  ignore=['./web/templates/**/*.go'],  # Ignore templ-generated Go files
+  live_update=[
+    sync('./build/web', '/app/build/web'),
+    sync('./web/templates', '/app/web/templates'),
+    sync('./web/static', '/app/web/static'),
+    restart_container()
   ])
 
 # Load the docker compose configuration
@@ -58,10 +87,17 @@ resources = {
     'trigger_mode': TRIGGER_MODE_MANUAL,
     'labels': ['scripts'],
     },
-  'api': {'labels': ['services'], 'resource_deps': ['go-compile', 'db', 'migrations']},
+  'api': {
+    'labels': ['services'],
+    'resource_deps': ['go-compile', 'db', 'migrations'],
+    'trigger_mode': TRIGGER_MODE_AUTO,  # Explicit trigger mode
+  },
+  'web': {
+    'labels': ['services'],
+    'resource_deps': ['go-compile'],  # Removed templ-compiler dependency
+    'trigger_mode': TRIGGER_MODE_AUTO,
+  },
   'minio': {'labels': ['database'], 'resource_deps': ['db']},
-  'web': {'labels': ['web'], 'resource_deps': ['api']},
-  'envoy': {'labels': ['services'], 'resource_deps': ['api']},
 }
 
 
