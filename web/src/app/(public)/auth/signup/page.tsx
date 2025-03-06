@@ -1,12 +1,13 @@
 'use client';
 
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useState, ChangeEvent } from "react";
 import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { CreateUserRequest, User } from "@/../grpc/user_pb";
 import { ArtGeneratorServiceClient } from "@/../grpc/ServicesServiceClientPb";
 import { useRouter } from "next/navigation";
 import Toast from "@/components/Notification/Toast";
+import { parseValidationErrors } from "@/utils/errorUtils";
 
 const signUpDisabled = false;
 
@@ -14,6 +15,18 @@ const SignUp: React.FC = () => {
   const router = useRouter();
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
+
+  // Handle input change to clear error for that field
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,19 +61,22 @@ const SignUp: React.FC = () => {
       console.error("Error creating user:", error);
       const errorMessage = error.message as string;
 
-      // Parse validation errors
-      if (errorMessage.includes("failed to validate request")) {
-        if (errorMessage.includes("password:")) {
-          setErrors(prev => ({ ...prev, password: errorMessage.match(/\(password: (.*?)\)/)?.[1] || "Invalid password" }));
+      // Parse validation errors using the utility function
+      const validationErrors = parseValidationErrors(errorMessage);
+
+      if (Object.keys(validationErrors).length > 0) {
+        // Check for generic error
+        if (validationErrors._generic) {
+          setToast({
+            type: 'error',
+            message: validationErrors._generic
+          });
+          delete validationErrors._generic;
         }
-        if (errorMessage.includes("email:")) {
-          setErrors(prev => ({ ...prev, email: errorMessage.match(/\(email: (.*?)\)/)?.[1] || "Invalid email" }));
-        }
-        if (errorMessage.includes("firstName:")) {
-          setErrors(prev => ({ ...prev, firstName: errorMessage.match(/\(firstName: (.*?)\)/)?.[1] || "Invalid first name" }));
-        }
-        if (errorMessage.includes("lastName:")) {
-          setErrors(prev => ({ ...prev, lastName: errorMessage.match(/\(lastName: (.*?)\)/)?.[1] || "Invalid last name" }));
+
+        // Set field-specific errors
+        if (Object.keys(validationErrors).length > 0) {
+          setErrors(validationErrors);
         }
       } else {
         // Handle non-field specific errors
@@ -234,6 +250,7 @@ const SignUp: React.FC = () => {
                             name="firstName"
                             placeholder="Enter your first name"
                             className={`w-full rounded-lg border ${errors.firstName ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                            onChange={handleInputChange}
                           />
                           {errors.firstName && (
                             <span className="text-red-500 text-sm mt-1">{errors.firstName}</span>
@@ -251,6 +268,7 @@ const SignUp: React.FC = () => {
                             name="lastName"
                             placeholder="Enter your last name"
                             className={`w-full rounded-lg border ${errors.lastName ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                            onChange={handleInputChange}
                           />
                           {errors.lastName && (
                             <span className="text-red-500 text-sm mt-1">{errors.lastName}</span>
@@ -269,6 +287,7 @@ const SignUp: React.FC = () => {
                           name="email"
                           placeholder="Enter your email"
                           className={`w-full rounded-lg border ${errors.email ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                          onChange={handleInputChange}
                         />
                         {errors.email && (
                           <span className="text-red-500 text-sm mt-1">{errors.email}</span>
@@ -286,6 +305,7 @@ const SignUp: React.FC = () => {
                           name="password"
                           placeholder="Enter your password"
                           className={`w-full rounded-lg border ${errors.password ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                          onChange={handleInputChange}
                         />
                         {errors.password && (
                           <span className="text-red-500 text-sm mt-1">{errors.password}</span>
@@ -303,6 +323,7 @@ const SignUp: React.FC = () => {
                           name="passwordConfirm"
                           placeholder="Confirm your password"
                           className={`w-full rounded-lg border ${errors.passwordConfirm ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                          onChange={handleInputChange}
                         />
                         {errors.passwordConfirm && (
                           <span className="text-red-500 text-sm mt-1">{errors.passwordConfirm}</span>

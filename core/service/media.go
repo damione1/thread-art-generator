@@ -12,7 +12,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/token"
 	"github.com/friendsofgo/errors"
-	validation "github.com/go-ozzo/ozzo-validation"
 )
 
 /*
@@ -52,12 +51,6 @@ func validateUploadRequest(r *http.Request) error {
 	}
 
 	return nil
-}
-
-func validateGetMediaUploadUrlRequest(r *http.Request) error {
-	return validation.Errors{
-		"name": validation.Validate(r.FormValue("name"), validation.Required, validation.Length(5, 20)),
-	}.Filter()
 }
 
 // Validate content type and extension of the uploaded file

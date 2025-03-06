@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
+	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
@@ -41,7 +42,7 @@ const (
 func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
 	var err error
 	if err := validateCreateUserRequest(req); err != nil {
-		return nil, fmt.Errorf("failed to validate request: %w", err)
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	pbUser := req.GetUser()
@@ -50,7 +51,7 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 
 	dbUser.Password, err = util.HashPassword(pbUser.GetPassword())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
+		return nil, pbErrors.NewInternalError("failed to hash password", err)
 	}
 
 	err = dbUser.Insert(ctx, server.config.DB, boil.Infer())
@@ -58,12 +59,12 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			err := validation.Errors{
 				"user": validation.Errors{
-					"email": errors.New("email already exists"),
+					"email": errors.New(pbErrors.ErrEmailAlreadyExists),
 				},
 			}
-			return nil, fmt.Errorf("failed to validate request: %w", err)
+			return nil, pbErrors.FormatValidationError(err)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to insert user: %s", err)
+		return nil, pbErrors.NewInternalError("failed to insert user", err)
 	}
 
 	accountActivation := &models.AccountActivation{
@@ -72,11 +73,11 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		ActivationToken: util.RandomInt(1000000, 9999999),
 	}
 	if err = accountActivation.Insert(ctx, server.config.DB, boil.Infer()); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to insert account validation: %s", err)
+		return nil, pbErrors.NewInternalError("failed to insert account validation", err)
 	}
 
 	if err := server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
-		status.Errorf(codes.Internal, "failed to send email: %s", err)
+		return nil, pbErrors.NewInternalError("failed to send email", err)
 	}
 
 	pbUser = pbx.DbUserToProto(dbUser)
@@ -103,14 +104,13 @@ func validateCreateUserRequest(req *pb.CreateUserRequest) error {
 
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	if err := validateUpdateUserRequest(req); err != nil {
-		return nil, err
-
+		return nil, pbErrors.FormatValidationError(err)
 	}
 	pbUser := req.GetUser()
 
 	userId, err := pbx.GetResourceIDByType(pbUser.GetName(), pbx.RessourceTypeUsers)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid ressource name: %s", err)
+		return nil, fmt.Errorf("%s: %s: %w", pbErrors.ErrValidationPrefix, pbErrors.ErrInvalidResourceName, err)
 	}
 
 	if userId != middleware.FromAdminContext(ctx).UserPayload.UserID {
@@ -120,9 +120,9 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "user not found")
+			return nil, pbErrors.NewNotFoundError(pbErrors.ErrUserNotFound)
 		}
-		return nil, status.Error(codes.Internal, "failed to get user")
+		return nil, pbErrors.NewInternalError("failed to get user", err)
 	}
 
 	updateMask := req.GetUpdateMask()
@@ -133,7 +133,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 				if pbUser.GetPassword() != "" {
 					hashedPassword, err := util.HashPassword(pbUser.GetPassword())
 					if err != nil {
-						return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
+						return nil, pbErrors.NewInternalError("failed to hash password", err)
 					}
 					user.Password = hashedPassword
 				}
@@ -158,7 +158,13 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	}
 
 	if _, err = user.Update(ctx, server.config.DB, boil.Infer()); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update user: %s", err)
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			err := validation.Errors{
+				"email": errors.New(pbErrors.ErrEmailAlreadyExists),
+			}
+			return nil, pbErrors.FormatValidationError(err)
+		}
+		return nil, pbErrors.NewInternalError("failed to update user", err)
 	}
 
 	return pbx.DbUserToProto(user), nil
@@ -205,28 +211,36 @@ func validateUpdateUserRequest(req *pb.UpdateUserRequest) error {
 func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
 	err := validateCreateSessionRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, pbErrors.FormatValidationError(err)
 	}
-
-	fmt.Println("CreateSessionRequest: ", req)
 
 	user, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Print(fmt.Sprintf("User %s not found", req.GetEmail()))
-			return nil, status.Errorf(codes.Unauthenticated, "incorrect email or password")
+			// Use validation error format for authentication errors
+			err := validation.Errors{
+				"email":    errors.New(pbErrors.ErrIncorrectCredentials),
+				"password": errors.New(pbErrors.ErrIncorrectCredentials),
+			}
+			return nil, pbErrors.FormatValidationError(err)
 		}
-		return nil, status.Error(codes.Internal, "failed to get user")
+		return nil, pbErrors.NewInternalError("failed to get user", err)
 	}
 
 	err = util.CheckPassword(req.GetPassword(), user.Password)
 	if err != nil {
 		log.Print(fmt.Sprintf("User %s password incorrect", req.GetEmail()))
-		return nil, status.Errorf(codes.Unauthenticated, "incorrect email or password")
+		// Use validation error format for authentication errors
+		err := validation.Errors{
+			"email":    errors.New(pbErrors.ErrIncorrectCredentials),
+			"password": errors.New(pbErrors.ErrIncorrectCredentials),
+		}
+		return nil, pbErrors.FormatValidationError(err)
 	}
 
 	if !user.Active {
-		return nil, status.Errorf(codes.PermissionDenied, "user is not active")
+		return nil, pbErrors.NewValidationError(pbErrors.ErrUserNotActive)
 	}
 
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
@@ -234,7 +248,7 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 		server.config.AccessTokenDuration,
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create access token: %s", err)
+		return nil, pbErrors.NewInternalError("failed to create access token", err)
 	}
 
 	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(
@@ -278,7 +292,7 @@ func validateCreateSessionRequest(req *pb.CreateSessionRequest) error {
 func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
 	err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required))
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err)
+		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
@@ -322,16 +336,18 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		RefreshToken:           refreshToken,
 		RefreshTokenExpireTime: timestamppb.New(refreshPayload.ExpireTime),
 	}, nil
-
 }
 
 func (server *Server) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*emptypb.Empty, error) {
 	if err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required)); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err)
+		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	if req.GetRefreshToken() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "refresh token is required")
+		err := validation.Errors{
+			"refresh_token": errors.New("refresh token is required"),
+		}
+		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
@@ -393,7 +409,7 @@ func checkPassword(value interface{}) error {
 
 func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRequest) (*emptypb.Empty, error) {
 	if err := validateValidateEmail(req); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err)
+		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	activation, err := models.AccountActivations(
@@ -402,7 +418,11 @@ func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRe
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "account activation not found")
+			err := validation.Errors{
+				"email":             errors.New("account activation not found"),
+				"validation_number": errors.New("account activation not found"),
+			}
+			return nil, fmt.Errorf("failed to validate request: %w", err)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to get account activation: %s", err)
 	}
@@ -445,18 +465,24 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 	if err := validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 	); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err)
+		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	dbUser, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "user not found")
+			err := validation.Errors{
+				"email": errors.New("user not found"),
+			}
+			return nil, fmt.Errorf("failed to validate request: %w", err)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to get user: %s", err)
 	}
 	if dbUser.Active {
-		return nil, status.Errorf(codes.PermissionDenied, "user is already active")
+		err := validation.Errors{
+			"email": errors.New("user is already active"),
+		}
+		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	if activationsRequestCount, err := models.AccountActivations(
@@ -464,7 +490,10 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 	).Count(ctx, server.config.DB); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to count account activations: %s", err)
 	} else if activationsRequestCount > 5 {
-		return nil, status.Errorf(codes.PermissionDenied, "too many requests")
+		err := validation.Errors{
+			"email": errors.New("too many validation requests"),
+		}
+		return nil, fmt.Errorf("failed to validate request: %w", err)
 	}
 
 	accountActivation := &models.AccountActivation{
@@ -484,9 +513,15 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 }
 
 func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+	if err := validation.ValidateStruct(req,
+		validation.Field(&req.Name, validation.Required),
+	); err != nil {
+		return nil, pbErrors.FormatValidationError(err)
+	}
+
 	userId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid ressource name: %s", err)
+		return nil, fmt.Errorf("%s: %s: %w", pbErrors.ErrValidationPrefix, pbErrors.ErrInvalidResourceName, err)
 	}
 
 	if userId != middleware.FromAdminContext(ctx).UserPayload.UserID {
@@ -496,9 +531,9 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "user not found")
+			return nil, pbErrors.NewNotFoundError(pbErrors.ErrUserNotFound)
 		}
-		return nil, status.Error(codes.Internal, "failed to get user")
+		return nil, pbErrors.NewInternalError("failed to get user", err)
 	}
 
 	return pbx.DbUserToProto(user), nil

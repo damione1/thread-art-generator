@@ -1,14 +1,27 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, ChangeEvent } from "react";
 import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { signIn } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Toast from "@/components/Notification/Toast";
+import { parseValidationErrors } from "@/utils/errorUtils";
 
 export default function Login() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
+
+  // Handle input change to clear error for that field
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
 
   async function onSubmit(formData: FormData) {
     setErrors({});
@@ -26,11 +39,30 @@ export default function Login() {
       if (!result?.error) {
         redirect("/dashboard");
       } else {
-        // Display the error message from the backend
-        setToast({
-          type: 'error',
-          message: result.error
-        });
+        // Parse validation errors using the utility function
+        const validationErrors = parseValidationErrors(result.error);
+
+        if (Object.keys(validationErrors).length > 0) {
+          // Check for generic error
+          if (validationErrors._generic) {
+            setToast({
+              type: 'error',
+              message: validationErrors._generic
+            });
+            delete validationErrors._generic;
+          }
+
+          // Set field-specific errors
+          if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+          }
+        } else {
+          // Display the error message from the backend
+          setToast({
+            type: 'error',
+            message: result.error
+          });
+        }
         console.log("Sign-in error:", result.error);
       }
     } catch (error: any) {
@@ -192,6 +224,7 @@ export default function Login() {
                       name="email"
                       placeholder="Enter your email"
                       className={`w-full rounded-lg border ${errors.email ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                      onChange={handleInputChange}
                     />
                     {errors.email && (
                       <span className="text-red-500 text-sm mt-1">{errors.email}</span>
@@ -226,6 +259,7 @@ export default function Login() {
                       name="password"
                       placeholder="Enter your password"
                       className={`w-full rounded-lg border ${errors.password ? 'border-red-500' : 'border-stroke'} bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                      onChange={handleInputChange}
                     />
                     {errors.password && (
                       <span className="text-red-500 text-sm mt-1">{errors.password}</span>

@@ -1,6 +1,6 @@
-import { NextAuthOptions, Session } from "next-auth";
-import { JWT } from "next-auth/jwt";
-import { signOut } from "next-auth/react";
+import type { JWT } from 'next-auth/jwt'
+import CredentialsProvider from "next-auth/providers/credentials";
+import type { Session } from "next-auth";
 
 // nextauth.d.ts
 declare module "next-auth" {
@@ -27,12 +27,11 @@ declare module "next-auth" {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   providers: [
-    {
+    CredentialsProvider({
       id: "credentials",
       name: "Credentials",
-      type: "credentials",
       credentials: {
         email: {
           label: "Email",
@@ -43,7 +42,7 @@ export const authOptions: NextAuthOptions = {
           type: "password",
         },
       },
-      async authorize(credentials) {
+      async authorize(credentials: Record<"email" | "password", string> | undefined) {
         if (!credentials || !credentials.email || !credentials.password) {
           throw new Error("Email and password are required");
         }
@@ -85,22 +84,22 @@ export const authOptions: NextAuthOptions = {
           throw new Error(error.message || "Authentication failed");
         }
       },
-    },
+    }),
   ],
   pages: {
     signIn: "/auth",
   },
   callbacks: {
-    async redirect({ url, baseUrl }) {
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       return url;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       session.user = {
         ...session.user,
         id: token.user.id,
         email: token.user.email,
         name: token.user.name,
-        image: token.user.image,
+        image: token.user.image || "",
       };
       session.backendTokens = {
         accessToken: token.backendTokens.accessToken,
@@ -110,10 +109,15 @@ export const authOptions: NextAuthOptions = {
       };
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user: any }) {
       // Initial sign-in
       if (user) {
-        token.user = user;
+        token.user = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image || undefined,
+        };
         token.backendTokens = {
           accessToken: user.accessToken,
           accessTokenExpires: user.accessTokenExpires,
