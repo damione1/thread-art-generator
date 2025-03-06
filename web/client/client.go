@@ -22,11 +22,13 @@ type GrpcClient struct {
 // NewGrpcClient creates a new gRPC client
 func NewGrpcClient(config util.Config) (*GrpcClient, error) {
 	// Set up a connection to the server
-	addr := fmt.Sprintf("0.0.0.0:%s", config.GRPCServerPort)
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	addr := fmt.Sprintf("api:%s", config.GRPCServerPort)
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to gRPC server: %w", err)
 	}
+
+	fmt.Println("Connected to gRPC server at", addr)
 
 	// Create a client
 	client := pb.NewArtGeneratorServiceClient(conn)

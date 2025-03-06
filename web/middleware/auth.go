@@ -58,8 +58,20 @@ func RequireAuth(grpcClient *client.GrpcClient) func(next http.Handler) http.Han
 			// Add auth to context
 			authCtx := client.WithAuth(ctx, token)
 
+			// Get the user resource name from the cookie
+			userResourceName := client.GetUserResourceName(r)
+			if userResourceName == "" {
+				// If no resource name in cookie but we have a valid token,
+				// we need to get the user from the token
+				// This is a fallback mechanism and should be rare
+				// For now, we'll just redirect to login to re-establish the session properly
+				client.ClearSessionCookies(w)
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
+
 			userReq := &pb.GetUserRequest{
-				Name: "me",
+				Name: userResourceName,
 			}
 			user, err := grpcClient.GetClient().GetUser(authCtx, userReq)
 			if err != nil {

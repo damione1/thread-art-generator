@@ -34,8 +34,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      HTTP_SERVER_PORT: ${WEB_SERVER_PORT:-8080}
-      GRPC_SERVER_ADDRESS: api:9091
+      HTTP_SERVER_PORT: ${WEB_SERVER_PORT}
+      GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
       ENVIRONMENT: ${ENVIRONMENT}
     depends_on:
       - api
