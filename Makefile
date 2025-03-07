@@ -20,17 +20,6 @@ build-go-proto:
 	--openapiv2_out=doc/swagger --openapiv2_opt=allow_merge=true,merge_file_name=thread-generator \
 	./proto/*.proto
 
-
-.PHONY: build-web-proto
-build-web-proto:
-	rm -rf web/grpc/*
-	protoc --proto_path ./proto \
-		--plugin=protoc-gen-grpc-web=web/node_modules/.bin/protoc-gen-grpc-web \
-		--plugin=protoc-gen-js=web/node_modules/.bin/protoc-gen-js \
-		--js_out=import_style=commonjs,binary:web/grpc \
-		--grpc-web_out=import_style=typescript,mode=grpcwebtext:web/grpc \
-		 `find ./proto -name '*.proto'`
-
 .PHONY: generate-sim-key
 generate-sim-key:
 	TOKEN_SYMMETRIC_KEY=$$(openssl rand -hex 16); \

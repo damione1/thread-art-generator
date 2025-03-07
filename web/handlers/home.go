@@ -11,8 +11,11 @@ import (
 // HomeHandler handles the home page
 func HomeHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Render the home page
-		component := templates.Home()
+		// Get the user from the context if available
+		user := middleware.GetUserFromContext(r.Context())
+
+		// Render the home page with the user
+		component := templates.Home(user)
 		component.Render(r.Context(), w)
 	}
 }

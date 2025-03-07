@@ -6,12 +6,21 @@ import (
 
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/web/client"
+	"github.com/Damione1/thread-art-generator/web/middleware"
 	"github.com/Damione1/thread-art-generator/web/templates"
 )
 
 // LoginHandler handles the login page
 func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Check if user is already logged in
+		user := middleware.GetUserFromContext(r.Context())
+		if user != nil {
+			// Already logged in, redirect to dashboard
+			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			return
+		}
+
 		// If the request is a GET, render the login page
 		if r.Method == http.MethodGet {
 			component := templates.Login("")
@@ -96,6 +105,14 @@ func LogoutHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 // RegisterHandler handles the registration page
 func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Check if user is already logged in
+		user := middleware.GetUserFromContext(r.Context())
+		if user != nil {
+			// Already logged in, redirect to dashboard
+			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			return
+		}
+
 		// If the request is a GET, render the registration page
 		if r.Method == http.MethodGet {
 			component := templates.Register("")

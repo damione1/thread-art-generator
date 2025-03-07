@@ -1,7 +1,9 @@
 package templates
 
-templ Home() {
-	@Layout("Home", nil) {
+import "github.com/Damione1/thread-art-generator/core/pb"
+
+templ Home(user *pb.User) {
+	@Layout("Home", user) {
 		<div class="relative isolate overflow-hidden">
 			<div class="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
 				<div class="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl lg:flex-shrink-0 lg:pt-8">
@@ -12,15 +14,21 @@ templ Home() {
 						Create beautiful thread art from your images with our easy-to-use generator. Upload an image, customize your settings, and get ready-to-use patterns for your next project.
 					</p>
 					<div class="mt-10 flex items-center gap-x-6">
-						<a href="/register" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-							Get started
-						</a>
+						if user == nil {
+							<a href="/register" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+								Get started
+							</a>
+						} else {
+							<a href="/dashboard" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+								Go to Dashboard
+							</a>
+						}
 						<a href="#learn-more" class="text-sm font-semibold leading-6 text-white">
 							Learn more <span aria-hidden="true">→</span>
 						</a>
 					</div>
 				</div>
-				<div class="mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:ml-10 lg:mr-0 lg:mt-0 lg:max-w-none lg:flex-none xl:ml-32">
+				<div class="mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:ml-10 lg:mr-0 lg:mt-0 lg:max-w-none xl:ml-32">
 					<div class="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
 						<img src="/static/images/thread-art-example.jpg" alt="Thread art example" class="w-[76rem] rounded-md bg-white/5 shadow-2xl ring-1 ring-white/10"/>
 					</div>
@@ -91,12 +99,18 @@ templ Home() {
 						Join thousands of creators who have transformed their images into beautiful thread art patterns.
 					</p>
 					<div class="mt-10 flex items-center justify-center gap-x-6">
-						<a href="/register" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-							Get started for free
-						</a>
-						<a href="/login" class="text-sm font-semibold leading-6 text-white">
-							Sign in <span aria-hidden="true">→</span>
-						</a>
+						if user == nil {
+							<a href="/register" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+								Get started for free
+							</a>
+							<a href="/login" class="text-sm font-semibold leading-6 text-white">
+								Sign in <span aria-hidden="true">→</span>
+							</a>
+						} else {
+							<a href="/dashboard" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+								Go to Dashboard
+							</a>
+						}
 					</div>
 				</div>
 			</div>

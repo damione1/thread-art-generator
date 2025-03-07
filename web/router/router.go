@@ -20,10 +20,13 @@ func NewRouter(grpcClient *client.GrpcClient) http.Handler {
 
 	// Public routes
 	r.Group(func(r chi.Router) {
+		// Apply TryAuth middleware to all public routes
+		r.Use(middleware.TryAuth(grpcClient))
+
 		// Home page
 		r.Get("/", handlers.HomeHandler(grpcClient))
 
-		// Auth routes
+		// Auth routes - these should redirect to dashboard if already logged in
 		r.Get("/login", handlers.LoginHandler(grpcClient))
 		r.Post("/login", handlers.LoginHandler(grpcClient))
 		r.Get("/register", handlers.RegisterHandler(grpcClient))
