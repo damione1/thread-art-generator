@@ -15,7 +15,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/util"
-	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -52,14 +51,10 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	err = dbUser.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			err := validation.Errors{
-				"user": validation.Errors{
-					"email": validation.Errors{
-						"email": errors.New(pbErrors.ErrEmailAlreadyExists),
-					},
-				},
+			violations := []*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("user.email", errors.New(pbErrors.ErrEmailAlreadyExists)),
 			}
-			return nil, pbErrors.FormatValidationError(err)
+			return nil, pbErrors.InvalidArgumentError(violations)
 		}
 		return nil, pbErrors.NewInternalError("failed to insert user", err)
 	}
@@ -136,10 +131,10 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 
 	if _, err = user.Update(ctx, server.config.DB, boil.Infer()); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			err := validation.Errors{
-				"email": errors.New(pbErrors.ErrEmailAlreadyExists),
+			violations := []*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("email", errors.New(pbErrors.ErrEmailAlreadyExists)),
 			}
-			return nil, pbErrors.FormatValidationError(err)
+			return nil, pbErrors.InvalidArgumentError(violations)
 		}
 		return nil, pbErrors.NewInternalError("failed to update user", err)
 	}
@@ -152,12 +147,12 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Print(fmt.Sprintf("User %s not found", req.GetEmail()))
-			// Use validation error format for authentication errors
-			err := validation.Errors{
-				"email":    errors.New(pbErrors.ErrIncorrectCredentials),
-				"password": errors.New(pbErrors.ErrIncorrectCredentials),
+			// Create field violations for both email and password
+			violations := []*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("email", errors.New(pbErrors.ErrIncorrectCredentials)),
+				pbErrors.FieldViolation("password", errors.New(pbErrors.ErrIncorrectCredentials)),
 			}
-			return nil, pbErrors.FormatValidationError(err)
+			return nil, pbErrors.InvalidArgumentError(violations)
 		}
 		return nil, pbErrors.NewInternalError("failed to get user", err)
 	}
@@ -165,12 +160,12 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 	err = util.CheckPassword(req.GetPassword(), user.Password)
 	if err != nil {
 		log.Print(fmt.Sprintf("User %s password incorrect", req.GetEmail()))
-		// Use validation error format for authentication errors
-		err := validation.Errors{
-			"email":    errors.New(pbErrors.ErrIncorrectCredentials),
-			"password": errors.New(pbErrors.ErrIncorrectCredentials),
+		// Create field violations for both email and password
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("email", errors.New(pbErrors.ErrIncorrectCredentials)),
+			pbErrors.FieldViolation("password", errors.New(pbErrors.ErrIncorrectCredentials)),
 		}
-		return nil, pbErrors.FormatValidationError(err)
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	if !user.Active {
@@ -346,18 +341,18 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 	dbUser, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err := validation.Errors{
-				"email": errors.New(pbErrors.ErrUserNotFound),
+			violations := []*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("email", errors.New(pbErrors.ErrUserNotFound)),
 			}
-			return nil, pbErrors.FormatValidationError(err)
+			return nil, pbErrors.InvalidArgumentError(violations)
 		}
 		return nil, pbErrors.NewInternalError("failed to get user", err)
 	}
 	if dbUser.Active {
-		err := validation.Errors{
-			"email": errors.New("user is already active"),
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("email", errors.New("user is already active")),
 		}
-		return nil, pbErrors.FormatValidationError(err)
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	if activationsRequestCount, err := models.AccountActivations(
@@ -365,10 +360,10 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 	).Count(ctx, server.config.DB); err != nil {
 		return nil, pbErrors.NewInternalError("failed to count account activations", err)
 	} else if activationsRequestCount > 5 {
-		err := validation.Errors{
-			"email": errors.New(pbErrors.ErrTooManyValidationRequests),
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("email", errors.New(pbErrors.ErrTooManyValidationRequests)),
 		}
-		return nil, pbErrors.FormatValidationError(err)
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	accountActivation := &models.AccountActivation{
@@ -390,7 +385,10 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
 	userId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %s: %w", pbErrors.ErrValidationPrefix, pbErrors.ErrInvalidResourceName, err)
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New(pbErrors.ErrInvalidResourceName)),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	if userId != middleware.FromAdminContext(ctx).UserPayload.UserID {
