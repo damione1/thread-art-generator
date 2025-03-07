@@ -31,7 +31,7 @@ func Login(errorMessage string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LoginWithValidation(client.ParseValidationError(errorMessage), "").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LoginWithData(NewLoginFormData(client.ParseValidationError(errorMessage), "")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -61,7 +61,7 @@ func LoginWithFormValues(errorMessage, email string) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LoginWithValidation(client.ParseValidationError(errorMessage), email).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LoginWithData(NewLoginFormData(client.ParseValidationError(errorMessage), email)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -69,7 +69,7 @@ func LoginWithFormValues(errorMessage, email string) templ.Component {
 	})
 }
 
-func LoginWithValidation(errors *client.ValidationErrors, email string) templ.Component {
+func LoginWithData(data LoginFormData) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -106,19 +106,19 @@ func LoginWithValidation(errors *client.ValidationErrors, email string) templ.Co
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = FormErrors(errors).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = FormErrors(data.Errors).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<form class=\"space-y-6\" action=\"/login\" method=\"POST\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<form class=\"space-y-6\" action=\"/login\" method=\"POST\" id=\"login-form\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = InputFieldWithMapping("email", "email", "email", "Email address", "", email, true, errors, "email").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = InputFieldWithMapping("email", "email", "email", "Email address", "", data.Email, true, data.Errors, "email").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = PasswordField("password", "password", "Password", "", true, errors, true).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = PasswordField("password", "password", "Password", "", true, data.Errors, true).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -86,9 +86,19 @@ templ PasswordFieldWithMapping(id, name, label, value string, required bool, err
 
 // FormErrors renders general form errors as an alert
 templ FormErrors(errors *client.ValidationErrors) {
-	if errors != nil && errors.GeneralError != "" {
+	// Only render if there are errors to display
+	if errors != nil && (errors.GeneralError != "" || HasFormLevelErrors(errors)) {
 		<div class="mb-4 p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
-			<p>{ errors.GeneralError }</p>
+			// Display general error message if present
+			if errors.GeneralError != "" {
+				<p class="font-medium mb-2">{ errors.GeneralError }</p>
+			}
+			// Display form-level errors (errors that don't map to specific input fields)
+			for _, fieldName := range []string{"user", "session", "auth"} {
+				if errors.HasFieldError(fieldName) {
+					<p class="font-medium">{ errors.GetFieldError(fieldName) }</p>
+				}
+			}
 		</div>
 	}
 }

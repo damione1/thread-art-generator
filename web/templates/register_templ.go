@@ -31,7 +31,7 @@ func Register(errorMessage string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = RegisterWithValidation(client.ParseValidationError(errorMessage), "", "", "").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = RegisterWithData(NewRegisterFormData(client.ParseValidationError(errorMessage), "", "", "")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -61,7 +61,7 @@ func RegisterWithFormValues(errorMessage, firstName, lastName, email string) tem
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = RegisterWithValidation(client.ParseValidationError(errorMessage), firstName, lastName, email).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = RegisterWithData(NewRegisterFormData(client.ParseValidationError(errorMessage), firstName, lastName, email)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -69,7 +69,7 @@ func RegisterWithFormValues(errorMessage, firstName, lastName, email string) tem
 	})
 }
 
-func RegisterWithValidation(errors *client.ValidationErrors, firstName, lastName, email string) templ.Component {
+func RegisterWithData(data RegisterFormData) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -106,7 +106,7 @@ func RegisterWithValidation(errors *client.ValidationErrors, firstName, lastName
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = FormErrors(errors).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = FormErrors(data.Errors).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -114,23 +114,23 @@ func RegisterWithValidation(errors *client.ValidationErrors, firstName, lastName
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = InputFieldWithMapping("text", "first_name", "first_name", "First Name", "", firstName, true, errors, "user.first_name").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = InputFieldWithMapping("text", "first_name", "first_name", "First Name", "", data.FirstName, true, data.Errors, "user.first_name").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = InputFieldWithMapping("text", "last_name", "last_name", "Last Name", "", lastName, true, errors, "user.last_name").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = InputFieldWithMapping("text", "last_name", "last_name", "Last Name", "", data.LastName, true, data.Errors, "user.last_name").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = InputFieldWithMapping("email", "email", "email", "Email address", "", email, true, errors, "user.email").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = InputFieldWithMapping("email", "email", "email", "Email address", "", data.Email, true, data.Errors, "user.email").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = PasswordFieldWithMapping("password", "password", "Password", "", true, errors, false, "user.password").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = PasswordFieldWithMapping("password", "password", "Password", "", true, data.Errors, false, "user.password").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = PasswordField("confirm_password", "confirm_password", "Confirm Password", "", true, errors, false).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = PasswordField("confirm_password", "confirm_password", "Confirm Password", "", true, data.Errors, false).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
