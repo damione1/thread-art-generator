@@ -48,23 +48,70 @@ func InvalidArgumentError(violations []*errdetails.BadRequest_FieldViolation) er
 }
 
 // UnauthenticatedError creates a gRPC Unauthenticated error
-func UnauthenticatedError(err error) error {
-	return status.Errorf(codes.Unauthenticated, "unauthorized: %s", err)
+func UnauthenticatedError(message string) error {
+	st := status.New(codes.Unauthenticated, message)
+	return st.Err()
 }
 
-// RolePermissionError creates a gRPC PermissionDenied error
-func RolePermissionError(err error) error {
-	return status.Errorf(codes.PermissionDenied, "role permission error: %s", err)
+// PermissionDeniedError creates a gRPC PermissionDenied error
+func PermissionDeniedError(message string) error {
+	st := status.New(codes.PermissionDenied, message)
+	return st.Err()
 }
 
 // InternalError creates a gRPC Internal error
-func InternalError(err error) error {
-	return status.Errorf(codes.Internal, "internal error: %s", err)
+func InternalError(message string, err error) error {
+	st := status.New(codes.Internal, message)
+
+	if err != nil {
+		// Add error details
+		errorInfo := &errdetails.ErrorInfo{
+			Reason: "INTERNAL_ERROR",
+			Metadata: map[string]string{
+				"error": err.Error(),
+			},
+		}
+
+		statusWithDetails, detailErr := st.WithDetails(errorInfo)
+		if detailErr != nil {
+			return st.Err()
+		}
+		return statusWithDetails.Err()
+	}
+
+	return st.Err()
 }
 
 // NotFoundError creates a gRPC NotFound error
-func NotFoundError(err error) error {
-	return status.Errorf(codes.NotFound, "not found: %s", err)
+func NotFoundError(message string) error {
+	st := status.New(codes.NotFound, message)
+	return st.Err()
+}
+
+// AlreadyExistsError creates a gRPC AlreadyExists error
+func AlreadyExistsError(message string, field string) error {
+	st := status.New(codes.AlreadyExists, message)
+
+	if field != "" {
+		violation := FieldViolation(field, errors.New(message))
+		badRequest := &errdetails.BadRequest{
+			FieldViolations: []*errdetails.BadRequest_FieldViolation{violation},
+		}
+
+		statusWithDetails, detailErr := st.WithDetails(badRequest)
+		if detailErr != nil {
+			return st.Err()
+		}
+		return statusWithDetails.Err()
+	}
+
+	return st.Err()
+}
+
+// FailedPreconditionError creates a gRPC FailedPrecondition error
+func FailedPreconditionError(message string) error {
+	st := status.New(codes.FailedPrecondition, message)
+	return st.Err()
 }
 
 // FormatValidationError formats a validation error with the standard prefix
@@ -140,4 +187,55 @@ func IsInternalError(err error) bool {
 	}
 	s, ok := status.FromError(err)
 	return ok && s.Code() == codes.Internal
+}
+
+// IsInvalidArgumentError checks if an error is an invalid argument error
+func IsInvalidArgumentError(err error) bool {
+	if err == nil {
+		return false
+	}
+	s, ok := status.FromError(err)
+	return ok && s.Code() == codes.InvalidArgument
+}
+
+// ExtractFieldViolations extracts field violations from an error
+func ExtractFieldViolations(err error) []*errdetails.BadRequest_FieldViolation {
+	if err == nil {
+		return nil
+	}
+
+	st, ok := status.FromError(err)
+	if !ok {
+		return nil
+	}
+
+	for _, detail := range st.Details() {
+		if badRequest, ok := detail.(*errdetails.BadRequest); ok {
+			return badRequest.GetFieldViolations()
+		}
+	}
+
+	return nil
+}
+
+// HasFieldViolation checks if an error has a field violation for a specific field
+func HasFieldViolation(err error, field string) bool {
+	violations := ExtractFieldViolations(err)
+	for _, v := range violations {
+		if v.GetField() == field {
+			return true
+		}
+	}
+	return false
+}
+
+// GetFieldViolationMessage gets the message for a specific field violation
+func GetFieldViolationMessage(err error, field string) string {
+	violations := ExtractFieldViolations(err)
+	for _, v := range violations {
+		if v.GetField() == field {
+			return v.GetDescription()
+		}
+	}
+	return ""
 }

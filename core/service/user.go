@@ -17,10 +17,8 @@ import (
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -45,7 +43,7 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 
 	dbUser.Password, err = util.HashPassword(pbUser.GetPassword())
 	if err != nil {
-		return nil, pbErrors.NewInternalError("failed to hash password", err)
+		return nil, pbErrors.InternalError("failed to hash password", err)
 	}
 
 	err = dbUser.Insert(ctx, server.config.DB, boil.Infer())
@@ -56,7 +54,7 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 			}
 			return nil, pbErrors.InvalidArgumentError(violations)
 		}
-		return nil, pbErrors.NewInternalError("failed to insert user", err)
+		return nil, pbErrors.InternalError("failed to insert user", err)
 	}
 
 	accountActivation := &models.AccountActivation{
@@ -65,11 +63,11 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 		ActivationToken: util.RandomInt(1000000, 9999999),
 	}
 	if err = accountActivation.Insert(ctx, server.config.DB, boil.Infer()); err != nil {
-		return nil, pbErrors.NewInternalError("failed to insert account validation", err)
+		return nil, pbErrors.InternalError("failed to insert account validation", err)
 	}
 
-	if err := server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
-		return nil, pbErrors.NewInternalError("failed to send email", err)
+	if err = server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
+		return nil, pbErrors.InternalError("failed to send email", err)
 	}
 
 	pbUser = pbx.DbUserToProto(dbUser)
@@ -85,16 +83,17 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, fmt.Errorf("%s: %s: %w", pbErrors.ErrValidationPrefix, pbErrors.ErrInvalidResourceName, err)
 	}
 
-	if userId != middleware.FromAdminContext(ctx).UserPayload.UserID {
-		return nil, status.Errorf(codes.PermissionDenied, "cannot update other user's info")
+	userIdFromToken := middleware.FromAdminContext(ctx).UserPayload.UserID
+	if userId != userIdFromToken {
+		return nil, pbErrors.PermissionDeniedError("cannot update other user's info")
 	}
 
 	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NewNotFoundError(pbErrors.ErrUserNotFound)
+			return nil, pbErrors.NotFoundError("user not found")
 		}
-		return nil, pbErrors.NewInternalError("failed to get user", err)
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	updateMask := req.GetUpdateMask()
@@ -105,7 +104,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 				if pbUser.GetPassword() != "" {
 					hashedPassword, err := util.HashPassword(pbUser.GetPassword())
 					if err != nil {
-						return nil, pbErrors.NewInternalError("failed to hash password", err)
+						return nil, pbErrors.InternalError("failed to hash password", err)
 					}
 					user.Password = hashedPassword
 				}
@@ -124,7 +123,9 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 					user.Email = pbUser.GetEmail()
 				}
 			default:
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid field mask: %s", path)
+				return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+					pbErrors.FieldViolation("updateMask", errors.New(fmt.Sprintf("invalid field mask: %s", path))),
+				})
 			}
 		}
 	}
@@ -136,7 +137,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 			}
 			return nil, pbErrors.InvalidArgumentError(violations)
 		}
-		return nil, pbErrors.NewInternalError("failed to update user", err)
+		return nil, pbErrors.InternalError("failed to update user", err)
 	}
 
 	return pbx.DbUserToProto(user), nil
@@ -154,7 +155,7 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 			}
 			return nil, pbErrors.InvalidArgumentError(violations)
 		}
-		return nil, pbErrors.NewInternalError("failed to get user", err)
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	err = util.CheckPassword(req.GetPassword(), user.Password)
@@ -169,7 +170,10 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 	}
 
 	if !user.Active {
-		return nil, pbErrors.NewValidationError(pbErrors.ErrUserNotActive)
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("user", errors.New(pbErrors.ErrUserNotActive)),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
@@ -177,13 +181,16 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 		server.config.AccessTokenDuration,
 	)
 	if err != nil {
-		return nil, pbErrors.NewInternalError("failed to create access token", err)
+		return nil, pbErrors.InternalError("failed to create access token", err)
 	}
 
 	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(
 		user.ID,
 		server.config.RefreshTokenDuration,
 	)
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to create refresh token", err)
+	}
 
 	metadata := server.extractMetadata(ctx)
 
@@ -198,7 +205,7 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 	}
 	err = session.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to insert session: %s", err)
+		return nil, pbErrors.InternalError("failed to insert session", err)
 	}
 
 	return &pb.CreateSessionResponse{
@@ -214,19 +221,19 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
 	refreshPayload, err := server.tokenMaker.ValidateToken(req.GetRefreshToken())
 	if err != nil {
-		return nil, pbErrors.NewInternalError("failed to verify token", err)
+		return nil, pbErrors.InternalError("failed to verify token", err)
 	}
 
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NewNotFoundError(pbErrors.ErrSessionNotFound)
+			return nil, pbErrors.NotFoundError("session not found")
 		}
-		return nil, pbErrors.NewInternalError("failed to get session", err)
+		return nil, pbErrors.InternalError("failed to get session", err)
 	}
 
 	if session.IsBlocked {
-		return nil, pbErrors.RolePermissionError(errors.New(pbErrors.ErrSessionBlocked))
+		return nil, pbErrors.PermissionDeniedError(pbErrors.ErrSessionBlocked)
 	}
 
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
@@ -234,7 +241,7 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		server.config.AccessTokenDuration,
 	)
 	if err != nil {
-		return nil, pbErrors.NewInternalError("failed to create access token", err)
+		return nil, pbErrors.InternalError("failed to create access token", err)
 	}
 
 	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(
@@ -242,14 +249,14 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		server.config.RefreshTokenDuration,
 	)
 	if err != nil {
-		return nil, pbErrors.NewInternalError("failed to create refresh token", err)
+		return nil, pbErrors.InternalError("failed to create refresh token", err)
 	}
 
 	session.RefreshToken = refreshToken
 	session.ExpiresAt = refreshPayload.ExpireTime
 	_, err = session.Update(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		return nil, pbErrors.NewInternalError("failed to update session", err)
+		return nil, pbErrors.InternalError("failed to update session", err)
 	}
 
 	return &pb.RefreshTokenResponse{
@@ -264,14 +271,14 @@ func (server *Server) DeleteSession(ctx context.Context, req *pb.DeleteSessionRe
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NewNotFoundError(pbErrors.ErrSessionNotFound)
+			return nil, pbErrors.NotFoundError("session not found")
 		}
-		return nil, pbErrors.NewInternalError("failed to get session", err)
+		return nil, pbErrors.InternalError("failed to get session", err)
 	}
 
 	_, err = session.Delete(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.NewInternalError("failed to delete session", err)
+		return nil, pbErrors.InternalError("failed to delete session", err)
 	}
 
 	return &emptypb.Empty{}, nil
@@ -315,23 +322,23 @@ func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRe
 			}
 			return nil, pbErrors.InvalidArgumentError(violations)
 		}
-		return nil, pbErrors.InternalError(fmt.Errorf("failed to get account activation: %w", err))
+		return nil, pbErrors.InternalError("failed to get account activation", err)
 	}
 
 	user, err := models.Users(models.UserWhere.ID.EQ(activation.UserID)).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.InternalError(fmt.Errorf("failed to get user: %w", err))
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	user.Active = true
 	_, err = user.Update(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		return nil, pbErrors.InternalError(fmt.Errorf("failed to update user: %w", err))
+		return nil, pbErrors.InternalError("failed to update user", err)
 	}
 
 	_, err = activation.Delete(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.InternalError(fmt.Errorf("failed to delete account activation: %w", err))
+		return nil, pbErrors.InternalError("failed to delete account activation", err)
 	}
 
 	return &emptypb.Empty{}, nil
@@ -346,7 +353,7 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 			}
 			return nil, pbErrors.InvalidArgumentError(violations)
 		}
-		return nil, pbErrors.NewInternalError("failed to get user", err)
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 	if dbUser.Active {
 		violations := []*errdetails.BadRequest_FieldViolation{
@@ -355,11 +362,14 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if activationsRequestCount, err := models.AccountActivations(
+	activationsRequestCount, err := models.AccountActivations(
 		models.AccountActivationWhere.UserEmail.EQ(req.GetEmail()),
-	).Count(ctx, server.config.DB); err != nil {
-		return nil, pbErrors.NewInternalError("failed to count account activations", err)
-	} else if activationsRequestCount > 5 {
+	).Count(ctx, server.config.DB)
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to count account activations", err)
+	}
+
+	if activationsRequestCount > 5 {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("email", errors.New(pbErrors.ErrTooManyValidationRequests)),
 		}
@@ -372,11 +382,11 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 		ActivationToken: util.RandomInt(1000000, 9999999),
 	}
 	if err = accountActivation.Insert(ctx, server.config.DB, boil.Infer()); err != nil {
-		return nil, pbErrors.NewInternalError("failed to insert account validation", err)
+		return nil, pbErrors.InternalError("failed to insert account validation", err)
 	}
 
-	if err := server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
-		return nil, pbErrors.NewInternalError("failed to send email", err)
+	if err = server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
+		return nil, pbErrors.InternalError("failed to send email", err)
 	}
 
 	return &emptypb.Empty{}, nil
@@ -391,16 +401,17 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if userId != middleware.FromAdminContext(ctx).UserPayload.UserID {
-		return nil, status.Errorf(codes.PermissionDenied, "cannot get other user's info")
+	userIdFromToken := middleware.FromAdminContext(ctx).UserPayload.UserID
+	if userId != userIdFromToken {
+		return nil, pbErrors.PermissionDeniedError("cannot get other user's info")
 	}
 
 	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NewNotFoundError(pbErrors.ErrUserNotFound)
+			return nil, pbErrors.NotFoundError("user not found")
 		}
-		return nil, pbErrors.NewInternalError("failed to get user", err)
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	return pbx.DbUserToProto(user), nil

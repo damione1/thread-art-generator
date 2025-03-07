@@ -72,13 +72,9 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			})
 
 			if err != nil {
-				// Parse the error and format it according to our standards
-				errorMsg := err.Error()
-				if !strings.Contains(errorMsg, "failed to validate request") {
-					// Format as validation error for credential errors
-					errorMsg = "failed to validate request: (email: incorrect email or password; password: incorrect email or password)"
-				}
-				component := templates.Login(errorMsg)
+				// Extract error details directly from the gRPC error
+				errorDetails := client.ExtractErrorDetails(err)
+				component := templates.LoginWithValidation(errorDetails)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -195,14 +191,9 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			})
 
 			if err != nil {
-				// Check if it's already a validation error
-				errorMsg := err.Error()
-				if !strings.Contains(errorMsg, "failed to validate request") {
-					// Format as validation error
-					errorMsg = "failed to validate request: " + errorMsg
-				}
-
-				component := templates.Register(errorMsg)
+				// Extract error details directly from the gRPC error
+				errorDetails := client.ExtractErrorDetails(err)
+				component := templates.RegisterWithValidation(errorDetails)
 				component.Render(r.Context(), w)
 				return
 			}

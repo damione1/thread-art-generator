@@ -83,7 +83,7 @@ func AuthInterceptor(tokenMaker token.Maker) grpc.UnaryServerInterceptor {
 
 		payload, err := authorizeUserFromContext(ctx, tokenMaker)
 		if err != nil {
-			return nil, pbErrors.UnauthenticatedError(err)
+			return nil, pbErrors.UnauthenticatedError("unauthorized: " + err.Error())
 		}
 
 		adminCtx := middleware.NewAdminContext(ctx, payload)

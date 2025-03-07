@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"slices"
 
@@ -10,11 +11,12 @@ import (
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
-	"github.com/friendsofgo/errors"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -31,11 +33,14 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 		models.UserWhere.ID.EQ(userPayload.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to get user"))
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	if user.Role != models.RoleEnumUser {
-		return nil, pbErrors.RolePermissionError(errors.New("Only admin can create art"))
+		return nil, pbErrors.PermissionDeniedError("only admin can create art")
 	}
 
 	artDb := &models.Art{
@@ -45,7 +50,7 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 
 	err = artDb.Insert(ctx, server.config.DB, boil.Infer())
 	if err != nil {
-		return nil, pbErrors.InternalError(errors.Wrap(err, "Failed to insert art"))
+		return nil, pbErrors.InternalError("failed to insert art", err)
 	}
 
 	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
@@ -73,11 +78,14 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetArt().GetName())
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to parse resource name"))
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("art.name", errors.New("invalid resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	if authorId != userPayload.UserID {
-		return nil, pbErrors.RolePermissionError(errors.New("Only the author can update the art"))
+		return nil, pbErrors.PermissionDeniedError("only the author can update the art")
 	}
 
 	// Check if the art exists
@@ -86,7 +94,10 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		models.ArtWhere.AuthorID.EQ(authorId),
 	).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to get art"))
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("art not found")
+		}
+		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
 	updateMask := req.GetUpdateMask()
@@ -174,7 +185,7 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		qm.Offset(int(req.PageToken)),
 	).All(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to get arts"))
+		return nil, pbErrors.InternalError("failed to get arts", err)
 	}
 
 	// Convert the arts to protobuf format
@@ -203,11 +214,14 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to parse resource name"))
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	if authorId != middleware.FromAdminContext(ctx).UserPayload.UserID {
-		return nil, pbErrors.RolePermissionError(errors.New("Only the author can get the art"))
+		return nil, pbErrors.PermissionDeniedError("only the author can get the art")
 	}
 
 	artDb, err := models.Arts(
@@ -215,7 +229,10 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		models.ArtWhere.AuthorID.EQ(authorId),
 	).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to get art"))
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("art not found")
+		}
+		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
 	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
@@ -233,28 +250,33 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to parse resource name"))
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	if authorId != middleware.FromAdminContext(ctx).UserPayload.UserID {
-		return nil, pbErrors.RolePermissionError(errors.New("Only the author can delete the art"))
+		return nil, pbErrors.PermissionDeniedError("only the author can delete the art")
 	}
 
-	// Check if the art exists
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(artId),
 		models.ArtWhere.AuthorID.EQ(authorId),
 	).One(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.NotFoundError(errors.Wrap(err, "Failed to get art"))
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("art not found")
+		}
+		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
 	_, err = artDb.Delete(ctx, server.config.DB)
 	if err != nil {
-		return nil, pbErrors.InternalError(errors.Wrap(err, "Failed to delete art"))
+		return nil, pbErrors.InternalError("failed to delete art", err)
 	}
 
-	//delete the image from the bucket
+	// Delete the image from the bucket
 	if artDb.ImageID.Valid {
 		imageKey := pbx.GetResourceName([]pbx.Resource{
 			{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
