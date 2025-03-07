@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/core/pb"
@@ -44,7 +45,18 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 
 			// Validate the email and password
 			if email == "" || password == "" {
-				component := templates.Login("Email and password are required")
+				errorMsg := ""
+				if email == "" {
+					errorMsg = "failed to validate request: (email: cannot be blank)"
+				}
+				if password == "" {
+					if errorMsg == "" {
+						errorMsg = "failed to validate request: (password: cannot be blank)"
+					} else {
+						errorMsg = "failed to validate request: (email: cannot be blank; password: cannot be blank)"
+					}
+				}
+				component := templates.Login(errorMsg)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -60,7 +72,13 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			})
 
 			if err != nil {
-				component := templates.Login("Invalid email or password")
+				// Parse the error and format it according to our standards
+				errorMsg := err.Error()
+				if !strings.Contains(errorMsg, "failed to validate request") {
+					// Format as validation error for credential errors
+					errorMsg = "failed to validate request: (email: incorrect email or password; password: incorrect email or password)"
+				}
+				component := templates.Login(errorMsg)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -137,14 +155,28 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			confirmPassword := r.FormValue("confirm_password")
 
 			// Validate the form values
-			if name == "" || email == "" || password == "" || confirmPassword == "" {
-				component := templates.Register("All fields are required")
-				component.Render(r.Context(), w)
-				return
+			validationErrors := []string{}
+
+			if name == "" {
+				validationErrors = append(validationErrors, "name: cannot be blank")
+			}
+			if email == "" {
+				validationErrors = append(validationErrors, "email: cannot be blank")
+			}
+			if password == "" {
+				validationErrors = append(validationErrors, "password: cannot be blank")
+			}
+			if confirmPassword == "" {
+				validationErrors = append(validationErrors, "confirm_password: cannot be blank")
 			}
 
 			if password != confirmPassword {
-				component := templates.Register("Passwords do not match")
+				validationErrors = append(validationErrors, "confirm_password: passwords do not match")
+			}
+
+			if len(validationErrors) > 0 {
+				errorMsg := "failed to validate request: (" + strings.Join(validationErrors, "; ") + ")"
+				component := templates.Register(errorMsg)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -163,7 +195,14 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			})
 
 			if err != nil {
-				component := templates.Register("Error creating user: " + err.Error())
+				// Check if it's already a validation error
+				errorMsg := err.Error()
+				if !strings.Contains(errorMsg, "failed to validate request") {
+					// Format as validation error
+					errorMsg = "failed to validate request: " + errorMsg
+				}
+
+				component := templates.Register(errorMsg)
 				component.Render(r.Context(), w)
 				return
 			}
