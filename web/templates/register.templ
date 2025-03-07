@@ -3,10 +3,15 @@ package templates
 import "github.com/Damione1/thread-art-generator/web/client"
 
 templ Register(errorMessage string) {
-	@RegisterWithValidation(client.ParseValidationError(errorMessage))
+	@RegisterWithValidation(client.ParseValidationError(errorMessage), "", "", "")
 }
 
-templ RegisterWithValidation(errors *client.ValidationErrors) {
+// RegisterWithFormValues renders the register page with form values pre-populated
+templ RegisterWithFormValues(errorMessage, firstName, lastName, email string) {
+	@RegisterWithValidation(client.ParseValidationError(errorMessage), firstName, lastName, email)
+}
+
+templ RegisterWithValidation(errors *client.ValidationErrors, firstName, lastName, email string) {
 	@Layout("Register", nil) {
 		<div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
 			<div class="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -17,9 +22,10 @@ templ RegisterWithValidation(errors *client.ValidationErrors) {
 			<div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
 				@FormErrors(errors)
 				<form class="space-y-6" action="/register" method="POST">
-					@InputField("text", "name", "name", "Name", "", "", true, errors)
-					@InputField("email", "email", "email", "Email address", "", "", true, errors)
-					@PasswordField("password", "password", "Password", "", true, errors, false)
+					@InputFieldWithMapping("text", "first_name", "first_name", "First Name", "", firstName, true, errors, "user.first_name")
+					@InputFieldWithMapping("text", "last_name", "last_name", "Last Name", "", lastName, true, errors, "user.last_name")
+					@InputFieldWithMapping("email", "email", "email", "Email address", "", email, true, errors, "user.email")
+					@PasswordFieldWithMapping("password", "password", "Password", "", true, errors, false, "user.password")
 					@PasswordField("confirm_password", "confirm_password", "Confirm Password", "", true, errors, false)
 					@SubmitButton("Register")
 				</form>

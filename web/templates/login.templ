@@ -3,10 +3,15 @@ package templates
 import "github.com/Damione1/thread-art-generator/web/client"
 
 templ Login(errorMessage string) {
-	@LoginWithValidation(client.ParseValidationError(errorMessage))
+	@LoginWithValidation(client.ParseValidationError(errorMessage), "")
 }
 
-templ LoginWithValidation(errors *client.ValidationErrors) {
+// LoginWithFormValues renders the login page with form values pre-populated
+templ LoginWithFormValues(errorMessage, email string) {
+	@LoginWithValidation(client.ParseValidationError(errorMessage), email)
+}
+
+templ LoginWithValidation(errors *client.ValidationErrors, email string) {
 	@Layout("Login", nil) {
 		<div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
 			<div class="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -17,7 +22,7 @@ templ LoginWithValidation(errors *client.ValidationErrors) {
 			<div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
 				@FormErrors(errors)
 				<form class="space-y-6" action="/login" method="POST">
-					@InputField("email", "email", "email", "Email address", "", "", true, errors)
+					@InputFieldWithMapping("email", "email", "email", "Email address", "", email, true, errors, "email")
 					@PasswordField("password", "password", "Password", "", true, errors, true)
 					@SubmitButton("Sign in")
 				</form>

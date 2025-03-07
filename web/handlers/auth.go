@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/core/pb"
@@ -45,18 +45,18 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 
 			// Validate the email and password
 			if email == "" || password == "" {
-				errorMsg := ""
+				validationErrors := &client.ValidationErrors{
+					FieldErrors: make(map[string]string),
+				}
+
 				if email == "" {
-					errorMsg = "failed to validate request: (email: cannot be blank)"
+					validationErrors.FieldErrors["email"] = "cannot be blank"
 				}
 				if password == "" {
-					if errorMsg == "" {
-						errorMsg = "failed to validate request: (password: cannot be blank)"
-					} else {
-						errorMsg = "failed to validate request: (email: cannot be blank; password: cannot be blank)"
-					}
+					validationErrors.FieldErrors["password"] = "cannot be blank"
 				}
-				component := templates.Login(errorMsg)
+
+				component := templates.LoginWithValidation(validationErrors, email)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -74,7 +74,13 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			if err != nil {
 				// Extract error details directly from the gRPC error
 				errorDetails := client.ExtractErrorDetails(err)
-				component := templates.LoginWithValidation(errorDetails)
+
+				// Debug logging to see what's happening
+				fmt.Printf("Error from API: %v\n", err)
+				fmt.Printf("Extracted error details: General=%s, Fields=%v\n",
+					errorDetails.GeneralError, errorDetails.FieldErrors)
+
+				component := templates.LoginWithValidation(errorDetails, email)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -145,34 +151,39 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			}
 
 			// Get the form values
-			name := r.FormValue("name")
+			firstName := r.FormValue("first_name")
+			lastName := r.FormValue("last_name")
 			email := r.FormValue("email")
 			password := r.FormValue("password")
 			confirmPassword := r.FormValue("confirm_password")
 
 			// Validate the form values
-			validationErrors := []string{}
+			validationErrors := &client.ValidationErrors{
+				FieldErrors: make(map[string]string),
+			}
 
-			if name == "" {
-				validationErrors = append(validationErrors, "name: cannot be blank")
+			if firstName == "" {
+				validationErrors.FieldErrors["first_name"] = "cannot be blank"
+			}
+			if lastName == "" {
+				validationErrors.FieldErrors["last_name"] = "cannot be blank"
 			}
 			if email == "" {
-				validationErrors = append(validationErrors, "email: cannot be blank")
+				validationErrors.FieldErrors["email"] = "cannot be blank"
 			}
 			if password == "" {
-				validationErrors = append(validationErrors, "password: cannot be blank")
+				validationErrors.FieldErrors["password"] = "cannot be blank"
 			}
 			if confirmPassword == "" {
-				validationErrors = append(validationErrors, "confirm_password: cannot be blank")
+				validationErrors.FieldErrors["confirm_password"] = "cannot be blank"
 			}
 
 			if password != confirmPassword {
-				validationErrors = append(validationErrors, "confirm_password: passwords do not match")
+				validationErrors.FieldErrors["confirm_password"] = "passwords do not match"
 			}
 
-			if len(validationErrors) > 0 {
-				errorMsg := "failed to validate request: (" + strings.Join(validationErrors, "; ") + ")"
-				component := templates.Register(errorMsg)
+			if len(validationErrors.FieldErrors) > 0 {
+				component := templates.RegisterWithValidation(validationErrors, firstName, lastName, email)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -184,16 +195,37 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			// Try to create the user
 			_, err = grpcClient.GetClient().CreateUser(ctx, &pb.CreateUserRequest{
 				User: &pb.User{
-					FirstName: name,
+					FirstName: firstName,
+					LastName:  lastName,
 					Email:     email,
 					Password:  password,
 				},
 			})
 
 			if err != nil {
+				// Debug logging for raw error
+				fmt.Printf("RegisterHandler - Raw error: %v\n", err)
+				fmt.Printf("RegisterHandler - Error type: %T\n", err)
+
+				// Format error as JSON for debugging
+				jsonError := client.ParseGRPCError(err)
+				fmt.Printf("RegisterHandler - Error as JSON: %s\n", jsonError)
+
 				// Extract error details directly from the gRPC error
 				errorDetails := client.ExtractErrorDetails(err)
-				component := templates.RegisterWithValidation(errorDetails)
+
+				// Debug logging to see what's happening
+				fmt.Printf("Error from API: %v\n", err)
+				fmt.Printf("Extracted error details: General=%s, Fields=%v\n",
+					errorDetails.GeneralError, errorDetails.FieldErrors)
+
+				// Fallback if no error details were extracted
+				if !errorDetails.HasErrors() {
+					fmt.Printf("No error details extracted, using fallback\n")
+					errorDetails.GeneralError = "An error occurred while creating your account. Please try again."
+				}
+
+				component := templates.RegisterWithValidation(errorDetails, firstName, lastName, email)
 				component.Render(r.Context(), w)
 				return
 			}

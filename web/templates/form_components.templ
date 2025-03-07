@@ -4,6 +4,11 @@ import "github.com/Damione1/thread-art-generator/web/client"
 
 // InputField renders a form input field with validation
 templ InputField(fieldType, id, name, label, placeholder, value string, required bool, errors *client.ValidationErrors) {
+	@InputFieldWithMapping(fieldType, id, name, label, placeholder, value, required, errors, "")
+}
+
+// InputFieldWithMapping renders a form input field with validation and error field mapping
+templ InputFieldWithMapping(fieldType, id, name, label, placeholder, value string, required bool, errors *client.ValidationErrors, errorFieldName string) {
 	<div>
 		<label for={ id } class="block text-sm font-medium leading-6 text-white">
 			{ label }
@@ -22,18 +27,25 @@ templ InputField(fieldType, id, name, label, placeholder, value string, required
 					required
 				}
 				class={ "block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6",
-					templ.KV("ring-red-500", errors != nil && errors.HasFieldError(name)),
-					templ.KV("ring-gray-300", errors == nil || !errors.HasFieldError(name)) }
+					templ.KV("ring-red-500", errors != nil && (errors.HasFieldError(name) || (errorFieldName != "" && errors.HasFieldError(errorFieldName)))),
+					templ.KV("ring-gray-300", errors == nil || (!errors.HasFieldError(name) && (errorFieldName == "" || !errors.HasFieldError(errorFieldName)))) }
 			/>
 		</div>
 		if errors != nil && errors.HasFieldError(name) {
 			<p class="mt-1 text-sm text-red-500">{ errors.GetFieldError(name) }</p>
+		} else if errorFieldName != "" && errors != nil && errors.HasFieldError(errorFieldName) {
+			<p class="mt-1 text-sm text-red-500">{ errors.GetFieldError(errorFieldName) }</p>
 		}
 	</div>
 }
 
 // PasswordField renders a password input with validation
 templ PasswordField(id, name, label, value string, required bool, errors *client.ValidationErrors, showForgotPassword bool) {
+	@PasswordFieldWithMapping(id, name, label, value, required, errors, showForgotPassword, "")
+}
+
+// PasswordFieldWithMapping renders a password input with validation and error field mapping
+templ PasswordFieldWithMapping(id, name, label, value string, required bool, errors *client.ValidationErrors, showForgotPassword bool, errorFieldName string) {
 	<div>
 		<div class="flex items-center justify-between">
 			<label for={ id } class="block text-sm font-medium leading-6 text-white">
@@ -60,12 +72,14 @@ templ PasswordField(id, name, label, value string, required bool, errors *client
 					required
 				}
 				class={ "block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6",
-					templ.KV("ring-red-500", errors != nil && errors.HasFieldError(name)),
-					templ.KV("ring-gray-300", errors == nil || !errors.HasFieldError(name)) }
+					templ.KV("ring-red-500", errors != nil && (errors.HasFieldError(name) || (errorFieldName != "" && errors.HasFieldError(errorFieldName)))),
+					templ.KV("ring-gray-300", errors == nil || (!errors.HasFieldError(name) && (errorFieldName == "" || !errors.HasFieldError(errorFieldName)))) }
 			/>
 		</div>
 		if errors != nil && errors.HasFieldError(name) {
 			<p class="mt-1 text-sm text-red-500">{ errors.GetFieldError(name) }</p>
+		} else if errorFieldName != "" && errors != nil && errors.HasFieldError(errorFieldName) {
+			<p class="mt-1 text-sm text-red-500">{ errors.GetFieldError(errorFieldName) }</p>
 		}
 	</div>
 }
