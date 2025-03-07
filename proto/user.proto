@@ -5,6 +5,7 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/field_mask.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "buf/validate/validate.proto";
 
 option go_package = "thread-art-generator/core/proto;pb";
 
@@ -21,18 +22,44 @@ message User {
         (google.api.resource_reference).type = "art.example.com/User"
         ];
     // FirstName is the user's first name.
-    string first_name = 3 [(google.api.field_behavior) = REQUIRED];
+    string first_name = 3 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string = {
+            min_len: 1,
+            pattern: "^[a-zA-Z \\-\\']+$"
+        }
+    ];
     // LastName is the user's last name.
-    string last_name = 4 [(google.api.field_behavior) = REQUIRED];
+    string last_name = 4 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string = {
+            min_len: 1,
+            pattern: "^[a-zA-Z \\-\\']+$"
+        }
+    ];
     // Email is the user's email.
-    string email = 5 [(google.api.field_behavior) = REQUIRED];
+    string email = 5 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string = {
+            min_len: 1,
+            email: true
+        }
+    ];
     // Password is the user's password.
     string password = 6 [
         (google.api.field_behavior) = REQUIRED,
-        (google.api.field_behavior) = INPUT_ONLY
-        ];
+        (google.api.field_behavior) = INPUT_ONLY,
+        (buf.validate.field).string = {
+            min_len: 10,
+            max_len: 255,
+            pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{10,255}$"
+        }
+    ];
     // Avatar is the user's avatar url.
-    string avatar = 7 [(google.api.field_behavior) = REQUIRED];
+    string avatar = 7 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string.min_len = 1
+    ];
 }
 
 message CreateUserRequest {
@@ -44,7 +71,8 @@ message GetUserRequest {
     // Name is the unique identifier for the user.
     string name = 1 [
         (google.api.field_behavior) = REQUIRED,
-        (google.api.resource_reference).type = "art.example.com/User"
+        (google.api.resource_reference).type = "art.example.com/User",
+        (buf.validate.field).string.min_len = 1
         ];
 }
 
@@ -59,7 +87,7 @@ message ListUsersRequest {
     // PageToken is the token to retrieve the next page of results.
     string page_token = 1;
     // PageSize is the number of users to return in a single page.
-    int32 page_size = 2;
+    int32 page_size = 2 [(buf.validate.field).int32 = {gt: 0, lt: 100}];
 }
 
 message ListUsersResponse {
@@ -71,14 +99,27 @@ message ListUsersResponse {
 
 message DeleteUserRequest {
     // Name is the unique identifier for the user.
-    string name = 1 [(google.api.field_behavior) = REQUIRED, (google.api.resource_reference).type = "art.example.com/User"];
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference).type = "art.example.com/User",
+        (buf.validate.field).string.min_len = 1
+    ];
 }
 
 message CreateSessionRequest {
     // Email is the user's email.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
+    string email = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string = {
+            min_len: 1,
+            email: true
+        }
+    ];
     // Password is the user's password.
-    string password = 2 [(google.api.field_behavior) = REQUIRED];
+    string password = 2 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string.min_len = 1
+    ];
 }
 
 message CreateSessionResponse {
@@ -99,7 +140,10 @@ message CreateSessionResponse {
 
 message RefreshTokenRequest {
     // RefreshToken is the refresh token that the user provides.
-    string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
+    string refresh_token = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string.min_len = 1
+    ];
 }
 
 message RefreshTokenResponse {
@@ -115,24 +159,51 @@ message RefreshTokenResponse {
 
 message DeleteSessionRequest {
     // RefreshToken is the refresh token of the session that needs to be deleted.
-    string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
+    string refresh_token = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string.min_len = 1
+    ];
 }
 
 //reset password
 message ResetPasswordRequest {
     // The email of the user who wants to reset the password.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
+    string email = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string = {
+            min_len: 1,
+            email: true
+        }
+    ];
 }
 
 //validate email
 message ValidateEmailRequest {
     // The email of the user who wants to validate the email.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
+    string email = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string = {
+            min_len: 1,
+            email: true
+        }
+    ];
     // The validation number that the user needs to input.
-    int64 validationNumber = 2 [(google.api.field_behavior) = REQUIRED];
+    int64 validationNumber = 2 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).int64 = {
+            gt: 999999,
+            lt: 10000000
+        }
+    ];
 }
 
 message SendValidationEmailRequest {
     // The email of the user who wants to validate the email.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
+    string email = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string = {
+            min_len: 1,
+            email: true
+        }
+    ];
 }

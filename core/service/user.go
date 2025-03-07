@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -18,7 +16,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/util"
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/go-ozzo/ozzo-validation/is"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -42,9 +39,6 @@ const (
 
 func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
 	var err error
-	if err := validateCreateUserRequest(req); err != nil {
-		return nil, pbErrors.FormatValidationError(err)
-	}
 
 	pbUser := req.GetUser()
 	pbUser.Name = "" // name is not allowed to be set by the user
@@ -88,27 +82,7 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	return pbUser, nil
 }
 
-func validateCreateUserRequest(req *pb.CreateUserRequest) error {
-	return validation.ValidateStruct(req,
-		validation.Field(&req.User, validation.Required, validation.By(
-			func(value interface{}) error {
-				user := value.(*pb.User)
-				return validation.ValidateStruct(user,
-					validation.Field(&user.Email, validation.Required, is.Email),
-					validation.Field(&user.Password, validation.By(checkPassword)),
-					validation.Field(&user.Name, validation.Length(0, 0)), // name is not allowed to be set by the user
-					validation.Field(&user.FirstName, validation.Required, validation.Length(1, 255)),
-					validation.Field(&user.LastName, validation.NilOrNotEmpty, validation.Length(1, 255)),
-				)
-			},
-		)),
-	)
-}
-
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
-	if err := validateUpdateUserRequest(req); err != nil {
-		return nil, pbErrors.FormatValidationError(err)
-	}
 	pbUser := req.GetUser()
 
 	userId, err := pbx.GetResourceIDByType(pbUser.GetName(), pbx.RessourceTypeUsers)
@@ -173,50 +147,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	return pbx.DbUserToProto(user), nil
 }
 
-func validateUpdateUserRequest(req *pb.UpdateUserRequest) error {
-	// Ensure the UpdateMask and User fields are provided
-	err := validation.ValidateStruct(req,
-		validation.Field(&req.UpdateMask, validation.Required),
-		validation.Field(&req.User, validation.Required),
-	)
-	if err != nil {
-		return err
-	}
-
-	user := req.GetUser()
-	updateMaskPaths := req.GetUpdateMask().GetPaths()
-
-	// Dynamically build validation rules based on the fields present in the UpdateMask
-	var rules []*validation.FieldRules
-
-	rules = append(rules, validation.Field(&user.Name, validation.Required))
-
-	if slices.Contains(updateMaskPaths, "email") {
-		rules = append(rules, validation.Field(&user.Email, validation.Required, is.Email))
-	}
-
-	if slices.Contains(updateMaskPaths, "first_name") {
-		rules = append(rules, validation.Field(&user.FirstName, validation.Required, validation.Length(2, 255)))
-	}
-
-	if slices.Contains(updateMaskPaths, "last_name") {
-		rules = append(rules, validation.Field(&user.LastName, validation.Length(0, 255)))
-	}
-
-	if slices.Contains(updateMaskPaths, "password") {
-		rules = append(rules, validation.Field(&user.Password, validation.Required, validation.By(checkPassword)))
-	}
-
-	// Validate the user struct based on the dynamically built rules
-	return validation.ValidateStruct(user, rules...)
-}
-
 func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	err := validateCreateSessionRequest(req)
-	if err != nil {
-		return nil, pbErrors.FormatValidationError(err)
-	}
-
 	user, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -285,17 +216,10 @@ func (server *Server) CreateSession(ctx context.Context, req *pb.CreateSessionRe
 	}, nil
 }
 
-func validateCreateSessionRequest(req *pb.CreateSessionRequest) error {
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.Password, validation.Required),
-	)
-}
-
 func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
-	err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required))
+	refreshPayload, err := server.tokenMaker.ValidateToken(req.GetRefreshToken())
 	if err != nil {
-		return nil, pbErrors.FormatValidationError(err)
+		return nil, pbErrors.NewInternalError("failed to verify token", err)
 	}
 
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
@@ -342,17 +266,6 @@ func (server *Server) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 }
 
 func (server *Server) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*emptypb.Empty, error) {
-	if err := validation.ValidateStruct(req, validation.Field(&req.RefreshToken, validation.Required)); err != nil {
-		return nil, pbErrors.FormatValidationError(err)
-	}
-
-	if req.GetRefreshToken() == "" {
-		err := validation.Errors{
-			"refresh_token": errors.New("refresh token is required"),
-		}
-		return nil, pbErrors.FormatValidationError(err)
-	}
-
 	session, err := models.Sessions(models.SessionWhere.RefreshToken.EQ(req.GetRefreshToken())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -393,28 +306,7 @@ func (server *Server) extractMetadata(ctx context.Context) *Metadata {
 	return mtdt
 }
 
-func checkPassword(value interface{}) error {
-	password, _ := value.(string)
-	if !regexp.MustCompile(`[a-z]`).MatchString(password) {
-		return fmt.Errorf("password must contain at least one lowercase letter")
-	}
-	if !regexp.MustCompile(`[A-Z]`).MatchString(password) {
-		return fmt.Errorf("password must contain at least one uppercase letter")
-	}
-	if !regexp.MustCompile(`\d`).MatchString(password) {
-		return fmt.Errorf("password must contain at least one digit")
-	}
-	if len(password) < 10 || len(password) > 255 {
-		return fmt.Errorf("password must be between 10 and 255 characters")
-	}
-	return nil
-}
-
 func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRequest) (*emptypb.Empty, error) {
-	if err := validateValidateEmail(req); err != nil {
-		return nil, pbErrors.FormatValidationError(err)
-	}
-
 	activation, err := models.AccountActivations(
 		models.AccountActivationWhere.UserEmail.EQ(req.GetEmail()),
 		models.AccountActivationWhere.ActivationToken.EQ(int(req.GetValidationNumber())),
@@ -450,28 +342,7 @@ func (server *Server) ValidateEmail(ctx context.Context, req *pb.ValidateEmailRe
 	return &emptypb.Empty{}, nil
 }
 
-func validateValidateEmail(req *pb.ValidateEmailRequest) error {
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.ValidationNumber, validation.Required, validation.By(
-			func(value interface{}) error {
-				validationNumber := value.(int64)
-				if validationNumber < 1000000 || validationNumber > 9999999 {
-					return fmt.Errorf("validation number must be 7 digits")
-				}
-				return nil
-			},
-		)),
-	)
-}
-
 func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValidationEmailRequest) (*emptypb.Empty, error) {
-	if err := validation.ValidateStruct(req,
-		validation.Field(&req.Email, validation.Required, is.Email),
-	); err != nil {
-		return nil, pbErrors.FormatValidationError(err)
-	}
-
 	dbUser, err := models.Users(models.UserWhere.Email.EQ(req.GetEmail())).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -517,12 +388,6 @@ func (server *Server) SendValidationEmail(ctx context.Context, req *pb.SendValid
 }
 
 func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
-	if err := validation.ValidateStruct(req,
-		validation.Field(&req.Name, validation.Required),
-	); err != nil {
-		return nil, pbErrors.FormatValidationError(err)
-	}
-
 	userId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s: %w", pbErrors.ErrValidationPrefix, pbErrors.ErrInvalidResourceName, err)

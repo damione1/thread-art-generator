@@ -18,6 +18,7 @@ build-go-proto:
 	protoc --go-grpc_out=core/pb --go_out=core/pb --proto_path=proto --go-grpc_opt=paths=source_relative \
 	--go_opt=paths=source_relative --grpc-gateway_out=core/pb --grpc-gateway_opt=paths=source_relative \
 	--openapiv2_out=doc/swagger --openapiv2_opt=allow_merge=true,merge_file_name=thread-generator \
+	--govalidators_out=paths=source_relative:core/pb \
 	./proto/*.proto
 
 .PHONY: generate-sim-key
