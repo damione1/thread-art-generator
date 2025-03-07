@@ -21,6 +21,12 @@ type RegisterFormData struct {
 	Email     string
 }
 
+// EmailValidationFormData contains data for the email validation form
+type EmailValidationFormData struct {
+	FormData
+	Email string
+}
+
 // NewLoginFormData creates a new LoginFormData instance
 func NewLoginFormData(errors *client.ValidationErrors, email string) LoginFormData {
 	return LoginFormData{
@@ -36,5 +42,13 @@ func NewRegisterFormData(errors *client.ValidationErrors, firstName, lastName, e
 		FirstName: firstName,
 		LastName:  lastName,
 		Email:     email,
+	}
+}
+
+// NewEmailValidationFormData creates a new EmailValidationFormData instance
+func NewEmailValidationFormData(errors *client.ValidationErrors, email string) EmailValidationFormData {
+	return EmailValidationFormData{
+		FormData: FormData{Errors: errors},
+		Email:    email,
 	}
 }

@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "github.com/Damione1/thread-art-generator/web/client"
 
-func Login(errorMessage string) templ.Component {
+func EmailValidation(errorMessage string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -31,7 +31,7 @@ func Login(errorMessage string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LoginWithData(NewLoginFormData(client.ParseValidationError(errorMessage), "")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = EmailValidationWithData(NewEmailValidationFormData(client.ParseValidationError(errorMessage), "")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -39,8 +39,8 @@ func Login(errorMessage string) templ.Component {
 	})
 }
 
-// LoginWithFormValues renders the login page with form values pre-populated
-func LoginWithFormValues(errorMessage, email string) templ.Component {
+// EmailValidationWithFormValues renders the email validation page with form values pre-populated
+func EmailValidationWithFormValues(errorMessage, email string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -61,7 +61,7 @@ func LoginWithFormValues(errorMessage, email string) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LoginWithData(NewLoginFormData(client.ParseValidationError(errorMessage), email)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = EmailValidationWithData(NewEmailValidationFormData(client.ParseValidationError(errorMessage), email)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -69,7 +69,7 @@ func LoginWithFormValues(errorMessage, email string) templ.Component {
 	})
 }
 
-func LoginWithData(data LoginFormData) templ.Component {
+func EmailValidationWithData(data EmailValidationFormData) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -102,7 +102,7 @@ func LoginWithData(data LoginFormData) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"flex min-h-full flex-col justify-center px-6 py-12 lg:px-8\"><div class=\"sm:mx-auto sm:w-full sm:max-w-sm\"><h2 class=\"mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-white\">Sign in to your account</h2></div><div class=\"mt-10 sm:mx-auto sm:w-full sm:max-w-sm\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"flex min-h-full flex-col justify-center px-6 py-12 lg:px-8\"><div class=\"sm:mx-auto sm:w-full sm:max-w-sm\"><h2 class=\"mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-white\">Validate Your Email</h2><p class=\"mt-2 text-center text-sm text-gray-400\">Enter the validation code that was sent to your email</p></div><div class=\"mt-10 sm:mx-auto sm:w-full sm:max-w-sm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -110,7 +110,7 @@ func LoginWithData(data LoginFormData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<form class=\"space-y-6\" action=\"/login\" method=\"POST\" id=\"login-form\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<form class=\"space-y-6\" action=\"/validate-email\" method=\"POST\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -118,21 +118,21 @@ func LoginWithData(data LoginFormData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = PasswordField("password", "password", "Password", "", true, data.Errors, true).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = InputFieldWithMapping("number", "validationNumber", "validationNumber", "Validation Code", "", "", true, data.Errors, "validationNumber").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = SubmitButton("Sign in").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = SubmitButton("Validate Email").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</form><p class=\"mt-10 text-center text-sm text-gray-400\">Not a member? <a href=\"/register\" class=\"font-semibold leading-6 text-indigo-400 hover:text-indigo-300\">Create an account</a></p><p class=\"mt-2 text-center text-sm text-gray-400\">Need to validate your email? <a href=\"/validate-email\" class=\"font-semibold leading-6 text-indigo-400 hover:text-indigo-300\">Enter validation code</a></p></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</form><p class=\"mt-10 text-center text-sm text-gray-400\">Already validated? <a href=\"/login\" class=\"font-semibold leading-6 text-indigo-400 hover:text-indigo-300\">Sign in</a></p></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Login", nil).Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Validate Email", nil).Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

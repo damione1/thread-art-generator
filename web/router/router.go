@@ -32,6 +32,10 @@ func NewRouter(grpcClient *client.GrpcClient) http.Handler {
 		r.Get("/register", handlers.RegisterHandler(grpcClient))
 		r.Post("/register", handlers.RegisterHandler(grpcClient))
 		r.Get("/logout", handlers.LogoutHandler(grpcClient))
+
+		// Email validation routes
+		r.Get("/validate-email", handlers.ValidateEmailHandler(grpcClient))
+		r.Post("/validate-email", handlers.ValidateEmailHandler(grpcClient))
 	})
 
 	// Protected routes

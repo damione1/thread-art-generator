@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/core/pb"
@@ -239,8 +240,115 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 				return
 			}
 
-			// Redirect to the login page
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			// Redirect to the email validation page with the email pre-filled
+			http.Redirect(w, r, "/validate-email?email="+url.QueryEscape(email), http.StatusSeeOther)
+			return
+		}
+
+		// If the request is not a GET or POST, return 405 Method Not Allowed
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+// ValidateEmailHandler handles the email validation page
+func ValidateEmailHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Check if user is already logged in
+		user := middleware.GetUserFromContext(r.Context())
+		if user != nil {
+			// Already logged in, redirect to dashboard
+			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			return
+		}
+
+		// If the request is a GET, render the email validation page
+		if r.Method == http.MethodGet {
+			// Get email from query parameter if present
+			email := r.URL.Query().Get("email")
+
+			if email != "" {
+				component := templates.EmailValidationWithFormValues("", email)
+				component.Render(r.Context(), w)
+			} else {
+				component := templates.EmailValidation("")
+				component.Render(r.Context(), w)
+			}
+			return
+		}
+
+		// If the request is a POST, handle the validation
+		if r.Method == http.MethodPost {
+			// Parse the form
+			err := r.ParseForm()
+			if err != nil {
+				component := templates.EmailValidation("Error parsing form")
+				component.Render(r.Context(), w)
+				return
+			}
+
+			// Get the email and validation number
+			email := r.FormValue("email")
+			validationNumberStr := r.FormValue("validationNumber")
+
+			// Validate the email and validation number
+			validationErrors := &client.ValidationErrors{
+				FieldErrors: make(map[string]string),
+			}
+
+			if email == "" {
+				validationErrors.FieldErrors["email"] = "cannot be blank"
+			}
+			if validationNumberStr == "" {
+				validationErrors.FieldErrors["validationNumber"] = "cannot be blank"
+			}
+
+			if len(validationErrors.FieldErrors) > 0 {
+				// Create form data and render
+				formData := templates.NewEmailValidationFormData(validationErrors, email)
+				component := templates.EmailValidationWithData(formData)
+				component.Render(r.Context(), w)
+				return
+			}
+
+			// Create a context with timeout
+			ctx, cancel := client.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+
+			// Convert validation number to int64
+			var validationNumber int64
+			_, err = fmt.Sscanf(validationNumberStr, "%d", &validationNumber)
+			if err != nil {
+				validationErrors.FieldErrors["validationNumber"] = "must be a valid number"
+				formData := templates.NewEmailValidationFormData(validationErrors, email)
+				component := templates.EmailValidationWithData(formData)
+				component.Render(r.Context(), w)
+				return
+			}
+
+			// Try to validate the email
+			_, err = grpcClient.GetClient().ValidateEmail(ctx, &pb.ValidateEmailRequest{
+				Email:            email,
+				ValidationNumber: validationNumber,
+			})
+
+			if err != nil {
+				// Extract error details directly from the gRPC error
+				errorDetails := client.ExtractErrorDetails(err)
+
+				// Debug logging to see what's happening
+				fmt.Printf("Error from API: %v\n", err)
+				fmt.Printf("Extracted error details: General=%s, Fields=%v\n",
+					errorDetails.GeneralError, errorDetails.FieldErrors)
+
+				// Create form data and render
+				formData := templates.NewEmailValidationFormData(errorDetails, email)
+				component := templates.EmailValidationWithData(formData)
+				component.Render(r.Context(), w)
+				return
+			}
+
+			// Redirect to the login page with success message
+			http.Redirect(w, r, "/login?validated=true", http.StatusSeeOther)
 			return
 		}
 
