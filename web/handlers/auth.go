@@ -25,8 +25,21 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 
 		// If the request is a GET, render the login page
 		if r.Method == http.MethodGet {
-			component := templates.Login("")
-			component.Render(r.Context(), w)
+			// Check for validated=true parameter and get email from cookie
+			email := client.GetEmailFromCookie(r)
+			validated := r.URL.Query().Get("validated") == "true"
+
+			if validated {
+				// Create success message
+				validationErrors := &client.ValidationErrors{
+					SuccessMessage: "Your email has been validated. You can now log in.",
+				}
+				component := templates.LoginWithData(templates.NewLoginFormData(validationErrors, email))
+				component.Render(r.Context(), w)
+			} else {
+				component := templates.LoginWithFormValues("", email)
+				component.Render(r.Context(), w)
+			}
 			return
 		}
 
@@ -43,6 +56,11 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			// Get the email and password
 			email := r.FormValue("email")
 			password := r.FormValue("password")
+
+			// Store email in cookie for future use
+			if email != "" {
+				client.SetEmailCookie(w, email)
+			}
 
 			// Validate the email and password
 			if email == "" || password == "" {
@@ -163,6 +181,11 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			password := r.FormValue("password")
 			confirmPassword := r.FormValue("confirm_password")
 
+			// Store email in cookie for future use
+			if email != "" {
+				client.SetEmailCookie(w, email)
+			}
+
 			// Validate the form values
 			validationErrors := &client.ValidationErrors{
 				FieldErrors: make(map[string]string),
@@ -263,16 +286,19 @@ func ValidateEmailHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 
 		// If the request is a GET, render the email validation page
 		if r.Method == http.MethodGet {
-			// Get email from query parameter if present
+			// Check for email in URL parameter first
 			email := r.URL.Query().Get("email")
 
-			if email != "" {
-				component := templates.EmailValidationWithFormValues("", email)
-				component.Render(r.Context(), w)
+			// If no email in URL, try to get from cookie
+			if email == "" {
+				email = client.GetEmailFromCookie(r)
 			} else {
-				component := templates.EmailValidation("")
-				component.Render(r.Context(), w)
+				// If email is in URL, save it to cookie
+				client.SetEmailCookie(w, email)
 			}
+
+			component := templates.EmailValidationWithFormValues("", email)
+			component.Render(r.Context(), w)
 			return
 		}
 
@@ -289,6 +315,11 @@ func ValidateEmailHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			// Get the email and validation number
 			email := r.FormValue("email")
 			validationNumberStr := r.FormValue("validationNumber")
+
+			// Store email in cookie for future use
+			if email != "" {
+				client.SetEmailCookie(w, email)
+			}
 
 			// Validate the email and validation number
 			validationErrors := &client.ValidationErrors{
@@ -354,5 +385,77 @@ func ValidateEmailHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 
 		// If the request is not a GET or POST, return 405 Method Not Allowed
 		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+// ResendValidationHandler handles the resend validation code request
+func ResendValidationHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// If the request is not a POST, return 405 Method Not Allowed
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Parse the form
+		err := r.ParseForm()
+		if err != nil {
+			http.Redirect(w, r, "/validate-email", http.StatusSeeOther)
+			return
+		}
+
+		// Get the email
+		email := r.FormValue("email")
+		if email == "" {
+			http.Redirect(w, r, "/validate-email", http.StatusSeeOther)
+			return
+		}
+
+		// Store email in cookie
+		client.SetEmailCookie(w, email)
+
+		// Create a context with timeout
+		ctx, cancel := client.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		// Send validation email
+		_, err = grpcClient.GetClient().SendValidationEmail(ctx, &pb.SendValidationEmailRequest{
+			Email: email,
+		})
+
+		if err != nil {
+			// Extract error details
+			errorDetails := client.ExtractErrorDetails(err)
+
+			// Debug logging
+			fmt.Printf("Error from API: %v\n", err)
+			fmt.Printf("Extracted error details: General=%s, Fields=%v\n",
+				errorDetails.GeneralError, errorDetails.FieldErrors)
+
+			// Create validation errors and add to URL as query parameter
+			validationErrors := &client.ValidationErrors{
+				GeneralError: "Failed to send validation email. Please try again.",
+			}
+
+			if errorDetails.HasErrors() {
+				validationErrors = errorDetails
+			}
+
+			// Create form data and render
+			formData := templates.NewEmailValidationFormData(validationErrors, email)
+			component := templates.EmailValidationWithData(formData)
+			component.Render(r.Context(), w)
+			return
+		}
+
+		// Create success message
+		validationErrors := &client.ValidationErrors{
+			SuccessMessage: "Validation code has been sent to your email.",
+		}
+
+		// Create form data and render
+		formData := templates.NewEmailValidationFormData(validationErrors, email)
+		component := templates.EmailValidationWithData(formData)
+		component.Render(r.Context(), w)
 	}
 }

@@ -19,8 +19,9 @@ type FieldError struct {
 
 // ValidationErrors holds all validation errors
 type ValidationErrors struct {
-	FieldErrors  map[string]string
-	GeneralError string
+	FieldErrors    map[string]string
+	GeneralError   string
+	SuccessMessage string
 }
 
 // HasErrors returns true if there are any errors

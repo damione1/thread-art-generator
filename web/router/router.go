@@ -36,6 +36,7 @@ func NewRouter(grpcClient *client.GrpcClient) http.Handler {
 		// Email validation routes
 		r.Get("/validate-email", handlers.ValidateEmailHandler(grpcClient))
 		r.Post("/validate-email", handlers.ValidateEmailHandler(grpcClient))
+		r.Post("/resend-validation", handlers.ResendValidationHandler(grpcClient))
 	})
 
 	// Protected routes

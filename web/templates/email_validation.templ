@@ -29,6 +29,16 @@ templ EmailValidationWithData(data EmailValidationFormData) {
 					@InputFieldWithMapping("number", "validationNumber", "validationNumber", "Validation Code", "", "", true, data.Errors, "validationNumber")
 					@SubmitButton("Validate Email")
 				</form>
+				if data.Email != "" {
+					<div class="mt-4 text-center">
+						<form action="/resend-validation" method="POST">
+							<input type="hidden" name="email" value={ data.Email }/>
+							<button type="submit" class="font-semibold text-sm text-indigo-400 hover:text-indigo-300">
+								Resend validation code
+							</button>
+						</form>
+					</div>
+				}
 				<p class="mt-10 text-center text-sm text-gray-400">
 					Already validated?
 					<a href="/login" class="font-semibold leading-6 text-indigo-400 hover:text-indigo-300">
