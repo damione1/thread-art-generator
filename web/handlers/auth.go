@@ -45,6 +45,7 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 
 			// Validate the email and password
 			if email == "" || password == "" {
+				// Create validation errors
 				validationErrors := &client.ValidationErrors{
 					FieldErrors: make(map[string]string),
 				}
@@ -56,7 +57,9 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 					validationErrors.FieldErrors["password"] = "cannot be blank"
 				}
 
-				component := templates.LoginWithValidation(validationErrors, email)
+				// Create form data and render
+				formData := templates.NewLoginFormData(validationErrors, email)
+				component := templates.LoginWithData(formData)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -80,7 +83,9 @@ func LoginHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 				fmt.Printf("Extracted error details: General=%s, Fields=%v\n",
 					errorDetails.GeneralError, errorDetails.FieldErrors)
 
-				component := templates.LoginWithValidation(errorDetails, email)
+				// Create form data and render
+				formData := templates.NewLoginFormData(errorDetails, email)
+				component := templates.LoginWithData(formData)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -183,7 +188,9 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 			}
 
 			if len(validationErrors.FieldErrors) > 0 {
-				component := templates.RegisterWithValidation(validationErrors, firstName, lastName, email)
+				// Create form data and render
+				formData := templates.NewRegisterFormData(validationErrors, firstName, lastName, email)
+				component := templates.RegisterWithData(formData)
 				component.Render(r.Context(), w)
 				return
 			}
@@ -225,7 +232,9 @@ func RegisterHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 					errorDetails.GeneralError = "An error occurred while creating your account. Please try again."
 				}
 
-				component := templates.RegisterWithValidation(errorDetails, firstName, lastName, email)
+				// Create form data and render
+				formData := templates.NewRegisterFormData(errorDetails, firstName, lastName, email)
+				component := templates.RegisterWithData(formData)
 				component.Render(r.Context(), w)
 				return
 			}
