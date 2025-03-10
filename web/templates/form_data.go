@@ -1,6 +1,9 @@
 package templates
 
-import "github.com/Damione1/thread-art-generator/web/client"
+import (
+	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/web/client"
+)
 
 // FormData contains common form data shared across different forms
 type FormData struct {
@@ -27,6 +30,12 @@ type EmailValidationFormData struct {
 	Email string
 }
 
+// ProfileFormData contains data for the profile form
+type ProfileFormData struct {
+	FormData
+	User *pb.User
+}
+
 // NewLoginFormData creates a new LoginFormData instance
 func NewLoginFormData(errors *client.ValidationErrors, email string) LoginFormData {
 	return LoginFormData{
@@ -50,5 +59,13 @@ func NewEmailValidationFormData(errors *client.ValidationErrors, email string) E
 	return EmailValidationFormData{
 		FormData: FormData{Errors: errors},
 		Email:    email,
+	}
+}
+
+// NewProfileFormData creates a new ProfileFormData instance
+func NewProfileFormData(errors *client.ValidationErrors, user *pb.User) ProfileFormData {
+	return ProfileFormData{
+		FormData: FormData{Errors: errors},
+		User:     user,
 	}
 }

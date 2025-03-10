@@ -45,6 +45,10 @@ func NewRouter(grpcClient *client.GrpcClient) http.Handler {
 
 		// Dashboard
 		r.Get("/dashboard", handlers.DashboardHandler(grpcClient))
+
+		// Profile
+		r.Get("/profile", handlers.ProfileHandler(grpcClient))
+		r.Post("/profile", handlers.ProfileHandler(grpcClient))
 	})
 
 	// Static files
