@@ -51,6 +51,13 @@ func NewRouter(grpcClient *client.GrpcClient) http.Handler {
 		r.Post("/profile", handlers.ProfileHandler(grpcClient))
 	})
 
+	// API routes
+	r.Group(func(r chi.Router) {
+		// Token API
+		r.Post("/api/auth/tokens", handlers.TokensForClientHandler(grpcClient))
+		r.Post("/api/auth/refresh", handlers.RefreshTokenAPIHandler(grpcClient))
+	})
+
 	// Static files
 	fileServer := http.FileServer(http.Dir("./static"))
 	r.Handle("/static/*", http.StripPrefix("/static", fileServer))

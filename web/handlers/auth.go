@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -457,5 +458,95 @@ func ResendValidationHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
 		formData := templates.NewEmailValidationFormData(validationErrors, email)
 		component := templates.EmailValidationWithData(formData)
 		component.Render(r.Context(), w)
+	}
+}
+
+// TokensForClientHandler returns tokens in JSON format for the client
+func TokensForClientHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only accept POST requests
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Must be authenticated
+		user := middleware.GetUserFromContext(r.Context())
+		if user == nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// Get access and refresh tokens from cookies
+		accessToken := client.GetSessionToken(r)
+		refreshToken := client.GetRefreshToken(r)
+
+		// If tokens are missing, redirect to login
+		if accessToken == "" || refreshToken == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// Set content type to JSON
+		w.Header().Set("Content-Type", "application/json")
+
+		// Return tokens and expiry time in JSON format
+		// We don't have exact expiry, so set to 1 hour from now
+		expiryTime := time.Now().Add(1 * time.Hour).Unix()
+
+		// Write JSON response
+		fmt.Fprintf(w, `{"access_token":"%s","refresh_token":"%s","access_token_expire_time":%d}`,
+			accessToken, refreshToken, expiryTime)
+	}
+}
+
+// RefreshTokenAPIHandler handles token refresh for API clients
+func RefreshTokenAPIHandler(grpcClient *client.GrpcClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only accept POST requests
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Parse the request body
+		var requestBody struct {
+			RefreshToken string `json:"refresh_token"`
+		}
+
+		// Try to decode the request body into the struct
+		err := json.NewDecoder(r.Body).Decode(&requestBody)
+		if err != nil || requestBody.RefreshToken == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Create a context with timeout
+		ctx, cancel := client.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		// Try to refresh the token
+		refreshResp, err := grpcClient.RefreshToken(ctx, requestBody.RefreshToken)
+		if err != nil {
+			// Extract error details from the gRPC error
+			errorDetails := client.ExtractErrorDetails(err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(errorDetails)
+			return
+		}
+
+		// Set content type to JSON
+		w.Header().Set("Content-Type", "application/json")
+
+		// Return tokens and expiry time in JSON format
+		response := map[string]interface{}{
+			"access_token":             refreshResp.AccessToken,
+			"refresh_token":            refreshResp.RefreshToken,
+			"access_token_expire_time": refreshResp.AccessTokenExpireTime.Seconds,
+		}
+
+		// Write JSON response
+		json.NewEncoder(w).Encode(response)
 	}
 }

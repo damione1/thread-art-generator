@@ -40,5 +40,43 @@ templ LoginWithData(data LoginFormData) {
 				</p>
 			</div>
 		</div>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const form = document.getElementById('login-form');
+
+				form.addEventListener('submit', function(e) {
+					// Let the form submit normally, but after redirect, fetch tokens
+					if (window.authUtils) {
+						// We'll do this async after the form processes
+						setTimeout(function() {
+							// After login, the cookies are set, so we can fetch them via API
+							fetch('/api/auth/tokens', {
+								method: 'POST',
+								credentials: 'include' // Include cookies
+							})
+							.then(response => {
+								if (response.ok) {
+									return response.json();
+								}
+							})
+							.then(data => {
+								if (data) {
+									// Store tokens in localStorage
+									window.authUtils.storeTokens(
+										data.access_token,
+										data.refresh_token,
+										data.access_token_expire_time
+									);
+									console.log('Auth tokens stored in localStorage');
+								}
+							})
+							.catch(error => {
+								console.error('Error fetching auth tokens:', error);
+							});
+						}, 1000); // Small delay to ensure cookies are set
+					}
+				});
+			});
+		</script>
 	}
 }

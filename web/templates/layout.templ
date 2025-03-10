@@ -29,7 +29,10 @@ templ Layout(title string, user *pb.User) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ title } - Thread Art Generator</title>
+			<title>{ title } | Thread Art Generator</title>
+			<link rel="stylesheet" href="/static/css/output.css"/>
+			<script src="/static/js/auth.js"></script>
+			<script src="/static/js/session-sync.js"></script>
 			<script src="https://cdn.tailwindcss.com"></script>
 			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
 			<script>

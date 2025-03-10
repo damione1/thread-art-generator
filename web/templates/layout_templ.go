@@ -65,7 +65,7 @@ func Layout(title string, user *pb.User) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - Thread Art Generator</title><script src=\"https://cdn.tailwindcss.com\"></script><script src=\"https://unpkg.com/htmx.org@1.9.10\"></script><script>\n\t\t\t\t// Toggle dropdown\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\t\t\tconst userMenuButton = document.getElementById('user-menu-button');\n\t\t\t\t\tconst userMenu = document.getElementById('user-menu');\n\t\t\t\t\tif (userMenuButton) {\n\t\t\t\t\t\tuserMenuButton.addEventListener('click', function() {\n\t\t\t\t\t\t\tuserMenu.classList.toggle('hidden');\n\t\t\t\t\t\t});\n\t\t\t\t\t}\n\n\t\t\t\t\t// Close dropdown when clicking outside\n\t\t\t\t\tdocument.addEventListener('click', function(event) {\n\t\t\t\t\t\tif (userMenuButton && userMenu && !userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {\n\t\t\t\t\t\t\tuserMenu.classList.add('hidden');\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\t// Toggle mobile menu\n\t\t\t\t\tconst mobileMenuButton = document.getElementById('mobile-menu-button');\n\t\t\t\t\tconst mobileMenu = document.getElementById('mobile-menu');\n\t\t\t\t\tif (mobileMenuButton) {\n\t\t\t\t\t\tmobileMenuButton.addEventListener('click', function() {\n\t\t\t\t\t\t\tmobileMenu.classList.toggle('hidden');\n\t\t\t\t\t\t});\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t</script></head><body class=\"h-full\"><div class=\"min-h-full\"><nav class=\"bg-gray-800\"><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><div class=\"flex h-16 items-center justify-between\"><div class=\"flex items-center\"><div class=\"flex-shrink-0\"><a href=\"/\" class=\"text-white font-bold text-xl\">Thread Art Generator</a></div><div class=\"hidden md:block\"><div class=\"ml-10 flex items-baseline space-x-4\"><a href=\"/\" class=\"text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium\">Home</a> <a href=\"/dashboard\" class=\"text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium\">Dashboard</a></div></div></div><div class=\"hidden md:block\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " | Thread Art Generator</title><link rel=\"stylesheet\" href=\"/static/css/output.css\"><script src=\"/static/js/auth.js\"></script><script src=\"/static/js/session-sync.js\"></script><script src=\"https://cdn.tailwindcss.com\"></script><script src=\"https://unpkg.com/htmx.org@1.9.10\"></script><script>\n\t\t\t\t// Toggle dropdown\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\t\t\tconst userMenuButton = document.getElementById('user-menu-button');\n\t\t\t\t\tconst userMenu = document.getElementById('user-menu');\n\t\t\t\t\tif (userMenuButton) {\n\t\t\t\t\t\tuserMenuButton.addEventListener('click', function() {\n\t\t\t\t\t\t\tuserMenu.classList.toggle('hidden');\n\t\t\t\t\t\t});\n\t\t\t\t\t}\n\n\t\t\t\t\t// Close dropdown when clicking outside\n\t\t\t\t\tdocument.addEventListener('click', function(event) {\n\t\t\t\t\t\tif (userMenuButton && userMenu && !userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {\n\t\t\t\t\t\t\tuserMenu.classList.add('hidden');\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\t// Toggle mobile menu\n\t\t\t\t\tconst mobileMenuButton = document.getElementById('mobile-menu-button');\n\t\t\t\t\tconst mobileMenu = document.getElementById('mobile-menu');\n\t\t\t\t\tif (mobileMenuButton) {\n\t\t\t\t\t\tmobileMenuButton.addEventListener('click', function() {\n\t\t\t\t\t\t\tmobileMenu.classList.toggle('hidden');\n\t\t\t\t\t\t});\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t</script></head><body class=\"h-full\"><div class=\"min-h-full\"><nav class=\"bg-gray-800\"><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><div class=\"flex h-16 items-center justify-between\"><div class=\"flex items-center\"><div class=\"flex-shrink-0\"><a href=\"/\" class=\"text-white font-bold text-xl\">Thread Art Generator</a></div><div class=\"hidden md:block\"><div class=\"ml-10 flex items-baseline space-x-4\"><a href=\"/\" class=\"text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium\">Home</a> <a href=\"/dashboard\" class=\"text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium\">Dashboard</a></div></div></div><div class=\"hidden md:block\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -82,7 +82,7 @@ func Layout(title string, user *pb.User) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(getFullName(user))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 91, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 94, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -95,7 +95,7 @@ func Layout(title string, user *pb.User) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(getGravatarURL(user.Email))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 95, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 98, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -123,7 +123,7 @@ func Layout(title string, user *pb.User) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(getGravatarURL(user.Email))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 134, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 137, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -136,7 +136,7 @@ func Layout(title string, user *pb.User) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(getFullName(user))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 137, Col: 89}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 140, Col: 89}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -149,7 +149,7 @@ func Layout(title string, user *pb.User) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(user.Email)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 138, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 141, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
