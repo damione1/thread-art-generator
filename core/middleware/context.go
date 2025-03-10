@@ -6,6 +6,9 @@ import (
 	"github.com/Damione1/thread-art-generator/core/token"
 )
 
+// AuthKey is the key used to store the Auth0 user ID in the context
+const AuthKey = "auth0_user_id"
+
 type AdminContext struct {
 	context.Context
 	UserPayload *token.Payload

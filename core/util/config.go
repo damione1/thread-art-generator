@@ -8,6 +8,14 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Auth0Config stores Auth0-specific configuration
+type Auth0Config struct {
+	Domain       string `mapstructure:"AUTH0_DOMAIN"`
+	Audience     string `mapstructure:"AUTH0_AUDIENCE"`
+	ClientID     string `mapstructure:"AUTH0_CLIENT_ID"`
+	ClientSecret string `mapstructure:"AUTH0_CLIENT_SECRET"`
+}
+
 // Config stores all configuration of the application.
 // The values are read by viper from a config file or environment variable.
 type Config struct {
@@ -28,6 +36,7 @@ type Config struct {
 	GCSBucketName        string        `mapstructure:"GCS_BUCKET_NAME"`
 	SendInBlueAPIKey     string        `mapstructure:"SENDINBLUE_API_KEY"`
 	FrontendUrl          string        `mapstructure:"FRONTEND_URL"`
+	Auth0                Auth0Config   `mapstructure:",squash"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -51,6 +60,10 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("GCS_BUCKET_NAME")
 	viper.BindEnv("SENDINBLUE_API_KEY")
 	viper.BindEnv("FRONTEND_URL")
+	viper.BindEnv("AUTH0_DOMAIN")
+	viper.BindEnv("AUTH0_AUDIENCE")
+	viper.BindEnv("AUTH0_CLIENT_ID")
+	viper.BindEnv("AUTH0_CLIENT_SECRET")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)

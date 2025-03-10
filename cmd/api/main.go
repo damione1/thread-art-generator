@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/cache"
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/interceptors"
@@ -37,7 +38,6 @@ func main() {
 	go runHttpServer(config)
 	go cache.CleanExpiredCacheEntries()
 	runGrpcServer(config)
-
 }
 
 func runGrpcServer(config util.Config) {
@@ -49,10 +49,16 @@ func runGrpcServer(config util.Config) {
 	defer server.Close()
 	log.Print("🍩 gRPC server created")
 
-	// Pass the tokenMaker to the AuthInterceptor
+	// Initialize authenticator
+	authenticator, err := createAuthenticator(config)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize authenticator")
+	}
+
+	// Pass the authenticator to the interceptor
 	chainedInterceptors := grpc.ChainUnaryInterceptor(
 		interceptors.GrpcLogger,
-		interceptors.AuthInterceptor(server.GetTokenMaker()),
+		interceptors.AuthInterceptor(authenticator),
 	)
 	grpcServer := grpc.NewServer(chainedInterceptors)
 	pb.RegisterArtGeneratorServiceServer(grpcServer, server)
@@ -113,7 +119,13 @@ func runHttpServer(config util.Config) {
 		log.Fatal().Err(err).Msg("Failed to listen.")
 	}
 
-	handler := interceptors.HttpAuthInterceptor(server.GetTokenMaker(), interceptors.HttpLogger(mux))
+	// Initialize authenticator
+	authenticator, err := createAuthenticator(config)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize authenticator")
+	}
+
+	handler := interceptors.HttpAuthInterceptor(authenticator, interceptors.HttpLogger(mux))
 
 	// Set CORS headers
 	corsHandler := func(h http.Handler) http.Handler {
@@ -157,4 +169,15 @@ func runHttpServer(config util.Config) {
 		log.Fatal().Err(err).Msg("🍦 HTTP server graceful shutdown failed.")
 	}
 	log.Print("🍦 HTTP server gracefully stopped.")
+}
+
+// createAuthenticator creates the appropriate authenticator based on config
+func createAuthenticator(config util.Config) (auth.Authenticator, error) {
+	// For now, we're using Auth0, but this could be changed based on configuration
+	auth0Config := auth.Auth0Configuration{
+		Domain:   config.Auth0.Domain,
+		Audience: config.Auth0.Audience,
+	}
+
+	return auth.NewAuth0Authenticator(auth0Config)
 }

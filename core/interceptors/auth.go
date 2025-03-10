@@ -3,17 +3,16 @@ package interceptors
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
-	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
+	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/middleware"
-	"github.com/Damione1/thread-art-generator/core/token"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -25,133 +24,122 @@ var whiteListedMethods = []string{
 	"/pb.ArtGeneratorService/GetMediaUploadUrl",
 	"/pb.ArtGeneratorService/GetMediaDownloadUrl",
 	"/pb.ArtGeneratorService/CreateUser",
-	"/pb.ArtGeneratorService/CreateSession",
-	"/pb.ArtGeneratorService/RefreshToken",
-	"/pb.ArtGeneratorService/DeleteSession",
-	"/pb.ArtGeneratorService/ResetPassword",
-	"/pb.ArtGeneratorService/ValidateEmail",
-	"/pb.ArtGeneratorService/SendValidationEmail",
 }
 
 var whiteListedHttpEndpoints = []string{
 	"/swagger",
-	"/v1/tokens:refresh",
-	"/v1/sessions",
-	"/v1/users/<string>:resetPassword",
-	"/v1/users/<string>:validateEmail",
-	"/v1/users/<string>:sendValidationEmail",
 }
 
-// Helper function to authorize user from gRPC metadata
-func authorizeUserFromContext(ctx context.Context, tokenMaker token.Maker) (*token.Payload, error) {
+// Helper function to extract and validate token from gRPC metadata
+func authorizeUserFromContext(ctx context.Context, authenticator auth.Authenticator) (*auth.AuthClaims, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("missing metadata")
+		return nil, status.Errorf(codes.Unauthenticated, "metadata is not provided")
 	}
 
-	return authorizeUserFromHeader(md.Get(authorizationHeader), tokenMaker)
+	values := md.Get(authorizationHeader)
+	if len(values) == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "authorization token is not provided")
+	}
+
+	return authorizeUserFromHeader(values, authenticator)
 }
 
-// Helper function to extract and validate token from HTTP header
-func authorizeUserFromHeader(authHeader []string, tokenMaker token.Maker) (*token.Payload, error) {
+// Helper function to extract and validate token from authorization header
+func authorizeUserFromHeader(authHeader []string, authenticator auth.Authenticator) (*auth.AuthClaims, error) {
 	if len(authHeader) == 0 {
-		return nil, fmt.Errorf("missing authorization header")
+		return nil, status.Errorf(codes.Unauthenticated, "authorization token is not provided")
 	}
 
-	fields := strings.Fields(authHeader[0])
-	if len(fields) < 2 || strings.ToLower(fields[0]) != authorizationBearer {
-		return nil, fmt.Errorf("invalid authorization header format")
+	bearerToken := authHeader[0]
+	fields := strings.Fields(bearerToken)
+	if len(fields) < 2 {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid authorization header format")
 	}
 
-	accessToken := fields[1]
-	return tokenMaker.ValidateToken(accessToken)
+	authType := strings.ToLower(fields[0])
+	if authType != authorizationBearer {
+		return nil, status.Errorf(codes.Unauthenticated, "unsupported authorization type: %s", authType)
+	}
+
+	token := fields[1]
+	claims, err := authenticator.ValidateToken(context.Background(), token)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+	}
+
+	return claims, nil
 }
 
-// gRPC Auth Interceptor
-func AuthInterceptor(tokenMaker token.Maker) grpc.UnaryServerInterceptor {
-	return func(
-		ctx context.Context,
-		req interface{},
-		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler,
-	) (resp interface{}, err error) {
-		// Skip authentication if the method is white-listed
-		log.Debug().Str("method", info.FullMethod).Msg("checking white-listed methods")
+// AuthInterceptor creates a gRPC interceptor for authentication
+func AuthInterceptor(authenticator auth.Authenticator) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		log.Info().Str("method", info.FullMethod).Msg("Intercepting request")
+
 		if isWhiteListedMethod(info.FullMethod) {
 			return handler(ctx, req)
 		}
 
-		payload, err := authorizeUserFromContext(ctx, tokenMaker)
+		claims, err := authorizeUserFromContext(ctx, authenticator)
 		if err != nil {
-			return nil, pbErrors.UnauthenticatedError("unauthorized: " + err.Error())
+			return nil, err
 		}
 
-		adminCtx := middleware.NewAdminContext(ctx, payload)
-		return handler(adminCtx, req)
+		// Add user info to context
+		newCtx := context.WithValue(ctx, middleware.AuthKey, claims.UserID)
+		return handler(newCtx, req)
 	}
 }
 
-// HTTP Auth Interceptor
-func HttpAuthInterceptor(tokenMaker token.Maker, handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		startTime := time.Now()
-		rec := &ResponseRecorder{
-			ResponseWriter: res,
-			StatusCode:     http.StatusOK,
-		}
-
-		// Skip authentication if the endpoint is white-listed
-		log.Debug().Str("path", req.URL.Path).Msg("checking white-listed endpoints")
-		if isWhiteListedEndpoint(req.URL.Path) {
-			handler.ServeHTTP(rec, req)
+// HttpAuthInterceptor creates HTTP middleware for authentication
+func HttpAuthInterceptor(authenticator auth.Authenticator, handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isWhiteListedEndpoint(r.URL.Path) {
+			handler.ServeHTTP(w, r)
 			return
 		}
 
-		authHeader := req.Header.Get(authorizationHeader)
-		payload, err := authorizeUserFromHeader([]string{authHeader}, tokenMaker)
+		authHeader := r.Header.Get(authorizationHeader)
+		if authHeader == "" {
+			respondWithError(w, http.StatusUnauthorized, "authorization token is not provided")
+			return
+		}
+
+		claims, err := authorizeUserFromHeader([]string{authHeader}, authenticator)
 		if err != nil {
-			respondWithError(res, http.StatusUnauthorized, err.Error())
-			log.Error().Err(err).Msg("invalid access token")
+			statusErr, ok := status.FromError(err)
+			if !ok {
+				respondWithError(w, http.StatusInternalServerError, "internal server error")
+				return
+			}
+			respondWithError(w, http.StatusUnauthorized, statusErr.Message())
 			return
 		}
 
-		adminCtx := middleware.NewAdminContext(req.Context(), payload)
-		handler.ServeHTTP(rec, req.WithContext(adminCtx))
-
-		duration := time.Since(startTime)
-		logger := log.Info()
-		if rec.StatusCode != http.StatusOK {
-			logger = log.Error()
-		}
-
-		logger.Str("protocol", "http").
-			Str("method", req.Method).
-			Str("path", req.URL.Path).
-			Int("status_code", rec.StatusCode).
-			Dur("duration", duration).
-			Msg("received an HTTP request")
+		// Add user info to context
+		ctx := context.WithValue(r.Context(), middleware.AuthKey, claims.UserID)
+		handler.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func respondWithError(res http.ResponseWriter, code int, message string) {
+	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(code)
 	json.NewEncoder(res).Encode(map[string]string{"error": message})
 }
 
-// Check if the method is white-listed
 func isWhiteListedMethod(method string) bool {
-	for _, m := range whiteListedMethods {
-		if m == method {
+	for _, whiteListedMethod := range whiteListedMethods {
+		if whiteListedMethod == method {
 			return true
 		}
 	}
 	return false
 }
 
-// Check if the endpoint is white-listed
 func isWhiteListedEndpoint(path string) bool {
-	for _, p := range whiteListedHttpEndpoints {
-		if strings.HasPrefix(path, p) {
+	for _, whiteListedEndpoint := range whiteListedHttpEndpoints {
+		if strings.HasPrefix(path, whiteListedEndpoint) {
 			return true
 		}
 	}
