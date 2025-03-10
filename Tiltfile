@@ -20,6 +20,48 @@ local_resource(
   auto_init=True
 )
 
+# Add NextJS dependencies and build
+local_resource(
+  'nextjs-deps',
+  cmd='cd web && npm install',
+  labels=["scripts"],
+  deps=['web/package.json'],
+  resource_deps=[],
+  auto_init=True
+)
+
+# Run Next.js locally for development
+local_resource(
+  'nextjs-dev',
+  serve_cmd='cd web && npm run dev',
+  labels=["frontend"],
+  resource_deps=['nextjs-deps'],
+  serve_env={
+    'NEXT_PUBLIC_API_URL': 'http://localhost:9090',
+    'NEXT_PUBLIC_AUTH0_DOMAIN': '${AUTH0_DOMAIN}',
+    'NEXT_PUBLIC_AUTH0_CLIENT_ID': '${AUTH0_CLIENT_ID}',
+    'NEXT_PUBLIC_AUTH0_AUDIENCE': '${AUTH0_AUDIENCE}',
+    'NEXT_PUBLIC_FRONTEND_URL': 'http://localhost:3000',
+    'AUTH0_DOMAIN': '${AUTH0_DOMAIN}',
+    'AUTH0_CLIENT_ID': '${AUTH0_CLIENT_ID}',
+    'AUTH0_CLIENT_SECRET': '${AUTH0_CLIENT_SECRET}',
+    'AUTH0_SECRET': '${AUTH0_SECRET}',
+    'APP_BASE_URL': 'http://localhost:3000'
+  },
+  links=[
+    link('http://localhost:3000', 'Next.js Frontend')
+  ],
+  readiness_probe=probe(
+    period_secs=2,
+    http_get=http_get_action(
+      port=3000,
+      path='/',
+      host='localhost'
+    )
+  ),
+  allow_parallel=True
+)
+
 docker_build(
   'api-image',
   '.',
@@ -45,20 +87,6 @@ docker_build(
   live_update=[
     sync('./build/migrations', '/app/build/migrations'),
     sync('./core/db/migrations', '/migrations'),
-  ])
-
-docker_build(
-  'web-image',
-  '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-web',
-  only=[
-    './build/web',
-    './web/static',
-  ],
-  live_update=[
-    sync('./build/web', '/app/build/web'),
-    sync('./web/static', '/app/web/static'),
-    restart_container()
   ])
 
 # Load the docker compose configuration
@@ -88,11 +116,6 @@ resources = {
     'labels': ['services'],
     'resource_deps': ['go-compile', 'db', 'migrations'],
     'trigger_mode': TRIGGER_MODE_AUTO,  # Explicit trigger mode
-  },
-  'web': {
-    'labels': ['services'],
-    'resource_deps': ['go-compile'],  # Removed templ-compiler dependency
-    'trigger_mode': TRIGGER_MODE_AUTO,
   },
   'minio': {'labels': ['database'], 'resource_deps': ['db']},
 }

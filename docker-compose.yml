@@ -25,24 +25,13 @@ services:
       ENVIRONMENT: ${ENVIRONMENT}
       SENDINBLUE_API_KEY: ${SENDINBLUE_API_KEY}
       FRONTEND_URL: ${FRONTEND_URL}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
     depends_on:
       - db
       - migrations
-
-  web:
-    image: web-image
-    ports:
-      - "8080:8080"
-    environment:
-      HTTP_SERVER_PORT: ${WEB_SERVER_PORT}
-      GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
-      FRONTEND_URL: ${FRONTEND_URL}
-      ENVIRONMENT: ${ENVIRONMENT}
-    depends_on:
-      - api
-    volumes:
-      - ./web/templates:/app/web/templates
-      - ./web/static:/app/web/static
 
   db:
     image: postgres:latest
