@@ -7,10 +7,10 @@ import (
 	fmt "fmt"
 	math "math"
 	proto "github.com/golang/protobuf/proto"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 	_ "google.golang.org/protobuf/types/known/fieldmaskpb"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
 	github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-validators"
 )
 
@@ -60,54 +60,5 @@ func (this *ListUsersResponse) Validate() error {
 	return nil
 }
 func (this *DeleteUserRequest) Validate() error {
-	return nil
-}
-func (this *CreateSessionRequest) Validate() error {
-	return nil
-}
-func (this *CreateSessionResponse) Validate() error {
-	if this.User != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.User); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("User", err)
-		}
-	}
-	if this.AccessTokenExpireTime != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.AccessTokenExpireTime); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("AccessTokenExpireTime", err)
-		}
-	}
-	if this.RefreshTokenExpireTime != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.RefreshTokenExpireTime); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("RefreshTokenExpireTime", err)
-		}
-	}
-	return nil
-}
-func (this *RefreshTokenRequest) Validate() error {
-	return nil
-}
-func (this *RefreshTokenResponse) Validate() error {
-	if this.AccessTokenExpireTime != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.AccessTokenExpireTime); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("AccessTokenExpireTime", err)
-		}
-	}
-	if this.RefreshTokenExpireTime != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.RefreshTokenExpireTime); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("RefreshTokenExpireTime", err)
-		}
-	}
-	return nil
-}
-func (this *DeleteSessionRequest) Validate() error {
-	return nil
-}
-func (this *ResetPasswordRequest) Validate() error {
-	return nil
-}
-func (this *ValidateEmailRequest) Validate() error {
-	return nil
-}
-func (this *SendValidationEmailRequest) Validate() error {
 	return nil
 }

@@ -5,11 +5,10 @@ go 1.23
 toolchain go1.23.4
 
 require (
-	github.com/a-h/templ v0.3.833
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.5-20250219170025-d39267d9df8f.1
 	github.com/aws/aws-sdk-go v1.53.7
 	github.com/disintegration/imaging v1.6.2
 	github.com/friendsofgo/errors v0.9.2
-	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-migrate/migrate/v4 v4.17.1
@@ -19,6 +18,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mwitkow/go-proto-validators v0.3.2
 	github.com/o1egl/paseto v1.0.0
+	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.32.0
 	github.com/sendinblue/APIv3-go-library/v2 v2.1.2
 	github.com/spf13/viper v1.18.2
@@ -37,7 +37,6 @@ require (
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.5-20250219170025-d39267d9df8f.1 // indirect
 	cloud.google.com/go/iam v1.1.8 // indirect
 	cloud.google.com/go/storage v1.40.0 // indirect
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da // indirect
@@ -81,7 +80,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
@@ -101,6 +99,7 @@ require (
 	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/tools v0.24.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/api v0.181.0 // indirect
 	google.golang.org/genproto v0.0.0-20240521202816-d264139d666e // indirect

@@ -20,39 +20,27 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ArtGeneratorService_CreateSession_FullMethodName       = "/pb.ArtGeneratorService/CreateSession"
-	ArtGeneratorService_DeleteSession_FullMethodName       = "/pb.ArtGeneratorService/DeleteSession"
-	ArtGeneratorService_RefreshToken_FullMethodName        = "/pb.ArtGeneratorService/RefreshToken"
-	ArtGeneratorService_UpdateUser_FullMethodName          = "/pb.ArtGeneratorService/UpdateUser"
-	ArtGeneratorService_GetUser_FullMethodName             = "/pb.ArtGeneratorService/GetUser"
-	ArtGeneratorService_ListUsers_FullMethodName           = "/pb.ArtGeneratorService/ListUsers"
-	ArtGeneratorService_CreateUser_FullMethodName          = "/pb.ArtGeneratorService/CreateUser"
-	ArtGeneratorService_DeleteUser_FullMethodName          = "/pb.ArtGeneratorService/DeleteUser"
-	ArtGeneratorService_ResetPassword_FullMethodName       = "/pb.ArtGeneratorService/ResetPassword"
-	ArtGeneratorService_ValidateEmail_FullMethodName       = "/pb.ArtGeneratorService/ValidateEmail"
-	ArtGeneratorService_SendValidationEmail_FullMethodName = "/pb.ArtGeneratorService/SendValidationEmail"
-	ArtGeneratorService_CreateArt_FullMethodName           = "/pb.ArtGeneratorService/CreateArt"
-	ArtGeneratorService_GetArt_FullMethodName              = "/pb.ArtGeneratorService/GetArt"
-	ArtGeneratorService_UpdateArt_FullMethodName           = "/pb.ArtGeneratorService/UpdateArt"
-	ArtGeneratorService_ListArts_FullMethodName            = "/pb.ArtGeneratorService/ListArts"
-	ArtGeneratorService_DeleteArt_FullMethodName           = "/pb.ArtGeneratorService/DeleteArt"
+	ArtGeneratorService_UpdateUser_FullMethodName = "/pb.ArtGeneratorService/UpdateUser"
+	ArtGeneratorService_GetUser_FullMethodName    = "/pb.ArtGeneratorService/GetUser"
+	ArtGeneratorService_ListUsers_FullMethodName  = "/pb.ArtGeneratorService/ListUsers"
+	ArtGeneratorService_CreateUser_FullMethodName = "/pb.ArtGeneratorService/CreateUser"
+	ArtGeneratorService_DeleteUser_FullMethodName = "/pb.ArtGeneratorService/DeleteUser"
+	ArtGeneratorService_CreateArt_FullMethodName  = "/pb.ArtGeneratorService/CreateArt"
+	ArtGeneratorService_GetArt_FullMethodName     = "/pb.ArtGeneratorService/GetArt"
+	ArtGeneratorService_UpdateArt_FullMethodName  = "/pb.ArtGeneratorService/UpdateArt"
+	ArtGeneratorService_ListArts_FullMethodName   = "/pb.ArtGeneratorService/ListArts"
+	ArtGeneratorService_DeleteArt_FullMethodName  = "/pb.ArtGeneratorService/DeleteArt"
 )
 
 // ArtGeneratorServiceClient is the client API for ArtGeneratorService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ArtGeneratorServiceClient interface {
-	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error)
-	DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*User, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*User, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error)
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	ValidateEmail(ctx context.Context, in *ValidateEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	SendValidationEmail(ctx context.Context, in *SendValidationEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*Art, error)
 	GetArt(ctx context.Context, in *GetArtRequest, opts ...grpc.CallOption) (*Art, error)
 	UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*Art, error)
@@ -66,36 +54,6 @@ type artGeneratorServiceClient struct {
 
 func NewArtGeneratorServiceClient(cc grpc.ClientConnInterface) ArtGeneratorServiceClient {
 	return &artGeneratorServiceClient{cc}
-}
-
-func (c *artGeneratorServiceClient) CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateSessionResponse)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_CreateSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_DeleteSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RefreshTokenResponse)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_RefreshToken_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *artGeneratorServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*User, error) {
@@ -142,36 +100,6 @@ func (c *artGeneratorServiceClient) DeleteUser(ctx context.Context, in *DeleteUs
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_DeleteUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_ResetPassword_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) ValidateEmail(ctx context.Context, in *ValidateEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_ValidateEmail_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) SendValidationEmail(ctx context.Context, in *SendValidationEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_SendValidationEmail_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -232,17 +160,11 @@ func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, in *DeleteArt
 // All implementations must embed UnimplementedArtGeneratorServiceServer
 // for forward compatibility.
 type ArtGeneratorServiceServer interface {
-	CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error)
-	DeleteSession(context.Context, *DeleteSessionRequest) (*emptypb.Empty, error)
-	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	UpdateUser(context.Context, *UpdateUserRequest) (*User, error)
 	GetUser(context.Context, *GetUserRequest) (*User, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	CreateUser(context.Context, *CreateUserRequest) (*User, error)
 	DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error)
-	ResetPassword(context.Context, *ResetPasswordRequest) (*emptypb.Empty, error)
-	ValidateEmail(context.Context, *ValidateEmailRequest) (*emptypb.Empty, error)
-	SendValidationEmail(context.Context, *SendValidationEmailRequest) (*emptypb.Empty, error)
 	CreateArt(context.Context, *CreateArtRequest) (*Art, error)
 	GetArt(context.Context, *GetArtRequest) (*Art, error)
 	UpdateArt(context.Context, *UpdateArtRequest) (*Art, error)
@@ -258,15 +180,6 @@ type ArtGeneratorServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedArtGeneratorServiceServer struct{}
 
-func (UnimplementedArtGeneratorServiceServer) CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateSession not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) DeleteSession(context.Context, *DeleteSessionRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteSession not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RefreshToken not implemented")
-}
 func (UnimplementedArtGeneratorServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
 }
@@ -281,15 +194,6 @@ func (UnimplementedArtGeneratorServiceServer) CreateUser(context.Context, *Creat
 }
 func (UnimplementedArtGeneratorServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResetPassword not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) ValidateEmail(context.Context, *ValidateEmailRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateEmail not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) SendValidationEmail(context.Context, *SendValidationEmailRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendValidationEmail not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) CreateArt(context.Context, *CreateArtRequest) (*Art, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateArt not implemented")
@@ -325,60 +229,6 @@ func RegisterArtGeneratorServiceServer(s grpc.ServiceRegistrar, srv ArtGenerator
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ArtGeneratorService_ServiceDesc, srv)
-}
-
-func _ArtGeneratorService_CreateSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).CreateSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_CreateSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).CreateSession(ctx, req.(*CreateSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_DeleteSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).DeleteSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_DeleteSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).DeleteSession(ctx, req.(*DeleteSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_RefreshToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RefreshTokenRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).RefreshToken(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_RefreshToken_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).RefreshToken(ctx, req.(*RefreshTokenRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _ArtGeneratorService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -467,60 +317,6 @@ func _ArtGeneratorService_DeleteUser_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ArtGeneratorServiceServer).DeleteUser(ctx, req.(*DeleteUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResetPasswordRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).ResetPassword(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_ResetPassword_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_ValidateEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidateEmailRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).ValidateEmail(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_ValidateEmail_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).ValidateEmail(ctx, req.(*ValidateEmailRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_SendValidationEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendValidationEmailRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).SendValidationEmail(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_SendValidationEmail_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).SendValidationEmail(ctx, req.(*SendValidationEmailRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -623,18 +419,6 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ArtGeneratorServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateSession",
-			Handler:    _ArtGeneratorService_CreateSession_Handler,
-		},
-		{
-			MethodName: "DeleteSession",
-			Handler:    _ArtGeneratorService_DeleteSession_Handler,
-		},
-		{
-			MethodName: "RefreshToken",
-			Handler:    _ArtGeneratorService_RefreshToken_Handler,
-		},
-		{
 			MethodName: "UpdateUser",
 			Handler:    _ArtGeneratorService_UpdateUser_Handler,
 		},
@@ -653,18 +437,6 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteUser",
 			Handler:    _ArtGeneratorService_DeleteUser_Handler,
-		},
-		{
-			MethodName: "ResetPassword",
-			Handler:    _ArtGeneratorService_ResetPassword_Handler,
-		},
-		{
-			MethodName: "ValidateEmail",
-			Handler:    _ArtGeneratorService_ValidateEmail_Handler,
-		},
-		{
-			MethodName: "SendValidationEmail",
-			Handler:    _ArtGeneratorService_SendValidationEmail_Handler,
 		},
 		{
 			MethodName: "CreateArt",

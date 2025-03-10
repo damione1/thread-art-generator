@@ -45,16 +45,7 @@ message User {
             email: true
         }
     ];
-    // Password is the user's password.
-    string password = 6 [
-        (google.api.field_behavior) = REQUIRED,
-        (google.api.field_behavior) = INPUT_ONLY,
-        (buf.validate.field).string = {
-            min_len: 10,
-            max_len: 255,
-            pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{10,255}$"
-        }
-    ];
+
     // Avatar is the user's avatar url.
     string avatar = 7 [
         (google.api.field_behavior) = REQUIRED,
@@ -103,107 +94,5 @@ message DeleteUserRequest {
         (google.api.field_behavior) = REQUIRED,
         (google.api.resource_reference).type = "art.example.com/User",
         (buf.validate.field).string.min_len = 1
-    ];
-}
-
-message CreateSessionRequest {
-    // Email is the user's email.
-    string email = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string = {
-            min_len: 1,
-            email: true
-        }
-    ];
-    // Password is the user's password.
-    string password = 2 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string.min_len = 1
-    ];
-}
-
-message CreateSessionResponse {
-    // User is the user.
-    User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // Session ID
-    string session_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // AccessToken is the access token.
-    string access_token = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshToken is the refresh token.
-    string refresh_token = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // AccessTokenExpiresTime is the access token expiration time.
-    google.protobuf.Timestamp access_token_expire_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshTokenExpiresTime is the refresh token expiration time.
-    google.protobuf.Timestamp refresh_token_expire_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-}
-
-message RefreshTokenRequest {
-    // RefreshToken is the refresh token that the user provides.
-    string refresh_token = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string.min_len = 1
-    ];
-}
-
-message RefreshTokenResponse {
-    // AccessToken is the new access token that the user can use for authentication.
-    string access_token = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshToken is the new refresh token that the user can use to get a new access token when the current one expires.
-    string refresh_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // AccessTokenExpiresTime is the access token expiration time.
-    google.protobuf.Timestamp access_token_expire_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshTokenExpiresTime is the refresh token expiration time.
-    google.protobuf.Timestamp refresh_token_expire_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
-}
-
-message DeleteSessionRequest {
-    // RefreshToken is the refresh token of the session that needs to be deleted.
-    string refresh_token = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string.min_len = 1
-    ];
-}
-
-//reset password
-message ResetPasswordRequest {
-    // The email of the user who wants to reset the password.
-    string email = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string = {
-            min_len: 1,
-            email: true
-        }
-    ];
-}
-
-//validate email
-message ValidateEmailRequest {
-    // The email of the user who wants to validate the email.
-    string email = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string = {
-            min_len: 1,
-            email: true
-        }
-    ];
-    // The validation number that the user needs to input.
-    int64 validationNumber = 2 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).int64 = {
-            gt: 999999,
-            lt: 10000000
-        }
-    ];
-}
-
-message SendValidationEmailRequest {
-    // The email of the user who wants to validate the email.
-    string email = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string = {
-            min_len: 1,
-            email: true
-        }
     ];
 }

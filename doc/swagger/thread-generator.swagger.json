@@ -37,109 +37,6 @@
     "application/json"
   ],
   "paths": {
-    "/v1/sessions": {
-      "post": {
-        "summary": "Log in a user",
-        "description": "Authenticate a user with their email and password and return an access token.",
-        "operationId": "ArtGeneratorService_CreateSession",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbCreateSessionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbCreateSessionRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Authentication"
-        ],
-        "security": []
-      }
-    },
-    "/v1/sessions/{refreshToken}": {
-      "delete": {
-        "summary": "Logout a user",
-        "description": "Delete a user's session, effectively logging them out.",
-        "operationId": "ArtGeneratorService_DeleteSession",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "refreshToken",
-            "description": "RefreshToken is the refresh token of the session that needs to be deleted.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Users"
-        ]
-      }
-    },
-    "/v1/tokens:refresh": {
-      "post": {
-        "summary": "Refresh a user's token",
-        "description": "Refresh a user's authentication token.",
-        "operationId": "ArtGeneratorService_RefreshToken",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbRefreshTokenResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pbRefreshTokenRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Users"
-        ]
-      }
-    },
     "/v1/users": {
       "get": {
         "summary": "List all users",
@@ -209,132 +106,6 @@
               "required": [
                 "user"
               ]
-            }
-          }
-        ],
-        "tags": [
-          "Users"
-        ]
-      }
-    },
-    "/v1/users/{email}:resetPassword": {
-      "post": {
-        "summary": "Reset a user's password",
-        "description": "Send a password reset email to a user's registered email address.",
-        "operationId": "ArtGeneratorService_ResetPassword",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "email",
-            "description": "The email of the user who wants to reset the password.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ArtGeneratorServiceResetPasswordBody"
-            }
-          }
-        ],
-        "tags": [
-          "Users"
-        ]
-      }
-    },
-    "/v1/users/{email}:sendValidationEmail": {
-      "post": {
-        "summary": "Send a validation email",
-        "description": "Ask the system to send a validation email to a user's registered email address.",
-        "operationId": "ArtGeneratorService_SendValidationEmail",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "email",
-            "description": "The email of the user who wants to validate the email.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ArtGeneratorServiceSendValidationEmailBody"
-            }
-          }
-        ],
-        "tags": [
-          "Users"
-        ]
-      }
-    },
-    "/v1/users/{email}:validateEmail": {
-      "post": {
-        "summary": "Validate a user's email",
-        "description": "Enter a validation number received by email to validate a user's email address.",
-        "operationId": "ArtGeneratorService_ValidateEmail",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "email",
-            "description": "The email of the user who wants to validate the email.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ArtGeneratorServiceValidateEmailBody"
             }
           }
         ],
@@ -455,10 +226,6 @@
                   "type": "string",
                   "description": "Email is the user's email."
                 },
-                "password": {
-                  "type": "string",
-                  "description": "Password is the user's password."
-                },
                 "avatar": {
                   "type": "string",
                   "description": "Avatar is the user's avatar url."
@@ -469,7 +236,6 @@
                 "firstName",
                 "lastName",
                 "email",
-                "password",
                 "avatar",
                 "user"
               ]
@@ -719,27 +485,6 @@
     }
   },
   "definitions": {
-    "ArtGeneratorServiceResetPasswordBody": {
-      "type": "object",
-      "title": "reset password"
-    },
-    "ArtGeneratorServiceSendValidationEmailBody": {
-      "type": "object"
-    },
-    "ArtGeneratorServiceValidateEmailBody": {
-      "type": "object",
-      "properties": {
-        "validationNumber": {
-          "type": "string",
-          "format": "int64",
-          "description": "The validation number that the user needs to input."
-        }
-      },
-      "title": "validate email",
-      "required": [
-        "validationNumber"
-      ]
-    },
     "pbArt": {
       "type": "object",
       "properties": {
@@ -778,60 +523,6 @@
         "title"
       ]
     },
-    "pbCreateSessionRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string",
-          "description": "Email is the user's email."
-        },
-        "password": {
-          "type": "string",
-          "description": "Password is the user's password."
-        }
-      },
-      "required": [
-        "email",
-        "password"
-      ]
-    },
-    "pbCreateSessionResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/pbUser",
-          "description": "User is the user.",
-          "readOnly": true
-        },
-        "sessionId": {
-          "type": "string",
-          "title": "Session ID",
-          "readOnly": true
-        },
-        "accessToken": {
-          "type": "string",
-          "description": "AccessToken is the access token.",
-          "readOnly": true
-        },
-        "refreshToken": {
-          "type": "string",
-          "description": "RefreshToken is the refresh token.",
-          "readOnly": true
-        },
-        "accessTokenExpireTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "AccessTokenExpiresTime is the access token expiration time.",
-          "readOnly": true
-        },
-        "refreshTokenExpireTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "RefreshTokenExpiresTime is the refresh token expiration time.",
-          "readOnly": true
-        }
-      }
-    },
     "pbListArtsResponse": {
       "type": "object",
       "properties": {
@@ -867,45 +558,6 @@
         }
       }
     },
-    "pbRefreshTokenRequest": {
-      "type": "object",
-      "properties": {
-        "refreshToken": {
-          "type": "string",
-          "description": "RefreshToken is the refresh token that the user provides."
-        }
-      },
-      "required": [
-        "refreshToken"
-      ]
-    },
-    "pbRefreshTokenResponse": {
-      "type": "object",
-      "properties": {
-        "accessToken": {
-          "type": "string",
-          "description": "AccessToken is the new access token that the user can use for authentication.",
-          "readOnly": true
-        },
-        "refreshToken": {
-          "type": "string",
-          "description": "RefreshToken is the new refresh token that the user can use to get a new access token when the current one expires.",
-          "readOnly": true
-        },
-        "accessTokenExpireTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "AccessTokenExpiresTime is the access token expiration time.",
-          "readOnly": true
-        },
-        "refreshTokenExpireTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "RefreshTokenExpiresTime is the refresh token expiration time.",
-          "readOnly": true
-        }
-      }
-    },
     "pbUser": {
       "type": "object",
       "properties": {
@@ -926,10 +578,6 @@
           "type": "string",
           "description": "Email is the user's email."
         },
-        "password": {
-          "type": "string",
-          "description": "Password is the user's password."
-        },
         "avatar": {
           "type": "string",
           "description": "Avatar is the user's avatar url."
@@ -939,7 +587,6 @@
         "firstName",
         "lastName",
         "email",
-        "password",
         "avatar"
       ]
     },

@@ -10,7 +10,6 @@ func DbUserToProto(user *models.User) *pb.User {
 	userPb := &pb.User{
 		Email:     user.Email,
 		FirstName: user.FirstName,
-		Password:  "", // never return password
 		Avatar:    util.NewGravatarFromEmail(user.Email).GetURL(),
 	}
 

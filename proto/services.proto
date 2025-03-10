@@ -54,42 +54,6 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 };
 
 service ArtGeneratorService {
-  rpc CreateSession (CreateSessionRequest) returns (CreateSessionResponse) {
-    option (google.api.http) = {
-      post: "/v1/sessions"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Log in a user"
-      description: "Authenticate a user with their email and password and return an access token."
-      security: {};
-      tags: "Authentication";
-    };
-  }
-
-  rpc DeleteSession (DeleteSessionRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/v1/sessions/{refresh_token}"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Logout a user"
-      description: "Delete a user's session, effectively logging them out."
-      tags: "Users";
-    };
-  }
-
-  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse) {
-    option (google.api.http) = {
-      post: "/v1/tokens:refresh"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Refresh a user's token"
-      description: "Refresh a user's authentication token."
-      tags: "Users";
-    };
-  }
-
   rpc UpdateUser (UpdateUserRequest) returns (User) {
     option (google.api.http) = {
       patch: "/v1/users/{user.name}"
@@ -143,42 +107,6 @@ service ArtGeneratorService {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Delete a user"
       description: "Remove a specific user from the system."
-      tags: "Users";
-    };
-  }
-
-  rpc ResetPassword (ResetPasswordRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/v1/users/{email}:resetPassword"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Reset a user's password"
-      description: "Send a password reset email to a user's registered email address."
-      tags: "Users";
-    };
-  }
-
-  rpc ValidateEmail (ValidateEmailRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/v1/users/{email}:validateEmail"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Validate a user's email"
-      description: "Enter a validation number received by email to validate a user's email address."
-      tags: "Users";
-    };
-  }
-
-  rpc SendValidationEmail (SendValidationEmailRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/v1/users/{email}:sendValidationEmail"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Send a validation email"
-      description: "Ask the system to send a validation email to a user's registered email address."
       tags: "Users";
     };
   }
