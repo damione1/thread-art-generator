@@ -1,6 +1,7 @@
 import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default async function ProfilePage() {
   const { user } = (await auth0.getSession()) || { user: null };
@@ -68,10 +69,12 @@ export default async function ProfilePage() {
           <div className="flex flex-col md:flex-row gap-8">
             {user.picture && (
               <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-primary-500/30 shadow-lg">
-                <img
+                <Image
                   src={user.picture}
                   alt={user.name || "Profile picture"}
                   className="w-full h-full object-cover"
+                  width={128}
+                  height={128}
                 />
               </div>
             )}
