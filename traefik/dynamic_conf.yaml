@@ -1,7 +1,7 @@
 http:
   routers:
     nextjs:
-      rule: "Host(`tag.local`)"
+      rule: "Host(`tag.local`) && !PathPrefix(`/api`)"
       entrypoints:
         - websecure
       service: nextjs
