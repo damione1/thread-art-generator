@@ -2,6 +2,8 @@
 
 This guide explains how to set up Auth0 authentication with the Thread Art Generator application.
 
+> **For local development with HTTPS**: Please refer to [Local Development with Auth0](./docs/AUTH0_LOCAL_DEV.md) for setting up Auth0 with tag.local domain.
+
 ## 1. Create an Auth0 Account
 
 If you don't already have one, create an account at [Auth0](https://auth0.com/).

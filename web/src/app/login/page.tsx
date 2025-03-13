@@ -27,7 +27,7 @@ export default async function LoginPage() {
             <div className="space-y-6">
               <div className="space-y-4">
                 <a
-                  href="/api/auth/login"
+                  href="/auth/login"
                   className="flex items-center justify-center w-full px-4 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition shadow-lg shadow-primary-900/20"
                 >
                   <span className="text-center font-medium">Sign in</span>
@@ -41,7 +41,7 @@ export default async function LoginPage() {
                 </div>
 
                 <a
-                  href="/api/auth/login?screen_hint=signup"
+                  href="/auth/login?screen_hint=signup"
                   className="flex items-center justify-center w-full px-4 py-3 rounded-md border border-dark-300 text-slate-200 hover:bg-dark-300/50 transition"
                 >
                   <span className="text-center font-medium">

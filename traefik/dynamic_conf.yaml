@@ -1,0 +1,19 @@
+http:
+  routers:
+    nextjs:
+      rule: "Host(`tag.local`)"
+      entrypoints:
+        - websecure
+      service: nextjs
+      tls: true
+
+  services:
+    nextjs:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3000"
+
+tls:
+  certificates:
+    - certFile: "/certs/tag.local.crt"
+      keyFile: "/certs/tag.local.key"

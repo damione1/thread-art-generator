@@ -73,3 +73,27 @@ Connect to the database using the following command:
 ```cli
 docker-compose exec db psql local -U local -d local
 ```
+
+## Local Development with HTTPS
+
+For local development, especially when working with Auth0, you can access the application via HTTPS using the `tag.local` domain:
+
+### Setup Instructions
+
+1. Run the mkcert setup to generate local certificates:
+
+   ```bash
+   tilt trigger setup-mkcert
+   ```
+
+2. Start the development environment:
+
+   ```bash
+   tilt up
+   ```
+
+3. Access the application at https://tag.local
+
+4. For Auth0 integration, add `https://tag.local/callback` to your Auth0 application's Allowed Callback URLs.
+
+The Traefik dashboard is available at http://localhost:8080/dashboard/ for debugging routing and certificates.

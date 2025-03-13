@@ -20,36 +20,13 @@ local_resource(
   auto_init=True
 )
 
-# Add NextJS dependencies and build
-local_resource(
-  'nextjs-deps',
-  cmd='cd web && npm install',
-  labels=["scripts"],
-  deps=['web/package.json'],
-  resource_deps=[],
-  auto_init=True
-)
-
 # Run Next.js locally for development
 local_resource(
   'nextjs-dev',
   serve_cmd='cd web && npm run dev',
   labels=["frontend"],
-  resource_deps=['nextjs-deps'],
-  serve_env={
-    'NEXT_PUBLIC_API_URL': 'http://localhost:9090',
-    'NEXT_PUBLIC_AUTH0_DOMAIN': '${AUTH0_DOMAIN}',
-    'NEXT_PUBLIC_AUTH0_CLIENT_ID': '${AUTH0_CLIENT_ID}',
-    'NEXT_PUBLIC_AUTH0_AUDIENCE': '${AUTH0_AUDIENCE}',
-    'NEXT_PUBLIC_FRONTEND_URL': 'http://localhost:3000',
-    'AUTH0_DOMAIN': '${AUTH0_DOMAIN}',
-    'AUTH0_CLIENT_ID': '${AUTH0_CLIENT_ID}',
-    'AUTH0_CLIENT_SECRET': '${AUTH0_CLIENT_SECRET}',
-    'AUTH0_SECRET': '${AUTH0_SECRET}',
-    'APP_BASE_URL': 'http://localhost:3000'
-  },
   links=[
-    link('http://localhost:3000', 'Next.js Frontend')
+    link('https://tag.local', 'Next.js Frontend')
   ],
   readiness_probe=probe(
     period_secs=2,
@@ -92,6 +69,45 @@ docker_build(
 # Load the docker compose configuration
 docker_compose('docker-compose.yml')
 
+# Function to ensure mkcert is installed
+def ensure_mkcert():
+    """Ensures mkcert is installed and generates certificates for tag.local"""
+    local('which mkcert || brew install mkcert')
+    local('mkcert -install')
+
+    # Create certs directory if it doesn't exist
+    local('mkdir -p ./certs')
+
+    # Generate certificates for tag.local
+    local('mkcert -cert-file ./certs/tag.local.crt -key-file ./certs/tag.local.key tag.local "*.tag.local"')
+
+    # Add tag.local to /etc/hosts if not already present
+    local('grep -q "tag.local" /etc/hosts || sudo sh -c \'echo "127.0.0.1 tag.local" >> /etc/hosts\'')
+
+# Run mkcert setup
+local_resource(
+  'setup-mkcert',
+  cmd='./setup_mkcert.sh',
+  labels=["scripts"],
+  trigger_mode=TRIGGER_MODE_MANUAL,
+  auto_init=False
+)
+
+# Build Traefik image with configuration
+docker_build(
+  'traefik-image',
+  '.',
+  dockerfile_contents='''
+FROM traefik:v2.10
+COPY ./certs/tag.local.crt /certs/tag.local.crt
+COPY ./certs/tag.local.key /certs/tag.local.key
+''',
+  only=['./certs'],
+  live_update=[
+    sync('./certs', '/certs')
+  ]
+)
+
 # Set the 'manual' resources to auto_init=False
 resources = {
   'db': {'labels': ['database']},
@@ -118,8 +134,15 @@ resources = {
     'trigger_mode': TRIGGER_MODE_AUTO,  # Explicit trigger mode
   },
   'minio': {'labels': ['database'], 'resource_deps': ['db']},
+  'traefik': {
+    'labels': ['networking'],
+    'resource_deps': ['api'],
+    'links': [
+      link('https://tag.local', 'Thread Art Generator (HTTPS)'),
+      link('http://localhost:8080/dashboard/', 'Traefik Dashboard')
+    ]
+  }
 }
-
 
 for resource_name, resource_config in resources.items():
     dc_resource(

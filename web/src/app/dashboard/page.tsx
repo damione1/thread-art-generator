@@ -51,7 +51,7 @@ export default async function DashboardPage() {
           <div className="flex items-center space-x-4">
             <span className="text-slate-200">Welcome, {user.name}</span>
             <a
-              href="/api/auth/logout"
+              href="/auth/logout"
               className="px-4 py-2 rounded-md border border-dark-300 text-slate-200 hover:bg-dark-300/50 transition"
             >
               Logout

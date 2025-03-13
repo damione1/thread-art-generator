@@ -32,6 +32,12 @@ services:
     depends_on:
       - db
       - migrations
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`tag.local`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls=true"
+      - "traefik.http.services.api.loadbalancer.server.port=9090"
 
   db:
     image: postgres:latest
@@ -85,23 +91,27 @@ services:
     environment:
       MINIO_DEFAULT_BUCKETS: local-bucket
 
-    # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: worker  # Overriding the default CMD in the Dockerfile
-  #   ports:
-  #     - '8080:8080'
-  #   environment:
-  #     - QUEUE_HOST=rabbitmq
-  #   depends_on:
-  #     - rabbitmq
-
-  # rabbitmq:
-  #   image: rabbitmq:management
-  #   ports:
-  #     - "15672:15672"
-  #     - "5672:5672"
+  traefik:
+    image: traefik-image
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Traefik dashboard
+    volumes:
+      - ./traefik:/etc/traefik
+      - ./certs:/certs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/etc/traefik"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+    container_name: traefik
 
 volumes:
   threadmachine:

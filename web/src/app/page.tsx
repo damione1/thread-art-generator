@@ -68,7 +68,7 @@ export default async function Home() {
                   Dashboard
                 </Link>
                 <a
-                  href="/api/auth/logout"
+                  href="/auth/logout"
                   className="px-4 py-2 rounded-md border border-dark-300 text-slate-200 hover:bg-dark-300/50 transition"
                 >
                   Logout
