@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	math "math"
 	proto "github.com/golang/protobuf/proto"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
 	_ "google.golang.org/protobuf/types/known/fieldmaskpb"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"

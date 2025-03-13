@@ -7,10 +7,10 @@ import (
 	fmt "fmt"
 	math "math"
 	proto "github.com/golang/protobuf/proto"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	_ "google.golang.org/protobuf/types/known/emptypb"
 	_ "google.golang.org/protobuf/types/descriptorpb"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

@@ -9,13 +9,25 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.3.0",
     "@auth0/nextjs-auth0": "^4.0.2",
+    "@bufbuild/connect": "^0.13.0",
+    "@bufbuild/connect-web": "^0.13.0",
+    "@bufbuild/protobuf": "^1.10.0",
+    "@grpc/grpc-js": "^1.13.0",
+    "@grpc/proto-loader": "^0.7.13",
     "@tailwindcss/postcss": "^4.0.12",
+    "google-protobuf": "^3.21.4",
+    "grpc-web": "^1.5.0",
     "next": "15.2.1",
+    "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.50.1",
+    "@bufbuild/protoc-gen-es": "^1.10.0",
+    "@connectrpc/protoc-gen-connect-es": "^1.6.1",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -24,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.2.1",
     "postcss": "^8.4.31",
+    "protoc-gen-js": "^3.21.4-4",
     "tailwindcss": "^4.0.12",
     "typescript": "^5"
   }
