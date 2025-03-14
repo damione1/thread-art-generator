@@ -20,24 +20,6 @@ local_resource(
   auto_init=True
 )
 
-# Run Next.js locally for development
-local_resource(
-  'nextjs-dev',
-  serve_cmd='cd web && npm run dev',
-  labels=["frontend"],
-  links=[
-    link('https://tag.local', 'Next.js Frontend')
-  ],
-  readiness_probe=probe(
-    period_secs=2,
-    http_get=http_get_action(
-      port=3000,
-      path='/',
-      host='localhost'
-    )
-  ),
-  allow_parallel=True
-)
 
 docker_build(
   'api-image',
@@ -66,6 +48,7 @@ docker_build(
     sync('./core/db/migrations', '/migrations'),
   ])
 
+
 # Load the docker compose configuration
 docker_compose('docker-compose.yml')
 
@@ -93,22 +76,7 @@ local_resource(
   auto_init=False
 )
 
-# Build Traefik image with configuration
-docker_build(
-  'traefik-image',
-  '.',
-  dockerfile_contents='''
-FROM traefik:v2.10
-COPY ./certs/tag.local.crt /certs/tag.local.crt
-COPY ./certs/tag.local.key /certs/tag.local.key
-''',
-  only=['./certs'],
-  live_update=[
-    sync('./certs', '/certs')
-  ]
-)
-
-# Set the 'manual' resources to auto_init=False
+# Set resources
 resources = {
   'db': {'labels': ['database']},
   'migrations': {
@@ -131,17 +99,21 @@ resources = {
   'api': {
     'labels': ['services'],
     'resource_deps': ['go-compile', 'db', 'migrations'],
-    'trigger_mode': TRIGGER_MODE_AUTO,  # Explicit trigger mode
+    'trigger_mode': TRIGGER_MODE_AUTO,
   },
-  'minio': {'labels': ['database'], 'resource_deps': ['db']},
-  'traefik': {
-    'labels': ['networking'],
+  'frontend': {
+    'labels': ['frontend'],
     'resource_deps': ['api'],
+    'trigger_mode': TRIGGER_MODE_AUTO,
+  },
+  'envoy': {
+    'labels': ['networking'],
+    'resource_deps': ['api', 'frontend'],
     'links': [
       link('https://tag.local', 'Thread Art Generator (HTTPS)'),
-      link('http://localhost:8080/dashboard/', 'Traefik Dashboard')
     ]
-  }
+  },
+  'minio': {'labels': ['database'], 'resource_deps': ['db']},
 }
 
 for resource_name, resource_config in resources.items():

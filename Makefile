@@ -54,7 +54,7 @@ build-go-proto:
 .PHONY: build-web-proto
 build-web-proto:
 	@echo "Generating NextJS gRPC client code..."
-	rm -rf web/src/lib/api/*
+	rm -rf web/src/lib/pb/*
 	cd web && \
 	npm install --save-dev \
 		@bufbuild/buf \
@@ -64,9 +64,9 @@ build-web-proto:
 		@bufbuild/connect \
 		@bufbuild/connect-web \
 		@bufbuild/protobuf && \
-	mkdir -p src/lib/api && \
-	npx protoc --es_out src/lib/api --es_opt target=ts \
-		--connect-es_out src/lib/api --connect-es_opt target=ts \
+	mkdir -p src/lib/pb && \
+	npx protoc --es_out src/lib/pb --es_opt target=ts \
+		--connect-es_out src/lib/pb --connect-es_opt target=ts \
 		--proto_path=../proto \
 		../proto/*.proto
 	@echo "Web client code generation complete!"

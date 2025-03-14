@@ -1,0 +1,16 @@
+FROM node:latest
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the development port
+EXPOSE 3000
+
+# Run Next.js in development mode
+CMD ["npm", "run", "dev"]

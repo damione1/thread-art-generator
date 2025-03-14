@@ -20,8 +20,6 @@ services:
       HTTP_SERVER_PORT: ${HTTP_SERVER_PORT}
       GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
       TOKEN_SYMMETRIC_KEY: ${TOKEN_SYMMETRIC_KEY}
-      ACCESS_TOKEN_DURATION: ${ACCESS_TOKEN_DURATION}
-      REFRESH_TOKEN_DURATION: ${REFRESH_TOKEN_DURATION}
       ENVIRONMENT: ${ENVIRONMENT}
       SENDINBLUE_API_KEY: ${SENDINBLUE_API_KEY}
       FRONTEND_URL: ${FRONTEND_URL}
@@ -32,12 +30,35 @@ services:
     depends_on:
       - db
       - migrations
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`tag.local`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls=true"
-      - "traefik.http.services.api.loadbalancer.server.port=9090"
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXTAUTH_URL=https://tag.local
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - API_URL=https://tag.local/grpc-api
+    volumes:
+      - ./web:/app
+    depends_on:
+      - api
+
+  envoy:
+    image: envoyproxy/envoy:v1.27-latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9901:9901"
+    volumes:
+      - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./certs:/certs:ro
+    depends_on:
+      - api
+      - frontend
 
   db:
     image: postgres:latest
@@ -90,28 +111,6 @@ services:
       - "9001:9001"
     environment:
       MINIO_DEFAULT_BUCKETS: local-bucket
-
-  traefik:
-    image: traefik-image
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080" # Traefik dashboard
-    volumes:
-      - ./traefik:/etc/traefik
-      - ./certs:/certs
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.file.directory=/etc/traefik"
-      - "--providers.file.watch=true"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-    container_name: traefik
 
 volumes:
   threadmachine:

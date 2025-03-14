@@ -4,7 +4,8 @@
 // @ts-nocheck
 
 import { CreateUserRequest, DeleteUserRequest, GetUserRequest, ListUsersRequest, ListUsersResponse, UpdateUserRequest, User } from "./user_pb.js";
-import { Empty, MethodKind } from "@bufbuild/protobuf";
+import { MethodKind } from "@bufbuild/protobuf";
+import { Empty } from "@bufbuild/protobuf/wkt";
 import { Art, CreateArtRequest, DeleteArtRequest, GetArtRequest, ListArtsRequest, ListArtsResponse, UpdateArtRequest } from "./art_pb.js";
 
 /**
