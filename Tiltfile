@@ -6,18 +6,6 @@ local_resource(
   cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go',
   labels=["scripts"],
   deps=['cmd/', 'core/', 'threadGenerator/', 'web/**/*.go'],
-  ignore=['web/templates/**/*.go']  # Ignore templ-generated Go files
-)
-
-# Add templ compiler to generate Go code from .templ files
-local_resource(
-  'templ-compiler',
-  cmd='go run github.com/a-h/templ/cmd/templ@latest generate',
-  labels=["scripts"],
-  deps=['web/templates/**/*.templ'],
-  resource_deps=[],
-  ignore=['web/templates/**/*.go'],  # Ignore generated Go files
-  auto_init=True
 )
 
 
