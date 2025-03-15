@@ -58,7 +58,7 @@ func runGrpcServer(config util.Config) {
 	// Pass the authenticator to the interceptor
 	chainedInterceptors := grpc.ChainUnaryInterceptor(
 		interceptors.GrpcLogger,
-		interceptors.AuthInterceptor(authenticator),
+		interceptors.AuthInterceptor(authenticator, config.DB, config.Auth0),
 	)
 	grpcServer := grpc.NewServer(chainedInterceptors)
 	pb.RegisterArtGeneratorServiceServer(grpcServer, server)
@@ -125,7 +125,7 @@ func runHttpServer(config util.Config) {
 		log.Fatal().Err(err).Msg("Failed to initialize authenticator")
 	}
 
-	handler := interceptors.HttpAuthInterceptor(authenticator, interceptors.HttpLogger(mux))
+	handler := interceptors.HttpAuthInterceptor(authenticator, config.DB, config.Auth0, interceptors.HttpLogger(mux))
 
 	// Set CORS headers
 	corsHandler := func(h http.Handler) http.Handler {

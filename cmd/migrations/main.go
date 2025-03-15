@@ -16,7 +16,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to load config")
 	}
-	log.Info().Msg("👋 Config loaded")
 
 	db, err := database.ConnectDb(&config)
 	if err != nil {
