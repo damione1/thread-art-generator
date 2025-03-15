@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/core/auth"
@@ -32,32 +31,6 @@ var whiteListedMethods = []string{
 	"/pb.ArtGeneratorService/CreateUser",
 }
 
-var whiteListedHttpEndpoints = []string{
-	"/swagger",
-}
-
-// AuthUser holds Auth0 user profile information
-type AuthUser struct {
-	UserID      string `json:"user_id"`
-	Email       string `json:"email"`
-	Name        string `json:"name"`
-	Nickname    string `json:"nickname"`
-	Picture     string `json:"picture"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
-	LastLogin   string `json:"last_login"`
-	LastIP      string `json:"last_ip"`
-	LoginsCount int    `json:"logins_count"`
-}
-
-// Auth0 management token cache
-var (
-	auth0TokenMutex    sync.RWMutex
-	auth0Token         string
-	auth0TokenExpiry   time.Time
-	auth0TokenLifetime = 23 * time.Hour // Management tokens typically last 24 hours, use 23 to be safe
-)
-
 // Helper function to extract and validate token from gRPC metadata
 func authorizeUserFromContext(ctx context.Context, authenticator auth.Authenticator) (*auth.AuthClaims, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -70,16 +43,7 @@ func authorizeUserFromContext(ctx context.Context, authenticator auth.Authentica
 		return nil, status.Errorf(codes.Unauthenticated, "authorization token is not provided")
 	}
 
-	return authorizeUserFromHeader(values, authenticator)
-}
-
-// Helper function to extract and validate token from authorization header
-func authorizeUserFromHeader(authHeader []string, authenticator auth.Authenticator) (*auth.AuthClaims, error) {
-	if len(authHeader) == 0 {
-		return nil, status.Errorf(codes.Unauthenticated, "authorization token is not provided")
-	}
-
-	bearerToken := authHeader[0]
+	bearerToken := values[0]
 	fields := strings.Fields(bearerToken)
 	if len(fields) < 2 {
 		return nil, status.Errorf(codes.Unauthenticated, "invalid authorization header format")
@@ -194,15 +158,6 @@ func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerI
 func isWhiteListedMethod(method string) bool {
 	for _, whiteListedMethod := range whiteListedMethods {
 		if whiteListedMethod == method {
-			return true
-		}
-	}
-	return false
-}
-
-func isWhiteListedEndpoint(path string) bool {
-	for _, whiteListedEndpoint := range whiteListedHttpEndpoints {
-		if strings.HasPrefix(path, whiteListedEndpoint) {
 			return true
 		}
 	}

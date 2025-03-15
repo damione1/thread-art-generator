@@ -2,5 +2,4 @@
 FROM alpine
 WORKDIR /app
 ADD build/api build/api
-COPY doc/swagger swagger
 ENTRYPOINT build/api
