@@ -4,7 +4,17 @@ FROM golang:1.24.0
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y protobuf-compiler
+RUN apt-get update && apt-get install -y unzip curl jq
+
+# Install latest version of protoc automatically
+RUN PROTOC_VERSION=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest | jq -r '.tag_name' | sed 's/^v//') && \
+    echo "Installing latest protoc version: ${PROTOC_VERSION}" && \
+    PROTOC_ZIP=protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP} && \
+    unzip -o ${PROTOC_ZIP} -d /usr/local bin/protoc && \
+    unzip -o ${PROTOC_ZIP} -d /usr/local 'include/*' && \
+    rm -f ${PROTOC_ZIP} && \
+    protoc --version
 
 # Install Go dependencies for proto handling
 # Combining these into a single RUN command reduces the number of layers
