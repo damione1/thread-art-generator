@@ -1,10 +1,14 @@
-FROM node:latest
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install
+# Set environment variables
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Install dependencies based on lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copy the rest of the application code
 COPY . .
@@ -12,5 +16,5 @@ COPY . .
 # Expose the development port
 EXPOSE 3000
 
-# Run Next.js in development mode
+# Run Next.js in development mode with Turbopack
 CMD ["npm", "run", "dev"]

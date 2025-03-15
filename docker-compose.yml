@@ -31,6 +31,27 @@ services:
       - db
       - migrations
 
+  # Production frontend service
+  # frontend-prod:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - NEXTAUTH_URL=https://tag.local
+  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+  #     - API_URL=https://tag.local/grpc-api
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #   depends_on:
+  #     - api
+
   frontend:
     build:
       context: ./web
@@ -44,8 +65,17 @@ services:
       - API_URL=https://tag.local/grpc-api
     volumes:
       - ./web:/app
+      - /app/node_modules
+      - /app/.next
     depends_on:
       - api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   envoy:
     image: envoyproxy/envoy:v1.27-latest
