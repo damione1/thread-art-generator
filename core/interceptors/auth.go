@@ -3,8 +3,6 @@ package interceptors
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -191,51 +189,6 @@ func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerI
 		newCtx := context.WithValue(ctx, middleware.AuthKey, internalID)
 		return handler(newCtx, req)
 	}
-}
-
-// HttpAuthInterceptor creates HTTP middleware for authentication
-func HttpAuthInterceptor(authService auth.AuthService, db *sql.DB, handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if isWhiteListedEndpoint(r.URL.Path) {
-			handler.ServeHTTP(w, r)
-			return
-		}
-
-		authHeader := r.Header.Get(authorizationHeader)
-		if authHeader == "" {
-			respondWithError(w, http.StatusUnauthorized, "authorization token is not provided")
-			return
-		}
-
-		claims, err := authorizeUserFromHeader([]string{authHeader}, authService)
-		if err != nil {
-			statusErr, ok := status.FromError(err)
-			if !ok {
-				respondWithError(w, http.StatusInternalServerError, "internal server error")
-				return
-			}
-			respondWithError(w, http.StatusUnauthorized, statusErr.Message())
-			return
-		}
-
-		// Get or create user in our database
-		internalID, err := getOrCreateUser(r.Context(), db, claims.UserID, authService)
-		if err != nil {
-			log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
-			respondWithError(w, http.StatusInternalServerError, "internal server error")
-			return
-		}
-
-		// Add internal user ID to context
-		ctx := context.WithValue(r.Context(), middleware.AuthKey, internalID)
-		handler.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func respondWithError(res http.ResponseWriter, code int, message string) {
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(code)
-	json.NewEncoder(res).Encode(map[string]string{"error": message})
 }
 
 func isWhiteListedMethod(method string) bool {
