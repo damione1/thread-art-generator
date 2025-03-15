@@ -49,16 +49,16 @@ func runGrpcServer(config util.Config) {
 	defer server.Close()
 	log.Print("🍩 gRPC server created")
 
-	// Initialize authenticator
-	authenticator, err := createAuthenticator(config)
+	// Initialize auth service
+	authService, err := createAuthService(config)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize authenticator")
+		log.Fatal().Err(err).Msg("Failed to initialize auth service")
 	}
 
-	// Pass the authenticator to the interceptor
+	// Pass the auth service to the interceptor
 	chainedInterceptors := grpc.ChainUnaryInterceptor(
 		interceptors.GrpcLogger,
-		interceptors.AuthInterceptor(authenticator, config.DB, config.Auth0),
+		interceptors.AuthInterceptor(authService, config.DB),
 	)
 	grpcServer := grpc.NewServer(chainedInterceptors)
 	pb.RegisterArtGeneratorServiceServer(grpcServer, server)
@@ -119,13 +119,13 @@ func runHttpServer(config util.Config) {
 		log.Fatal().Err(err).Msg("Failed to listen.")
 	}
 
-	// Initialize authenticator
-	authenticator, err := createAuthenticator(config)
+	// Initialize auth service
+	authService, err := createAuthService(config)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize authenticator")
+		log.Fatal().Err(err).Msg("Failed to initialize auth service")
 	}
 
-	handler := interceptors.HttpAuthInterceptor(authenticator, config.DB, config.Auth0, interceptors.HttpLogger(mux))
+	handler := interceptors.HttpAuthInterceptor(authService, config.DB, interceptors.HttpLogger(mux))
 
 	// Set CORS headers
 	corsHandler := func(h http.Handler) http.Handler {
@@ -171,13 +171,25 @@ func runHttpServer(config util.Config) {
 	log.Print("🍦 HTTP server gracefully stopped.")
 }
 
-// createAuthenticator creates the appropriate authenticator based on config
-func createAuthenticator(config util.Config) (auth.Authenticator, error) {
+// createAuthService creates the appropriate auth service based on config
+func createAuthService(config util.Config) (auth.AuthService, error) {
 	// For now, we're using Auth0, but this could be changed based on configuration
 	auth0Config := auth.Auth0Configuration{
-		Domain:   config.Auth0.Domain,
-		Audience: config.Auth0.Audience,
+		Domain:       config.Auth0.Domain,
+		Audience:     config.Auth0.Audience,
+		ClientID:     config.Auth0.ClientID,
+		ClientSecret: config.Auth0.ClientSecret,
 	}
 
-	return auth.NewAuth0Authenticator(auth0Config)
+	return auth.NewAuth0Service(auth0Config)
+}
+
+// createAuthenticator creates the appropriate authenticator based on config
+// Deprecated: Use createAuthService instead
+func createAuthenticator(config util.Config) (auth.Authenticator, error) {
+	authService, err := createAuthService(config)
+	if err != nil {
+		return nil, err
+	}
+	return authService.(auth.Authenticator), nil
 }

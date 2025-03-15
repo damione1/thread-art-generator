@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,7 +12,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/middleware"
-	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -105,7 +102,7 @@ func authorizeUserFromHeader(authHeader []string, authenticator auth.Authenticat
 }
 
 // getOrCreateUser checks if a user exists in the database and creates one if it doesn't
-func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, config util.Auth0Config) (string, error) {
+func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvider auth.UserProvider) (string, error) {
 	// Try to find user by Auth0 ID - using null.StringFrom to convert string to null.String
 	user, err := models.Users(
 		models.UserWhere.Auth0ID.EQ(null.StringFrom(auth0ID)),
@@ -122,7 +119,7 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, config uti
 	}
 
 	// User not found, fetch details from Auth0
-	authUser, err := fetchUserFromAuth0(ctx, auth0ID, config)
+	authUser, err := userProvider.GetUserInfo(ctx, auth0ID)
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +131,7 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, config uti
 	internalID := uuid.New().String()
 	newUser := &models.User{
 		ID:        internalID,
-		Auth0ID:   null.StringFrom(authUser.UserID),
+		Auth0ID:   null.StringFrom(authUser.ID),
 		Email:     authUser.Email,
 		Password:  "", // Empty password since Auth0 handles authentication
 		FirstName: firstName,
@@ -169,115 +166,8 @@ func parseNameFromAuth0(fullName string) (firstName, lastName string) {
 	return parts[0], strings.Join(parts[1:], " ")
 }
 
-// fetchUserFromAuth0 fetches user details from Auth0 Management API
-func fetchUserFromAuth0(ctx context.Context, auth0ID string, config util.Auth0Config) (*AuthUser, error) {
-	// Get management API token
-	token, err := getAuth0ManagementToken(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create request to Auth0 Management API
-	client := &http.Client{Timeout: 10 * time.Second}
-	apiURL := fmt.Sprintf("https://%s/api/v2/users/%s", config.Domain, auth0ID)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", "Bearer "+token)
-
-	// Make request
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to get user info: %s, status: %d", string(body), resp.StatusCode)
-	}
-
-	// Parse response
-	var authUser AuthUser
-	if err := json.NewDecoder(resp.Body).Decode(&authUser); err != nil {
-		return nil, err
-	}
-
-	return &authUser, nil
-}
-
-// getAuth0ManagementToken gets a token for the Auth0 Management API with caching
-func getAuth0ManagementToken(ctx context.Context, config util.Auth0Config) (string, error) {
-	// Check if we have a valid cached token
-	auth0TokenMutex.RLock()
-	if auth0Token != "" && time.Now().Before(auth0TokenExpiry) {
-		token := auth0Token
-		auth0TokenMutex.RUnlock()
-		return token, nil
-	}
-	auth0TokenMutex.RUnlock()
-
-	// No valid token, acquire write lock and fetch a new one
-	auth0TokenMutex.Lock()
-	defer auth0TokenMutex.Unlock()
-
-	// Double-check in case another goroutine refreshed the token while we were waiting
-	if auth0Token != "" && time.Now().Before(auth0TokenExpiry) {
-		return auth0Token, nil
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	tokenURL := fmt.Sprintf("https://%s/oauth/token", config.Domain)
-
-	payload := strings.NewReader(fmt.Sprintf(`{
-		"client_id": "%s",
-		"client_secret": "%s",
-		"audience": "https://%s/api/v2/",
-		"grant_type": "client_credentials"
-	}`, config.ClientID, config.ClientSecret, config.Domain))
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, payload)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("failed to get management token: %s, status: %d", string(body), resp.StatusCode)
-	}
-
-	var result struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
-	}
-
-	// Cache the token
-	auth0Token = result.AccessToken
-	auth0TokenExpiry = time.Now().Add(auth0TokenLifetime)
-
-	log.Info().Msg("Refreshed Auth0 Management API token")
-
-	return result.AccessToken, nil
-}
-
 // AuthInterceptor creates a gRPC interceptor for authentication
-func AuthInterceptor(authenticator auth.Authenticator, db *sql.DB, config util.Auth0Config) grpc.UnaryServerInterceptor {
+func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		log.Info().Str("method", info.FullMethod).Msg("Intercepting request")
 
@@ -285,13 +175,13 @@ func AuthInterceptor(authenticator auth.Authenticator, db *sql.DB, config util.A
 			return handler(ctx, req)
 		}
 
-		claims, err := authorizeUserFromContext(ctx, authenticator)
+		claims, err := authorizeUserFromContext(ctx, authService)
 		if err != nil {
 			return nil, err
 		}
 
 		// Get or create user in our database
-		internalID, err := getOrCreateUser(ctx, db, claims.UserID, config)
+		internalID, err := getOrCreateUser(ctx, db, claims.UserID, authService)
 		if err != nil {
 			log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
 			return nil, status.Errorf(codes.Internal, "internal error")
@@ -304,7 +194,7 @@ func AuthInterceptor(authenticator auth.Authenticator, db *sql.DB, config util.A
 }
 
 // HttpAuthInterceptor creates HTTP middleware for authentication
-func HttpAuthInterceptor(authenticator auth.Authenticator, db *sql.DB, config util.Auth0Config, handler http.Handler) http.Handler {
+func HttpAuthInterceptor(authService auth.AuthService, db *sql.DB, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isWhiteListedEndpoint(r.URL.Path) {
 			handler.ServeHTTP(w, r)
@@ -317,7 +207,7 @@ func HttpAuthInterceptor(authenticator auth.Authenticator, db *sql.DB, config ut
 			return
 		}
 
-		claims, err := authorizeUserFromHeader([]string{authHeader}, authenticator)
+		claims, err := authorizeUserFromHeader([]string{authHeader}, authService)
 		if err != nil {
 			statusErr, ok := status.FromError(err)
 			if !ok {
@@ -329,7 +219,7 @@ func HttpAuthInterceptor(authenticator auth.Authenticator, db *sql.DB, config ut
 		}
 
 		// Get or create user in our database
-		internalID, err := getOrCreateUser(r.Context(), db, claims.UserID, config)
+		internalID, err := getOrCreateUser(r.Context(), db, claims.UserID, authService)
 		if err != nil {
 			log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
 			respondWithError(w, http.StatusInternalServerError, "internal server error")
