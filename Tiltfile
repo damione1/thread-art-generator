@@ -82,6 +82,11 @@ resources = {
     'trigger_mode': TRIGGER_MODE_MANUAL,
     'labels': ['scripts'],
     },
+  'ts-proto-generator': {
+    'auto_init': False,
+    'trigger_mode': TRIGGER_MODE_MANUAL,
+    'labels': ['scripts'],
+    },
   'api': {
     'labels': ['services'],
     'resource_deps': ['go-compile', 'db', 'migrations'],

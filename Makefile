@@ -23,22 +23,22 @@ build-go-proto:
 .PHONY: build-web-proto
 build-web-proto:
 	@echo "Generating NextJS gRPC client code..."
-	rm -rf web/src/lib/pb/*
+	docker-compose run --rm ts-proto-generator
+	@echo "Web client code generation complete!"
+
+.PHONY: install-web-proto-deps
+install-web-proto-deps:
+	@echo "Installing web proto dependencies..."
 	cd web && \
-	npm install --save-dev \
+	npm install --legacy-peer-deps --save-dev \
 		@bufbuild/buf \
 		@bufbuild/protoc-gen-es \
 		@connectrpc/protoc-gen-connect-es && \
-	npm install --save \
+	npm install --legacy-peer-deps --save \
 		@bufbuild/connect \
 		@bufbuild/connect-web \
-		@bufbuild/protobuf && \
-	mkdir -p src/lib/pb && \
-	npx protoc --es_out src/lib/pb --es_opt target=ts \
-		--connect-es_out src/lib/pb --connect-es_opt target=ts \
-		--proto_path=../proto \
-		../proto/*.proto
-	@echo "Web client code generation complete!"
+		@bufbuild/protobuf
+	@echo "Web proto dependencies installed!"
 
 
 .PHONY: generate-sim-key

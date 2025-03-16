@@ -115,6 +115,15 @@ services:
     volumes:
       - ./:/app
 
+  ts-proto-generator:
+    build:
+      context: .
+      dockerfile: Infra/Dockerfiles/Dockerfile-ts-proto
+    volumes:
+      - ./:/app
+    container_name: "ts-proto-generator"
+    restart: "no"
+
   generate-models:
     build:
       context: .
