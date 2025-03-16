@@ -13,10 +13,15 @@ echo "Generating TypeScript proto files..."
 rm -rf /app/web/src/lib/pb/*
 mkdir -p /app/web/src/lib/pb
 protoc \
-  --es_out=/app/web/src/lib/pb \
-  --es_opt=target=ts \
-  --connect-es_out=/app/web/src/lib/pb \
-  --connect-es_opt=target=ts \
   --proto_path=/app/proto \
-  /app/proto/*.proto
+  --es_out=/app/web/src/lib/pb \
+  --es_opt=target=ts,import_extension=none \
+  --connect-es_out=/app/web/src/lib/pb \
+  --connect-es_opt=target=ts,import_extension=none \
+  --plugin=protoc-gen-connect-es=/app/web/node_modules/.bin/protoc-gen-connect-es \
+  --plugin=protoc-gen-es=/app/web/node_modules/.bin/protoc-gen-es \
+  /app/proto/*.proto \
+  /app/proto/buf/validate/validate.proto \
+  /app/proto/google/api/field_behavior.proto \
+  /app/proto/google/api/resource.proto
 echo "TypeScript proto generation complete!"

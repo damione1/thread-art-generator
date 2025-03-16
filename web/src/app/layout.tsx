@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "../styles/globals.css";
+import { Toaster } from "react-hot-toast";
+import { Providers } from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,7 +13,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Thread Art Generator",
-  description: "Transform your images into beautiful thread art patterns",
+  description: "Transform images into thread art portraits",
 };
 
 export default function RootLayout({
@@ -24,7 +26,19 @@ export default function RootLayout({
       <body
         className={`min-h-screen bg-dark-100 text-slate-200 ${inter.className}`}
       >
-        {children}
+        <Providers>
+          {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: "#333",
+                color: "#fff",
+                borderRadius: "8px",
+              },
+            }}
+          />
+        </Providers>
       </body>
     </html>
   );
