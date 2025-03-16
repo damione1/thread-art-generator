@@ -15,8 +15,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/peer"
 )
 
 type Metadata struct {
@@ -124,30 +122,6 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	}
 
 	return pbx.DbUserToProto(user), nil
-}
-
-func (server *Server) extractMetadata(ctx context.Context) *Metadata {
-	mtdt := &Metadata{}
-
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		if userAgents := md.Get(grpcGatewayUserAgentHeader); len(userAgents) > 0 {
-			mtdt.UserAgent = userAgents[0]
-		}
-		if userAgents := md.Get(userAgentHeader); len(userAgents) > 0 {
-			mtdt.UserAgent = userAgents[0]
-		}
-
-		if clientIPS := md.Get(xForwardedForHeader); len(clientIPS) > 0 {
-			mtdt.ClientIP = clientIPS[0]
-		}
-	}
-
-	if p, ok := peer.FromContext(ctx); ok {
-		mtdt.ClientIP = p.Addr.String()
-	}
-
-	return mtdt
 }
 
 func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
