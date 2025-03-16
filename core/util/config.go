@@ -19,7 +19,6 @@ type Auth0Config struct {
 // The values are read by viper from a config file or environment variable.
 type Config struct {
 	Environment         string      `mapstructure:"ENVIRONMENT"`
-	HTTPServerPort      string      `mapstructure:"HTTP_SERVER_PORT"`
 	GRPCServerPort      string      `mapstructure:"GRPC_SERVER_PORT"`
 	TokenSymmetricKey   string      `mapstructure:"TOKEN_SYMMETRIC_KEY"`
 	EmailSenderName     string      `mapstructure:"EMAIL_SENDER_NAME"`
@@ -42,7 +41,6 @@ func LoadConfig() (config Config, err error) {
 
 	viper.BindEnv("ENVIRONMENT")
 	viper.BindEnv("MIGRATION_PATH")
-	viper.BindEnv("HTTP_SERVER_PORT")
 	viper.BindEnv("GRPC_SERVER_PORT")
 	viper.BindEnv("TOKEN_SYMMETRIC_KEY")
 	viper.BindEnv("EMAIL_SENDER_NAME")

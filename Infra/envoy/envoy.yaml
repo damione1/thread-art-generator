@@ -28,7 +28,7 @@ static_resources:
                       routes:
                         # gRPC-Web route
                         - match:
-                            prefix: "/grpc-api"
+                            prefix: "/api/grpc-proxy"
                             grpc: {}
                           route:
                             cluster: grpc_service

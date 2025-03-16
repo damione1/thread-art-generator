@@ -74,7 +74,7 @@ def ensure_mkcert():
 # Run mkcert setup
 local_resource(
   'setup-mkcert',
-  cmd='./setup_mkcert.sh',
+  cmd='./scripts/setup_mkcert.sh',
   labels=["scripts"],
   trigger_mode=TRIGGER_MODE_MANUAL,
   auto_init=False

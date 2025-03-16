@@ -15,7 +15,7 @@ This guide explains how to set up Auth0 for local development with HTTPS using T
 Run the setup script to generate local certificates and configure your hosts file:
 
 ```bash
-./setup_mkcert.sh
+./scripts/setup_mkcert.sh
 ```
 
 Or use Tilt:
@@ -85,7 +85,7 @@ If you're seeing certificate warnings:
 3. Regenerate certificates:
    ```bash
    rm -rf ./certs
-   ./setup_mkcert.sh
+   ./scripts/setup_mkcert.sh
    ```
 
 ### Auth0 Login Issues
