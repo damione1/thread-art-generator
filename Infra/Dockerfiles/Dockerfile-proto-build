@@ -1,0 +1,63 @@
+FROM golang:1.24.0 as go-proto
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y unzip curl jq
+
+# Install latest version of protoc automatically
+RUN PROTOC_VERSION=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest | jq -r '.tag_name' | sed 's/^v//') && \
+    echo "Installing latest protoc version: ${PROTOC_VERSION}" && \
+    PROTOC_ZIP=protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP} && \
+    unzip -o ${PROTOC_ZIP} -d /usr/local bin/protoc && \
+    unzip -o ${PROTOC_ZIP} -d /usr/local 'include/*' && \
+    rm -f ${PROTOC_ZIP}
+
+# Install Go dependencies for proto handling
+RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
+    go install github.com/mwitkow/go-proto-validators/protoc-gen-govalidators@latest
+
+# Create necessary directories
+RUN mkdir -p /app/core/pb
+
+FROM node:latest as ts-proto
+
+# Install global dependencies to ensure they're in PATH
+RUN npm install -g \
+    @bufbuild/buf \
+    @bufbuild/protoc-gen-es \
+    @connectrpc/protoc-gen-connect-es \
+    @bufbuild/connect \
+    @bufbuild/connect-web \
+    @bufbuild/protobuf
+
+# Create output directory
+RUN mkdir -p /app/web/src/lib/pb
+
+# Install protoc (same version as go-proto stage)
+COPY --from=go-proto /usr/local/bin/protoc /usr/local/bin/
+COPY --from=go-proto /usr/local/include /usr/local/include
+
+# Final stage
+FROM ubuntu:latest
+
+# Copy protoc from go-proto stage
+COPY --from=go-proto /usr/local/bin/protoc /usr/local/bin/
+COPY --from=go-proto /usr/local/include /usr/local/include
+
+# Copy Go proto plugins
+COPY --from=go-proto /go/bin/* /usr/local/bin/
+
+# Copy NodeJS and its plugins
+COPY --from=ts-proto /usr/local/bin /usr/local/bin
+COPY --from=ts-proto /usr/local/lib /usr/local/lib
+
+# Set working directory
+WORKDIR /app
+
+# Create proto directories
+RUN mkdir -p /app/core/pb /app/web/src/lib/pb
+
+# Set entrypoint
+ENTRYPOINT ["/app/scripts/build-protos.sh"]

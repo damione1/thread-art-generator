@@ -38,6 +38,24 @@ docker_build(
 # Load the docker compose configuration
 docker_compose('docker-compose.yml')
 
+# Add proto file watching for automatic rebuilds
+local_resource(
+  'proto-watch',
+  cmd='echo "Proto files changed - rebuilding..."',
+  deps=['proto/'],
+  resource_deps=['proto-rebuild'],
+  labels=["auto-proto"]
+)
+
+# Combined proto rebuild resource
+local_resource(
+  'proto-rebuild',
+  cmd='docker-compose run --rm proto-build',
+  trigger_mode=TRIGGER_MODE_MANUAL,
+  auto_init=False,
+  labels=["auto-proto"]
+)
+
 # Function to ensure mkcert is installed
 def ensure_mkcert():
     """Ensures mkcert is installed and generates certificates for tag.local"""
@@ -77,12 +95,7 @@ resources = {
     'labels': ['scripts'],
     'resource_deps': ['db']
     },
-  'go-proto-generator': {
-    'auto_init': False,
-    'trigger_mode': TRIGGER_MODE_MANUAL,
-    'labels': ['scripts'],
-    },
-  'ts-proto-generator': {
+  'proto-build': {
     'auto_init': False,
     'trigger_mode': TRIGGER_MODE_MANUAL,
     'labels': ['scripts'],

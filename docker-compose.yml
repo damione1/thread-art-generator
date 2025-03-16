@@ -107,21 +107,14 @@ services:
       timeout: 5s
       retries: 5
 
-  go-proto-generator:
+  # Combined proto build service
+  proto-build:
     build:
       context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-go-proto
-    command: make build-go-proto
+      dockerfile: Infra/Dockerfiles/Dockerfile-proto-build
     volumes:
       - ./:/app
-
-  ts-proto-generator:
-    build:
-      context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-ts-proto
-    volumes:
-      - ./:/app
-    container_name: "ts-proto-generator"
+    container_name: "proto-build"
     restart: "no"
 
   generate-models:
