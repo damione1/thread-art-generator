@@ -4,7 +4,9 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { FieldMask, Message, proto3, Timestamp } from "@bufbuild/protobuf";
+import { Message, proto3 } from "@bufbuild/protobuf";
+import { Timestamp } from "./google/protobuf/timestamp_pb";
+import { FieldMask } from "./google/protobuf/field_mask_pb";
 
 /**
  * @generated from message pb.Art

@@ -18,7 +18,9 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Duration, FieldDescriptorProto_Type, FieldOptions, Message, MessageOptions, OneofOptions, proto2, Timestamp } from "@bufbuild/protobuf";
+import { Duration, Message, proto2 } from "@bufbuild/protobuf";
+import { Timestamp } from "../../google/protobuf/timestamp_pb";
+import { FieldDescriptorProto_Type, FieldOptions, MessageOptions, OneofOptions } from "../../google/protobuf/descriptor_pb";
 
 /**
  * Specifies how FieldConstraints.ignore behaves. See the documentation for

@@ -12,6 +12,10 @@ echo "Go proto generation complete!"
 echo "Generating TypeScript proto files..."
 rm -rf /app/web/src/lib/pb/*
 mkdir -p /app/web/src/lib/pb
+
+# Find all .proto files in the /app/proto directory and its subdirectories
+PROTO_FILES=$(find /app/proto -name "*.proto")
+
 protoc \
   --proto_path=/app/proto \
   --es_out=/app/web/src/lib/pb \
@@ -20,8 +24,5 @@ protoc \
   --connect-es_opt=target=ts,import_extension=none \
   --plugin=protoc-gen-connect-es=/app/web/node_modules/.bin/protoc-gen-connect-es \
   --plugin=protoc-gen-es=/app/web/node_modules/.bin/protoc-gen-es \
-  /app/proto/*.proto \
-  /app/proto/buf/validate/validate.proto \
-  /app/proto/google/api/field_behavior.proto \
-  /app/proto/google/api/resource.proto
+  $PROTO_FILES
 echo "TypeScript proto generation complete!"

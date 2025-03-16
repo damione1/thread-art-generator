@@ -17,7 +17,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { FieldOptions, proto3 } from "@bufbuild/protobuf";
+import { proto3 } from "@bufbuild/protobuf";
+import { FieldOptions } from "../protobuf/descriptor_pb";
 
 /**
  * An indicator of the behavior of a given field (for example, that a field
