@@ -26,7 +26,6 @@ import (
 type User struct {
 	ID        string      `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Email     string      `boil:"email" json:"email" toml:"email" yaml:"email"`
-	Password  string      `boil:"password" json:"password" toml:"password" yaml:"password"`
 	AvatarID  null.String `boil:"avatar_id" json:"avatar_id,omitempty" toml:"avatar_id" yaml:"avatar_id,omitempty"`
 	Active    bool        `boil:"active" json:"active" toml:"active" yaml:"active"`
 	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
@@ -34,7 +33,7 @@ type User struct {
 	Role      RoleEnum    `boil:"role" json:"role" toml:"role" yaml:"role"`
 	FirstName string      `boil:"first_name" json:"first_name" toml:"first_name" yaml:"first_name"`
 	LastName  null.String `boil:"last_name" json:"last_name,omitempty" toml:"last_name" yaml:"last_name,omitempty"`
-	Auth0ID   null.String `boil:"auth0_id" json:"auth0_id,omitempty" toml:"auth0_id" yaml:"auth0_id,omitempty"`
+	Auth0ID   string      `boil:"auth0_id" json:"auth0_id" toml:"auth0_id" yaml:"auth0_id"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -43,7 +42,6 @@ type User struct {
 var UserColumns = struct {
 	ID        string
 	Email     string
-	Password  string
 	AvatarID  string
 	Active    string
 	CreatedAt string
@@ -55,7 +53,6 @@ var UserColumns = struct {
 }{
 	ID:        "id",
 	Email:     "email",
-	Password:  "password",
 	AvatarID:  "avatar_id",
 	Active:    "active",
 	CreatedAt: "created_at",
@@ -69,7 +66,6 @@ var UserColumns = struct {
 var UserTableColumns = struct {
 	ID        string
 	Email     string
-	Password  string
 	AvatarID  string
 	Active    string
 	CreatedAt string
@@ -81,7 +77,6 @@ var UserTableColumns = struct {
 }{
 	ID:        "users.id",
 	Email:     "users.email",
-	Password:  "users.password",
 	AvatarID:  "users.avatar_id",
 	Active:    "users.active",
 	CreatedAt: "users.created_at",
@@ -132,7 +127,6 @@ func (w whereHelperRoleEnum) NIN(slice []RoleEnum) qm.QueryMod {
 var UserWhere = struct {
 	ID        whereHelperstring
 	Email     whereHelperstring
-	Password  whereHelperstring
 	AvatarID  whereHelpernull_String
 	Active    whereHelperbool
 	CreatedAt whereHelpertime_Time
@@ -140,11 +134,10 @@ var UserWhere = struct {
 	Role      whereHelperRoleEnum
 	FirstName whereHelperstring
 	LastName  whereHelpernull_String
-	Auth0ID   whereHelpernull_String
+	Auth0ID   whereHelperstring
 }{
 	ID:        whereHelperstring{field: "\"users\".\"id\""},
 	Email:     whereHelperstring{field: "\"users\".\"email\""},
-	Password:  whereHelperstring{field: "\"users\".\"password\""},
 	AvatarID:  whereHelpernull_String{field: "\"users\".\"avatar_id\""},
 	Active:    whereHelperbool{field: "\"users\".\"active\""},
 	CreatedAt: whereHelpertime_Time{field: "\"users\".\"created_at\""},
@@ -152,7 +145,7 @@ var UserWhere = struct {
 	Role:      whereHelperRoleEnum{field: "\"users\".\"role\""},
 	FirstName: whereHelperstring{field: "\"users\".\"first_name\""},
 	LastName:  whereHelpernull_String{field: "\"users\".\"last_name\""},
-	Auth0ID:   whereHelpernull_String{field: "\"users\".\"auth0_id\""},
+	Auth0ID:   whereHelperstring{field: "\"users\".\"auth0_id\""},
 }
 
 // UserRels is where relationship names are stored.
@@ -160,14 +153,10 @@ var UserRels = struct {
 	AccountActivations  string
 	AuthorArtVariations string
 	AuthorArts          string
-	PasswordResets      string
-	Sessions            string
 }{
 	AccountActivations:  "AccountActivations",
 	AuthorArtVariations: "AuthorArtVariations",
 	AuthorArts:          "AuthorArts",
-	PasswordResets:      "PasswordResets",
-	Sessions:            "Sessions",
 }
 
 // userR is where relationships are stored.
@@ -175,8 +164,6 @@ type userR struct {
 	AccountActivations  AccountActivationSlice `boil:"AccountActivations" json:"AccountActivations" toml:"AccountActivations" yaml:"AccountActivations"`
 	AuthorArtVariations ArtVariationSlice      `boil:"AuthorArtVariations" json:"AuthorArtVariations" toml:"AuthorArtVariations" yaml:"AuthorArtVariations"`
 	AuthorArts          ArtSlice               `boil:"AuthorArts" json:"AuthorArts" toml:"AuthorArts" yaml:"AuthorArts"`
-	PasswordResets      PasswordResetSlice     `boil:"PasswordResets" json:"PasswordResets" toml:"PasswordResets" yaml:"PasswordResets"`
-	Sessions            SessionSlice           `boil:"Sessions" json:"Sessions" toml:"Sessions" yaml:"Sessions"`
 }
 
 // NewStruct creates a new relationship struct
@@ -205,27 +192,13 @@ func (r *userR) GetAuthorArts() ArtSlice {
 	return r.AuthorArts
 }
 
-func (r *userR) GetPasswordResets() PasswordResetSlice {
-	if r == nil {
-		return nil
-	}
-	return r.PasswordResets
-}
-
-func (r *userR) GetSessions() SessionSlice {
-	if r == nil {
-		return nil
-	}
-	return r.Sessions
-}
-
 // userL is where Load methods for each relationship are stored.
 type userL struct{}
 
 var (
-	userAllColumns            = []string{"id", "email", "password", "avatar_id", "active", "created_at", "updated_at", "role", "first_name", "last_name", "auth0_id"}
-	userColumnsWithoutDefault = []string{"email", "password", "first_name"}
-	userColumnsWithDefault    = []string{"id", "avatar_id", "active", "created_at", "updated_at", "role", "last_name", "auth0_id"}
+	userAllColumns            = []string{"id", "email", "avatar_id", "active", "created_at", "updated_at", "role", "first_name", "last_name", "auth0_id"}
+	userColumnsWithoutDefault = []string{"email", "first_name", "auth0_id"}
+	userColumnsWithDefault    = []string{"id", "avatar_id", "active", "created_at", "updated_at", "role", "last_name"}
 	userPrimaryKeyColumns     = []string{"id"}
 	userGeneratedColumns      = []string{}
 )
@@ -597,34 +570,6 @@ func (o *User) AuthorArts(mods ...qm.QueryMod) artQuery {
 	return Arts(queryMods...)
 }
 
-// PasswordResets retrieves all the password_reset's PasswordResets with an executor.
-func (o *User) PasswordResets(mods ...qm.QueryMod) passwordResetQuery {
-	var queryMods []qm.QueryMod
-	if len(mods) != 0 {
-		queryMods = append(queryMods, mods...)
-	}
-
-	queryMods = append(queryMods,
-		qm.Where("\"password_resets\".\"user_id\"=?", o.ID),
-	)
-
-	return PasswordResets(queryMods...)
-}
-
-// Sessions retrieves all the session's Sessions with an executor.
-func (o *User) Sessions(mods ...qm.QueryMod) sessionQuery {
-	var queryMods []qm.QueryMod
-	if len(mods) != 0 {
-		queryMods = append(queryMods, mods...)
-	}
-
-	queryMods = append(queryMods,
-		qm.Where("\"sessions\".\"user_id\"=?", o.ID),
-	)
-
-	return Sessions(queryMods...)
-}
-
 // LoadAccountActivations allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
 func (userL) LoadAccountActivations(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
@@ -964,232 +909,6 @@ func (userL) LoadAuthorArts(ctx context.Context, e boil.ContextExecutor, singula
 	return nil
 }
 
-// LoadPasswordResets allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadPasswordResets(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
-
-	if singular {
-		var ok bool
-		object, ok = maybeUser.(*User)
-		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
-			}
-		}
-	} else {
-		s, ok := maybeUser.(*[]*User)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &userR{}
-		}
-		args[object.ID] = struct{}{}
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &userR{}
-			}
-			args[obj.ID] = struct{}{}
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`password_resets`),
-		qm.WhereIn(`password_resets.user_id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load password_resets")
-	}
-
-	var resultSlice []*PasswordReset
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice password_resets")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on password_resets")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for password_resets")
-	}
-
-	if len(passwordResetAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-	if singular {
-		object.R.PasswordResets = resultSlice
-		for _, foreign := range resultSlice {
-			if foreign.R == nil {
-				foreign.R = &passwordResetR{}
-			}
-			foreign.R.User = object
-		}
-		return nil
-	}
-
-	for _, foreign := range resultSlice {
-		for _, local := range slice {
-			if local.ID == foreign.UserID {
-				local.R.PasswordResets = append(local.R.PasswordResets, foreign)
-				if foreign.R == nil {
-					foreign.R = &passwordResetR{}
-				}
-				foreign.R.User = local
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
-// LoadSessions allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadSessions(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
-
-	if singular {
-		var ok bool
-		object, ok = maybeUser.(*User)
-		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
-			}
-		}
-	} else {
-		s, ok := maybeUser.(*[]*User)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &userR{}
-		}
-		args[object.ID] = struct{}{}
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &userR{}
-			}
-			args[obj.ID] = struct{}{}
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`sessions`),
-		qm.WhereIn(`sessions.user_id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load sessions")
-	}
-
-	var resultSlice []*Session
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice sessions")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on sessions")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for sessions")
-	}
-
-	if len(sessionAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-	if singular {
-		object.R.Sessions = resultSlice
-		for _, foreign := range resultSlice {
-			if foreign.R == nil {
-				foreign.R = &sessionR{}
-			}
-			foreign.R.User = object
-		}
-		return nil
-	}
-
-	for _, foreign := range resultSlice {
-		for _, local := range slice {
-			if local.ID == foreign.UserID {
-				local.R.Sessions = append(local.R.Sessions, foreign)
-				if foreign.R == nil {
-					foreign.R = &sessionR{}
-				}
-				foreign.R.User = local
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
 // AddAccountActivationsG adds the given related objects to the existing relationships
 // of the user, optionally inserting them as new records.
 // Appends related to o.R.AccountActivations.
@@ -1371,130 +1090,6 @@ func (o *User) AddAuthorArts(ctx context.Context, exec boil.ContextExecutor, ins
 			}
 		} else {
 			rel.R.Author = o
-		}
-	}
-	return nil
-}
-
-// AddPasswordResetsG adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.PasswordResets.
-// Sets related.R.User appropriately.
-// Uses the global database handle.
-func (o *User) AddPasswordResetsG(ctx context.Context, insert bool, related ...*PasswordReset) error {
-	return o.AddPasswordResets(ctx, boil.GetContextDB(), insert, related...)
-}
-
-// AddPasswordResets adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.PasswordResets.
-// Sets related.R.User appropriately.
-func (o *User) AddPasswordResets(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*PasswordReset) error {
-	var err error
-	for _, rel := range related {
-		if insert {
-			rel.UserID = o.ID
-			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
-				return errors.Wrap(err, "failed to insert into foreign table")
-			}
-		} else {
-			updateQuery := fmt.Sprintf(
-				"UPDATE \"password_resets\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
-				strmangle.WhereClause("\"", "\"", 2, passwordResetPrimaryKeyColumns),
-			)
-			values := []interface{}{o.ID, rel.ID}
-
-			if boil.IsDebug(ctx) {
-				writer := boil.DebugWriterFrom(ctx)
-				fmt.Fprintln(writer, updateQuery)
-				fmt.Fprintln(writer, values)
-			}
-			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-				return errors.Wrap(err, "failed to update foreign table")
-			}
-
-			rel.UserID = o.ID
-		}
-	}
-
-	if o.R == nil {
-		o.R = &userR{
-			PasswordResets: related,
-		}
-	} else {
-		o.R.PasswordResets = append(o.R.PasswordResets, related...)
-	}
-
-	for _, rel := range related {
-		if rel.R == nil {
-			rel.R = &passwordResetR{
-				User: o,
-			}
-		} else {
-			rel.R.User = o
-		}
-	}
-	return nil
-}
-
-// AddSessionsG adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.Sessions.
-// Sets related.R.User appropriately.
-// Uses the global database handle.
-func (o *User) AddSessionsG(ctx context.Context, insert bool, related ...*Session) error {
-	return o.AddSessions(ctx, boil.GetContextDB(), insert, related...)
-}
-
-// AddSessions adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.Sessions.
-// Sets related.R.User appropriately.
-func (o *User) AddSessions(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Session) error {
-	var err error
-	for _, rel := range related {
-		if insert {
-			rel.UserID = o.ID
-			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
-				return errors.Wrap(err, "failed to insert into foreign table")
-			}
-		} else {
-			updateQuery := fmt.Sprintf(
-				"UPDATE \"sessions\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
-				strmangle.WhereClause("\"", "\"", 2, sessionPrimaryKeyColumns),
-			)
-			values := []interface{}{o.ID, rel.ID}
-
-			if boil.IsDebug(ctx) {
-				writer := boil.DebugWriterFrom(ctx)
-				fmt.Fprintln(writer, updateQuery)
-				fmt.Fprintln(writer, values)
-			}
-			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-				return errors.Wrap(err, "failed to update foreign table")
-			}
-
-			rel.UserID = o.ID
-		}
-	}
-
-	if o.R == nil {
-		o.R = &userR{
-			Sessions: related,
-		}
-	} else {
-		o.R.Sessions = append(o.R.Sessions, related...)
-	}
-
-	for _, rel := range related {
-		if rel.R == nil {
-			rel.R = &sessionR{
-				User: o,
-			}
-		} else {
-			rel.R.User = o
 		}
 	}
 	return nil

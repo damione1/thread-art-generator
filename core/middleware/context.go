@@ -14,6 +14,12 @@ type AdminContext struct {
 	UserPayload *token.Payload
 }
 
+// UserIDFromContext retrieves the user ID from the context
+func UserIDFromContext(ctx context.Context) (string, bool) {
+	userID, ok := ctx.Value(AuthKey).(string)
+	return userID, ok
+}
+
 // newAdminContext creates a new AdminContext from a regular context and user payload.
 func NewAdminContext(ctx context.Context, userPayload *token.Payload) *AdminContext {
 	return &AdminContext{

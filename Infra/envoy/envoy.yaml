@@ -26,10 +26,9 @@ static_resources:
                     - name: tag_local
                       domains: ["tag.local", "*.tag.local"]
                       routes:
-                        # gRPC-Web route
+                        # gRPC-Web service route - without the grpc matcher which might be causing issues
                         - match:
-                            prefix: "/api/grpc-proxy"
-                            grpc: {}
+                            prefix: "/pb.ArtGeneratorService/"
                           route:
                             cluster: grpc_service
                             timeout: 0s
@@ -103,10 +102,21 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: api
+                      address: thread-art-generator-api-1
                       port_value: 9090
       connect_timeout: 30s
       dns_lookup_family: V4_ONLY
+      # Add health checks for the API
+      health_checks:
+        - timeout: 1s
+          interval: 10s
+          unhealthy_threshold: 3
+          healthy_threshold: 1
+          http_health_check:
+            path: "/health"
+            expected_statuses:
+              start: 200
+              end: 299
 
     - name: nextjs_service
       type: STRICT_DNS
@@ -118,6 +128,6 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: frontend
+                      address: thread-art-generator-frontend-1
                       port_value: 3000
       connect_timeout: 30s

@@ -72,8 +72,13 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, fmt.Errorf("%s: %s: %w", pbErrors.ErrValidationPrefix, pbErrors.ErrInvalidResourceName, err)
 	}
 
-	userIdFromToken := middleware.FromAdminContext(ctx).UserPayload.UserID
-	if userId != userIdFromToken {
+	// Get user ID from context using the same key used in auth interceptor
+	userIdFromContext, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	if userId != userIdFromContext {
 		return nil, pbErrors.PermissionDeniedError("cannot update other user's info")
 	}
 
@@ -125,7 +130,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 }
 
 func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
-	userId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
+	requestedUserId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New(pbErrors.ErrInvalidResourceName)),
@@ -133,12 +138,20 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	userIdFromToken := middleware.FromAdminContext(ctx).UserPayload.UserID
-	if userId != userIdFromToken {
+	// Get user ID from context using the same key used in auth interceptor
+	userIdFromContext, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// The userIdFromContext is our internal ID, not the Auth0 ID
+	// First, ensure the current user has permission to access the requested user
+	if requestedUserId != userIdFromContext {
 		return nil, pbErrors.PermissionDeniedError("cannot get other user's info")
 	}
 
-	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
+	// Query by internal ID since that's what's in the context
+	user, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, pbErrors.NotFoundError("user not found")

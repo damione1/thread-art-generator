@@ -5,9 +5,9 @@ add-enum-types = true
 
 [psql]
   host   = "db"
-  dbname = "threadart"
+  dbname = "threadmachine"
   user   = "postgres"
-  pass   = "password"
+  pass   = "postgres"
   schema = "public"
   sslmode  = "disable"
   blacklist = ["migrations", "other"]

@@ -1,5 +1,5 @@
-import { createPromiseClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
+import { createClient } from "@connectrpc/connect";
+import { createGrpcWebTransport } from "@connectrpc/connect-web";
 import { ArtGeneratorService } from "@/lib/pb/services_connect";
 import {
     User,
@@ -7,22 +7,23 @@ import {
     UpdateUserRequest
 } from "@/lib/pb/user_pb";
 import { FieldMask } from "@bufbuild/protobuf";
+import { withAuth } from "@/lib/auth/authService";
+import { ConnectError, Code } from "@connectrpc/connect";
 
-// Create a Connect transport for the browser environment
-const transport = createConnectTransport({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || "https://tag.local/grpc-api",
+// Create a gRPC-Web transport for the browser environment
+const transport = createGrpcWebTransport({
+    // Connect directly to the gRPC service without any prefix
+    baseUrl: process.env.NEXT_PUBLIC_FRONTEND_URL || "https://tag.local",
     credentials: "include", // Include cookies for auth
+    useBinaryFormat: true, // Use binary format for gRPC-Web (more compatible)
 });
+
+// Log the API URL for debugging
+console.log("gRPC-Web API URL:", process.env.NEXT_PUBLIC_FRONTEND_URL || "https://tag.local");
+console.log("Using gRPC-Web protocol with binary format");
 
 // Create a gRPC client for the ArtGeneratorService
-export const artGeneratorClient = createPromiseClient(ArtGeneratorService, transport);
-
-// Helper function to add auth token to metadata
-export const withAuth = (token: string) => ({
-    headers: {
-        Authorization: `Bearer ${token}`,
-    },
-});
+export const artGeneratorClient = createClient(ArtGeneratorService, transport);
 
 // Function to update user profile
 export async function updateUserProfile(
@@ -66,9 +67,46 @@ export async function updateUserProfile(
 
 // Function to get user profile
 export async function getUserProfile(accessToken: string, userId: string) {
+    console.log("Fetching user profile with ID:", userId);
+
+    // Log token structure to debug JWT format issues
+    if (!accessToken) {
+        console.error("Access token is empty or undefined");
+        throw new Error("Missing access token. Please re-authenticate.");
+    }
+
     const request = new GetUserRequest({
         name: `users/${userId}`,
     });
 
-    return artGeneratorClient.getUser(request, withAuth(accessToken));
+    console.log("GetUserRequest:", JSON.stringify(request, null, 2));
+
+    try {
+        // Add additional logging to debug the gRPC request
+        const authHeaders = withAuth(accessToken);
+        console.log("Making getUser gRPC call with auth headers");
+
+        const response = await artGeneratorClient.getUser(request, authHeaders);
+        console.log("GetUser response received");
+        return response;
+    } catch (error) {
+        // Enhanced error logging to debug the issue
+        console.error("Error getting user profile:", error);
+
+        // Handle known error codes
+        if (error instanceof ConnectError) {
+            switch (error.code) {
+                case Code.Unavailable:
+                    throw new Error("The API service is currently unavailable. Please try again later.");
+                case Code.NotFound:
+                    throw new Error("User profile not found. Please create a profile first.");
+                case Code.Unauthenticated:
+                    throw new Error("Your session has expired. Please log in again.");
+                default:
+                    throw new Error(`API Error: ${error.message}`);
+            }
+        }
+
+        throw error;
+    }
 }
