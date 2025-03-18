@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       "s.gravatar.com",
       "lh3.googleusercontent.com",
       "avatars.githubusercontent.com",
+      "www.gravatar.com",
     ],
   },
   // For gRPC-Web we need to configure rewrites to proxy API requests
