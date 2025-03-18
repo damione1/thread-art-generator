@@ -402,6 +402,44 @@ func (x *DeleteUserRequest) GetName() string {
 	return ""
 }
 
+// GetCurrentUserRequest is an empty request to get the currently authenticated user.
+// Following AIP principles of having a separate method for getting the current user.
+type GetCurrentUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserRequest) Reset() {
+	*x = GetCurrentUserRequest{}
+	mi := &file_user_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserRequest) ProtoMessage() {}
+
+func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
+func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
+	return file_user_proto_rawDescGZIP(), []int{7}
+}
+
 var File_user_proto protoreflect.FileDescriptor
 
 var file_user_proto_rawDesc = string([]byte{
@@ -464,10 +502,11 @@ var file_user_proto_rawDesc = string([]byte{
 	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x24, 0xe2, 0x41, 0x01, 0x02,
 	0xfa, 0x41, 0x16, 0x0a, 0x14, 0x61, 0x72, 0x74, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65,
 	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x55, 0x73, 0x65, 0x72, 0xba, 0x48, 0x04, 0x72, 0x02, 0x10, 0x01,
-	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x42, 0x24, 0x5a, 0x22, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64,
-	0x2d, 0x61, 0x72, 0x74, 0x2d, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x63,
-	0x6f, 0x72, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x33,
+	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x17, 0x0a, 0x15, 0x47, 0x65, 0x74, 0x43, 0x75, 0x72,
+	0x72, 0x65, 0x6e, 0x74, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x42,
+	0x24, 0x5a, 0x22, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64, 0x2d, 0x61, 0x72, 0x74, 0x2d, 0x67, 0x65,
+	0x6e, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x63, 0x6f, 0x72, 0x65, 0x2f, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -482,7 +521,7 @@ func file_user_proto_rawDescGZIP() []byte {
 	return file_user_proto_rawDescData
 }
 
-var file_user_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_user_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_user_proto_goTypes = []any{
 	(*User)(nil),                  // 0: pb.User
 	(*CreateUserRequest)(nil),     // 1: pb.CreateUserRequest
@@ -491,12 +530,13 @@ var file_user_proto_goTypes = []any{
 	(*ListUsersRequest)(nil),      // 4: pb.ListUsersRequest
 	(*ListUsersResponse)(nil),     // 5: pb.ListUsersResponse
 	(*DeleteUserRequest)(nil),     // 6: pb.DeleteUserRequest
-	(*fieldmaskpb.FieldMask)(nil), // 7: google.protobuf.FieldMask
+	(*GetCurrentUserRequest)(nil), // 7: pb.GetCurrentUserRequest
+	(*fieldmaskpb.FieldMask)(nil), // 8: google.protobuf.FieldMask
 }
 var file_user_proto_depIdxs = []int32{
 	0, // 0: pb.CreateUserRequest.user:type_name -> pb.User
 	0, // 1: pb.UpdateUserRequest.user:type_name -> pb.User
-	7, // 2: pb.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
+	8, // 2: pb.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
 	0, // 3: pb.ListUsersResponse.users:type_name -> pb.User
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
@@ -516,7 +556,7 @@ func file_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_proto_rawDesc), len(file_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

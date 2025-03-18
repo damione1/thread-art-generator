@@ -20,16 +20,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ArtGeneratorService_UpdateUser_FullMethodName = "/pb.ArtGeneratorService/UpdateUser"
-	ArtGeneratorService_GetUser_FullMethodName    = "/pb.ArtGeneratorService/GetUser"
-	ArtGeneratorService_ListUsers_FullMethodName  = "/pb.ArtGeneratorService/ListUsers"
-	ArtGeneratorService_CreateUser_FullMethodName = "/pb.ArtGeneratorService/CreateUser"
-	ArtGeneratorService_DeleteUser_FullMethodName = "/pb.ArtGeneratorService/DeleteUser"
-	ArtGeneratorService_CreateArt_FullMethodName  = "/pb.ArtGeneratorService/CreateArt"
-	ArtGeneratorService_GetArt_FullMethodName     = "/pb.ArtGeneratorService/GetArt"
-	ArtGeneratorService_UpdateArt_FullMethodName  = "/pb.ArtGeneratorService/UpdateArt"
-	ArtGeneratorService_ListArts_FullMethodName   = "/pb.ArtGeneratorService/ListArts"
-	ArtGeneratorService_DeleteArt_FullMethodName  = "/pb.ArtGeneratorService/DeleteArt"
+	ArtGeneratorService_UpdateUser_FullMethodName     = "/pb.ArtGeneratorService/UpdateUser"
+	ArtGeneratorService_GetUser_FullMethodName        = "/pb.ArtGeneratorService/GetUser"
+	ArtGeneratorService_ListUsers_FullMethodName      = "/pb.ArtGeneratorService/ListUsers"
+	ArtGeneratorService_CreateUser_FullMethodName     = "/pb.ArtGeneratorService/CreateUser"
+	ArtGeneratorService_DeleteUser_FullMethodName     = "/pb.ArtGeneratorService/DeleteUser"
+	ArtGeneratorService_GetCurrentUser_FullMethodName = "/pb.ArtGeneratorService/GetCurrentUser"
+	ArtGeneratorService_CreateArt_FullMethodName      = "/pb.ArtGeneratorService/CreateArt"
+	ArtGeneratorService_GetArt_FullMethodName         = "/pb.ArtGeneratorService/GetArt"
+	ArtGeneratorService_UpdateArt_FullMethodName      = "/pb.ArtGeneratorService/UpdateArt"
+	ArtGeneratorService_ListArts_FullMethodName       = "/pb.ArtGeneratorService/ListArts"
+	ArtGeneratorService_DeleteArt_FullMethodName      = "/pb.ArtGeneratorService/DeleteArt"
 )
 
 // ArtGeneratorServiceClient is the client API for ArtGeneratorService service.
@@ -41,6 +42,7 @@ type ArtGeneratorServiceClient interface {
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error)
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*User, error)
 	CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*Art, error)
 	GetArt(ctx context.Context, in *GetArtRequest, opts ...grpc.CallOption) (*Art, error)
 	UpdateArt(ctx context.Context, in *UpdateArtRequest, opts ...grpc.CallOption) (*Art, error)
@@ -106,6 +108,16 @@ func (c *artGeneratorServiceClient) DeleteUser(ctx context.Context, in *DeleteUs
 	return out, nil
 }
 
+func (c *artGeneratorServiceClient) GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*User, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(User)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_GetCurrentUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *artGeneratorServiceClient) CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*Art, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Art)
@@ -165,6 +177,7 @@ type ArtGeneratorServiceServer interface {
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	CreateUser(context.Context, *CreateUserRequest) (*User, error)
 	DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error)
+	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*User, error)
 	CreateArt(context.Context, *CreateArtRequest) (*Art, error)
 	GetArt(context.Context, *GetArtRequest) (*Art, error)
 	UpdateArt(context.Context, *UpdateArtRequest) (*Art, error)
@@ -194,6 +207,9 @@ func (UnimplementedArtGeneratorServiceServer) CreateUser(context.Context, *Creat
 }
 func (UnimplementedArtGeneratorServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) GetCurrentUser(context.Context, *GetCurrentUserRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentUser not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) CreateArt(context.Context, *CreateArtRequest) (*Art, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateArt not implemented")
@@ -321,6 +337,24 @@ func _ArtGeneratorService_DeleteUser_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ArtGeneratorService_GetCurrentUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCurrentUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).GetCurrentUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_GetCurrentUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).GetCurrentUser(ctx, req.(*GetCurrentUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ArtGeneratorService_CreateArt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateArtRequest)
 	if err := dec(in); err != nil {
@@ -437,6 +471,10 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteUser",
 			Handler:    _ArtGeneratorService_DeleteUser_Handler,
+		},
+		{
+			MethodName: "GetCurrentUser",
+			Handler:    _ArtGeneratorService_GetCurrentUser_Handler,
 		},
 		{
 			MethodName: "CreateArt",

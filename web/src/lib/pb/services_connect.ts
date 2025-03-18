@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateUserRequest, DeleteUserRequest, GetUserRequest, ListUsersRequest, ListUsersResponse, UpdateUserRequest, User } from "./user_pb";
+import { CreateUserRequest, DeleteUserRequest, GetCurrentUserRequest, GetUserRequest, ListUsersRequest, ListUsersResponse, UpdateUserRequest, User } from "./user_pb";
 import { MethodKind } from "@bufbuild/protobuf";
 import { Empty } from "./google/protobuf/empty_pb";
 import { Art, CreateArtRequest, DeleteArtRequest, GetArtRequest, ListArtsRequest, ListArtsResponse, UpdateArtRequest } from "./art_pb";
@@ -57,6 +57,15 @@ export const ArtGeneratorService = {
       name: "DeleteUser",
       I: DeleteUserRequest,
       O: Empty,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc pb.ArtGeneratorService.GetCurrentUser
+     */
+    getCurrentUser: {
+      name: "GetCurrentUser",
+      I: GetCurrentUserRequest,
+      O: User,
       kind: MethodKind.Unary,
     },
     /**

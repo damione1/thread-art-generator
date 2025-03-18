@@ -111,6 +111,17 @@ service ArtGeneratorService {
     };
   }
 
+  rpc GetCurrentUser (GetCurrentUserRequest) returns (User) {
+    option (google.api.http) = {
+      get: "/v1/users:me"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get the current user"
+      description: "Retrieve information for the currently authenticated user."
+      tags: "Users";
+    };
+  }
+
   rpc CreateArt (CreateArtRequest) returns (Art) {
     option (google.api.http) = {
       post: "/v1/{parent=users/*}/arts"

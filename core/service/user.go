@@ -161,3 +161,23 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 
 	return pbx.DbUserToProto(user), nil
 }
+
+// GetCurrentUser retrieves the current authenticated user based on the context
+func (server *Server) GetCurrentUser(ctx context.Context, req *pb.GetCurrentUserRequest) (*pb.User, error) {
+	// Get user ID from context using the same key used in auth interceptor
+	userIdFromContext, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.UnauthenticatedError("user not authenticated")
+	}
+
+	// Query by internal ID since that's what's in the context
+	user, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
+		return nil, pbErrors.InternalError("failed to get user", err)
+	}
+
+	return pbx.DbUserToProto(user), nil
+}

@@ -95,3 +95,9 @@ message DeleteUserRequest {
         (buf.validate.field).string.min_len = 1
     ];
 }
+
+// GetCurrentUserRequest is an empty request to get the currently authenticated user.
+// Following AIP principles of having a separate method for getting the current user.
+message GetCurrentUserRequest {
+    // Intentionally empty - uses the authentication context to identify the user
+}

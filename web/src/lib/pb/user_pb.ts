@@ -336,3 +336,39 @@ export class DeleteUserRequest extends Message<DeleteUserRequest> {
   }
 }
 
+/**
+ * GetCurrentUserRequest is an empty request to get the currently authenticated user.
+ * Following AIP principles of having a separate method for getting the current user.
+ *
+ * Intentionally empty - uses the authentication context to identify the user
+ *
+ * @generated from message pb.GetCurrentUserRequest
+ */
+export class GetCurrentUserRequest extends Message<GetCurrentUserRequest> {
+  constructor(data?: PartialMessage<GetCurrentUserRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.GetCurrentUserRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCurrentUserRequest {
+    return new GetCurrentUserRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCurrentUserRequest {
+    return new GetCurrentUserRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCurrentUserRequest {
+    return new GetCurrentUserRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCurrentUserRequest | PlainMessage<GetCurrentUserRequest> | undefined, b: GetCurrentUserRequest | PlainMessage<GetCurrentUserRequest> | undefined): boolean {
+    return proto3.util.equals(GetCurrentUserRequest, a, b);
+  }
+}
+
