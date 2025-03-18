@@ -1,9 +1,24 @@
 import Link from "next/link";
 import Layout from "../components/layout/Layout";
 import { User } from "../types/user";
+import { auth0 } from "@/lib/auth0";
 
 export default async function Home() {
-  const user: User | null = null; // placeholder for user - will be replaced with auth logic later
+  // This will now use Auth0 to get the user session
+  let user: User | null = null;
+
+  try {
+    const session = await auth0.getSession();
+    if (session?.user) {
+      user = {
+        id: session.user.sub || "",
+        name: session.user.name || "User",
+        email: session.user.email || "",
+      };
+    }
+  } catch (error) {
+    console.error("Failed to get user session:", error);
+  }
 
   return (
     <Layout user={user} title="ThreadArt - Create Beautiful Thread Art">

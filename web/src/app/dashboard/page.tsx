@@ -1,15 +1,28 @@
 import Link from "next/link";
 import Layout from "../../components/layout/Layout";
+import { auth0 } from "@/lib/auth0";
 import { User } from "../../types/user";
 
 export default async function DashboardPage() {
-  // This will be replaced with actual Auth0 integration later
-  // For now, we're using a mock user
-  const user: User = {
-    id: "1",
-    name: "Demo User",
-    email: "user@example.com",
+  // This will now use Auth0 to get the user session
+  let user: User = {
+    id: "",
+    name: "User",
+    email: "",
   };
+
+  try {
+    const session = await auth0.getSession();
+    if (session?.user) {
+      user = {
+        id: session.user.sub || "",
+        name: session.user.name || "User",
+        email: session.user.email || "",
+      };
+    }
+  } catch (error) {
+    console.error("Failed to get user session:", error);
+  }
 
   return (
     <Layout user={user} title="Dashboard - ThreadArt">
@@ -34,16 +47,22 @@ export default async function DashboardPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 4v16m8-8H4"
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-slate-100">
+            <h3 className="text-xl font-semibold text-slate-100 mb-2">
               Create New Project
             </h3>
-            <p className="text-slate-400 mt-2">
-              Start a new thread art creation
+            <p className="text-slate-400 mb-6">
+              Start a new thread art project
             </p>
+            <Link
+              href="/projects/new"
+              className="text-primary-500 font-medium hover:text-primary-400 transition"
+            >
+              Get Started →
+            </Link>
           </div>
 
           {/* Sample Project Card */}

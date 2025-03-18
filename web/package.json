@@ -10,18 +10,16 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@auth0/auth0-react": "^2.3.0",
     "@auth0/nextjs-auth0": "^4.1.0",
+    "@bufbuild/protobuf": "^1.5.0",
     "@connectrpc/connect": "^1.0.0",
     "@connectrpc/connect-web": "^1.0.0",
-    "@bufbuild/protobuf": "^1.5.0",
     "@grpc/grpc-js": "^1.13.0",
     "@grpc/proto-loader": "^0.7.13",
     "@tailwindcss/postcss": "^4.0.12",
     "google-protobuf": "^3.21.4",
     "grpc-web": "^1.5.0",
     "next": "15.2.1",
-    "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2"
