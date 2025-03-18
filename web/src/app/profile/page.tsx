@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Layout from "../../components/layout/Layout";
 import { User } from "../../types/user";
 import Image from "next/image";
-import { GetCurrentUserRequest, User as ProtoUser } from "@/lib/pb/user_pb";
-import { createGrpcClient } from "@/lib/grpc-client";
+import { User as ProtoUser } from "@/lib/pb/user_pb";
+import { getCurrentUser } from "@/lib/grpc-client";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -38,22 +38,15 @@ export default function ProfilePage() {
           email: data.user.email || "",
         });
 
-        if (data.accessToken) {
-          try {
-            console.log("data.accessToken", data.accessToken);
-            // Make the gRPC call on the client side
-            const { client, callOptions } = createGrpcClient(data.accessToken);
-            const userData = await client.getCurrentUser(
-              new GetCurrentUserRequest(),
-              callOptions
-            );
-            setProfileData(userData);
-          } catch (err) {
-            console.error("Error fetching user profile:", err);
-            setError(
-              `Error: ${err instanceof Error ? err.message : "Unknown error"}`
-            );
-          }
+        try {
+          // Use our new gRPC client with token caching
+          const userData = await getCurrentUser();
+          setProfileData(userData);
+        } catch (err) {
+          console.error("Error fetching user profile:", err);
+          setError(
+            `Error: ${err instanceof Error ? err.message : "Unknown error"}`
+          );
         }
       } catch (err) {
         console.error("Error fetching session:", err);
