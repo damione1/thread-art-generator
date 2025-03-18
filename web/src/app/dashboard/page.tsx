@@ -28,8 +28,25 @@ export default async function DashboardPage() {
     <Layout user={user} title="Dashboard - ThreadArt">
       <div className="container mx-auto px-4 py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-100">Dashboard</h1>
-          <p className="text-slate-400 mt-2">Manage your thread art projects</p>
+          <h1 className="text-3xl font-bold mb-4">Welcome, {user.name}!</h1>
+          <p className="text-gray-600 mb-6">
+            This is your dashboard where you can manage your Thread Art
+            projects.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href="/create"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Create New Project
+            </Link>
+            <Link
+              href="/profile"
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors"
+            >
+              View Profile
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
