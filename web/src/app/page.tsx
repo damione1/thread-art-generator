@@ -1,84 +1,12 @@
-import { auth0 } from "@/lib/auth0";
 import Link from "next/link";
+import Layout from "../components/layout/Layout";
+import { User } from "../types/user";
 
 export default async function Home() {
-  const { user } = (await auth0.getSession()) || { user: null };
+  const user: User | null = null; // placeholder for user - will be replaced with auth logic later
 
   return (
-    <main>
-      <header className="sticky top-0 z-50 border-b border-dark-300 bg-dark-100/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-2xl font-bold tracking-tight text-slate-100"
-            >
-              Thread<span className="text-primary-500">Art</span>
-            </Link>
-          </div>
-          <nav className="hidden space-x-8 md:flex">
-            <Link
-              href="/"
-              className="text-slate-300 hover:text-white transition"
-            >
-              Home
-            </Link>
-            <Link
-              href="/gallery"
-              className="text-slate-300 hover:text-white transition"
-            >
-              Gallery
-            </Link>
-            <Link
-              href="/create"
-              className="text-slate-300 hover:text-white transition"
-            >
-              Create
-            </Link>
-            <Link
-              href="/about"
-              className="text-slate-300 hover:text-white transition"
-            >
-              About
-            </Link>
-          </nav>
-          <div className="flex items-center space-x-4">
-            {!user ? (
-              <>
-                <Link
-                  href="/login"
-                  className="px-4 py-2 rounded-md text-slate-200 hover:text-primary-300 transition"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition shadow-lg shadow-primary-900/20"
-                >
-                  Sign up
-                </Link>
-              </>
-            ) : (
-              <>
-                <span className="text-slate-200">Welcome, {user.name}</span>
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition shadow-lg shadow-primary-900/20"
-                >
-                  Dashboard
-                </Link>
-                <a
-                  href="/auth/logout"
-                  className="px-4 py-2 rounded-md border border-dark-300 text-slate-200 hover:bg-dark-300/50 transition"
-                >
-                  Logout
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-
+    <Layout user={user} title="ThreadArt - Create Beautiful Thread Art">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Background gradient */}
@@ -147,48 +75,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-dark-300 bg-dark-200">
-        <div className="container mx-auto p-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <Link
-                href="/"
-                className="text-xl font-bold tracking-tight text-slate-100"
-              >
-                Thread<span className="text-primary-500">Art</span>
-              </Link>
-              <p className="mt-2 text-sm text-slate-400">
-                Generate beautiful thread art from images
-              </p>
-            </div>
-            <div className="flex space-x-6">
-              <a
-                href="#"
-                className="text-slate-400 hover:text-white transition"
-              >
-                Privacy
-              </a>
-              <a
-                href="#"
-                className="text-slate-400 hover:text-white transition"
-              >
-                Terms
-              </a>
-              <a
-                href="#"
-                className="text-slate-400 hover:text-white transition"
-              >
-                Contact
-              </a>
-            </div>
-          </div>
-          <div className="mt-8 border-t border-dark-300 pt-8 text-center text-sm text-slate-400">
-            © {new Date().getFullYear()} ThreadArt. All rights reserved.
-          </div>
-        </div>
-      </footer>
-    </main>
+    </Layout>
   );
 }

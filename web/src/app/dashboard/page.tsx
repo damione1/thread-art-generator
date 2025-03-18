@@ -1,65 +1,18 @@
-import { auth0 } from "@/lib/auth0";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import Layout from "../../components/layout/Layout";
+import { User } from "../../types/user";
 
 export default async function DashboardPage() {
-  const { user } = (await auth0.getSession()) || { user: null };
-
-  // If user is not logged in, redirect to login
-  if (!user) {
-    redirect("/login");
-  }
+  // This will be replaced with actual Auth0 integration later
+  // For now, we're using a mock user
+  const user: User = {
+    id: "1",
+    name: "Demo User",
+    email: "user@example.com",
+  };
 
   return (
-    <main className="min-h-screen bg-dark-100 text-slate-200">
-      <header className="sticky top-0 z-50 border-b border-dark-300 bg-dark-100/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-2xl font-bold tracking-tight text-slate-100"
-            >
-              Thread<span className="text-primary-500">Art</span>
-            </Link>
-          </div>
-          <nav className="hidden space-x-8 md:flex">
-            <Link
-              href="/dashboard"
-              className="text-primary-400 hover:text-primary-300 transition"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/gallery"
-              className="text-slate-300 hover:text-white transition"
-            >
-              Gallery
-            </Link>
-            <Link
-              href="/create"
-              className="text-slate-300 hover:text-white transition"
-            >
-              Create
-            </Link>
-            <Link
-              href="/profile"
-              className="text-slate-300 hover:text-white transition"
-            >
-              Profile
-            </Link>
-          </nav>
-          <div className="flex items-center space-x-4">
-            <span className="text-slate-200">Welcome, {user.name}</span>
-            <a
-              href="/auth/logout"
-              className="px-4 py-2 rounded-md border border-dark-300 text-slate-200 hover:bg-dark-300/50 transition"
-            >
-              Logout
-            </a>
-          </div>
-        </div>
-      </header>
-
+    <Layout user={user} title="Dashboard - ThreadArt">
       <div className="container mx-auto px-4 py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-100">Dashboard</h1>
@@ -162,6 +115,6 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
-    </main>
+    </Layout>
   );
 }

@@ -67,7 +67,7 @@ func authorizeUserFromContext(ctx context.Context, authenticator auth.Authentica
 func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvider auth.UserProvider) (string, error) {
 	// Try to find user by Auth0 ID - using null.StringFrom to convert string to null.String
 	user, err := models.Users(
-		models.UserWhere.Auth0ID.EQ(null.StringFrom(auth0ID)),
+		models.UserWhere.Auth0ID.EQ(auth0ID),
 	).One(ctx, db)
 
 	if err == nil {
@@ -93,9 +93,8 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 	internalID := uuid.New().String()
 	newUser := &models.User{
 		ID:        internalID,
-		Auth0ID:   null.StringFrom(authUser.ID),
+		Auth0ID:   authUser.ID,
 		Email:     authUser.Email,
-		Password:  "", // Empty password since Auth0 handles authentication
 		FirstName: firstName,
 		LastName:  null.StringFrom(lastName),
 		AvatarID:  null.StringFrom(""), // We could store the picture URL from Auth0 if needed
