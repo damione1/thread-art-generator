@@ -170,18 +170,35 @@ export const getUser = async (userId: string) => {
 };
 
 /**
- * Update a user
+ * Update a user with partial fields
+ * Following Google API Design guidelines with field masks
  */
-export const updateUser = async (user: Partial<User>, updateMask: string[] = []) => {
-    const { UpdateUserRequest } = await import("./pb/user_pb");
+export const updateUser = async (
+    userData: Partial<{
+        name: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        avatar: string;
+    }>,
+    updateMask: string[] = []
+) => {
+    const { UpdateUserRequest, User } = await import("./pb/user_pb");
     const { FieldMask } = await import("./pb/google/protobuf/field_mask_pb");
+
+    // If updateMask is empty, automatically generate it from userData keys
+    if (updateMask.length === 0 && userData) {
+        updateMask = Object.keys(userData).filter(key => key !== 'name'); // name is identifier, not updatable field
+    }
 
     return GrpcService.call(async (token) => {
         const { client, callOptions } = await createGrpcClient(token);
+
         const request = new UpdateUserRequest({
-            user: user as User,
-            updateMask: new FieldMask({ paths: updateMask })
+            user: new User(userData),
+            updateMask: new FieldMask({ paths: updateMask }),
         });
+
         return client.updateUser(request, callOptions);
     });
 };
