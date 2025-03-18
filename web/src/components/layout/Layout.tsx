@@ -16,7 +16,7 @@ const Layout: React.FC<LayoutProps> = ({
   user = null,
 }) => {
   return (
-    <div className="min-h-screen bg-dark-100 text-white">
+    <div className="min-h-screen bg-dark-100 text-white flex flex-col">
       <Head>
         <title>{title}</title>
         <meta
@@ -32,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({
 
       <Header user={user} />
 
-      <main>{children}</main>
+      <main className="flex-grow">{children}</main>
 
       <Footer />
     </div>
