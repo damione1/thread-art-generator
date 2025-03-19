@@ -19,7 +19,7 @@ const tokenCache: TokenCache = {
 
 // Configuration for the gRPC client
 const CONFIG = {
-    baseUrl: window.location.origin,
+    baseUrl: process.env.NEXT_PUBLIC_APP_BASE_URL || "http://localhost:3000",
     tokenExpiryBufferMs: 5 * 60 * 1000, // 5 minutes buffer before token expiry
 };
 

@@ -26,12 +26,20 @@ static_resources:
                     - name: tag_local
                       domains: ["tag.local", "*.tag.local"]
                       routes:
-                        # gRPC-Web service route - without the grpc matcher which might be causing issues
+                        # gRPC-Web service route
                         - match:
                             prefix: "/pb.ArtGeneratorService/"
                           route:
                             cluster: grpc_service
                             timeout: 0s
+                        # WebSocket route for Next.js HMR
+                        - match:
+                            prefix: "/_next/webpack-hmr"
+                          route:
+                            cluster: nextjs_service
+                            timeout: 0s
+                            upgrade_configs:
+                              - upgrade_type: "websocket"
                         # All other traffic goes to NextJS
                         - match:
                             prefix: "/"
