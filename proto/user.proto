@@ -22,26 +22,17 @@ message User {
     // FirstName is the user's first name.
     string first_name = 3 [
         (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string = {
-            min_len: 1,
-            pattern: "^[a-zA-Z \\-\\']+$"
-        }
+        (buf.validate.field).string.min_len = 1
     ];
     // LastName is the user's last name.
     string last_name = 4 [
         (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string = {
-            min_len: 1,
-            pattern: "^[a-zA-Z \\-\\']+$"
-        }
+        (buf.validate.field).string.min_len = 1
     ];
     // Email is the user's email.
     string email = 5 [
         (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string = {
-            min_len: 1,
-            email: true
-        }
+        (buf.validate.field).string.email = true
     ];
 
     // Avatar is the user's avatar url.
@@ -50,30 +41,32 @@ message User {
     ];
 }
 
-message CreateUserRequest {
-    // User is the user to be created.
-    User user = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
 message GetUserRequest {
     // Name is the unique identifier for the user.
     string name = 1 [
         (google.api.field_behavior) = REQUIRED,
         (google.api.resource_reference).type = "art.example.com/User",
-        (buf.validate.field).string.min_len = 1
-        ];
+        (buf.validate.field).cel = {
+            id: "get_user.name.format",
+            message: "User resource name is required and must start with 'users/'",
+            expression: "string.length(this) > 0 && string.startsWith(this, 'users/')"
+        }
+    ];
 }
 
 message UpdateUserRequest {
     // User is the user to be updated.
-    User user = 1 [(google.api.field_behavior) = REQUIRED];
+    User user = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).required = true
+    ];
 }
 
 message ListUsersRequest {
     // PageToken is the token to retrieve the next page of results.
     string page_token = 1;
     // PageSize is the number of users to return in a single page.
-    int32 page_size = 2 [(buf.validate.field).int32 = {gt: 0, lt: 100}];
+    int32 page_size = 2 [(buf.validate.field).int32 = {gt: 0, lte: 100}];
 }
 
 message ListUsersResponse {
@@ -88,7 +81,11 @@ message DeleteUserRequest {
     string name = 1 [
         (google.api.field_behavior) = REQUIRED,
         (google.api.resource_reference).type = "art.example.com/User",
-        (buf.validate.field).string.min_len = 1
+        (buf.validate.field).cel = {
+            id: "delete_user.name.format",
+            message: "User resource name is required and must start with 'users/'",
+            expression: "string.length(this) > 0 && string.startsWith(this, 'users/')"
+        }
     ];
 }
 

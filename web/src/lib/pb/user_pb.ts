@@ -78,45 +78,6 @@ export class User extends Message<User> {
 }
 
 /**
- * @generated from message pb.CreateUserRequest
- */
-export class CreateUserRequest extends Message<CreateUserRequest> {
-  /**
-   * User is the user to be created.
-   *
-   * @generated from field: pb.User user = 1;
-   */
-  user?: User;
-
-  constructor(data?: PartialMessage<CreateUserRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "pb.CreateUserRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "user", kind: "message", T: User },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateUserRequest {
-    return new CreateUserRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateUserRequest {
-    return new CreateUserRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateUserRequest {
-    return new CreateUserRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CreateUserRequest | PlainMessage<CreateUserRequest> | undefined, b: CreateUserRequest | PlainMessage<CreateUserRequest> | undefined): boolean {
-    return proto3.util.equals(CreateUserRequest, a, b);
-  }
-}
-
-/**
  * @generated from message pb.GetUserRequest
  */
 export class GetUserRequest extends Message<GetUserRequest> {

@@ -23,7 +23,6 @@ const (
 	ArtGeneratorService_UpdateUser_FullMethodName     = "/pb.ArtGeneratorService/UpdateUser"
 	ArtGeneratorService_GetUser_FullMethodName        = "/pb.ArtGeneratorService/GetUser"
 	ArtGeneratorService_ListUsers_FullMethodName      = "/pb.ArtGeneratorService/ListUsers"
-	ArtGeneratorService_CreateUser_FullMethodName     = "/pb.ArtGeneratorService/CreateUser"
 	ArtGeneratorService_DeleteUser_FullMethodName     = "/pb.ArtGeneratorService/DeleteUser"
 	ArtGeneratorService_GetCurrentUser_FullMethodName = "/pb.ArtGeneratorService/GetCurrentUser"
 	ArtGeneratorService_CreateArt_FullMethodName      = "/pb.ArtGeneratorService/CreateArt"
@@ -40,7 +39,6 @@ type ArtGeneratorServiceClient interface {
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*User, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*User, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
-	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error)
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*User, error)
 	CreateArt(ctx context.Context, in *CreateArtRequest, opts ...grpc.CallOption) (*Art, error)
@@ -82,16 +80,6 @@ func (c *artGeneratorServiceClient) ListUsers(ctx context.Context, in *ListUsers
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListUsersResponse)
 	err := c.cc.Invoke(ctx, ArtGeneratorService_ListUsers_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *artGeneratorServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(User)
-	err := c.cc.Invoke(ctx, ArtGeneratorService_CreateUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +163,6 @@ type ArtGeneratorServiceServer interface {
 	UpdateUser(context.Context, *UpdateUserRequest) (*User, error)
 	GetUser(context.Context, *GetUserRequest) (*User, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
-	CreateUser(context.Context, *CreateUserRequest) (*User, error)
 	DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*User, error)
 	CreateArt(context.Context, *CreateArtRequest) (*Art, error)
@@ -201,9 +188,6 @@ func (UnimplementedArtGeneratorServiceServer) GetUser(context.Context, *GetUserR
 }
 func (UnimplementedArtGeneratorServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
-}
-func (UnimplementedArtGeneratorServiceServer) CreateUser(context.Context, *CreateUserRequest) (*User, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
@@ -297,24 +281,6 @@ func _ArtGeneratorService_ListUsers_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ArtGeneratorServiceServer).ListUsers(ctx, req.(*ListUsersRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ArtGeneratorService_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ArtGeneratorServiceServer).CreateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ArtGeneratorService_CreateUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArtGeneratorServiceServer).CreateUser(ctx, req.(*CreateUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -463,10 +429,6 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListUsers",
 			Handler:    _ArtGeneratorService_ListUsers_Handler,
-		},
-		{
-			MethodName: "CreateUser",
-			Handler:    _ArtGeneratorService_CreateUser_Handler,
 		},
 		{
 			MethodName: "DeleteUser",

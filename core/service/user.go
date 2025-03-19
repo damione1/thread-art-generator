@@ -12,7 +12,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
-	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -28,42 +27,6 @@ const (
 	userAgentHeader            = "user-agent"
 	xForwardedForHeader        = "x-forwarded-for"
 )
-
-func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
-	var err error
-
-	pbUser := req.GetUser()
-	pbUser.Name = "" // name is not allowed to be set by the user
-	dbUser := pbx.ProtoUserToDb(pbUser)
-
-	err = dbUser.Insert(ctx, server.config.DB, boil.Infer())
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			violations := []*errdetails.BadRequest_FieldViolation{
-				pbErrors.FieldViolation("user.email", errors.New(pbErrors.ErrEmailAlreadyExists)),
-			}
-			return nil, pbErrors.InvalidArgumentError(violations)
-		}
-		return nil, pbErrors.InternalError("failed to insert user", err)
-	}
-
-	accountActivation := &models.AccountActivation{
-		UserID:          dbUser.ID,
-		UserEmail:       dbUser.Email,
-		ActivationToken: util.RandomInt(1000000, 9999999),
-	}
-	if err = accountActivation.Insert(ctx, server.config.DB, boil.Infer()); err != nil {
-		return nil, pbErrors.InternalError("failed to insert account validation", err)
-	}
-
-	if err = server.mailService.SendValidateEmail(dbUser.Email, dbUser.FirstName, dbUser.LastName.String, accountActivation.ActivationToken); err != nil {
-		return nil, pbErrors.InternalError("failed to send email", err)
-	}
-
-	pbUser = pbx.DbUserToProto(dbUser)
-
-	return pbUser, nil
-}
 
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	if err := protovalidate.Validate(req); err != nil {

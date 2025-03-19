@@ -5,10 +5,16 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/field_mask.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "buf/validate/validate.proto";
 
 option go_package = "thread-art-generator/core/proto;pb";
 
 message Art {
+    option (google.api.resource) = {
+        type: "art.example.com/Art"
+        pattern: "arts/{art}"
+    };
+
     // The name of the Art resource.
     // For example: "arts/123"
     string name = 1 [
@@ -17,10 +23,15 @@ message Art {
         ];
 
     // Title is the art's title.
-    string title = 2 [(google.api.field_behavior) = REQUIRED];
+    string title = 2 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).string.min_len = 1
+    ];
 
     // ImageURL is the art's image URL.
-    string image_url = 3;
+    string image_url = 3 [
+        (buf.validate.field).string.uri = true
+    ];
 
     // The name of the User resource who is the author of the art.
     // For example: "users/456"
@@ -33,27 +44,40 @@ message Art {
     google.protobuf.Timestamp create_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 
     // UpdatedAt is the art's last update time.
-    google.protobuf.Timestamp update_time = 6  [(google.api.field_behavior) = OUTPUT_ONLY];
+    google.protobuf.Timestamp update_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message CreateArtRequest {
     // The parent which owns the arts.
     // For example: "users/456"
     string parent = 1 [
-        (google.api.field_behavior) = OUTPUT_ONLY,
-        (google.api.resource_reference) = {type: "art.example.com/User"}
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/User"},
+        (buf.validate.field).cel = {
+            id: "create_art.parent.format",
+            message: "Parent resource name is required and must start with 'users/'",
+            expression: "string.length(this) > 0 && string.startsWith(this, 'users/')"
+        }
     ];
 
     // The art to create.
-    Art art = 2 [(google.api.field_behavior) = REQUIRED];
+    Art art = 2 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).required = true
+    ];
 }
 
 message UpdateArtRequest {
     // The Art resource to update.
-    Art art = 1 [(google.api.field_behavior) = REQUIRED];
+    Art art = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).required = true
+    ];
 
     // The update mask applies to the resource.
-    google.protobuf.FieldMask update_mask = 2;
+    google.protobuf.FieldMask update_mask = 2 [
+        (buf.validate.field).required = true
+    ];
 }
 
 message GetArtRequest {
@@ -61,7 +85,12 @@ message GetArtRequest {
     // For example: "users/{user}/arts/{art}"
     string name = 1 [
         (google.api.field_behavior) = REQUIRED,
-        (google.api.resource_reference) = {type: "art.example.com/Art"}
+        (google.api.resource_reference) = {type: "art.example.com/Art"},
+        (buf.validate.field).cel = {
+            id: "get_art.name.format",
+            message: "Art resource name is required and must start with 'arts/'",
+            expression: "string.length(this) > 0 && string.startsWith(this, 'arts/')"
+        }
     ];
 }
 
@@ -70,11 +99,18 @@ message ListArtsRequest {
     // For example: "users/456"
     string parent = 1 [
         (google.api.field_behavior) = REQUIRED,
-        (google.api.resource_reference) = {type: "art.example.com/User"}
+        (google.api.resource_reference) = {type: "art.example.com/User"},
+        (buf.validate.field).cel = {
+            id: "list_arts.parent.format",
+            message: "Parent resource name is required and must start with 'users/'",
+            expression: "string.length(this) > 0 && string.startsWith(this, 'users/')"
+        }
     ];
 
     // The maximum number of arts to return. The service may return fewer than this value.
-    int32 page_size = 2;
+    int32 page_size = 2 [
+        (buf.validate.field).int32 = {gt: 0, lte: 100}
+    ];
 
     // A page token, received from a previous `ListArts` call.
     int32 page_token = 3;
@@ -94,6 +130,11 @@ message DeleteArtRequest {
     // For example: "arts/123"
     string name = 1 [
         (google.api.field_behavior) = REQUIRED,
-        (google.api.resource_reference) = {type: "pb.Art"}
+        (google.api.resource_reference) = {type: "art.example.com/Art"},
+        (buf.validate.field).cel = {
+            id: "delete_art.name.format",
+            message: "Art resource name is required and must start with 'arts/'",
+            expression: "string.length(this) > 0 && string.startsWith(this, 'arts/')"
+        }
     ];
 }

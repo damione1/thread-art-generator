@@ -88,18 +88,6 @@ service ArtGeneratorService {
     };
   }
 
-  rpc CreateUser (CreateUserRequest) returns (User) {
-    option (google.api.http) = {
-      post: "/v1/users"
-      body: "user"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Create a new user"
-      description: "Create a new user in the system."
-      tags: "Users";
-    };
-  }
-
   rpc DeleteUser (DeleteUserRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/v1/users/{name}"
