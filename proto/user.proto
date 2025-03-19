@@ -22,12 +22,14 @@ message User {
     // FirstName is the user's first name.
     string first_name = 3 [
         (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string.min_len = 1
+        (buf.validate.field).string.min_len = 1,
+        (buf.validate.field).string.pattern = "^[a-zA-Z]+$"
     ];
     // LastName is the user's last name.
     string last_name = 4 [
         (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string.min_len = 1
+        (buf.validate.field).string.min_len = 1,
+        (buf.validate.field).string.pattern = "^[a-zA-Z]+$"
     ];
     // Email is the user's email.
     string email = 5 [

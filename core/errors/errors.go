@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bufbuild/protovalidate-go"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -238,4 +239,55 @@ func GetFieldViolationMessage(err error, field string) string {
 		}
 	}
 	return ""
+}
+
+// ConvertProtoValidateError converts a protovalidate error to a gRPC InvalidArgumentError
+func ConvertProtoValidateError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Check if it's a protovalidate.ValidationError
+	validationErr, ok := err.(*protovalidate.ValidationError)
+	if !ok {
+		// If not, return a generic error
+		return InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			FieldViolation("", errors.New("validation failed")),
+		})
+	}
+
+	// Convert violations to field violations
+	fieldViolations := make([]*errdetails.BadRequest_FieldViolation, 0, len(validationErr.Violations))
+
+	for _, violation := range validationErr.Violations {
+		// Convert field path to a string format that matches frontend field names
+		fieldPath := extractFieldName(violation)
+
+		fieldViolations = append(fieldViolations, &errdetails.BadRequest_FieldViolation{
+			Field:       fieldPath,
+			Description: violation.Proto.GetMessage(),
+		})
+	}
+
+	return InvalidArgumentError(fieldViolations)
+}
+
+// extractFieldName extracts the field name from a violation in a format suitable for frontend
+func extractFieldName(violation *protovalidate.Violation) string {
+	if violation == nil || violation.FieldDescriptor == nil {
+		return ""
+	}
+
+	// Get the field name from the descriptor
+	fieldName := string(violation.FieldDescriptor.Name())
+
+	// Convert from snake_case to camelCase for frontend fields
+	parts := strings.Split(fieldName, "_")
+	for i := 1; i < len(parts); i++ {
+		if len(parts[i]) > 0 {
+			parts[i] = strings.ToUpper(string(parts[i][0])) + parts[i][1:]
+		}
+	}
+
+	return strings.Join(parts, "")
 }

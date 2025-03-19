@@ -30,7 +30,7 @@ const (
 
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	if err := protovalidate.Validate(req); err != nil {
-		return nil, err
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
 	pbUser := req.GetUser()

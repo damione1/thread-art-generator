@@ -1,4 +1,6 @@
 import { useState, useCallback, ChangeEvent, FormEvent } from "react";
+import { ConnectError } from "@connectrpc/connect";
+import { handleFormError } from "../lib/grpc-error";
 
 interface FormState<T> {
     values: T;
@@ -179,20 +181,30 @@ export function useForm<T extends Record<string, unknown>>(
                 } catch (err) {
                     console.error("Form submission error:", err);
 
-                    let errorMessage = "An unknown error occurred";
-                    if (err instanceof Error) {
-                        errorMessage = err.message;
+                    // Handle gRPC errors with field violations
+                    const handled = handleFormError(
+                        err,
+                        setFieldError,
+                        setGeneralError
+                    );
+
+                    if (!handled) {
+                        // Fallback error handling for non-gRPC errors
+                        let errorMessage = "An unknown error occurred";
+                        if (err instanceof Error) {
+                            errorMessage = err.message;
+                        }
+                        setGeneralError(errorMessage);
                     }
 
                     setState((prev) => ({
                         ...prev,
                         isSubmitting: false,
-                        generalError: errorMessage,
                     }));
                 }
             };
         },
-        [state.values, validateForm, initialValues]
+        [state.values, validateForm, initialValues, setFieldError, setGeneralError]
     );
 
     return {

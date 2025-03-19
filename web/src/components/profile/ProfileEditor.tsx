@@ -42,14 +42,19 @@ export default function ProfileEditor({
 
   // Handle form submission
   const onSubmitForm = async (formValues: ProfileFormValues) => {
-    const updatedUser = await updateUser({
-      name: userData.name,
-      firstName: formValues.firstName || "",
-      lastName: formValues.lastName || "",
-      email: formValues.email || "",
-    });
+    try {
+      const updatedUser = await updateUser({
+        name: userData.name,
+        firstName: formValues.firstName || "",
+        lastName: formValues.lastName || "",
+        email: formValues.email || "",
+      });
 
-    onUpdate(updatedUser);
+      onUpdate(updatedUser);
+    } catch (error) {
+      // Error handling is now managed by the useForm hook
+      throw error;
+    }
   };
 
   return (
