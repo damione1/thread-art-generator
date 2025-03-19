@@ -13,6 +13,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/util"
+	"github.com/bufbuild/protovalidate-go"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
@@ -65,6 +66,10 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 }
 
 func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, err
+	}
+
 	pbUser := req.GetUser()
 
 	userId, err := pbx.GetResourceIDByType(pbUser.GetName(), pbx.RessourceTypeUsers)
@@ -90,30 +95,18 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
-	updateMask := req.GetUpdateMask()
-	if updateMask != nil && len(updateMask.GetPaths()) > 0 {
-		for _, path := range updateMask.GetPaths() {
-			switch path {
-			case "first_name":
-				if pbUser.GetFirstName() != "" {
-					user.FirstName = pbUser.GetFirstName()
-				}
-			case "last_name":
-				user.LastName.String = pbUser.GetLastName()
-				user.LastName.Valid = false
-				if pbUser.GetLastName() != "" {
-					user.LastName.Valid = true
-				}
-			case "email":
-				if pbUser.GetEmail() != "" {
-					user.Email = pbUser.GetEmail()
-				}
-			default:
-				return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
-					pbErrors.FieldViolation("updateMask", errors.New(fmt.Sprintf("invalid field mask: %s", path))),
-				})
-			}
-		}
+	if pbUser.GetFirstName() != "" {
+		user.FirstName = pbUser.GetFirstName()
+	}
+
+	user.LastName.Valid = false
+	user.LastName.String = pbUser.GetLastName()
+	if pbUser.GetLastName() != "" {
+		user.LastName.Valid = true
+	}
+
+	if pbUser.GetEmail() != "" {
+		user.Email = pbUser.GetEmail()
 	}
 
 	if _, err = user.Update(ctx, server.config.DB, boil.Infer()); err != nil {

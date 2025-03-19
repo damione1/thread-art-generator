@@ -36,48 +36,17 @@ export default function ProfileEditor({
     setSuccess(false);
 
     try {
-      // Only include changed fields in the update
-      const updateFields: Record<string, string> = {};
-      const updateMask: string[] = [];
+      // Send all fields in the update
+      const updatedUser = await updateUser({
+        name: userData.name,
+        firstName: formData.firstName || "",
+        lastName: formData.lastName || "",
+        email: formData.email || "",
+        avatar: formData.avatar || "",
+      });
 
-      // Check each field to see if it changed
-      if (formData.firstName !== userData.firstName) {
-        updateFields.firstName = formData.firstName;
-        updateMask.push("first_name");
-      }
-
-      if (formData.lastName !== userData.lastName) {
-        updateFields.lastName = formData.lastName;
-        updateMask.push("last_name");
-      }
-
-      if (formData.email !== userData.email) {
-        updateFields.email = formData.email;
-        updateMask.push("email");
-      }
-
-      if (formData.avatar !== userData.avatar) {
-        updateFields.avatar = formData.avatar;
-        updateMask.push("avatar");
-      }
-
-      // Only make the API call if there are changes
-      if (updateMask.length > 0) {
-        // Include the resource name for the update
-        const updatedUser = await updateUser(
-          {
-            name: userData.name,
-            ...updateFields,
-          },
-          updateMask
-        );
-
-        onUpdate(updatedUser);
-        setSuccess(true);
-      } else {
-        // No changes to save
-        setSuccess(true);
-      }
+      onUpdate(updatedUser);
+      setSuccess(true);
     } catch (err) {
       console.error("Error updating profile:", err);
       setError(

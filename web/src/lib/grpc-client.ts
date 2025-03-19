@@ -22,6 +22,13 @@ const CONFIG = {
     tokenExpiryBufferMs: 5 * 60 * 1000, // 5 minutes buffer before token expiry
 };
 
+// Add this type for gRPC errors at the top of the file
+interface GrpcError {
+    code: number;
+    message: string;
+    details?: unknown;
+}
+
 /**
  * Creates a transport for gRPC web
  */
@@ -170,8 +177,7 @@ export const getUser = async (userId: string) => {
 };
 
 /**
- * Update a user with partial fields
- * Following Google API Design guidelines with field masks
+ * Update a user with all fields
  */
 export const updateUser = async (
     userData: Partial<{
@@ -180,26 +186,37 @@ export const updateUser = async (
         lastName: string;
         email: string;
         avatar: string;
-    }>,
-    updateMask: string[] = []
+    }>
 ) => {
     const { UpdateUserRequest, User } = await import("./pb/user_pb");
-    const { FieldMask } = await import("./pb/google/protobuf/field_mask_pb");
 
-    // If updateMask is empty, automatically generate it from userData keys
-    if (updateMask.length === 0 && userData) {
-        updateMask = Object.keys(userData).filter(key => key !== 'name'); // name is identifier, not updatable field
-    }
+    console.log("UpdateUser request:", userData);
 
     return GrpcService.call(async (token) => {
-        const { client, callOptions } = await createGrpcClient(token);
+        try {
+            const { client, callOptions } = await createGrpcClient(token);
 
-        const request = new UpdateUserRequest({
-            user: new User(userData),
-            updateMask: new FieldMask({ paths: updateMask }),
-        });
+            const request = new UpdateUserRequest({
+                user: new User(userData),
+            });
 
-        return client.updateUser(request, callOptions);
+            console.log("Request payload:", request);
+            const response = await client.updateUser(request, callOptions);
+            console.log("Update response:", response);
+            return response;
+        } catch (error) {
+            console.error("UpdateUser error:", error);
+            // Log more details if it's a gRPC error
+            if (error && typeof error === 'object' && 'code' in error) {
+                const grpcError = error as GrpcError;
+                console.error("gRPC error details:", {
+                    code: grpcError.code,
+                    message: grpcError.message,
+                    details: grpcError.details
+                });
+            }
+            throw error;
+        }
     });
 };
 

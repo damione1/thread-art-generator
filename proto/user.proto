@@ -1,7 +1,6 @@
 syntax = "proto3";
 
 package pb;
-import "google/protobuf/field_mask.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "buf/validate/validate.proto";
@@ -47,8 +46,7 @@ message User {
 
     // Avatar is the user's avatar url.
     string avatar = 7 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).string.min_len = 1
+        (google.api.field_behavior) = OUTPUT_ONLY
     ];
 }
 
@@ -69,8 +67,6 @@ message GetUserRequest {
 message UpdateUserRequest {
     // User is the user to be updated.
     User user = 1 [(google.api.field_behavior) = REQUIRED];
-    // UpdateMask is the field mask representing which fields to update.
-    google.protobuf.FieldMask update_mask = 2;
 }
 
 message ListUsersRequest {

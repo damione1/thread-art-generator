@@ -5,7 +5,6 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { FieldMask } from "./google/protobuf/field_mask_pb";
 
 /**
  * @generated from message pb.User
@@ -167,13 +166,6 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
    */
   user?: User;
 
-  /**
-   * UpdateMask is the field mask representing which fields to update.
-   *
-   * @generated from field: google.protobuf.FieldMask update_mask = 2;
-   */
-  updateMask?: FieldMask;
-
   constructor(data?: PartialMessage<UpdateUserRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -183,7 +175,6 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
   static readonly typeName = "pb.UpdateUserRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "user", kind: "message", T: User },
-    { no: 2, name: "update_mask", kind: "message", T: FieldMask },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateUserRequest {
