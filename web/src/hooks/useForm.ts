@@ -1,5 +1,4 @@
 import { useState, useCallback, ChangeEvent, FormEvent } from "react";
-import { ConnectError } from "@connectrpc/connect";
 import { handleFormError } from "../lib/grpc-error";
 
 interface FormState<T> {
@@ -180,7 +179,6 @@ export function useForm<T extends Record<string, unknown>>(
                     }));
                 } catch (err) {
                     console.error("Form submission error:", err);
-
                     // Handle gRPC errors with field violations
                     const handled = handleFormError(
                         err,

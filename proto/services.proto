@@ -171,4 +171,16 @@ service ArtGeneratorService {
     };
     option (google.api.method_signature) = "name";
   }
+
+  rpc GetArtUploadUrl (GetArtUploadUrlRequest) returns (GetArtUploadUrlResponse) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*/arts/*}:getUploadUrl"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get upload URL for art image"
+      description: "Generate a signed URL for uploading an image for a specific art."
+      tags: "Media";
+    };
+    option (google.api.method_signature) = "name";
+  }
 }

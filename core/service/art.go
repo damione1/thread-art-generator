@@ -4,29 +4,33 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"slices"
+	"time"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
-	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/bufbuild/protovalidate-go"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"gocloud.dev/blob"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
 	userPayload := middleware.FromAdminContext(ctx).UserPayload
 
-	if err := validateCreateArtRequest(req); err != nil {
-		return nil, err
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
 	user, err := models.Users(
@@ -56,24 +60,11 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
 }
 
-func validateCreateArtRequest(req *pb.CreateArtRequest) error {
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Art,
-			validation.Required,
-			validation.By(
-				func(value interface{}) error {
-					return validateArt(value.(*pb.Art), true)
-				},
-			),
-		),
-	)
-}
-
 func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
 	userPayload := middleware.FromAdminContext(ctx).UserPayload
 
-	if err := validateUpdateArtRequest(req); err != nil {
-		return nil, err
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetArt().GetName())
@@ -100,18 +91,8 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
-	updateMask := req.GetUpdateMask()
-	if updateMask != nil && len(updateMask.GetPaths()) > 0 {
-		for _, path := range updateMask.GetPaths() {
-			switch path {
-			case "title":
-				if req.GetArt().GetTitle() != "" {
-					artDb.Title = req.GetArt().GetTitle()
-				}
-			default:
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid field mask: %s", path)
-			}
-		}
+	if req.GetArt().GetTitle() != "" {
+		artDb.Title = req.GetArt().GetTitle()
 	}
 
 	_, err = artDb.Update(ctx, server.config.DB, boil.Infer())
@@ -122,37 +103,11 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
 }
 
-func validateUpdateArtRequest(req *pb.UpdateArtRequest) error {
-	// Ensure the UpdateMask and Arts fields are provided
-	err := validation.ValidateStruct(req,
-		validation.Field(&req.UpdateMask, validation.Required),
-		validation.Field(&req.Art, validation.Required),
-	)
-	if err != nil {
-		return err
-	}
-
-	user := req.GetArt()
-	updateMaskPaths := req.GetUpdateMask().GetPaths()
-
-	// Dynamically build validation rules based on the fields present in the UpdateMask
-	var rules []*validation.FieldRules
-
-	rules = append(rules, validation.Field(&user.Name, validation.Required))
-
-	if slices.Contains(updateMaskPaths, "title") {
-		rules = append(rules, validation.Field(&user.Title, validation.Required, validation.Length(1, 255)))
-	}
-
-	// Validate the user struct based on the dynamically built rules
-	return validation.ValidateStruct(user, rules...)
-}
-
 func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
 	userPayload := middleware.FromAdminContext(ctx).UserPayload
 
-	if err := validateListArtsRequest(req); err != nil {
-		return nil, err
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
 	pageSize := int(req.GetPageSize())
@@ -200,16 +155,9 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 	}, nil
 }
 
-func validateListArtsRequest(req *pb.ListArtsRequest) error {
-	return validation.ValidateStruct(req,
-		validation.Field(&req.PageSize, validation.Required, validation.Min(1), validation.Max(50)),
-		validation.Field(&req.PageToken, validation.Min(0)),
-	)
-}
-
 func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Art, error) {
-	if err := validateGetArtRequest(req); err != nil {
-		return nil, err
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
@@ -238,14 +186,9 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
 }
 
-func validateGetArtRequest(req *pb.GetArtRequest) error {
-	return validation.ValidateStruct(req) //validation.Field(&req.Id, validation.Required, is.UUIDv4),
-
-}
-
 func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (*emptypb.Empty, error) {
-	if err := validateDeleteArtRequest(req); err != nil {
-		return nil, err
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
@@ -292,21 +235,74 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 	return &emptypb.Empty{}, nil
 }
 
-func validateDeleteArtRequest(req *pb.DeleteArtRequest) error {
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Name, validation.Required),
-	)
-}
-
-func validateArt(art *pb.Art, isNew bool) error {
-	if isNew {
-		return validation.ValidateStruct(art,
-			validation.Field(&art.Title, validation.Required, validation.Length(1, 255)),
-		)
-	} else {
-		return validation.ValidateStruct(art,
-			validation.Field(&art.Name, validation.Required),
-			validation.Field(&art.Title, validation.Required, validation.Length(1, 255)),
-		)
+// GetArtUploadUrl generates a signed URL for uploading an image for a specific art
+func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadUrlRequest) (*pb.GetArtUploadUrlResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
+
+	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	if err != nil {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	userPayload := middleware.FromAdminContext(ctx).UserPayload
+	if authorId != userPayload.UserID {
+		return nil, pbErrors.PermissionDeniedError("only the author can get an upload URL for the art")
+	}
+
+	// Check if the art exists
+	artDb, err := models.Arts(
+		models.ArtWhere.ID.EQ(artId),
+		models.ArtWhere.AuthorID.EQ(authorId),
+	).One(ctx, server.config.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("art not found")
+		}
+		return nil, pbErrors.InternalError("failed to get art", err)
+	}
+
+	// Generate a unique image ID if not exists
+	imageID := artDb.ImageID.String
+	if !artDb.ImageID.Valid {
+		imageID = uuid.New().String()
+
+		// Update the art with the new image ID
+		artDb.ImageID = null.StringFrom(imageID)
+
+		_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(models.ArtColumns.ImageID))
+		if err != nil {
+			return nil, pbErrors.InternalError("failed to update art with image ID", err)
+		}
+	}
+
+	// Create the image key in the format "users/{userId}/arts/{imageId}"
+	imageKey := pbx.GetResourceName([]pbx.Resource{
+		{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
+		{Type: pbx.RessourceTypeArts, ID: imageID},
+	})
+
+	// Generate a signed URL with 15 minutes expiration
+	opts := &blob.SignedURLOptions{
+		Expiry:      15 * time.Minute,
+		Method:      "PUT",
+		ContentType: "image/jpeg",
+	}
+
+	signedURL, err := server.bucket.SignedURL(ctx, imageKey, opts)
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to generate signed URL", err)
+	}
+
+	// Calculate expiration time
+	expirationTime := time.Now().Add(15 * time.Minute)
+
+	return &pb.GetArtUploadUrlResponse{
+		UploadUrl:      signedURL,
+		ExpirationTime: timestamppb.New(expirationTime),
+	}, nil
 }

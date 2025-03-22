@@ -7,6 +7,7 @@ import (
 // AuthClaims represents common claims that can be extracted from a token
 type AuthClaims struct {
 	UserID string
+	Email  string
 }
 
 // UserInfo contains user profile information

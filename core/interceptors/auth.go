@@ -86,6 +86,8 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 		return "", err
 	}
 
+	log.Info().Msgf("AuthUser: %s", authUser)
+
 	// Parse name into first name and last name
 	firstName, lastName := parseNameFromAuth0(authUser.Name)
 
@@ -130,8 +132,6 @@ func parseNameFromAuth0(fullName string) (firstName, lastName string) {
 // AuthInterceptor creates a gRPC interceptor for authentication
 func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		log.Info().Str("method", info.FullMethod).Msg("Intercepting request")
-
 		if isWhiteListedMethod(info.FullMethod) {
 			return handler(ctx, req)
 		}

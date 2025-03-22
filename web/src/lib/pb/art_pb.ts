@@ -368,3 +368,90 @@ export class DeleteArtRequest extends Message<DeleteArtRequest> {
   }
 }
 
+/**
+ * @generated from message pb.GetArtUploadUrlRequest
+ */
+export class GetArtUploadUrlRequest extends Message<GetArtUploadUrlRequest> {
+  /**
+   * The name of the Art resource to upload an image for.
+   * For example: "arts/123"
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetArtUploadUrlRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.GetArtUploadUrlRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetArtUploadUrlRequest {
+    return new GetArtUploadUrlRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetArtUploadUrlRequest {
+    return new GetArtUploadUrlRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetArtUploadUrlRequest {
+    return new GetArtUploadUrlRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetArtUploadUrlRequest | PlainMessage<GetArtUploadUrlRequest> | undefined, b: GetArtUploadUrlRequest | PlainMessage<GetArtUploadUrlRequest> | undefined): boolean {
+    return proto3.util.equals(GetArtUploadUrlRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.GetArtUploadUrlResponse
+ */
+export class GetArtUploadUrlResponse extends Message<GetArtUploadUrlResponse> {
+  /**
+   * The signed URL to upload the art image to
+   *
+   * @generated from field: string upload_url = 1;
+   */
+  uploadUrl = "";
+
+  /**
+   * The expiration time for the signed URL
+   *
+   * @generated from field: google.protobuf.Timestamp expiration_time = 2;
+   */
+  expirationTime?: Timestamp;
+
+  constructor(data?: PartialMessage<GetArtUploadUrlResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.GetArtUploadUrlResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "upload_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "expiration_time", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetArtUploadUrlResponse {
+    return new GetArtUploadUrlResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetArtUploadUrlResponse {
+    return new GetArtUploadUrlResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetArtUploadUrlResponse {
+    return new GetArtUploadUrlResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetArtUploadUrlResponse | PlainMessage<GetArtUploadUrlResponse> | undefined, b: GetArtUploadUrlResponse | PlainMessage<GetArtUploadUrlResponse> | undefined): boolean {
+    return proto3.util.equals(GetArtUploadUrlResponse, a, b);
+  }
+}
+

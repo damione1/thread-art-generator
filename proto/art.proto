@@ -138,3 +138,25 @@ message DeleteArtRequest {
         }
     ];
 }
+
+message GetArtUploadUrlRequest {
+    // The name of the Art resource to upload an image for.
+    // For example: "arts/123"
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/Art"},
+        (buf.validate.field).cel = {
+            id: "get_art_upload_url.name.format",
+            message: "Art resource name is required and must start with 'arts/'",
+            expression: "string.length(this) > 0 && string.startsWith(this, 'arts/')"
+        }
+    ];
+}
+
+message GetArtUploadUrlResponse {
+    // The signed URL to upload the art image to
+    string upload_url = 1;
+
+    // The expiration time for the signed URL
+    google.protobuf.Timestamp expiration_time = 2;
+}

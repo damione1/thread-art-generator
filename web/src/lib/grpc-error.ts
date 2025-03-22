@@ -1,6 +1,5 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { BadRequest } from "./pb/google/rpc/error_details_pb";
-import { Any } from "@bufbuild/protobuf";
 
 // Helper type for field errors
 export interface FieldErrors {
@@ -38,7 +37,7 @@ export function extractFieldErrors(error: unknown): FieldErrors {
             }
         }
     } catch (err) {
-        console.error("Error parsing field violations:", err);
+        console.info("Error parsing field violations:", err);
     }
 
     return fieldErrors;

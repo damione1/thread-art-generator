@@ -1,7 +1,6 @@
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
 import { createClient, ConnectError, Code } from "@connectrpc/connect";
 import { ArtGeneratorService } from "./pb/services_connect";
-import { User } from "./pb/user_pb";
 import { Art } from "./pb/art_pb";
 
 // Cache for the access token
@@ -98,7 +97,6 @@ export const createGrpcClient = async (providedToken?: string) => {
             accessToken = await getAccessToken();
         } catch (error) {
             console.error("Failed to get access token:", error);
-            // Return client without token - will work for public endpoints
         }
     }
 
@@ -190,26 +188,20 @@ export const updateUser = async (
     }>
 ) => {
     const { UpdateUserRequest, User } = await import("./pb/user_pb");
-
-    console.log("UpdateUser request:", userData);
-
     return GrpcService.call(async (token) => {
         try {
             const { client, callOptions } = await createGrpcClient(token);
-
             const request = new UpdateUserRequest({
                 user: new User(userData),
             });
-
-            console.log("Request payload:", request);
             const response = await client.updateUser(request, callOptions);
-            console.log("Update response:", response);
             return response;
         } catch (error) {
             console.error("UpdateUser error:", error);
             // Log more details if it's a gRPC error
             if (error && typeof error === 'object' && 'code' in error) {
                 const grpcError = error as GrpcError;
+
                 console.error("gRPC error details:", {
                     code: grpcError.code,
                     message: grpcError.message,
@@ -313,20 +305,6 @@ export const listUsers = async (pageSize: number = 10, pageToken?: string) => {
     });
 };
 
-/**
- * Create a new user
- */
-export const createUser = async (user: Partial<User>) => {
-    const { CreateUserRequest } = await import("./pb/user_pb");
-
-    return GrpcService.call(async (token) => {
-        const { client, callOptions } = await createGrpcClient(token);
-        const request = new CreateUserRequest({
-            user: user as User
-        });
-        return client.createUser(request, callOptions);
-    });
-};
 
 /**
  * Delete a user
