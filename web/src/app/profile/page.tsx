@@ -30,7 +30,7 @@ export default function ProfilePage() {
 
         if (!data.user) {
           // Not authenticated, redirect to login
-          router.push("/api/auth/login");
+          router.push("/auth/login");
           return;
         }
 

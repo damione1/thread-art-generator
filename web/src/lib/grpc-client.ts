@@ -52,6 +52,7 @@ export const fetchAccessToken = async (): Promise<string> => {
 
         const data = await response.json();
         if (!data.accessToken) {
+            //redirect to login
             throw new Error("No access token available");
         }
 
