@@ -3,7 +3,7 @@ load('ext://restart_process', 'docker_build_with_restart')
 
 local_resource(
   'go-compile',
-  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/cli cmd/cli/main.go && chmod +x build/cli',
   labels=["scripts"],
   deps=['cmd/', 'core/', 'threadGenerator/', 'web/**/*.go'],
 )

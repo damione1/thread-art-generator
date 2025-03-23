@@ -155,13 +155,10 @@ services:
       - ./infra/minio/config:/root/.minio
     depends_on:
       - db
-    networks:
-      mynet:
-        aliases:
-          # For localhost access, add the following to your /etc/hosts
-          # 127.0.0.1       my-minio-localhost-alias
-          # When accessing the minio container on a server with an accessible dns, use the following
-          - ${HOSTNAME}
 
 volumes:
   threadmachine:
+
+networks:
+  default:
+    name: thread-art-network
