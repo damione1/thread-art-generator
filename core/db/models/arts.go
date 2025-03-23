@@ -31,6 +31,8 @@ type Art struct {
 	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	DeletedAt null.Time   `boil:"deleted_at" json:"deleted_at,omitempty" toml:"deleted_at" yaml:"deleted_at,omitempty"`
+	// Current status of the art resource
+	Status ArtStatusEnum `boil:"status" json:"status" toml:"status" yaml:"status"`
 
 	R *artR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L artL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -44,6 +46,7 @@ var ArtColumns = struct {
 	CreatedAt string
 	UpdatedAt string
 	DeletedAt string
+	Status    string
 }{
 	ID:        "id",
 	Title:     "title",
@@ -52,6 +55,7 @@ var ArtColumns = struct {
 	CreatedAt: "created_at",
 	UpdatedAt: "updated_at",
 	DeletedAt: "deleted_at",
+	Status:    "status",
 }
 
 var ArtTableColumns = struct {
@@ -62,6 +66,7 @@ var ArtTableColumns = struct {
 	CreatedAt string
 	UpdatedAt string
 	DeletedAt string
+	Status    string
 }{
 	ID:        "arts.id",
 	Title:     "arts.title",
@@ -70,9 +75,45 @@ var ArtTableColumns = struct {
 	CreatedAt: "arts.created_at",
 	UpdatedAt: "arts.updated_at",
 	DeletedAt: "arts.deleted_at",
+	Status:    "arts.status",
 }
 
 // Generated where
+
+type whereHelperArtStatusEnum struct{ field string }
+
+func (w whereHelperArtStatusEnum) EQ(x ArtStatusEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelperArtStatusEnum) NEQ(x ArtStatusEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelperArtStatusEnum) LT(x ArtStatusEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelperArtStatusEnum) LTE(x ArtStatusEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelperArtStatusEnum) GT(x ArtStatusEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelperArtStatusEnum) GTE(x ArtStatusEnum) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelperArtStatusEnum) IN(slice []ArtStatusEnum) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperArtStatusEnum) NIN(slice []ArtStatusEnum) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
 
 var ArtWhere = struct {
 	ID        whereHelperstring
@@ -82,6 +123,7 @@ var ArtWhere = struct {
 	CreatedAt whereHelpertime_Time
 	UpdatedAt whereHelpertime_Time
 	DeletedAt whereHelpernull_Time
+	Status    whereHelperArtStatusEnum
 }{
 	ID:        whereHelperstring{field: "\"arts\".\"id\""},
 	Title:     whereHelperstring{field: "\"arts\".\"title\""},
@@ -90,6 +132,7 @@ var ArtWhere = struct {
 	CreatedAt: whereHelpertime_Time{field: "\"arts\".\"created_at\""},
 	UpdatedAt: whereHelpertime_Time{field: "\"arts\".\"updated_at\""},
 	DeletedAt: whereHelpernull_Time{field: "\"arts\".\"deleted_at\""},
+	Status:    whereHelperArtStatusEnum{field: "\"arts\".\"status\""},
 }
 
 // ArtRels is where relationship names are stored.
@@ -130,9 +173,9 @@ func (r *artR) GetArtVariations() ArtVariationSlice {
 type artL struct{}
 
 var (
-	artAllColumns            = []string{"id", "title", "image_id", "author_id", "created_at", "updated_at", "deleted_at"}
+	artAllColumns            = []string{"id", "title", "image_id", "author_id", "created_at", "updated_at", "deleted_at", "status"}
 	artColumnsWithoutDefault = []string{"title", "author_id"}
-	artColumnsWithDefault    = []string{"id", "image_id", "created_at", "updated_at", "deleted_at"}
+	artColumnsWithDefault    = []string{"id", "image_id", "created_at", "updated_at", "deleted_at", "status"}
 	artPrimaryKeyColumns     = []string{"id"}
 	artGeneratedColumns      = []string{}
 )

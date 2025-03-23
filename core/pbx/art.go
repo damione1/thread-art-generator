@@ -12,20 +12,38 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, post *models.Art) *pb.Art {
+func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, art *models.Art) *pb.Art {
+	// Map status from database enum to proto enum
+	var status pb.ArtStatus
+	switch art.Status {
+	case models.ArtStatusEnumPENDING_IMAGE:
+		status = pb.ArtStatus_ART_STATUS_PENDING_IMAGE
+	case models.ArtStatusEnumPROCESSING:
+		status = pb.ArtStatus_ART_STATUS_PROCESSING
+	case models.ArtStatusEnumCOMPLETE:
+		status = pb.ArtStatus_ART_STATUS_COMPLETE
+	case models.ArtStatusEnumFAILED:
+		status = pb.ArtStatus_ART_STATUS_FAILED
+	case models.ArtStatusEnumARCHIVED:
+		status = pb.ArtStatus_ART_STATUS_ARCHIVED
+	default:
+		status = pb.ArtStatus_ART_STATUS_UNSPECIFIED
+	}
+
 	artPb := &pb.Art{
-		Title:      post.Title,
-		Author:     fmt.Sprintf("users/%s", post.AuthorID),
-		CreateTime: timestamppb.New(post.CreatedAt),
-		UpdateTime: timestamppb.New(post.UpdatedAt),
+		Title:      art.Title,
+		Author:     fmt.Sprintf("users/%s", art.AuthorID),
+		CreateTime: timestamppb.New(art.CreatedAt),
+		UpdateTime: timestamppb.New(art.UpdatedAt),
+		Status:     status,
 	}
 	artPb.Name = GetResourceName([]Resource{
-		{Type: RessourceTypeUsers, ID: post.AuthorID},
-		{Type: RessourceTypeArts, ID: post.ID},
+		{Type: RessourceTypeUsers, ID: art.AuthorID},
+		{Type: RessourceTypeArts, ID: art.ID},
 	})
 
-	if post.ImageID.Valid {
-		imageUrl, err := cache.GetOrCreateSignedImageURL(ctx, bucket, post.ImageID.String, 10)
+	if art.ImageID.Valid {
+		imageUrl, err := cache.GetOrCreateSignedImageURL(ctx, bucket, art.ImageID.String, 10)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get signed URL for image")
 			artPb.ImageUrl = ""

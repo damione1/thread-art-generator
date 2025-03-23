@@ -27,29 +27,40 @@ import (
 )
 
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
-	userPayload := middleware.FromAdminContext(ctx).UserPayload
+	// Get user ID from context using the same key used in auth interceptor
+	log.Info().Msgf("CreateArt: %s", req)
 
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+	log.Info().Msgf("CreateArt userID: %s", userID)
 	if err := protovalidate.Validate(req); err != nil {
+		log.Info().Msgf("CreateArt protovalidate: %s", err)
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
-
+	log.Info().Msgf("CreateArt protovalidate: %s", req)
 	user, err := models.Users(
-		models.UserWhere.ID.EQ(userPayload.UserID),
+		models.UserWhere.ID.EQ(userID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			log.Info().Msgf("CreateArt user not found")
 			return nil, pbErrors.NotFoundError("user not found")
 		}
+		log.Info().Msgf("CreateArt failed to get user: %s", err)
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
-
+	log.Info().Msgf("CreateArt user: %s", user)
 	if user.Role != models.RoleEnumUser {
-		return nil, pbErrors.PermissionDeniedError("only admin can create art")
+		log.Info().Msgf("CreateArt user is not a user")
+		return nil, pbErrors.PermissionDeniedError("only users can create art")
 	}
-
+	log.Info().Msgf("CreateArt user is a user")
 	artDb := &models.Art{
 		Title:    req.GetArt().GetTitle(),
 		AuthorID: user.ID,
+		Status:   models.ArtStatusEnumPENDING_IMAGE, // Set initial status as pending image
 	}
 
 	err = artDb.Insert(ctx, server.config.DB, boil.Infer())
@@ -61,7 +72,11 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 }
 
 func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
-	userPayload := middleware.FromAdminContext(ctx).UserPayload
+	// Get user ID from context using the same key used in auth interceptor
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
 
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
@@ -75,7 +90,7 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userPayload.UserID {
+	if authorId != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can update the art")
 	}
 
@@ -104,7 +119,11 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 }
 
 func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
-	userPayload := middleware.FromAdminContext(ctx).UserPayload
+	// Get user ID from context using the same key used in auth interceptor
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
 
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
@@ -113,9 +132,8 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 	pageSize := int(req.GetPageSize())
 
 	const (
-		maxPageSize      = 1000
-		defaultPageSize  = 100
-		defaultPageToken = 0
+		maxPageSize     = 1000
+		defaultPageSize = 100
 	)
 
 	switch {
@@ -127,20 +145,31 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		pageSize = maxPageSize
 	}
 
-	if req.GetPageToken() < 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "page token is negative")
-	} else if req.GetPageToken() == 0 {
-		req.PageToken = defaultPageToken
+	// Parse page token to get offset
+	offset := 0
+	if req.GetPageToken() != "" {
+		var err error
+		offset, err = parseInt32PageToken(req.GetPageToken())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid page token: %v", err)
+		}
 	}
 
 	// Query the arts with pagination
 	arts, err := models.Arts(
-		models.ArtWhere.AuthorID.EQ(userPayload.UserID),
-		qm.Limit(pageSize),
-		qm.Offset(int(req.PageToken)),
+		models.ArtWhere.AuthorID.EQ(userID),
+		qm.Limit(pageSize+1), // Query one more than we need to check if there are more results
+		qm.Offset(offset),
 	).All(ctx, server.config.DB)
 	if err != nil {
 		return nil, pbErrors.InternalError("failed to get arts", err)
+	}
+
+	// Check if there are more results
+	hasNextPage := false
+	if len(arts) > pageSize {
+		hasNextPage = true
+		arts = arts[:pageSize] // Trim the extra result
 	}
 
 	// Convert the arts to protobuf format
@@ -149,15 +178,50 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		artPbs = append(artPbs, pbx.ArtDbToProto(ctx, server.bucket, artDb))
 	}
 
+	// Create next page token if there are more results
+	nextPageToken := ""
+	if hasNextPage {
+		nextPageToken = createPageToken(offset + pageSize)
+	}
+
 	return &pb.ListArtsResponse{
 		Arts:          artPbs,
-		NextPageToken: req.PageToken + int32(pageSize),
+		NextPageToken: nextPageToken,
 	}, nil
+}
+
+// parseInt32PageToken converts a string page token to an integer offset
+func parseInt32PageToken(token string) (int, error) {
+	// For simplicity, we're just converting the string to int
+	// In a production system, you might want to use a more secure approach
+	// such as signed or encrypted tokens
+	var offset int
+	_, err := fmt.Sscanf(token, "%d", &offset)
+	if err != nil {
+		return 0, err
+	}
+	if offset < 0 {
+		return 0, fmt.Errorf("offset cannot be negative")
+	}
+	return offset, nil
+}
+
+// createPageToken creates a page token from an integer offset
+func createPageToken(offset int) string {
+	// For simplicity, we're just converting the int to string
+	// In a production system, you might want to use a more secure approach
+	return fmt.Sprintf("%d", offset)
 }
 
 func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Art, error) {
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
+	}
+
+	// Get user ID from context using the same key used in auth interceptor
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
@@ -168,7 +232,7 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != middleware.FromAdminContext(ctx).UserPayload.UserID {
+	if authorId != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get the art")
 	}
 
@@ -191,6 +255,12 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
+	// Get user ID from context using the same key used in auth interceptor
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
@@ -199,7 +269,7 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != middleware.FromAdminContext(ctx).UserPayload.UserID {
+	if authorId != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can delete the art")
 	}
 
@@ -241,6 +311,12 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
+	// Get user ID from context using the same key used in auth interceptor
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
 	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
@@ -249,8 +325,7 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	userPayload := middleware.FromAdminContext(ctx).UserPayload
-	if authorId != userPayload.UserID {
+	if authorId != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get an upload URL for the art")
 	}
 
@@ -305,4 +380,74 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		UploadUrl:      signedURL,
 		ExpirationTime: timestamppb.New(expirationTime),
 	}, nil
+}
+
+// ConfirmArtImageUpload marks an art as complete after successful image upload
+func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.ConfirmArtImageUploadRequest) (*pb.Art, error) {
+	// Get user ID from context using the same key used in auth interceptor
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
+	}
+
+	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	if err != nil {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	if authorId != userID {
+		return nil, pbErrors.PermissionDeniedError("only the author can confirm image upload")
+	}
+
+	// Get the art
+	artDb, err := models.Arts(
+		models.ArtWhere.ID.EQ(artId),
+		models.ArtWhere.AuthorID.EQ(authorId),
+	).One(ctx, server.config.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("art not found")
+		}
+		return nil, pbErrors.InternalError("failed to get art", err)
+	}
+
+	// Make sure there's an image ID
+	if !artDb.ImageID.Valid {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("art has no image ID, request upload URL first")),
+		})
+	}
+
+	// Verify the image exists in the bucket
+	imageKey := pbx.GetResourceName([]pbx.Resource{
+		{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
+		{Type: pbx.RessourceTypeArts, ID: artDb.ImageID.String},
+	})
+
+	exists, err := server.bucket.Exists(ctx, imageKey)
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to verify image exists", err)
+	}
+
+	if !exists {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("image not found in storage, upload the image first")),
+		})
+	}
+
+	// Update status to complete
+	artDb.Status = models.ArtStatusEnumCOMPLETE
+	_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(models.ArtColumns.Status))
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to update art status", err)
+	}
+
+	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
 }

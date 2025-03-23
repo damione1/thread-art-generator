@@ -35,10 +35,10 @@ export default async function DashboardPage() {
           </p>
           <div className="flex flex-wrap gap-4">
             <Link
-              href="/create"
+              href="/dashboard/arts/new"
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
-              Create New Project
+              Create New Art
             </Link>
             <Link
               href="/profile"
@@ -69,13 +69,13 @@ export default async function DashboardPage() {
               </svg>
             </div>
             <h3 className="text-xl font-semibold text-slate-100 mb-2">
-              Create New Project
+              Create New Art
             </h3>
             <p className="text-slate-400 mb-6">
               Start a new thread art project
             </p>
             <Link
-              href="/projects/new"
+              href="/dashboard/arts/new"
               className="text-primary-500 font-medium hover:text-primary-400 transition"
             >
               Get Started →

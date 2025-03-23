@@ -485,6 +485,48 @@ func local_request_ArtGeneratorService_GetArtUploadUrl_0(ctx context.Context, ma
 	return msg, metadata, err
 }
 
+func request_ArtGeneratorService_ConfirmArtImageUpload_0(ctx context.Context, marshaler runtime.Marshaler, client ArtGeneratorServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ConfirmArtImageUploadRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+	protoReq.Name, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+	msg, err := client.ConfirmArtImageUpload(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_ArtGeneratorService_ConfirmArtImageUpload_0(ctx context.Context, marshaler runtime.Marshaler, server ArtGeneratorServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ConfirmArtImageUploadRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+	protoReq.Name, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+	msg, err := server.ConfirmArtImageUpload(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterArtGeneratorServiceHandlerServer registers the http handlers for service ArtGeneratorService to "mux".
 // UnaryRPC     :call ArtGeneratorServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -617,7 +659,7 @@ func RegisterArtGeneratorServiceHandlerServer(ctx context.Context, mux *runtime.
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/GetArt", runtime.WithHTTPPathPattern("/v1/{name=authors/*/arts/*}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/GetArt", runtime.WithHTTPPathPattern("/v1/{name=users/*/arts/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -710,6 +752,26 @@ func RegisterArtGeneratorServiceHandlerServer(ctx context.Context, mux *runtime.
 			return
 		}
 		forward_ArtGeneratorService_GetArtUploadUrl_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_ArtGeneratorService_ConfirmArtImageUpload_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.ArtGeneratorService/ConfirmArtImageUpload", runtime.WithHTTPPathPattern("/v1/{name=users/*/arts/*}:confirmImageUpload"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ArtGeneratorService_ConfirmArtImageUpload_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ArtGeneratorService_ConfirmArtImageUpload_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 
 	return nil
@@ -857,7 +919,7 @@ func RegisterArtGeneratorServiceHandlerClient(ctx context.Context, mux *runtime.
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/GetArt", runtime.WithHTTPPathPattern("/v1/{name=authors/*/arts/*}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/GetArt", runtime.WithHTTPPathPattern("/v1/{name=users/*/arts/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -938,33 +1000,52 @@ func RegisterArtGeneratorServiceHandlerClient(ctx context.Context, mux *runtime.
 		}
 		forward_ArtGeneratorService_GetArtUploadUrl_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_ArtGeneratorService_ConfirmArtImageUpload_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/pb.ArtGeneratorService/ConfirmArtImageUpload", runtime.WithHTTPPathPattern("/v1/{name=users/*/arts/*}:confirmImageUpload"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ArtGeneratorService_ConfirmArtImageUpload_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ArtGeneratorService_ConfirmArtImageUpload_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
 var (
-	pattern_ArtGeneratorService_UpdateUser_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "users", "user.name"}, ""))
-	pattern_ArtGeneratorService_GetUser_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "users", "name"}, ""))
-	pattern_ArtGeneratorService_ListUsers_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "users"}, ""))
-	pattern_ArtGeneratorService_DeleteUser_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "users", "name"}, ""))
-	pattern_ArtGeneratorService_GetCurrentUser_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "users"}, "me"))
-	pattern_ArtGeneratorService_CreateArt_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 2, 5, 2, 2, 3}, []string{"v1", "users", "parent", "arts"}, ""))
-	pattern_ArtGeneratorService_GetArt_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "authors", "arts", "name"}, ""))
-	pattern_ArtGeneratorService_UpdateArt_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "art.name"}, ""))
-	pattern_ArtGeneratorService_ListArts_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 2, 5, 2, 2, 3}, []string{"v1", "users", "parent", "arts"}, ""))
-	pattern_ArtGeneratorService_DeleteArt_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "name"}, ""))
-	pattern_ArtGeneratorService_GetArtUploadUrl_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "name"}, "getUploadUrl"))
+	pattern_ArtGeneratorService_UpdateUser_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "users", "user.name"}, ""))
+	pattern_ArtGeneratorService_GetUser_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "users", "name"}, ""))
+	pattern_ArtGeneratorService_ListUsers_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "users"}, ""))
+	pattern_ArtGeneratorService_DeleteUser_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "users", "name"}, ""))
+	pattern_ArtGeneratorService_GetCurrentUser_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "users"}, "me"))
+	pattern_ArtGeneratorService_CreateArt_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 2, 5, 2, 2, 3}, []string{"v1", "users", "parent", "arts"}, ""))
+	pattern_ArtGeneratorService_GetArt_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "name"}, ""))
+	pattern_ArtGeneratorService_UpdateArt_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "art.name"}, ""))
+	pattern_ArtGeneratorService_ListArts_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 2, 5, 2, 2, 3}, []string{"v1", "users", "parent", "arts"}, ""))
+	pattern_ArtGeneratorService_DeleteArt_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "name"}, ""))
+	pattern_ArtGeneratorService_GetArtUploadUrl_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "name"}, "getUploadUrl"))
+	pattern_ArtGeneratorService_ConfirmArtImageUpload_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 2, 2, 1, 0, 4, 4, 5, 3}, []string{"v1", "users", "arts", "name"}, "confirmImageUpload"))
 )
 
 var (
-	forward_ArtGeneratorService_UpdateUser_0      = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_GetUser_0         = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_ListUsers_0       = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_DeleteUser_0      = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_GetCurrentUser_0  = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_CreateArt_0       = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_GetArt_0          = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_UpdateArt_0       = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_ListArts_0        = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_DeleteArt_0       = runtime.ForwardResponseMessage
-	forward_ArtGeneratorService_GetArtUploadUrl_0 = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_UpdateUser_0            = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_GetUser_0               = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_ListUsers_0             = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_DeleteUser_0            = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_GetCurrentUser_0        = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_CreateArt_0             = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_GetArt_0                = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_UpdateArt_0             = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_ListArts_0              = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_DeleteArt_0             = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_GetArtUploadUrl_0       = runtime.ForwardResponseMessage
+	forward_ArtGeneratorService_ConfirmArtImageUpload_0 = runtime.ForwardResponseMessage
 )

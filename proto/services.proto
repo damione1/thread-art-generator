@@ -125,10 +125,10 @@ service ArtGeneratorService {
 
   rpc GetArt (GetArtRequest) returns (Art) {
     option (google.api.http) = {
-      get: "/v1/{name=authors/*/arts/*}"
+      get: "/v1/{name=users/*/arts/*}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Get a arts's information"
+      summary: "Get an art's information"
       description: "Retrieve information for a specific art by its ID."
       tags: "Arts";
     };
@@ -179,6 +179,19 @@ service ArtGeneratorService {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Get upload URL for art image"
       description: "Generate a signed URL for uploading an image for a specific art."
+      tags: "Media";
+    };
+    option (google.api.method_signature) = "name";
+  }
+
+  rpc ConfirmArtImageUpload (ConfirmArtImageUploadRequest) returns (Art) {
+    option (google.api.http) = {
+      post: "/v1/{name=users/*/arts/*}:confirmImageUpload"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Confirm art image upload"
+      description: "Mark an art resource as complete after image upload."
       tags: "Media";
     };
     option (google.api.method_signature) = "name";

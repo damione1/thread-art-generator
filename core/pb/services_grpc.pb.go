@@ -20,17 +20,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ArtGeneratorService_UpdateUser_FullMethodName      = "/pb.ArtGeneratorService/UpdateUser"
-	ArtGeneratorService_GetUser_FullMethodName         = "/pb.ArtGeneratorService/GetUser"
-	ArtGeneratorService_ListUsers_FullMethodName       = "/pb.ArtGeneratorService/ListUsers"
-	ArtGeneratorService_DeleteUser_FullMethodName      = "/pb.ArtGeneratorService/DeleteUser"
-	ArtGeneratorService_GetCurrentUser_FullMethodName  = "/pb.ArtGeneratorService/GetCurrentUser"
-	ArtGeneratorService_CreateArt_FullMethodName       = "/pb.ArtGeneratorService/CreateArt"
-	ArtGeneratorService_GetArt_FullMethodName          = "/pb.ArtGeneratorService/GetArt"
-	ArtGeneratorService_UpdateArt_FullMethodName       = "/pb.ArtGeneratorService/UpdateArt"
-	ArtGeneratorService_ListArts_FullMethodName        = "/pb.ArtGeneratorService/ListArts"
-	ArtGeneratorService_DeleteArt_FullMethodName       = "/pb.ArtGeneratorService/DeleteArt"
-	ArtGeneratorService_GetArtUploadUrl_FullMethodName = "/pb.ArtGeneratorService/GetArtUploadUrl"
+	ArtGeneratorService_UpdateUser_FullMethodName            = "/pb.ArtGeneratorService/UpdateUser"
+	ArtGeneratorService_GetUser_FullMethodName               = "/pb.ArtGeneratorService/GetUser"
+	ArtGeneratorService_ListUsers_FullMethodName             = "/pb.ArtGeneratorService/ListUsers"
+	ArtGeneratorService_DeleteUser_FullMethodName            = "/pb.ArtGeneratorService/DeleteUser"
+	ArtGeneratorService_GetCurrentUser_FullMethodName        = "/pb.ArtGeneratorService/GetCurrentUser"
+	ArtGeneratorService_CreateArt_FullMethodName             = "/pb.ArtGeneratorService/CreateArt"
+	ArtGeneratorService_GetArt_FullMethodName                = "/pb.ArtGeneratorService/GetArt"
+	ArtGeneratorService_UpdateArt_FullMethodName             = "/pb.ArtGeneratorService/UpdateArt"
+	ArtGeneratorService_ListArts_FullMethodName              = "/pb.ArtGeneratorService/ListArts"
+	ArtGeneratorService_DeleteArt_FullMethodName             = "/pb.ArtGeneratorService/DeleteArt"
+	ArtGeneratorService_GetArtUploadUrl_FullMethodName       = "/pb.ArtGeneratorService/GetArtUploadUrl"
+	ArtGeneratorService_ConfirmArtImageUpload_FullMethodName = "/pb.ArtGeneratorService/ConfirmArtImageUpload"
 )
 
 // ArtGeneratorServiceClient is the client API for ArtGeneratorService service.
@@ -48,6 +49,7 @@ type ArtGeneratorServiceClient interface {
 	ListArts(ctx context.Context, in *ListArtsRequest, opts ...grpc.CallOption) (*ListArtsResponse, error)
 	DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetArtUploadUrl(ctx context.Context, in *GetArtUploadUrlRequest, opts ...grpc.CallOption) (*GetArtUploadUrlResponse, error)
+	ConfirmArtImageUpload(ctx context.Context, in *ConfirmArtImageUploadRequest, opts ...grpc.CallOption) (*Art, error)
 }
 
 type artGeneratorServiceClient struct {
@@ -168,6 +170,16 @@ func (c *artGeneratorServiceClient) GetArtUploadUrl(ctx context.Context, in *Get
 	return out, nil
 }
 
+func (c *artGeneratorServiceClient) ConfirmArtImageUpload(ctx context.Context, in *ConfirmArtImageUploadRequest, opts ...grpc.CallOption) (*Art, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Art)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_ConfirmArtImageUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ArtGeneratorServiceServer is the server API for ArtGeneratorService service.
 // All implementations must embed UnimplementedArtGeneratorServiceServer
 // for forward compatibility.
@@ -183,6 +195,7 @@ type ArtGeneratorServiceServer interface {
 	ListArts(context.Context, *ListArtsRequest) (*ListArtsResponse, error)
 	DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error)
 	GetArtUploadUrl(context.Context, *GetArtUploadUrlRequest) (*GetArtUploadUrlResponse, error)
+	ConfirmArtImageUpload(context.Context, *ConfirmArtImageUploadRequest) (*Art, error)
 	mustEmbedUnimplementedArtGeneratorServiceServer()
 }
 
@@ -225,6 +238,9 @@ func (UnimplementedArtGeneratorServiceServer) DeleteArt(context.Context, *Delete
 }
 func (UnimplementedArtGeneratorServiceServer) GetArtUploadUrl(context.Context, *GetArtUploadUrlRequest) (*GetArtUploadUrlResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetArtUploadUrl not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) ConfirmArtImageUpload(context.Context, *ConfirmArtImageUploadRequest) (*Art, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfirmArtImageUpload not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) mustEmbedUnimplementedArtGeneratorServiceServer() {}
 func (UnimplementedArtGeneratorServiceServer) testEmbeddedByValue()                             {}
@@ -445,6 +461,24 @@ func _ArtGeneratorService_GetArtUploadUrl_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ArtGeneratorService_ConfirmArtImageUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmArtImageUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).ConfirmArtImageUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_ConfirmArtImageUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).ConfirmArtImageUpload(ctx, req.(*ConfirmArtImageUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ArtGeneratorService_ServiceDesc is the grpc.ServiceDesc for ArtGeneratorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -495,6 +529,10 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetArtUploadUrl",
 			Handler:    _ArtGeneratorService_GetArtUploadUrl_Handler,
+		},
+		{
+			MethodName: "ConfirmArtImageUpload",
+			Handler:    _ArtGeneratorService_ConfirmArtImageUpload_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

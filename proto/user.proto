@@ -30,7 +30,7 @@ message User {
         (buf.validate.field).cel = {
             id: "user.first_name.required",
             message: "First name is required",
-            expression: "size(this) > 0"
+            expression: "this.size() > 0"
         }
     ];
     // LastName is the user's last name.
@@ -44,7 +44,7 @@ message User {
         (buf.validate.field).cel = {
             id: "user.last_name.required",
             message: "Last name is required",
-            expression: "size(this) > 0"
+            expression: "this.size() > 0"
         }
     ];
     // Email is the user's email.
@@ -58,7 +58,7 @@ message User {
         (buf.validate.field).cel = {
             id: "user.email.required",
             message: "Email address is required",
-            expression: "size(this) > 0"
+            expression: "this.size() > 0"
         }
     ];
 
@@ -76,7 +76,7 @@ message GetUserRequest {
         (buf.validate.field).cel = {
             id: "get_user.name.format",
             message: "User resource name is required and must start with 'users/'",
-            expression: "string.length(this) > 0 && string.startsWith(this, \"users/\")"
+            expression: "this.size() > 0 && this.startsWith('users/')"
         }
     ];
 }
@@ -111,7 +111,7 @@ message DeleteUserRequest {
         (buf.validate.field).cel = {
             id: "delete_user.name.format",
             message: "User resource name is required and must start with 'users/'",
-            expression: "string.length(this) > 0 && string.startsWith(this, \"users/\")"
+            expression: "this.size() > 0 && this.startsWith('users/')"
         }
     ];
 }

@@ -6,7 +6,7 @@
 import { DeleteUserRequest, GetCurrentUserRequest, GetUserRequest, ListUsersRequest, ListUsersResponse, UpdateUserRequest, User } from "./user_pb";
 import { MethodKind } from "@bufbuild/protobuf";
 import { Empty } from "./google/protobuf/empty_pb";
-import { Art, CreateArtRequest, DeleteArtRequest, GetArtRequest, GetArtUploadUrlRequest, GetArtUploadUrlResponse, ListArtsRequest, ListArtsResponse, UpdateArtRequest } from "./art_pb";
+import { Art, ConfirmArtImageUploadRequest, CreateArtRequest, DeleteArtRequest, GetArtRequest, GetArtUploadUrlRequest, GetArtUploadUrlResponse, ListArtsRequest, ListArtsResponse, UpdateArtRequest } from "./art_pb";
 
 /**
  * @generated from service pb.ArtGeneratorService
@@ -111,6 +111,15 @@ export const ArtGeneratorService = {
       name: "GetArtUploadUrl",
       I: GetArtUploadUrlRequest,
       O: GetArtUploadUrlResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc pb.ArtGeneratorService.ConfirmArtImageUpload
+     */
+    confirmArtImageUpload: {
+      name: "ConfirmArtImageUpload",
+      I: ConfirmArtImageUploadRequest,
+      O: Art,
       kind: MethodKind.Unary,
     },
   }

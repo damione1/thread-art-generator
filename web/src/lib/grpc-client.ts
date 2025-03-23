@@ -201,7 +201,6 @@ export const updateUser = async (
             // Log more details if it's a gRPC error
             if (error && typeof error === 'object' && 'code' in error) {
                 const grpcError = error as GrpcError;
-
                 console.error("gRPC error details:", {
                     code: grpcError.code,
                     message: grpcError.message,
@@ -219,15 +218,42 @@ export const updateUser = async (
  * Create a new art piece
  */
 export const createArt = async (art: Partial<Art>, parent: string) => {
-    const { CreateArtRequest } = await import("./pb/art_pb");
+    const { CreateArtRequest, Art } = await import("./pb/art_pb");
 
     return GrpcService.call(async (token) => {
         const { client, callOptions } = await createGrpcClient(token);
         const request = new CreateArtRequest({
             parent,
-            art: art as Art
+            art: new Art(art)
         });
         return client.createArt(request, callOptions);
+    });
+};
+
+/**
+ * Get an upload URL for an art piece image
+ */
+export const getArtUploadUrl = async (artName: string) => {
+    const { GetArtUploadUrlRequest } = await import("./pb/art_pb");
+
+    return GrpcService.call(async (token) => {
+        const { client, callOptions } = await createGrpcClient(token);
+        return client.getArtUploadUrl(new GetArtUploadUrlRequest({ name: artName }), callOptions);
+    });
+};
+
+/**
+ * Confirm that an art image has been uploaded successfully
+ */
+export const confirmArtImageUpload = async (artName: string) => {
+    const { ConfirmArtImageUploadRequest } = await import("./pb/art_pb");
+
+    return GrpcService.call(async (token) => {
+        const { client, callOptions } = await createGrpcClient(token);
+        return client.confirmArtImageUpload(
+            new ConfirmArtImageUploadRequest({ name: artName }),
+            callOptions
+        );
     });
 };
 

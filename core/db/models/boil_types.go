@@ -51,6 +51,58 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
+type ArtStatusEnum string
+
+// Enum values for ArtStatusEnum
+const (
+	ArtStatusEnumPENDING_IMAGE ArtStatusEnum = "PENDING_IMAGE"
+	ArtStatusEnumPROCESSING    ArtStatusEnum = "PROCESSING"
+	ArtStatusEnumCOMPLETE      ArtStatusEnum = "COMPLETE"
+	ArtStatusEnumFAILED        ArtStatusEnum = "FAILED"
+	ArtStatusEnumARCHIVED      ArtStatusEnum = "ARCHIVED"
+)
+
+func AllArtStatusEnum() []ArtStatusEnum {
+	return []ArtStatusEnum{
+		ArtStatusEnumPENDING_IMAGE,
+		ArtStatusEnumPROCESSING,
+		ArtStatusEnumCOMPLETE,
+		ArtStatusEnumFAILED,
+		ArtStatusEnumARCHIVED,
+	}
+}
+
+func (e ArtStatusEnum) IsValid() error {
+	switch e {
+	case ArtStatusEnumPENDING_IMAGE, ArtStatusEnumPROCESSING, ArtStatusEnumCOMPLETE, ArtStatusEnumFAILED, ArtStatusEnumARCHIVED:
+		return nil
+	default:
+		return errors.New("enum is not valid")
+	}
+}
+
+func (e ArtStatusEnum) String() string {
+	return string(e)
+}
+
+func (e ArtStatusEnum) Ordinal() int {
+	switch e {
+	case ArtStatusEnumPENDING_IMAGE:
+		return 0
+	case ArtStatusEnumPROCESSING:
+		return 1
+	case ArtStatusEnumCOMPLETE:
+		return 2
+	case ArtStatusEnumFAILED:
+		return 3
+	case ArtStatusEnumARCHIVED:
+		return 4
+
+	default:
+		panic(errors.New("enum is not valid"))
+	}
+}
+
 type RoleEnum string
 
 // Enum values for RoleEnum

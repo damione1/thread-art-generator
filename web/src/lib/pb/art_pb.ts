@@ -9,12 +9,70 @@ import { Timestamp } from "./google/protobuf/timestamp_pb";
 import { FieldMask } from "./google/protobuf/field_mask_pb";
 
 /**
+ * Status of the art
+ *
+ * @generated from enum pb.ArtStatus
+ */
+export enum ArtStatus {
+  /**
+   * Default unspecified status
+   *
+   * @generated from enum value: ART_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Art is created but image is pending upload
+   *
+   * @generated from enum value: ART_STATUS_PENDING_IMAGE = 1;
+   */
+  PENDING_IMAGE = 1,
+
+  /**
+   * Image is uploaded and being processed
+   *
+   * @generated from enum value: ART_STATUS_PROCESSING = 2;
+   */
+  PROCESSING = 2,
+
+  /**
+   * Art is complete with processed image
+   *
+   * @generated from enum value: ART_STATUS_COMPLETE = 3;
+   */
+  COMPLETE = 3,
+
+  /**
+   * Processing failed
+   *
+   * @generated from enum value: ART_STATUS_FAILED = 4;
+   */
+  FAILED = 4,
+
+  /**
+   * Art is archived/hidden but not deleted
+   *
+   * @generated from enum value: ART_STATUS_ARCHIVED = 5;
+   */
+  ARCHIVED = 5,
+}
+// Retrieve enum metadata with: proto3.getEnumType(ArtStatus)
+proto3.util.setEnumType(ArtStatus, "pb.ArtStatus", [
+  { no: 0, name: "ART_STATUS_UNSPECIFIED" },
+  { no: 1, name: "ART_STATUS_PENDING_IMAGE" },
+  { no: 2, name: "ART_STATUS_PROCESSING" },
+  { no: 3, name: "ART_STATUS_COMPLETE" },
+  { no: 4, name: "ART_STATUS_FAILED" },
+  { no: 5, name: "ART_STATUS_ARCHIVED" },
+]);
+
+/**
  * @generated from message pb.Art
  */
 export class Art extends Message<Art> {
   /**
    * The name of the Art resource.
-   * For example: "arts/123"
+   * For example: "users/123/arts/456"
    *
    * @generated from field: string name = 1;
    */
@@ -35,24 +93,31 @@ export class Art extends Message<Art> {
   imageUrl = "";
 
   /**
+   * Status of the art
+   *
+   * @generated from field: pb.ArtStatus status = 4;
+   */
+  status = ArtStatus.UNSPECIFIED;
+
+  /**
    * The name of the User resource who is the author of the art.
    * For example: "users/456"
    *
-   * @generated from field: string author = 4;
+   * @generated from field: string author = 5;
    */
   author = "";
 
   /**
    * CreatedAt is the art's creation time. Output only.
    *
-   * @generated from field: google.protobuf.Timestamp create_time = 5;
+   * @generated from field: google.protobuf.Timestamp create_time = 6;
    */
   createTime?: Timestamp;
 
   /**
    * UpdatedAt is the art's last update time.
    *
-   * @generated from field: google.protobuf.Timestamp update_time = 6;
+   * @generated from field: google.protobuf.Timestamp update_time = 7;
    */
   updateTime?: Timestamp;
 
@@ -67,9 +132,10 @@ export class Art extends Message<Art> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "image_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "create_time", kind: "message", T: Timestamp },
-    { no: 6, name: "update_time", kind: "message", T: Timestamp },
+    { no: 4, name: "status", kind: "enum", T: proto3.getEnumType(ArtStatus) },
+    { no: 5, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "create_time", kind: "message", T: Timestamp },
+    { no: 7, name: "update_time", kind: "message", T: Timestamp },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Art {
@@ -246,9 +312,9 @@ export class ListArtsRequest extends Message<ListArtsRequest> {
   /**
    * A page token, received from a previous `ListArts` call.
    *
-   * @generated from field: int32 page_token = 3;
+   * @generated from field: string page_token = 3;
    */
-  pageToken = 0;
+  pageToken = "";
 
   constructor(data?: PartialMessage<ListArtsRequest>) {
     super();
@@ -260,7 +326,7 @@ export class ListArtsRequest extends Message<ListArtsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "parent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "page_token", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListArtsRequest {
@@ -295,9 +361,9 @@ export class ListArtsResponse extends Message<ListArtsResponse> {
    * A token to retrieve next page of results.
    * Pass this value in ListArtsRequest.page_token field in the subsequent call to `ListArts` method to retrieve the next page of results.
    *
-   * @generated from field: int32 next_page_token = 2;
+   * @generated from field: string next_page_token = 2;
    */
-  nextPageToken = 0;
+  nextPageToken = "";
 
   constructor(data?: PartialMessage<ListArtsResponse>) {
     super();
@@ -308,7 +374,7 @@ export class ListArtsResponse extends Message<ListArtsResponse> {
   static readonly typeName = "pb.ListArtsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "arts", kind: "message", T: Art, repeated: true },
-    { no: 2, name: "next_page_token", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "next_page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListArtsResponse {
@@ -334,7 +400,7 @@ export class ListArtsResponse extends Message<ListArtsResponse> {
 export class DeleteArtRequest extends Message<DeleteArtRequest> {
   /**
    * The name of the Art resource.
-   * For example: "arts/123"
+   * For example: "users/123/arts/456"
    *
    * @generated from field: string name = 1;
    */
@@ -374,7 +440,7 @@ export class DeleteArtRequest extends Message<DeleteArtRequest> {
 export class GetArtUploadUrlRequest extends Message<GetArtUploadUrlRequest> {
   /**
    * The name of the Art resource to upload an image for.
-   * For example: "arts/123"
+   * For example: "users/123/arts/456"
    *
    * @generated from field: string name = 1;
    */
@@ -452,6 +518,46 @@ export class GetArtUploadUrlResponse extends Message<GetArtUploadUrlResponse> {
 
   static equals(a: GetArtUploadUrlResponse | PlainMessage<GetArtUploadUrlResponse> | undefined, b: GetArtUploadUrlResponse | PlainMessage<GetArtUploadUrlResponse> | undefined): boolean {
     return proto3.util.equals(GetArtUploadUrlResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.ConfirmArtImageUploadRequest
+ */
+export class ConfirmArtImageUploadRequest extends Message<ConfirmArtImageUploadRequest> {
+  /**
+   * The name of the Art resource that has been uploaded.
+   * For example: "users/123/arts/456"
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<ConfirmArtImageUploadRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.ConfirmArtImageUploadRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfirmArtImageUploadRequest {
+    return new ConfirmArtImageUploadRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfirmArtImageUploadRequest {
+    return new ConfirmArtImageUploadRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfirmArtImageUploadRequest {
+    return new ConfirmArtImageUploadRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ConfirmArtImageUploadRequest | PlainMessage<ConfirmArtImageUploadRequest> | undefined, b: ConfirmArtImageUploadRequest | PlainMessage<ConfirmArtImageUploadRequest> | undefined): boolean {
+    return proto3.util.equals(ConfirmArtImageUploadRequest, a, b);
   }
 }
 
