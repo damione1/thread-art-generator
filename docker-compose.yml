@@ -145,7 +145,23 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
       MINIO_DEFAULT_BUCKETS: local-bucket
+      MINIO_SERVER_URL: http://localhost:9000
+      MINIO_BROWSER_REDIRECT_URL: https://tag.local/storage
+    volumes:
+      - ./infra/minio/data:/data
+      - ./infra/minio/config:/root/.minio
+    depends_on:
+      - db
+    networks:
+      mynet:
+        aliases:
+          # For localhost access, add the following to your /etc/hosts
+          # 127.0.0.1       my-minio-localhost-alias
+          # When accessing the minio container on a server with an accessible dns, use the following
+          - ${HOSTNAME}
 
 volumes:
   threadmachine:

@@ -26,6 +26,12 @@ static_resources:
                     - name: tag_local
                       domains: ["tag.local", "*.tag.local"]
                       routes:
+                        # Minio storage route
+                        - match:
+                            prefix: "/storage/"
+                          route:
+                            cluster: minio_service
+                            timeout: 0s
                         # gRPC-Web service route
                         - match:
                             prefix: "/pb.ArtGeneratorService/"
@@ -138,4 +144,18 @@ static_resources:
                     socket_address:
                       address: thread-art-generator-frontend-1
                       port_value: 3000
+      connect_timeout: 30s
+
+    - name: minio_service
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: minio_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: thread-art-generator-minio-1
+                      port_value: 9000
       connect_timeout: 30s

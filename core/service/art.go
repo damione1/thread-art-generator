@@ -376,6 +376,8 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	// Calculate expiration time
 	expirationTime := time.Now().Add(15 * time.Minute)
 
+	log.Info().Msgf("Signed URL: %s", signedURL)
+
 	return &pb.GetArtUploadUrlResponse{
 		UploadUrl:      signedURL,
 		ExpirationTime: timestamppb.New(expirationTime),

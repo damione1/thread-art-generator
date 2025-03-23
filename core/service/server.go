@@ -40,7 +40,16 @@ func NewServer(config util.Config) (*Server, error) {
 	case "production":
 		//To be implemented
 	case "development":
-		server.bucket, err = storage.NewMinioBlobStorage("minio:9000", "minio", "miniosecret", "local-bucket", false) //Default Minio credentials
+		// Use https://tag.local/storage as the public URL for signed URLs
+		// while still connecting to minio:9000 internally
+		server.bucket, err = storage.NewMinioBlobStorage(
+			"minio:9000",                // Internal endpoint for operations
+			"minio",                     // Access key
+			"minio123",                  // Secret key
+			"local-bucket",              // Bucket name
+			false,                       // Use SSL
+			"https://tag.local/storage", // Public URL for signed URLs
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create minio storage. %v", err)
 		}
