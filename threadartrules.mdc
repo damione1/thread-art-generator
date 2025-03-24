@@ -1,0 +1,299 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Thread Art Generator Frontend Implementation Guide
+
+## Form Implementation
+
+### Form Pattern Overview
+The application uses a consistent pattern for form implementation:
+
+1. **Base Rendering** - Simple version that accepts minimal params (usually error message)
+2. **Pre-populated Rendering** - Accepts error message and pre-populated field values
+3. **Data Structure Rendering** - Accepts a form data structure containing both errors and values
+
+Example pattern from email validation:
+```go
+// Base version
+templ EmailValidation(errorMessage string) {
+  @EmailValidationWithData(NewEmailValidationFormData(client.ParseValidationError(errorMessage), ""))
+}
+
+// Pre-populated version
+templ EmailValidationWithFormValues(errorMessage, email string) {
+  @EmailValidationWithData(NewEmailValidationFormData(client.ParseValidationError(errorMessage), email))
+}
+
+// Data structure version (the actual implementation)
+templ EmailValidationWithData(data EmailValidationFormData) {
+  // Form implementation
+}
+```
+
+### Form Data Structures
+Each form should have a corresponding data structure with:
+- Field values
+- Validation errors
+
+Example:
+```go
+type EmailValidationFormData struct {
+  Email  string
+  Errors map[string]string
+}
+
+func NewEmailValidationFormData(errors map[string]string, email string) EmailValidationFormData {
+  return EmailValidationFormData{
+    Errors: errors,
+    Email:  email,
+  }
+}
+```
+
+## gRPC Error Normalization
+
+### Error Structure
+gRPC errors follow Google API guidelines and are normalized through the `client.ParseValidationError` function:
+
+```go
+// In client/errors.go
+func ParseValidationError(errMsg string) map[string]string {
+  if errMsg == "" {
+    return map[string]string{}
+  }
+
+  // Parse error message from gRPC status
+  errors := make(map[string]string)
+
+  // Example implementation of error parsing from gRPC status messages
+  // into field-specific validation errors
+
+  return errors
+}
+```
+
+### Error Field Mapping
+Error keys should match form field names to support automatic binding in the `FormErrors` component.
+
+## Server-Side Error Handling
+
+### Error Response Structure
+All API services must follow a consistent pattern for returning errors using the Google API error model implemented through gRPC status codes and rich error details.
+
+#### Error Types
+
+1. **Validation Errors**: Invalid input from clients
+2. **Not Found Errors**: Requested resource doesn't exist
+3. **Permission Errors**: Authentication/authorization failures
+4. **Internal Errors**: Unexpected server-side issues
+
+### Using the pbErrors Package
+
+The `pbErrors` package provides helper functions to create standardized error responses:
+
+```go
+// Field violation for a specific field
+pbErrors.FieldViolation(fieldName string, err error) *errdetails.BadRequest_FieldViolation
+
+// Invalid argument error (for form validation failures)
+pbErrors.InvalidArgumentError(violations []*errdetails.BadRequest_FieldViolation) error
+
+// Not found error
+pbErrors.NotFoundError(resource string, id interface{}) error
+
+// Permission denied error
+pbErrors.PermissionDeniedError(message string) error
+
+// Internal error (with optional cause)
+pbErrors.InternalError(message string, err error) error
+```
+
+### Validation Error Pattern
+
+For validation errors, always:
+1. Create field-specific violations
+2. Return InvalidArgumentError with all violations
+
+Example:
+```go
+// Example from ValidateEmail in user.go
+if errors.Is(err, sql.ErrNoRows) {
+    // Create field violations for both email and validation_number
+    violations := []*errdetails.BadRequest_FieldViolation{
+        pbErrors.FieldViolation("email", errors.New("account activation not found")),
+        pbErrors.FieldViolation("validationNumber", errors.New("account activation not found")),
+    }
+    return nil, pbErrors.InvalidArgumentError(violations)
+}
+```
+
+### Internal Error Pattern
+
+For internal errors, use the InternalError helper:
+
+```go
+if err != nil {
+    return nil, pbErrors.InternalError("failed to create user", err)
+}
+```
+
+### Not Found Error Pattern
+
+For missing resources, use the NotFoundError helper:
+
+```go
+if errors.Is(err, sql.ErrNoRows) {
+    return nil, pbErrors.NotFoundError("user", req.GetEmail())
+}
+```
+
+### Error Handling Best Practices
+
+1. **Field Names**: Use the exact field names from the proto definitions for error keys
+2. **Consistent Messaging**: Use consistent error messages for similar error types
+3. **Detailed Messages**: Provide specific details without exposing sensitive information
+4. **Multiple Violations**: Return all validation errors at once rather than the first encountered
+5. **Rich Details**: Use gRPC's rich error details for machine-readable errors
+6. **Logging**: Log internal errors with context but don't expose details to clients
+
+### Complete Error Handling Example
+
+```go
+func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
+    // Validation
+    violations := validateCreateUserRequest(req)
+    if len(violations) > 0 {
+        return nil, pbErrors.InvalidArgumentError(violations)
+    }
+
+    // Check for duplicate email
+    exists, err := server.userExists(ctx, req.GetEmail())
+    if err != nil {
+        return nil, pbErrors.InternalError("failed to check existing user", err)
+    }
+    if exists {
+        violations := []*errdetails.BadRequest_FieldViolation{
+            pbErrors.FieldViolation("email", errors.New("email already exists")),
+        }
+        return nil, pbErrors.InvalidArgumentError(violations)
+    }
+
+    // Create user
+    user, err := server.createUser(ctx, req)
+    if err != nil {
+        return nil, pbErrors.InternalError("failed to create user", err)
+    }
+
+    return user, nil
+}
+
+func validateCreateUserRequest(req *pb.CreateUserRequest) []*errdetails.BadRequest_FieldViolation {
+    var violations []*errdetails.BadRequest_FieldViolation
+
+    if req.GetEmail() == "" {
+        violations = append(violations, pbErrors.FieldViolation("email", errors.New("cannot be empty")))
+    }
+
+    if req.GetPassword() == "" {
+        violations = append(violations, pbErrors.FieldViolation("password", errors.New("cannot be empty")))
+    } else if len(req.GetPassword()) < 8 {
+        violations = append(violations, pbErrors.FieldViolation("password", errors.New("must be at least 8 characters")))
+    }
+
+    return violations
+}
+```
+
+## End-to-End Error Handling Flow
+
+1. Client submits form data
+2. Server validates input
+3. If invalid, server returns gRPC error with field violations
+4. Error is intercepted by gRPC-web gateway
+5. Client receives error as HTTP response with status 400
+6. ParseValidationError extracts field violations
+7. Form is re-rendered with errors displayed next to respective fields
+
+## Form Components
+
+### Layout
+The `Layout` component wraps all pages with consistent header/footer and accepts title and metadata:
+```go
+// Usage
+@Layout("Page Title", metadata) {
+  // Page content
+}
+```
+
+### Form Error Display
+The `FormErrors` component displays all validation errors at the top of the form:
+```go
+// Usage
+@FormErrors(data.Errors)
+```
+
+### Input Field With Mapping
+The `InputFieldWithMapping` component renders form inputs with consistent styling and error handling:
+
+```go
+// Parameters:
+// 1. Input type (text, email, password, etc.)
+// 2. HTML name attribute
+// 3. ID attribute
+// 4. Label text
+// 5. Placeholder
+// 6. Value
+// 7. Required boolean
+// 8. Errors map
+// 9. Error mapping key
+
+// Usage
+@InputFieldWithMapping("email", "email", "email", "Email address", "", data.Email, true, data.Errors, "email")
+```
+
+The error mapping key (last parameter) connects the field to the appropriate error key from the gRPC error response.
+
+### Submit Button
+The `SubmitButton` component renders a styled submit button:
+```go
+// Usage
+@SubmitButton("Button Text")
+```
+
+## Best Practices
+
+1. **Field Naming**
+   - Use consistent field names across frontend and backend
+   - Match form field names with protobuf field names where possible
+
+2. **Error Handling**
+   - Always wrap form submissions in proper error handling
+   - Use the ParseValidationError function to normalize gRPC errors
+
+3. **Form Implementation**
+   - Start with the data structure version and work backward
+   - Always provide pre-populated versions for edit forms
+
+4. **Validation**
+   - Client-side validation should mirror server-side validation
+   - Use HTML5 validation attributes where appropriate
+
+## Form Submission Flow
+
+1. User submits form via POST
+2. Server validates input and returns gRPC errors if invalid
+3. Errors are parsed via ParseValidationError
+4. Form is re-rendered with errors and original values
+5. On success, user is redirected to appropriate page
+
+## Adding New Forms
+
+When adding a new form:
+
+1. Create form data structure with appropriate fields
+2. Implement the three-tiered template pattern
+3. Use existing form components
+4. Ensure field error mapping is consistent with backend validation
+5. Add server-side route handler for form submission

@@ -148,7 +148,7 @@ services:
       MINIO_ROOT_PASSWORD: minio123
       MINIO_DEFAULT_BUCKETS: local-bucket
       MINIO_SERVER_URL: http://localhost:9000
-      MINIO_BROWSER_REDIRECT_URL: https://tag.local/storage
+      #MINIO_BROWSER_REDIRECT_URL: https://tag.local/storage
     volumes:
       - ./infra/minio/data:/data
       - ./infra/minio/config:/root/.minio
