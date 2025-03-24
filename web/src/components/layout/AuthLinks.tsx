@@ -1,22 +1,24 @@
 "use client";
 
-import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthLinks() {
+  const { loginRedirect } = useAuth();
+
   return (
     <>
-      <Link
-        href="/auth/login"
+      <button
+        onClick={loginRedirect}
         className="px-4 py-2 rounded-md text-slate-200 hover:text-primary-300 transition"
       >
         Log in
-      </Link>
-      <Link
-        href="/auth/login"
+      </button>
+      <button
+        onClick={loginRedirect}
         className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition shadow-lg shadow-primary-900/20"
       >
         Sign up
-      </Link>
+      </button>
     </>
   );
 }

@@ -1,20 +1,10 @@
-import { auth0 } from "@/lib/auth0";
 import { NextResponse } from "next/server";
 
-export async function GET() {
-    try {
-        const session = await auth0.getSession();
+// The auth is now handled client-side with Auth0 SPA
+// This endpoint is kept as a placeholder for potential backend session management
 
-        // Return the session data
-        return NextResponse.json({
-            user: session?.user || null,
-            accessToken: session?.tokenSet?.accessToken || null,
-        });
-    } catch (error) {
-        console.error("Error getting session:", error);
-        return NextResponse.json(
-            { error: "Failed to get session" },
-            { status: 500 }
-        );
-    }
+export async function GET() {
+    return NextResponse.json({
+        message: "Authentication is now handled client-side with Auth0 SPA",
+    });
 }

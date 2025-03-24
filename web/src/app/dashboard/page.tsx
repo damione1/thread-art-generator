@@ -8,6 +8,7 @@ import { Art } from "@/lib/pb/art_pb";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 // Helper function to get status display information
 function getStatusInfo(status: number) {
@@ -28,6 +29,7 @@ function getStatusInfo(status: number) {
 }
 
 export default function DashboardPage() {
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<User>({
     id: "",
     name: "User",
@@ -38,29 +40,24 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authUser) {
+      setUser({
+        id: authUser.sub || "",
+        name: authUser.name || "User",
+        email: authUser.email || "",
+      });
+    }
+  }, [authUser]);
+
+  useEffect(() => {
     async function fetchData() {
       try {
-        // Use fetch to call an API route instead of direct auth0.getSession()
-        const userResponse = await fetch("/api/user");
-        if (!userResponse.ok) {
-          throw new Error("Failed to fetch user data");
-        }
+        if (!user.id) return;
 
-        const userData = await userResponse.json();
-        if (userData) {
-          setUser({
-            id: userData.sub || "",
-            name: userData.name || "User",
-            email: userData.email || "",
-          });
-
-          // Fetch user's arts if we have a user ID
-          if (userData.sub) {
-            const parentResource = `users/${userData.sub}`;
-            const artsResponse = await listArts(parentResource, 10);
-            setUserArts(artsResponse.arts || []);
-          }
-        }
+        // Fetch user's arts if we have a user ID
+        const parentResource = `users/${user.id}`;
+        const artsResponse = await listArts(parentResource, 10);
+        setUserArts(artsResponse.arts || []);
       } catch (error) {
         console.error("Failed to get user data or arts:", error);
         setErrorMessage(
@@ -72,7 +69,7 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, []);
+  }, [user.id]);
 
   return (
     <Layout user={user} title="Dashboard - ThreadArt">

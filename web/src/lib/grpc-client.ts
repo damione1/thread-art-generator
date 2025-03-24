@@ -3,23 +3,9 @@ import { createClient, ConnectError, Code } from "@connectrpc/connect";
 import { ArtGeneratorService } from "./pb/services_connect";
 import { Art } from "./pb/art_pb";
 
-// Cache for the access token
-type TokenCache = {
-    token: string | null;
-    expiresAt: number; // Unix timestamp when token expires
-};
-
-// Default token cache with no token
-const tokenCache: TokenCache = {
-    token: null,
-    expiresAt: 0,
-};
-
-
 // Configuration for the gRPC client
 const CONFIG = {
     baseUrl: process.env.NEXT_PUBLIC_APP_BASE_URL || "http://localhost:3000",
-    tokenExpiryBufferMs: 5 * 60 * 1000, // 5 minutes buffer before token expiry
 };
 
 // Add this type for gRPC errors at the top of the file
@@ -41,44 +27,33 @@ export const createTransport = () => {
 };
 
 /**
- * Fetches a fresh access token from the server
+ * Gets the access token from Auth0
  */
-export const fetchAccessToken = async (): Promise<string> => {
-    try {
-        const response = await fetch("/api/auth/session");
-        if (!response.ok) {
-            throw new Error("Failed to get session");
+export const getAccessToken = async (): Promise<string | undefined> => {
+    // In a browser environment, we use Auth0
+    if (typeof window !== 'undefined') {
+        try {
+            // Dynamic import to prevent server-side issues
+            const { getAuth0Client } = await import('@/utils/auth0-client');
+            const auth0 = await getAuth0Client();
+
+            // Check if authenticated
+            const isAuthenticated = await auth0.isAuthenticated();
+            if (!isAuthenticated) {
+                console.warn("User is not authenticated");
+                return undefined;
+            }
+
+            // Get token with audience
+            return auth0.getTokenSilently();
+        } catch (error) {
+            console.error("Error getting Auth0 token:", error);
+            return undefined;
         }
-
-        const data = await response.json();
-        if (!data.accessToken) {
-            //redirect to login
-            throw new Error("No access token available");
-        }
-
-        // Set the token in the cache with an estimated expiry time
-        // This assumes the token is valid for 1 hour, adjust as needed
-        tokenCache.token = data.accessToken;
-        tokenCache.expiresAt = Date.now() + 55 * 60 * 1000; // 55 minutes from now
-
-        return data.accessToken;
-    } catch (error) {
-        console.error("Error fetching access token:", error);
-        throw error;
-    }
-};
-
-/**
- * Gets a valid access token, either from cache or by fetching a new one
- */
-export const getAccessToken = async (): Promise<string> => {
-    // Check if we have a cached token that's not expired
-    if (tokenCache.token && Date.now() < tokenCache.expiresAt - CONFIG.tokenExpiryBufferMs) {
-        return tokenCache.token;
     }
 
-    // Fetch a new token
-    return fetchAccessToken();
+    // In a non-browser environment (like SSR), no token is available
+    return undefined;
 };
 
 /**
@@ -92,7 +67,7 @@ export const createGrpcClient = async (providedToken?: string) => {
     // If a token is explicitly provided, use it
     let accessToken = providedToken;
 
-    // Otherwise, get one from cache or fetch a new one
+    // Otherwise, get one from Auth0
     if (!accessToken) {
         try {
             accessToken = await getAccessToken();
@@ -118,7 +93,7 @@ export const createGrpcClient = async (providedToken?: string) => {
  */
 export class GrpcService {
     /**
-     * Makes a gRPC service call with proper error handling and token refresh
+     * Makes a gRPC service call with proper error handling and token refres pdh
      * @param serviceCall - Function that makes the actual gRPC call
      * @param forceFetchToken - Whether to force fetch a new token
      */
@@ -128,7 +103,7 @@ export class GrpcService {
     ): Promise<T> {
         try {
             // Get the current token (or force fetch a new one)
-            const token = forceFetchToken ? await fetchAccessToken() : await getAccessToken();
+            const token = forceFetchToken ? await getAccessToken() : await getAccessToken();
 
             // Make the call with the token
             return await serviceCall(token);
@@ -290,10 +265,11 @@ export const updateArt = async (art: Partial<Art>, updateMask: string[] = []) =>
 /**
  * List arts for a parent (user)
  */
-export const listArts = async (parent: string, pageSize: number = 10, pageToken?: number) => {
+export const listArts = async (parent: string, pageSize: number = 10, pageToken?: string) => {
     const { ListArtsRequest } = await import("./pb/art_pb");
 
     return GrpcService.call(async (token) => {
+        console.log("listArts", token);
         const { client, callOptions } = await createGrpcClient(token);
         const request = new ListArtsRequest({
             parent,

@@ -1,19 +1,6 @@
-import type { NextRequest } from "next/server"
-import { auth0 } from "./lib/auth0"
-
-
-export async function middleware(request: NextRequest) {
-    return await auth0.middleware(request)
-}
+// We don't need server-side middleware for Auth0 SPA authentication
+// This file is left empty but can be used in the future if needed
 
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-         */
-        "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
-    ],
-}
+    matcher: [], // Don't match any routes
+};

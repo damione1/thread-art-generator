@@ -2,13 +2,9 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
@@ -26,16 +22,8 @@ type Auth0Configuration struct {
 
 // Auth0Service implements both Authenticator and UserProvider interfaces
 type Auth0Service struct {
-	config     Auth0Configuration
-	validator  *validator.Validator
-	tokenCache *managementTokenCache
-}
-
-// managementTokenCache caches the Auth0 management API token
-type managementTokenCache struct {
-	sync.RWMutex
-	token     string
-	expiresAt time.Time
+	config    Auth0Configuration
+	validator *validator.Validator
 }
 
 // customClaims contains custom data we want from the Auth0 token
@@ -73,9 +61,8 @@ func NewAuth0Service(config Auth0Configuration) (AuthService, error) {
 	}
 
 	return &Auth0Service{
-		config:     config,
-		validator:  jwtValidator,
-		tokenCache: &managementTokenCache{},
+		config:    config,
+		validator: jwtValidator,
 	}, nil
 }
 
@@ -108,217 +95,45 @@ func (a *Auth0Service) GetAuthMiddleware() interface{} {
 
 // GetUserInfo retrieves user information from Auth0
 func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInfo, error) {
-	token, err := a.getManagementToken(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get management token: %w", err)
+	// With SPA authentication, we can create a basic user profile from the token ID
+	// This removes the need for the Management API token
+
+	// Extract the auth0 identifier - typically in format "provider|userid"
+	parts := strings.Split(userID, "|")
+	provider := "auth0"
+	if len(parts) > 1 {
+		provider = parts[0]
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	apiURL := fmt.Sprintf("https://%s/api/v2/users/%s", a.config.Domain, userID)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", "Bearer "+token)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to get user info: %s (status: %d)", string(body), resp.StatusCode)
-	}
-
-	var auth0User struct {
-		UserID    string `json:"user_id"`
-		Email     string `json:"email"`
-		Name      string `json:"name"`
-		Nickname  string `json:"nickname"`
-		Picture   string `json:"picture"`
-		FirstName string `json:"given_name"`
-		LastName  string `json:"family_name"`
-		CreatedAt string `json:"created_at"`
-		UpdatedAt string `json:"updated_at"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&auth0User); err != nil {
-		return nil, err
-	}
-
+	// Create a basic user profile with the information we have
 	return &UserInfo{
-		ID:        auth0User.UserID,
-		Email:     auth0User.Email,
-		Name:      auth0User.Name,
-		FirstName: auth0User.FirstName,
-		LastName:  auth0User.LastName,
-		Picture:   auth0User.Picture,
-		CreatedAt: auth0User.CreatedAt,
-		UpdatedAt: auth0User.UpdatedAt,
+		ID:        userID,
+		Email:     "", // Can be populated later when user logs in
+		Name:      "", // Can be populated later when user logs in
+		FirstName: "",
+		LastName:  "",
+		Picture:   "",
+		CreatedAt: time.Now().Format(time.RFC3339),
+		UpdatedAt: time.Now().Format(time.RFC3339),
+		Provider:  provider,
 	}, nil
 }
 
 // UpdateUserPassword updates a user's password in Auth0
 func (a *Auth0Service) UpdateUserPassword(ctx context.Context, userID string, newPassword string) error {
-	token, err := a.getManagementToken(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get management token: %w", err)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	apiURL := fmt.Sprintf("https://%s/api/v2/users/%s", a.config.Domain, userID)
-
-	payload := strings.NewReader(fmt.Sprintf(`{
-		"password": "%s",
-		"connection": "Username-Password-Authentication"
-	}`, newPassword))
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, apiURL, payload)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to update password: %s (status: %d)", string(body), resp.StatusCode)
-	}
-
+	// With SPA authentication, password updates should be handled client-side
+	// This method becomes a no-op in this implementation
+	log.Warn().Str("user_id", userID).Msg("UpdateUserPassword called but not implemented in SPA mode")
 	return nil
 }
 
 // UpdateUserProfile updates a user's profile information in Auth0
 func (a *Auth0Service) UpdateUserProfile(ctx context.Context, userID string, profile UserProfile) error {
-	token, err := a.getManagementToken(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get management token: %w", err)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	apiURL := fmt.Sprintf("https://%s/api/v2/users/%s", a.config.Domain, userID)
-
-	// Create payload with only the fields that are present
-	payloadMap := make(map[string]string)
-
-	if profile.Name != "" {
-		payloadMap["name"] = profile.Name
-	}
-
-	if profile.FirstName != "" {
-		payloadMap["given_name"] = profile.FirstName
-	}
-
-	if profile.LastName != "" {
-		payloadMap["family_name"] = profile.LastName
-	}
-
-	if profile.Picture != "" {
-		payloadMap["picture"] = profile.Picture
-	}
-
-	payloadJSON, err := json.Marshal(payloadMap)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, apiURL, strings.NewReader(string(payloadJSON)))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to update profile: %s (status: %d)", string(body), resp.StatusCode)
-	}
-
+	// With SPA authentication, profile updates should be handled client-side
+	// This method becomes a no-op in this implementation
+	log.Warn().
+		Str("user_id", userID).
+		Str("name", profile.Name).
+		Msg("UpdateUserProfile called but not implemented in SPA mode")
 	return nil
-}
-
-// getManagementToken gets a token for the Auth0 Management API with caching
-func (a *Auth0Service) getManagementToken(ctx context.Context) (string, error) {
-	// Check cache first
-	a.tokenCache.RLock()
-	if a.tokenCache.token != "" && time.Now().Before(a.tokenCache.expiresAt) {
-		token := a.tokenCache.token
-		a.tokenCache.RUnlock()
-		return token, nil
-	}
-	a.tokenCache.RUnlock()
-
-	// No valid token, acquire write lock and fetch a new one
-	a.tokenCache.Lock()
-	defer a.tokenCache.Unlock()
-
-	// Double-check in case another goroutine refreshed the token while we were waiting
-	if a.tokenCache.token != "" && time.Now().Before(a.tokenCache.expiresAt) {
-		return a.tokenCache.token, nil
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	tokenURL := fmt.Sprintf("https://%s/oauth/token", a.config.Domain)
-
-	payload := strings.NewReader(fmt.Sprintf(`{
-		"client_id": "%s",
-		"client_secret": "%s",
-		"audience": "https://%s/api/v2/",
-		"grant_type": "client_credentials"
-	}`, a.config.ClientID, a.config.ClientSecret, a.config.Domain))
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, payload)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("failed to get management token: %s (status: %d)", string(body), resp.StatusCode)
-	}
-
-	var result struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
-	}
-
-	// Cache the token with a bit of buffer (90% of the actual expiry time)
-	expiryDuration := time.Duration(float64(result.ExpiresIn)*0.9) * time.Second
-	a.tokenCache.token = result.AccessToken
-	a.tokenCache.expiresAt = time.Now().Add(expiryDuration)
-
-	log.Info().Msg("Refreshed Auth0 Management API token")
-
-	return result.AccessToken, nil
 }

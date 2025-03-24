@@ -1,24 +1,11 @@
 import Link from "next/link";
 import Layout from "../components/layout/Layout";
 import { User } from "../types/user";
-import { auth0 } from "@/lib/auth0";
 
-export default async function Home() {
-  // This will now use Auth0 to get the user session
-  let user: User | null = null;
-
-  try {
-    const session = await auth0.getSession();
-    if (session?.user) {
-      user = {
-        id: session.user.sub || "",
-        name: session.user.name || "User",
-        email: session.user.email || "",
-      };
-    }
-  } catch (error) {
-    console.error("Failed to get user session:", error);
-  }
+export default function Home() {
+  // Since we're using client-side Auth0, the user will be null initially
+  // The Layout component will handle getting the user on the client side
+  const user: User | null = null;
 
   return (
     <Layout user={user} title="ThreadArt - Create Beautiful Thread Art">
@@ -42,21 +29,12 @@ export default async function Home() {
                 single thread.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                {user ? (
-                  <Link
-                    href="/dashboard"
-                    className="px-8 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition text-lg font-medium shadow-lg shadow-primary-900/20"
-                  >
-                    Go to Dashboard
-                  </Link>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="px-8 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition text-lg font-medium shadow-lg shadow-primary-900/20"
-                  >
-                    Get Started
-                  </Link>
-                )}
+                <Link
+                  href="/dashboard"
+                  className="px-8 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition text-lg font-medium shadow-lg shadow-primary-900/20"
+                >
+                  Get Started
+                </Link>
                 <Link
                   href="/gallery"
                   className="px-8 py-3 rounded-md border border-dark-300 text-slate-200 hover:bg-dark-300/50 transition text-lg font-medium"

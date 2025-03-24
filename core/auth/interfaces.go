@@ -20,6 +20,7 @@ type UserInfo struct {
 	Picture   string
 	CreatedAt string
 	UpdatedAt string
+	Provider  string
 }
 
 // UserProfile contains updatable user profile information

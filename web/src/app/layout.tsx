@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "Transform images into thread art portraits",
 };
 
+// Root layout is a server component and can't contain client-side code
+// Auth0ProviderWithRedirect is configured at the dashboard layout level
 export default function RootLayout({
   children,
 }: Readonly<{

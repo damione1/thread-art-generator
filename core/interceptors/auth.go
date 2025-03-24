@@ -86,10 +86,24 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 		return "", err
 	}
 
-	log.Info().Msgf("AuthUser: %s", authUser)
+	log.Info().
+		Str("id", authUser.ID).
+		Str("email", authUser.Email).
+		Str("name", authUser.Name).
+		Str("provider", authUser.Provider).
+		Msg("Creating new user from Auth0 info")
 
 	// Parse name into first name and last name
 	firstName, lastName := parseNameFromAuth0(authUser.Name)
+
+	// If Auth0 didn't provide a name, use a default based on provider
+	if firstName == "" {
+		if authUser.Provider != "" {
+			firstName = "User from " + authUser.Provider
+		} else {
+			firstName = "New User"
+		}
+	}
 
 	// Create new user
 	internalID := uuid.New().String()
