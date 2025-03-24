@@ -34,3 +34,8 @@ setup: init_env
 	@echo "======================="
 	@echo "\nEnvironment variables set in .env"
 	@echo "Run 'make proto' to generate proto files"
+
+.PHONY: psql
+psql:
+	@eval $$(grep -e "POSTGRES_USER\|POSTGRES_PASSWORD\|POSTGRES_DB" .env | sed 's/^/export /'); \
+	PGPASSWORD=$$POSTGRES_PASSWORD psql -h localhost -U $$POSTGRES_USER -d $$POSTGRES_DB

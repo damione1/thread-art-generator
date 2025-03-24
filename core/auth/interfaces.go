@@ -6,8 +6,10 @@ import (
 
 // AuthClaims represents common claims that can be extracted from a token
 type AuthClaims struct {
-	UserID string
-	Email  string
+	UserID  string
+	Email   string
+	Name    string
+	Picture string
 }
 
 // UserInfo contains user profile information
@@ -56,4 +58,7 @@ type UserProvider interface {
 type AuthService interface {
 	Authenticator
 	UserProvider
+
+	// GetUserInfoFromToken retrieves user information using a token
+	GetUserInfoFromToken(ctx context.Context, token string) (*UserInfo, error)
 }

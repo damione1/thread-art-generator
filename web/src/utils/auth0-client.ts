@@ -17,6 +17,7 @@ export const getAuth0Client = async (): Promise<Auth0Client> => {
         authorizationParams: {
             audience: process.env.NEXT_PUBLIC_AUTH0_AUDIENCE,
             redirect_uri: typeof window !== 'undefined' ? window.location.origin + '/dashboard' : '',
+            scope: 'openid profile email read:current_user update:current_user_metadata',
         },
         cacheLocation: 'localstorage',
     };

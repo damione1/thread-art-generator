@@ -9,10 +9,12 @@ import (
 
 // Auth0Config stores Auth0-specific configuration
 type Auth0Config struct {
-	Domain       string `mapstructure:"AUTH0_DOMAIN"`
-	Audience     string `mapstructure:"AUTH0_AUDIENCE"`
-	ClientID     string `mapstructure:"AUTH0_CLIENT_ID"`
-	ClientSecret string `mapstructure:"AUTH0_CLIENT_SECRET"`
+	Domain                    string `mapstructure:"AUTH0_DOMAIN"`
+	Audience                  string `mapstructure:"AUTH0_AUDIENCE"`
+	ClientID                  string `mapstructure:"AUTH0_CLIENT_ID"`
+	ClientSecret              string `mapstructure:"AUTH0_CLIENT_SECRET"`
+	ManagementApiClientID     string `mapstructure:"AUTH0_MANAGEMENT_API_CLIENT_ID"`
+	ManagementApiClientSecret string `mapstructure:"AUTH0_MANAGEMENT_API_CLIENT_SECRET"`
 }
 
 // Config stores all configuration of the application.
@@ -57,6 +59,8 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("AUTH0_AUDIENCE")
 	viper.BindEnv("AUTH0_CLIENT_ID")
 	viper.BindEnv("AUTH0_CLIENT_SECRET")
+	viper.BindEnv("AUTH0_MANAGEMENT_API_CLIENT_ID")
+	viper.BindEnv("AUTH0_MANAGEMENT_API_CLIENT_SECRET")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)

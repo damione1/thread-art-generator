@@ -69,10 +69,12 @@ func runGrpcServer(config util.Config) {
 
 func createAuthService(config util.Config) (auth.AuthService, error) {
 	auth0Config := auth.Auth0Configuration{
-		Domain:       config.Auth0.Domain,
-		Audience:     config.Auth0.Audience,
-		ClientID:     config.Auth0.ClientID,
-		ClientSecret: config.Auth0.ClientSecret,
+		Domain:                    config.Auth0.Domain,
+		Audience:                  config.Auth0.Audience,
+		ClientID:                  config.Auth0.ClientID,
+		ClientSecret:              config.Auth0.ClientSecret,
+		ManagementApiClientID:     config.Auth0.ManagementApiClientID,
+		ManagementApiClientSecret: config.Auth0.ManagementApiClientSecret,
 	}
 
 	return auth.NewAuth0Service(auth0Config)

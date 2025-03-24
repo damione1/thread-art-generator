@@ -32,35 +32,35 @@ var whiteListedMethods = []string{
 }
 
 // Helper function to extract and validate token from gRPC metadata
-func authorizeUserFromContext(ctx context.Context, authenticator auth.Authenticator) (*auth.AuthClaims, error) {
+func authorizeUserFromContext(ctx context.Context, authenticator auth.Authenticator) (*auth.AuthClaims, string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "metadata is not provided")
+		return nil, "", status.Errorf(codes.Unauthenticated, "metadata is not provided")
 	}
 
 	values := md.Get(authorizationHeader)
 	if len(values) == 0 {
-		return nil, status.Errorf(codes.Unauthenticated, "authorization token is not provided")
+		return nil, "", status.Errorf(codes.Unauthenticated, "authorization token is not provided")
 	}
 
 	bearerToken := values[0]
 	fields := strings.Fields(bearerToken)
 	if len(fields) < 2 {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid authorization header format")
+		return nil, "", status.Errorf(codes.Unauthenticated, "invalid authorization header format")
 	}
 
 	authType := strings.ToLower(fields[0])
 	if authType != authorizationBearer {
-		return nil, status.Errorf(codes.Unauthenticated, "unsupported authorization type: %s", authType)
+		return nil, "", status.Errorf(codes.Unauthenticated, "unsupported authorization type: %s", authType)
 	}
 
 	token := fields[1]
 	claims, err := authenticator.ValidateToken(context.Background(), token)
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+		return nil, "", status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 	}
 
-	return claims, nil
+	return claims, token, nil
 }
 
 // getOrCreateUser checks if a user exists in the database and creates one if it doesn't
@@ -71,7 +71,70 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 	).One(ctx, db)
 
 	if err == nil {
-		// User found, return internal ID
+		// User found, check if we need to update missing fields
+		needsUpdate := false
+
+		// Check if token is in context for direct userinfo
+		token, tokenOk := ctx.Value("token").(string)
+
+		// Get latest Auth0 info anyway to ensure we have the most up-to-date data
+		var authUser *auth.UserInfo
+		var authErr error
+
+		// Try first with direct token method if available (more reliable)
+		if tokenOk && token != "" {
+			// Try to use the token-based method which uses userinfo endpoint
+			if auth0Service, ok := userProvider.(auth.AuthService); ok {
+				authUser, authErr = auth0Service.GetUserInfoFromToken(ctx, token)
+				if authErr != nil {
+					log.Warn().Err(authErr).Str("auth0_id", auth0ID).Msg("Failed to get user info from token, will try regular method")
+				}
+			}
+		}
+
+		// Fall back to standard method if token method failed
+		if authUser == nil {
+			authUser, authErr = userProvider.GetUserInfo(ctx, auth0ID)
+		}
+
+		if authErr == nil {
+			// Only update if Auth0 has data and our local data is empty
+			if authUser.Email != "" && user.Email == "" {
+				user.Email = authUser.Email
+				needsUpdate = true
+				log.Debug().Str("user_id", user.ID).Str("email", authUser.Email).Msg("Updating user email from Auth0")
+			}
+
+			if authUser.Name != "" && (user.FirstName == "" || user.LastName.String == "") {
+				firstName, lastName := parseNameFromAuth0(authUser.Name)
+				if firstName != "" && user.FirstName == "" {
+					user.FirstName = firstName
+					needsUpdate = true
+					log.Debug().Str("user_id", user.ID).Str("first_name", firstName).Msg("Updating user first name from Auth0")
+				}
+				if lastName != "" && user.LastName.String == "" {
+					user.LastName = null.StringFrom(lastName)
+					needsUpdate = true
+					log.Debug().Str("user_id", user.ID).Str("last_name", lastName).Msg("Updating user last name from Auth0")
+				}
+			}
+
+			if needsUpdate {
+				user.UpdatedAt = time.Now()
+				_, updateErr := user.Update(ctx, db, boil.Infer())
+				if updateErr != nil {
+					log.Warn().Err(updateErr).Str("user_id", user.ID).Msg("Failed to update user with Auth0 info")
+					// Don't fail the operation just because we couldn't update
+				} else {
+					log.Info().Str("user_id", user.ID).Msg("Updated user with latest Auth0 info")
+				}
+			}
+		} else {
+			// Just log the error but continue
+			log.Warn().Err(authErr).Str("auth0_id", auth0ID).Msg("Couldn't fetch updated user info from Auth0")
+		}
+
+		// Return internal ID even if update failed
 		return user.ID, nil
 	}
 
@@ -81,9 +144,27 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 	}
 
 	// User not found, fetch details from Auth0
-	authUser, err := userProvider.GetUserInfo(ctx, auth0ID)
-	if err != nil {
-		return "", err
+	// Try first with direct token method if available (more reliable)
+	var authUser *auth.UserInfo
+	var authErr error
+
+	token, tokenOk := ctx.Value("token").(string)
+	if tokenOk && token != "" {
+		// Try to use the token-based method which uses userinfo endpoint
+		if auth0Service, ok := userProvider.(auth.AuthService); ok {
+			authUser, authErr = auth0Service.GetUserInfoFromToken(ctx, token)
+			if authErr != nil {
+				log.Warn().Err(authErr).Str("auth0_id", auth0ID).Msg("Failed to get user info from token, will try regular method")
+			}
+		}
+	}
+
+	// Fall back to standard method if token method failed
+	if authUser == nil {
+		authUser, authErr = userProvider.GetUserInfo(ctx, auth0ID)
+		if authErr != nil {
+			return "", authErr
+		}
 	}
 
 	log.Info().
@@ -150,7 +231,7 @@ func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerI
 			return handler(ctx, req)
 		}
 
-		claims, err := authorizeUserFromContext(ctx, authService)
+		claims, token, err := authorizeUserFromContext(ctx, authService)
 		if err != nil {
 			return nil, err
 		}
@@ -162,8 +243,10 @@ func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerI
 			return nil, status.Errorf(codes.Internal, "internal error")
 		}
 
-		// Add internal user ID to context
+		// Add internal user ID and raw token to context
 		newCtx := context.WithValue(ctx, middleware.AuthKey, internalID)
+		// Store the raw token in context for later use in GetUserInfo
+		newCtx = context.WithValue(newCtx, "token", token)
 		return handler(newCtx, req)
 	}
 }
