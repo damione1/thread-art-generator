@@ -28,9 +28,6 @@ import (
 
 // CLI represents the command-line interface structure
 type CLI struct {
-	// Global flags
-	Debug bool `help:"Enable debug mode" short:"d"`
-
 	// Commands
 	Login    LoginCmd    `cmd:"" help:"Log in with Auth0"`
 	Logout   LogoutCmd   `cmd:"" help:"Log out and clear credentials"`
@@ -195,8 +192,6 @@ func (cmd *LoginCmd) Run() error {
 	}
 	stateStr := string(state)
 
-	fmt.Println("Debug: Generated state:", stateStr)
-
 	// Create a channel to receive the authorization code
 	codeCh := make(chan string)
 	errCh := make(chan error)
@@ -216,7 +211,7 @@ func (cmd *LoginCmd) Run() error {
 		<head>
 			<title>Auth0 CLI Login</title>
 			<style>
-				body { font-family: sans-serif; margin: 2em; }
+				body { font-family: sans-serif; margin: 2em; max-width: 500px; margin: 0 auto; padding: 2em; }
 				.error { color: #e53e3e; }
 				.success { color: #38a169; }
 				pre { background: #f7fafc; padding: 1em; border-radius: 5px; }
@@ -239,22 +234,11 @@ func (cmd *LoginCmd) Run() error {
 					var params = getHashParams();
 					var expectedState = "%s";
 
-					console.log("URL Fragment:", window.location.hash);
-					console.log("Params:", JSON.stringify(params));
-					console.log("Expected State:", expectedState);
-
-					document.getElementById('fragment').textContent = window.location.hash;
-					document.getElementById('expected-state').textContent = expectedState;
-					document.getElementById('received-state').textContent = params.state || "None";
-
 					// Check if we have an access token and state
 					if (params.access_token && params.state) {
 						// Compare states directly
 						if (params.state === expectedState) {
-							console.log("States match perfectly!");
-
-							// Instead of making another request, we'll post to a new endpoint
-							// that processes the token directly
+							// Send token to our backend
 							var xhr = new XMLHttpRequest();
 							xhr.open('POST', '/process-token', true);
 							xhr.setRequestHeader('Content-Type', 'application/json');
@@ -273,9 +257,7 @@ func (cmd *LoginCmd) Run() error {
 							}));
 							document.getElementById('result').innerHTML = 'Processing...';
 						} else {
-							var stateError = 'Error: State mismatch.<br>Expected: ' + expectedState + '<br>Received: ' + params.state;
-							document.getElementById('result').innerHTML = '<div class="error">' + stateError + '</div>';
-							console.error('State mismatch', {expected: expectedState, received: params.state});
+							document.getElementById('result').innerHTML = '<div class="error">Error: Authentication failed. State mismatch.</div>';
 						}
 					} else if (params.error) {
 						document.getElementById('result').innerHTML = '<div class="error">Error: ' + params.error + '<br>' + params.error_description + '</div>';
@@ -291,13 +273,6 @@ func (cmd *LoginCmd) Run() error {
 		<body>
 			<h2>Auth0 CLI Login</h2>
 			<div id="result">Processing authentication...</div>
-			<h3>Debug Information</h3>
-			<p><strong>URL Fragment:</strong></p>
-			<pre id="fragment">None</pre>
-			<p><strong>Expected State:</strong></p>
-			<pre id="expected-state">None</pre>
-			<p><strong>Received State:</strong></p>
-			<pre id="received-state">None</pre>
 		</body>
 		</html>
 		`, stateStr)
@@ -320,21 +295,17 @@ func (cmd *LoginCmd) Run() error {
 
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&tokenRequest); err != nil {
-			errMsg := fmt.Sprintf("Failed to parse token request: %v", err)
-			fmt.Println(errMsg)
 			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, errMsg)
-			errCh <- fmt.Errorf(errMsg)
+			io.WriteString(w, "Failed to parse token")
+			errCh <- fmt.Errorf("failed to parse token request: %v", err)
 			return
 		}
 
 		// Validate state
 		if tokenRequest.State != stateStr {
-			errMsg := fmt.Sprintf("Invalid state. Expected: %s, Got: %s", stateStr, tokenRequest.State)
-			fmt.Println(errMsg)
 			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, "Invalid state. Authentication failed.")
-			errCh <- fmt.Errorf(errMsg)
+			io.WriteString(w, "Authentication failed")
+			errCh <- fmt.Errorf("invalid state")
 			return
 		}
 
@@ -371,8 +342,6 @@ func (cmd *LoginCmd) Run() error {
 		stateStr,
 	)
 
-	fmt.Println("Debug: Opening auth URL with state:", stateStr)
-
 	// Open browser
 	fmt.Println("Opening browser for authentication...")
 	openBrowser(authURL)
@@ -384,7 +353,6 @@ func (cmd *LoginCmd) Run() error {
 		// The token is already the access token
 
 		// Parse expiry from JWT (simplified)
-		// In a real application, you would want to properly validate and decode the JWT
 		expiresAt, err := parseJWTExpiry(tokenString)
 		if err != nil {
 			return err
@@ -618,26 +586,22 @@ func openBrowser(url string) {
 	}
 
 	if err != nil {
-		log.Printf("Failed to open browser: %v", err)
 		fmt.Printf("Please open this URL in your browser: %s\n", url)
 	}
 }
 
 // parseJWTExpiry extracts the expiration time from a JWT token
 func parseJWTExpiry(tokenString string) (time.Time, error) {
-	// Default expiry as fallback
-	defaultExpiry := time.Now().Add(24 * time.Hour)
-
 	// Split the token
 	parts := strings.Split(tokenString, ".")
 	if len(parts) != 3 {
-		return defaultExpiry, fmt.Errorf("invalid token format")
+		return time.Now().Add(24 * time.Hour), fmt.Errorf("invalid token format")
 	}
 
 	// Decode the payload (second part)
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return defaultExpiry, fmt.Errorf("failed to decode token payload: %v", err)
+		return time.Now().Add(24 * time.Hour), fmt.Errorf("failed to decode token payload")
 	}
 
 	// Parse JSON payload
@@ -646,7 +610,7 @@ func parseJWTExpiry(tokenString string) (time.Time, error) {
 	}
 
 	if err := json.Unmarshal(payload, &claims); err != nil {
-		return defaultExpiry, fmt.Errorf("failed to parse token payload: %v", err)
+		return time.Now().Add(24 * time.Hour), fmt.Errorf("failed to parse token payload")
 	}
 
 	// If the exp claim is present
@@ -654,14 +618,15 @@ func parseJWTExpiry(tokenString string) (time.Time, error) {
 		return time.Unix(claims.Exp, 0), nil
 	}
 
-	return defaultExpiry, nil
+	// Default 24h expiry as fallback
+	return time.Now().Add(24 * time.Hour), nil
 }
 
 func main() {
 	cli := CLI{}
 	ctx := kong.Parse(&cli,
 		kong.Name("thread-art-cli"),
-		kong.Description("Command line interface for Thread Art Generator"),
+		kong.Description("CLI for Thread Art Generator"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
