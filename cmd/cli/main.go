@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -95,14 +98,15 @@ var (
 func init() {
 	// Initialize OAuth2 config for Auth0
 	oauthConfig = &oauth2.Config{
-		ClientID:     os.Getenv("AUTH0_CLIENT_ID"),
-		ClientSecret: os.Getenv("AUTH0_CLIENT_SECRET"),
-		RedirectURL:  "http://localhost:8085/callback",
+		ClientID: os.Getenv("AUTH0_CLIENT_ID"),
+		// No client secret needed for SPA flow
+		RedirectURL: "http://localhost:8085/callback",
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  fmt.Sprintf("https://%s/authorize", os.Getenv("AUTH0_DOMAIN")),
 			TokenURL: fmt.Sprintf("https://%s/oauth/token", os.Getenv("AUTH0_DOMAIN")),
 		},
-		Scopes: []string{"openid", "profile", "email", "read:current_user"},
+		// Match scopes with the web SPA application
+		Scopes: []string{"openid", "profile", "email"},
 	}
 
 	// Load config if exists
@@ -145,9 +149,10 @@ func saveConfig() error {
 
 // getGRPCClient creates a new gRPC client with auth token
 func getGRPCClient() (pb.ArtGeneratorServiceClient, error) {
-	// Check token expiration and refresh if needed
+	// Check token expiration and ask user to log in again if needed
 	if config.ExpiresAt.Before(time.Now()) {
-		fmt.Println("Token expired, please log in again")
+		fmt.Println("Token expired. Please log in again.")
+		fmt.Println("Run: thread-art-cli login")
 		return nil, fmt.Errorf("token expired")
 	}
 
@@ -174,8 +179,23 @@ func getAuthContext() (context.Context, error) {
 
 // Run executes the login command
 func (cmd *LoginCmd) Run() error {
-	// Generate a random state
-	state := fmt.Sprintf("%d", time.Now().UnixNano())
+	// Generate a random state that's URL safe and won't have encoding issues
+	// Use alphanumeric characters only to avoid encoding problems
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return fmt.Errorf("failed to generate state: %v", err)
+	}
+
+	// Convert random bytes to alphanumeric only
+	state := make([]byte, 16)
+	for i := range b {
+		state[i] = letters[int(b[i])%len(letters)]
+	}
+	stateStr := string(state)
+
+	fmt.Println("Debug: Generated state:", stateStr)
 
 	// Create a channel to receive the authorization code
 	codeCh := make(chan string)
@@ -183,34 +203,149 @@ func (cmd *LoginCmd) Run() error {
 
 	// Start a local server to handle the callback
 	srv := &http.Server{Addr: ":8085"}
-	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-		// Check state
-		if r.URL.Query().Get("state") != state {
-			errCh <- fmt.Errorf("invalid state")
-			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, "Invalid state")
+
+	// Setup HTTP handlers on DefaultServeMux
+	http.DefaultServeMux = http.NewServeMux()
+
+	// Set up a handler for token fragment callback - this is our main page
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// This page will extract the token from URL fragment and process it directly
+		html := fmt.Sprintf(`
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>Auth0 CLI Login</title>
+			<style>
+				body { font-family: sans-serif; margin: 2em; }
+				.error { color: #e53e3e; }
+				.success { color: #38a169; }
+				pre { background: #f7fafc; padding: 1em; border-radius: 5px; }
+			</style>
+			<script>
+				// Extract token from URL fragment
+				function getHashParams() {
+					var hashParams = {};
+					var e,
+						r = /([^&;=]+)=?([^&;]*)/g,
+						q = window.location.hash.substring(1);
+					while (e = r.exec(q)) {
+						hashParams[e[1]] = decodeURIComponent(e[2]);
+					}
+					return hashParams;
+				}
+
+				// Main function
+				function handleAuth() {
+					var params = getHashParams();
+					var expectedState = "%s";
+
+					console.log("URL Fragment:", window.location.hash);
+					console.log("Params:", JSON.stringify(params));
+					console.log("Expected State:", expectedState);
+
+					document.getElementById('fragment').textContent = window.location.hash;
+					document.getElementById('expected-state').textContent = expectedState;
+					document.getElementById('received-state').textContent = params.state || "None";
+
+					// Check if we have an access token and state
+					if (params.access_token && params.state) {
+						// Compare states directly
+						if (params.state === expectedState) {
+							console.log("States match perfectly!");
+
+							// Instead of making another request, we'll post to a new endpoint
+							// that processes the token directly
+							var xhr = new XMLHttpRequest();
+							xhr.open('POST', '/process-token', true);
+							xhr.setRequestHeader('Content-Type', 'application/json');
+							xhr.onreadystatechange = function() {
+								if (xhr.readyState === 4) {
+									if (xhr.status === 200) {
+										document.getElementById('result').innerHTML = '<div class="success">Authentication successful! You can close this window.</div>';
+									} else {
+										document.getElementById('result').innerHTML = '<div class="error">Error from server: ' + xhr.responseText + '</div>';
+									}
+								}
+							};
+							xhr.send(JSON.stringify({
+								access_token: params.access_token,
+								state: params.state
+							}));
+							document.getElementById('result').innerHTML = 'Processing...';
+						} else {
+							var stateError = 'Error: State mismatch.<br>Expected: ' + expectedState + '<br>Received: ' + params.state;
+							document.getElementById('result').innerHTML = '<div class="error">' + stateError + '</div>';
+							console.error('State mismatch', {expected: expectedState, received: params.state});
+						}
+					} else if (params.error) {
+						document.getElementById('result').innerHTML = '<div class="error">Error: ' + params.error + '<br>' + params.error_description + '</div>';
+					} else {
+						document.getElementById('result').innerHTML = '<div class="error">No token received. Please try again.</div>';
+					}
+				}
+
+				// Run when page loads
+				window.onload = handleAuth;
+			</script>
+		</head>
+		<body>
+			<h2>Auth0 CLI Login</h2>
+			<div id="result">Processing authentication...</div>
+			<h3>Debug Information</h3>
+			<p><strong>URL Fragment:</strong></p>
+			<pre id="fragment">None</pre>
+			<p><strong>Expected State:</strong></p>
+			<pre id="expected-state">None</pre>
+			<p><strong>Received State:</strong></p>
+			<pre id="received-state">None</pre>
+		</body>
+		</html>
+		`, stateStr)
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(html))
+	})
+
+	// Add an endpoint to process the token directly from the frontend
+	http.HandleFunc("/process-token", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
-		// Get authorization code
-		code := r.URL.Query().Get("code")
-		if code == "" {
-			errCh <- fmt.Errorf("no code in callback")
+		// Parse JSON request
+		var tokenRequest struct {
+			AccessToken string `json:"access_token"`
+			State       string `json:"state"`
+		}
+
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&tokenRequest); err != nil {
+			errMsg := fmt.Sprintf("Failed to parse token request: %v", err)
+			fmt.Println(errMsg)
 			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, "No code")
+			io.WriteString(w, errMsg)
+			errCh <- fmt.Errorf(errMsg)
 			return
 		}
 
-		// Send code to channel
-		codeCh <- code
+		// Validate state
+		if tokenRequest.State != stateStr {
+			errMsg := fmt.Sprintf("Invalid state. Expected: %s, Got: %s", stateStr, tokenRequest.State)
+			fmt.Println(errMsg)
+			w.WriteHeader(http.StatusBadRequest)
+			io.WriteString(w, "Invalid state. Authentication failed.")
+			errCh <- fmt.Errorf(errMsg)
+			return
+		}
 
-		// Send success response
+		// Handle the token
+		codeCh <- tokenRequest.AccessToken
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, "Authentication successful! You can close this window.")
+		io.WriteString(w, "Authentication successful!")
 
 		// Shutdown server
 		go func() {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 			srv.Shutdown(context.Background())
 		}()
 	})
@@ -223,7 +358,20 @@ func (cmd *LoginCmd) Run() error {
 	}()
 
 	// Generate authorization URL
-	authURL := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+	// Use response_type=token for implicit flow (SPA approach)
+	audience := os.Getenv("AUTH0_AUDIENCE")
+
+	// Construct the URL with properly escaped parameters
+	authURL := fmt.Sprintf("%s?client_id=%s&response_type=token&scope=%s&redirect_uri=%s&audience=%s&state=%s",
+		oauthConfig.Endpoint.AuthURL,
+		oauthConfig.ClientID,
+		strings.Join(oauthConfig.Scopes, " "),
+		oauthConfig.RedirectURL,
+		audience,
+		stateStr,
+	)
+
+	fmt.Println("Debug: Opening auth URL with state:", stateStr)
 
 	// Open browser
 	fmt.Println("Opening browser for authentication...")
@@ -231,17 +379,21 @@ func (cmd *LoginCmd) Run() error {
 
 	// Wait for code or error
 	select {
-	case code := <-codeCh:
-		// Exchange code for token
-		token, err := oauthConfig.Exchange(context.Background(), code)
+	case tokenString := <-codeCh:
+		// In SPA flow, we get the token directly (not a code to exchange)
+		// The token is already the access token
+
+		// Parse expiry from JWT (simplified)
+		// In a real application, you would want to properly validate and decode the JWT
+		expiresAt, err := parseJWTExpiry(tokenString)
 		if err != nil {
-			return fmt.Errorf("could not exchange code for token: %v", err)
+			return err
 		}
 
 		// Save token to config
-		config.AccessToken = token.AccessToken
-		config.RefreshToken = token.RefreshToken
-		config.ExpiresAt = token.Expiry
+		config.AccessToken = tokenString
+		config.RefreshToken = "" // No refresh token in implicit flow
+		config.ExpiresAt = expiresAt
 
 		// Save config
 		if err := saveConfig(); err != nil {
@@ -469,6 +621,40 @@ func openBrowser(url string) {
 		log.Printf("Failed to open browser: %v", err)
 		fmt.Printf("Please open this URL in your browser: %s\n", url)
 	}
+}
+
+// parseJWTExpiry extracts the expiration time from a JWT token
+func parseJWTExpiry(tokenString string) (time.Time, error) {
+	// Default expiry as fallback
+	defaultExpiry := time.Now().Add(24 * time.Hour)
+
+	// Split the token
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		return defaultExpiry, fmt.Errorf("invalid token format")
+	}
+
+	// Decode the payload (second part)
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return defaultExpiry, fmt.Errorf("failed to decode token payload: %v", err)
+	}
+
+	// Parse JSON payload
+	var claims struct {
+		Exp int64 `json:"exp"`
+	}
+
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return defaultExpiry, fmt.Errorf("failed to parse token payload: %v", err)
+	}
+
+	// If the exp claim is present
+	if claims.Exp > 0 {
+		return time.Unix(claims.Exp, 0), nil
+	}
+
+	return defaultExpiry, nil
 }
 
 func main() {

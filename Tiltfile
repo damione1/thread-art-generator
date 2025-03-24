@@ -1,9 +1,9 @@
 load('ext://restart_process', 'docker_build_with_restart')
 
-
+#compile and set executable. But for the cli one, we need to build it for the current platform and make it executable
 local_resource(
   'go-compile',
-  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/cli cmd/cli/main.go && chmod +x build/cli',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && go build -o build/cli cmd/cli/main.go',
   labels=["scripts"],
   deps=['cmd/', 'core/', 'threadGenerator/', 'web/**/*.go'],
 )
