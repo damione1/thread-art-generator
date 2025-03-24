@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "../styles/globals.css";
 import { Toaster } from "react-hot-toast";
+import ClientProviders from "@/components/auth/ClientProviders";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 // Root layout is a server component and can't contain client-side code
-// Auth0ProviderWithRedirect is configured at the dashboard layout level
+// So we use a ClientProviders component to wrap the entire app
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +28,7 @@ export default function RootLayout({
       <body
         className={`min-h-screen bg-dark-100 text-slate-200 ${inter.className}`}
       >
-        {children}
+        <ClientProviders>{children}</ClientProviders>
         <Toaster
           position="top-right"
           toastOptions={{

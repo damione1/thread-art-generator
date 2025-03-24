@@ -20,20 +20,30 @@ export function useAuth() {
         }
     }, [getAccessTokenSilently]);
 
-    const loginRedirect = useCallback(() => {
-        loginWithRedirect({
-            appState: {
-                returnTo: window.location.pathname,
-            },
-        });
+    const loginRedirect = useCallback((options?: Record<string, unknown>) => {
+        try {
+            console.log("Redirecting to Auth0 login...");
+            loginWithRedirect(options || {
+                appState: {
+                    returnTo: window.location.pathname,
+                },
+            });
+        } catch (error) {
+            console.error('Failed to redirect to login:', error);
+        }
     }, [loginWithRedirect]);
 
     const logoutUser = useCallback(() => {
-        logout({
-            logoutParams: {
-                returnTo: window.location.origin,
-            },
-        });
+        try {
+            logout({
+                logoutParams: {
+                    returnTo: window.location.origin,
+                },
+            });
+        } catch (error) {
+            console.error('Failed to logout:', error);
+            window.location.href = '/';
+        }
     }, [logout]);
 
     return {

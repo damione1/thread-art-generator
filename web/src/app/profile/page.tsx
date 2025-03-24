@@ -8,50 +8,42 @@ import Image from "next/image";
 import { User as ProtoUser } from "@/lib/pb/user_pb";
 import { getCurrentUser } from "@/lib/grpc-client";
 import ProfileEditor from "@/components/profile/ProfileEditor";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user: authUser, isAuthenticated, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User>({ id: "", name: "User", email: "" });
   const [profileData, setProfileData] = useState<ProtoUser | null>(null);
   const [showEditor, setShowEditor] = useState(false);
 
+  // Update user state when auth user changes
   useEffect(() => {
-    // Get the session data from the auth cookie
-    async function getSessionData() {
+    if (authUser) {
+      setUser({
+        id: authUser.sub || "",
+        name: authUser.name || "User",
+        email: authUser.email || "",
+      });
+    }
+  }, [authUser]);
+
+  // Fetch user data from API when authenticated
+  useEffect(() => {
+    async function fetchUserData() {
+      if (!isAuthenticated || !authUser) {
+        return;
+      }
+
       try {
-        const response = await fetch("/api/auth/session");
-        if (!response.ok) {
-          throw new Error("Failed to get session");
-        }
-
-        const data = await response.json();
-
-        if (!data.user) {
-          // Not authenticated, redirect to login
-          router.push("/auth/login");
-          return;
-        }
-
-        setUser({
-          id: data.user.sub || "",
-          name: data.user.name || "User",
-          email: data.user.email || "",
-        });
-
-        try {
-          // Use our new gRPC client with token caching
-          const userData = await getCurrentUser();
-          setProfileData(userData);
-        } catch (err) {
-          console.error("Error fetching user profile:", err);
-          setError(
-            `Error: ${err instanceof Error ? err.message : "Unknown error"}`
-          );
-        }
+        setLoading(true);
+        // Use our gRPC client with token caching
+        const userData = await getCurrentUser();
+        setProfileData(userData);
       } catch (err) {
-        console.error("Error fetching session:", err);
+        console.error("Error fetching user profile:", err);
         setError(
           `Error: ${err instanceof Error ? err.message : "Unknown error"}`
         );
@@ -60,15 +52,25 @@ export default function ProfilePage() {
       }
     }
 
-    getSessionData();
-  }, [router]);
+    fetchUserData();
+  }, [isAuthenticated, authUser]);
+
+  // If not logged in, redirect to home
+  if (!authLoading && !isAuthenticated) {
+    router.push("/");
+    return (
+      <div className="container mx-auto p-6">
+        <p>Redirecting to login...</p>
+      </div>
+    );
+  }
 
   return (
     <Layout user={user} title="Profile - ThreadArt">
       <div className="container mx-auto p-6">
         <h1 className="text-3xl font-bold mb-6">User Profile</h1>
 
-        {loading && (
+        {(loading || authLoading) && (
           <div className="bg-dark-200 p-8 rounded-lg text-center shadow-inner">
             <div className="flex justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-100"></div>
@@ -83,7 +85,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {profileData && !loading && (
+        {profileData && !loading && !authLoading && (
           <div className="bg-dark-200 rounded-lg p-6 shadow-lg">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center">
