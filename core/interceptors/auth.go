@@ -71,7 +71,15 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 	).One(ctx, db)
 
 	if err == nil {
-		// User found, check if we need to update missing fields
+		// User found, only update if really necessary
+		// Check if we have all required fields
+		if user.Email != "" && user.FirstName != "" {
+			// We have all the essential info, no need to fetch from Auth0 again
+			log.Debug().Str("user_id", user.ID).Msg("User found with complete profile, skipping Auth0 fetch")
+			return user.ID, nil
+		}
+
+		// Missing essential info, need to update
 		needsUpdate := false
 
 		// Check if token is in context for direct userinfo
@@ -227,7 +235,15 @@ func parseNameFromAuth0(fullName string) (firstName, lastName string) {
 // AuthInterceptor creates a gRPC interceptor for authentication
 func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		// Skip auth for whitelisted methods
 		if isWhiteListedMethod(info.FullMethod) {
+			return handler(ctx, req)
+		}
+
+		// Check if user ID is already in context (e.g., from previous middleware)
+		if userID, ok := ctx.Value(middleware.AuthKey).(string); ok && userID != "" {
+			log.Debug().Str("user_id", userID).Msg("User already authenticated, skipping auth check")
+			// User already authenticated, proceed with handler
 			return handler(ctx, req)
 		}
 

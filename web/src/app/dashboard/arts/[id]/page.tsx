@@ -2,92 +2,70 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import Image from "next/image";
 import {
-  createArt,
+  getArt,
   getArtUploadUrl,
   confirmArtImageUpload,
   getCurrentUser,
 } from "@/lib/grpc-client";
 import { Art } from "@/lib/pb/art_pb";
-import { User } from "@/lib/pb/user_pb";
-import {
-  FormField,
-  TextInput,
-  ErrorMessage,
-  SuccessMessage,
-  useForm,
-} from "@/components/ui";
+import { ErrorMessage, SuccessMessage } from "@/components/ui";
 
-interface ArtFormValues extends Record<string, unknown> {
-  title: string;
-}
-
-export default function NewArtPage() {
+export default function ArtDetailPage() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<"create" | "upload">("create");
+  const params = useParams();
+  const artId = params?.id as string;
+
   const [art, setArt] = useState<Art | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Upload states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  // Initialize form for art creation
-  const {
-    values,
-    errors,
-    handleChange,
-    handleSubmit,
-    isSubmitting,
-    generalError,
-    isSuccess,
-  } = useForm<ArtFormValues>({
-    title: "",
-  });
-
-  // Fetch current user if not already loaded
-  const fetchCurrentUser = async () => {
-    if (!user) {
+  // Fetch art and user data
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
+        // Get current user
         const currentUser = await getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Failed to fetch user:", error);
+
+        // Get art details
+        if (artId) {
+          console.log("artId", artId);
+          // Format the art resource name correctly
+          const artResourceName = `${currentUser.name}/arts/${artId}`;
+          console.log("artResourceName", artResourceName);
+          const artData = await getArt(artResourceName);
+          setArt(artData);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load art details. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
-    }
-  };
+    };
 
-  // Handle form submission to create art
-  const handleCreateArt = async (formValues: ArtFormValues) => {
-    try {
-      await fetchCurrentUser();
+    fetchData();
+  }, [artId]);
 
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
-
-      const newArt = await createArt({ title: formValues.title }, user.name);
-
-      // Extract the art ID from the full resource name
-      const artIdMatch = newArt.name.match(/users\/[^/]+\/arts\/([^/]+)$/);
-      const artId = artIdMatch ? artIdMatch[1] : newArt.name;
-
-      // Redirect to art details page immediately
-      router.push(`/dashboard/arts/${artId}`);
-    } catch (error) {
-      console.error("Failed to create art:", error);
-      throw error; // Let the form handler deal with this
-    }
-  };
-
-  // Handle file drop/selection
+  // Handle file upload
   const handleFileUpload = async (file: File) => {
     if (!art || !art.name) {
-      setUploadError("No art created yet. Please create art first.");
+      setUploadError("Art information not available. Please try again.");
       return;
     }
 
     setIsUploading(true);
     setUploadError(null);
+    setUploadSuccess(false);
 
     try {
       // Get upload URL
@@ -117,13 +95,9 @@ export default function NewArtPage() {
 
       setUploadSuccess(true);
 
-      // Redirect to art details page after short delay
+      // Reload art data after a short delay
       setTimeout(() => {
-        // Extract the art ID from the full resource name
-        const artIdMatch = art.name.match(/users\/[^/]+\/arts\/([^/]+)$/);
-        const artId = artIdMatch ? artIdMatch[1] : art.name;
-
-        router.push(`/dashboard/arts/${artId}`);
+        router.refresh();
       }, 1500);
     } catch (error) {
       console.error("Upload failed:", error);
@@ -164,63 +138,97 @@ export default function NewArtPage() {
     }
   };
 
-  // Initialize component
-  useEffect(() => {
-    fetchCurrentUser();
-  }, []);
+  // Helper function to get status display information
+  function getStatusInfo(status: number) {
+    switch (status) {
+      case 3: // ART_STATUS_COMPLETE
+        return { text: "Completed", color: "text-accent-teal" };
+      case 2: // ART_STATUS_PROCESSING
+        return { text: "Processing", color: "text-amber-400" };
+      case 1: // ART_STATUS_PENDING_IMAGE
+        return { text: "Pending Image", color: "text-primary-400" };
+      case 4: // ART_STATUS_FAILED
+        return { text: "Failed", color: "text-red-500" };
+      case 5: // ART_STATUS_ARCHIVED
+        return { text: "Archived", color: "text-slate-400" };
+      default:
+        return { text: "Unknown", color: "text-slate-400" };
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-center items-center min-h-[300px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !art) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-dark-200 rounded-lg p-6 shadow-lg">
+            <h2 className="text-xl font-semibold mb-4 text-slate-100">Error</h2>
+            <p className="text-slate-300 mb-4">{error || "Art not found"}</p>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const statusInfo = getStatusInfo(art.status);
+  const needsImage = art.status === 1; // ART_STATUS_PENDING_IMAGE
+  const created = art.createTime
+    ? new Date(Number(art.createTime.seconds) * 1000)
+    : new Date();
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-dark-200 rounded-lg p-6 shadow-lg">
-          <h2 className="text-xl font-semibold mb-4 text-slate-100">
-            {currentStep === "create" ? "Create New Art" : "Upload Image"}
-          </h2>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-dark-200 rounded-lg p-6 shadow-lg mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-slate-100">
+              {art.title}
+            </h2>
+            <span
+              className={`${statusInfo.color} px-3 py-1 rounded-full text-sm border border-current`}
+            >
+              {statusInfo.text}
+            </span>
+          </div>
 
-          {currentStep === "create" ? (
-            <>
-              <ErrorMessage message={generalError} />
-              <SuccessMessage
-                message={
-                  isSuccess
-                    ? "Art created successfully! Please upload an image."
-                    : null
-                }
-              />
+          <div className="mb-6">
+            <p className="text-slate-400 text-sm">
+              Created on {created.toLocaleDateString()} at{" "}
+              {created.toLocaleTimeString()}
+            </p>
+          </div>
 
-              <form onSubmit={handleSubmit(handleCreateArt)}>
-                <div className="mb-4">
-                  <FormField
-                    id="title"
-                    name="title"
-                    label="Title"
-                    error={errors.title}
-                    inputComponent={
-                      <TextInput
-                        id="title"
-                        name="title"
-                        value={values.title}
-                        onChange={handleChange}
-                        disabled={isSubmitting}
-                        placeholder="Enter art title"
-                      />
-                    }
-                  />
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                  >
-                    {isSubmitting ? "Creating..." : "Create Art"}
-                  </button>
-                </div>
-              </form>
-            </>
-          ) : (
-            <>
+          {art.imageUrl ? (
+            <div className="mb-6">
+              <div className="rounded-lg overflow-hidden bg-dark-300 aspect-square w-full max-w-xl mx-auto">
+                <Image
+                  src={art.imageUrl}
+                  alt={art.title}
+                  className="w-full h-full object-contain"
+                  width={600}
+                  height={600}
+                />
+              </div>
+            </div>
+          ) : needsImage ? (
+            <div className="mb-6">
               <ErrorMessage message={uploadError} />
               <SuccessMessage
                 message={uploadSuccess ? "Image uploaded successfully!" : null}
@@ -279,25 +287,23 @@ export default function NewArtPage() {
                   )}
                 </div>
               </div>
-
-              <div className="flex justify-between">
-                <button
-                  onClick={() => setCurrentStep("create")}
-                  disabled={isUploading}
-                  className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  disabled={isUploading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  Done
-                </button>
-              </div>
-            </>
+            </div>
+          ) : (
+            <div className="mb-6 p-4 bg-dark-300 rounded-lg text-center">
+              <p className="text-slate-300">No image available</p>
+            </div>
           )}
+
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+
+            {/* Add additional action buttons here if needed */}
+          </div>
         </div>
       </div>
     </div>

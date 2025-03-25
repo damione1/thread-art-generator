@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
@@ -30,6 +31,11 @@ type Auth0Service struct {
 	config     Auth0Configuration
 	validator  *validator.Validator
 	httpClient *http.Client
+
+	// Token cache
+	managementToken    string
+	managementTokenExp time.Time
+	tokenCacheMutex    sync.RWMutex
 }
 
 // customClaims contains custom data we want from the Auth0 token
@@ -308,8 +314,69 @@ func (a *Auth0Service) GetUserInfoFromToken(ctx context.Context, token string) (
 	}, nil
 }
 
+// getUserInfoCache implements a simple per-request cache for user info lookups
+type userInfoCache struct {
+	cache map[string]*UserInfo
+	mu    sync.RWMutex
+}
+
+// newUserInfoCache creates a new cache
+func newUserInfoCache() *userInfoCache {
+	return &userInfoCache{
+		cache: make(map[string]*UserInfo),
+	}
+}
+
+// get retrieves a cached user info if available
+func (c *userInfoCache) get(userID string) (*UserInfo, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	info, ok := c.cache[userID]
+	return info, ok
+}
+
+// set caches user info
+func (c *userInfoCache) set(userID string, info *UserInfo) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cache[userID] = info
+}
+
+// contextKey is a private type for context keys to avoid collisions
+type contextKey string
+
+// userInfoCacheKey is the context key for the user info cache
+const userInfoCacheKey contextKey = "userInfoCache"
+
+// getUserInfoCache gets or creates a user info cache in the context
+func getUserInfoCache(ctx context.Context) *userInfoCache {
+	if cache, ok := ctx.Value(userInfoCacheKey).(*userInfoCache); ok {
+		return cache
+	}
+	return newUserInfoCache()
+}
+
+// withUserInfoCache adds a user info cache to the context if not already present
+func withUserInfoCache(ctx context.Context) context.Context {
+	if _, ok := ctx.Value(userInfoCacheKey).(*userInfoCache); ok {
+		// Cache already exists
+		return ctx
+	}
+	return context.WithValue(ctx, userInfoCacheKey, newUserInfoCache())
+}
+
 // GetUserInfo retrieves user information from Auth0
 func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInfo, error) {
+	// Add cache to context if not present
+	ctx = withUserInfoCache(ctx)
+	cache := getUserInfoCache(ctx)
+
+	// Check cache first
+	if cachedInfo, ok := cache.get(userID); ok {
+		log.Debug().Str("user_id", userID).Msg("Using cached user info")
+		return cachedInfo, nil
+	}
+
 	// Extract the auth0 identifier - typically in format "provider|userid"
 	parts := strings.Split(userID, "|")
 	provider := "auth0"
@@ -343,7 +410,7 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 					}
 				}
 
-				return &UserInfo{
+				result := &UserInfo{
 					ID:        userID,
 					Email:     uiInfo.Email,
 					Name:      uiInfo.Name,
@@ -353,13 +420,17 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 					CreatedAt: time.Now().Format(time.RFC3339), // Userinfo doesn't provide timestamps
 					UpdatedAt: time.Now().Format(time.RFC3339),
 					Provider:  provider,
-				}, nil
+				}
+
+				// Cache the result
+				cache.set(userID, result)
+				return result, nil
 			}
 		}
 
 		// Fall back to minimal info if both methods fail
 		log.Warn().Str("user_id", userID).Msg("Using minimal profile as fallback")
-		return &UserInfo{
+		result := &UserInfo{
 			ID:        userID,
 			Email:     "",
 			Name:      "",
@@ -369,7 +440,11 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 			CreatedAt: time.Now().Format(time.RFC3339),
 			UpdatedAt: time.Now().Format(time.RFC3339),
 			Provider:  provider,
-		}, nil
+		}
+
+		// Cache the result even though it's minimal
+		cache.set(userID, result)
+		return result, nil
 	}
 
 	// Parse name into first/last name components if possible
@@ -384,7 +459,7 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 		}
 	}
 
-	return &UserInfo{
+	result := &UserInfo{
 		ID:        userID,
 		Email:     userInfo.Email,
 		Name:      userInfo.Name,
@@ -394,7 +469,11 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 		CreatedAt: userInfo.CreatedAt,
 		UpdatedAt: userInfo.UpdatedAt,
 		Provider:  provider,
-	}, nil
+	}
+
+	// Cache the result
+	cache.set(userID, result)
+	return result, nil
 }
 
 // fetchUserInfoFromManagement fetches user info from Auth0 Management API
@@ -456,12 +535,34 @@ func (a *Auth0Service) fetchUserInfoFromManagement(ctx context.Context, userID s
 
 // getManagementToken gets an access token for the Auth0 Management API
 func (a *Auth0Service) getManagementToken(ctx context.Context) (string, error) {
+	// Check cache first with read lock
+	a.tokenCacheMutex.RLock()
+	cachedToken := a.managementToken
+	tokenExpiration := a.managementTokenExp
+	a.tokenCacheMutex.RUnlock()
+
+	// If we have a valid cached token, return it
+	if cachedToken != "" && time.Now().Before(tokenExpiration) {
+		log.Debug().Msg("Using cached Auth0 management token")
+		return cachedToken, nil
+	}
+
+	// Need to fetch a new token - use write lock
+	a.tokenCacheMutex.Lock()
+	defer a.tokenCacheMutex.Unlock()
+
+	// Double-check if another goroutine refreshed the token while we were waiting
+	if a.managementToken != "" && time.Now().Before(a.managementTokenExp) {
+		log.Debug().Msg("Another goroutine refreshed the token, using that")
+		return a.managementToken, nil
+	}
+
 	// Debug log the management API configuration but mask secrets
 	log.Debug().
 		Str("domain", a.config.Domain).
 		Str("management_client_id", a.config.ManagementApiClientID).
 		Str("management_client_secret_length", fmt.Sprintf("%d chars", len(a.config.ManagementApiClientSecret))).
-		Msg("Getting management API token")
+		Msg("Getting new management API token")
 
 	// Check if management credentials are set
 	if a.config.ManagementApiClientID == "" || a.config.ManagementApiClientSecret == "" {
@@ -528,6 +629,18 @@ func (a *Auth0Service) getManagementToken(ctx context.Context) (string, error) {
 		Str("token_type", tokenResp.TokenType).
 		Int("expires_in", tokenResp.ExpiresIn).
 		Msg("Auth0 management token obtained successfully")
+
+	// Cache the token
+	expiryTime := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	// Apply a 5-minute buffer to ensure we refresh before actual expiration
+	safeExpiryTime := expiryTime.Add(-5 * time.Minute)
+
+	a.managementToken = tokenResp.AccessToken
+	a.managementTokenExp = safeExpiryTime
+
+	log.Info().
+		Time("expiry", safeExpiryTime).
+		Msg("Cached new Auth0 management token")
 
 	return tokenResp.AccessToken, nil
 }
