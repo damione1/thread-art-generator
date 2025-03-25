@@ -26,12 +26,12 @@ export default function Navigation({ user }: NavigationProps) {
       <Link href="/gallery" className={getLinkClass("/gallery")}>
         Gallery
       </Link>
-      <Link href="/create" className={getLinkClass("/create")}>
-        Create
-      </Link>
       {user ? (
-        <Link href="/dashboard" className={getLinkClass("/dashboard")}>
-          Dashboard
+        <Link
+          href="/dashboard/arts/new"
+          className={getLinkClass("/dashboard/arts/new")}
+        >
+          Create
         </Link>
       ) : (
         <Link href="/about" className={getLinkClass("/about")}>

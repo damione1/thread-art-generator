@@ -269,7 +269,6 @@ export const listArts = async (parent: string, pageSize: number = 10, pageToken?
     const { ListArtsRequest } = await import("./pb/art_pb");
 
     return GrpcService.call(async (token) => {
-        console.log("listArts", token);
         const { client, callOptions } = await createGrpcClient(token);
         const request = new ListArtsRequest({
             parent,

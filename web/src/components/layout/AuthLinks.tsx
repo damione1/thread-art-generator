@@ -9,7 +9,6 @@ export default function AuthLinks() {
 
   const handleLogin = () => {
     // Log the attempt to help with debugging
-    console.log("Login button clicked, redirecting to Auth0...");
     try {
       loginRedirect({
         authorizationParams: {

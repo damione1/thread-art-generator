@@ -22,7 +22,6 @@ export function useAuth() {
 
     const loginRedirect = useCallback((options?: Record<string, unknown>) => {
         try {
-            console.log("Redirecting to Auth0 login...");
             loginWithRedirect(options || {
                 appState: {
                     returnTo: window.location.pathname,

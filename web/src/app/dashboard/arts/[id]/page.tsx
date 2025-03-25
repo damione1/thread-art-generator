@@ -9,6 +9,7 @@ import {
   getArtUploadUrl,
   confirmArtImageUpload,
   getCurrentUser,
+  deleteArt,
 } from "@/lib/grpc-client";
 import { Art } from "@/lib/pb/art_pb";
 import { ErrorMessage, SuccessMessage } from "@/components/ui";
@@ -27,6 +28,11 @@ export default function ArtDetailPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
+  //States for delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // Fetch art and user data
   useEffect(() => {
     const fetchData = async () => {
@@ -38,10 +44,8 @@ export default function ArtDetailPage() {
 
         // Get art details
         if (artId) {
-          console.log("artId", artId);
           // Format the art resource name correctly
           const artResourceName = `${currentUser.name}/arts/${artId}`;
-          console.log("artResourceName", artResourceName);
           const artData = await getArt(artResourceName);
           setArt(artData);
         }
@@ -138,6 +142,28 @@ export default function ArtDetailPage() {
     }
   };
 
+  // Handle art deletion
+  const handleDeleteArt = async () => {
+    if (!art || !art.name) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteArt(art.name);
+
+      // Redirect to dashboard after successful deletion
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Failed to delete art:", error);
+      setDeleteError("Failed to delete art. Please try again.");
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   // Helper function to get status display information
   function getStatusInfo(status: number) {
     switch (status) {
@@ -196,6 +222,68 @@ export default function ArtDetailPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
+        {/* Delete confirmation modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-dark-200 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-semibold mb-4 text-slate-100">
+                Delete Art
+              </h3>
+              <p className="text-slate-300 mb-6">
+                Are you sure you want to delete &ldquo;{art.title}&rdquo;? This
+                action cannot be undone.
+              </p>
+              {deleteError && (
+                <div className="mb-4 p-3 bg-red-900/30 border border-red-700 text-red-400 rounded">
+                  {deleteError}
+                </div>
+              )}
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteArt}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center"
+                >
+                  {isDeleting ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-dark-200 rounded-lg p-6 shadow-lg mb-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-slate-100">
@@ -302,7 +390,12 @@ export default function ArtDetailPage() {
               Back to Dashboard
             </button>
 
-            {/* Add additional action buttons here if needed */}
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Delete Art
+            </button>
           </div>
         </div>
       </div>

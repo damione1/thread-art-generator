@@ -33,7 +33,6 @@ export const Auth0ProviderWithRedirect = ({
   }, [domain, clientId, audience]);
 
   const onRedirectCallback = (appState?: AppState) => {
-    console.log("Auth0 redirect callback with appState:", appState);
     // Use App Router's push instead of Pages Router's replace
     router.push(appState?.returnTo || "/dashboard");
   };
