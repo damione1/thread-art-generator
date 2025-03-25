@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import Image from "next/image";
@@ -13,11 +13,14 @@ import {
 } from "@/lib/grpc-client";
 import { Art } from "@/lib/pb/art_pb";
 import { ErrorMessage, SuccessMessage } from "@/components/ui";
+import { Cropper, CropperRef, CircleStencil } from "react-advanced-cropper";
+import "react-advanced-cropper/dist/style.css";
 
 export default function ArtDetailPage() {
   const router = useRouter();
   const params = useParams();
   const artId = params?.id as string;
+  const cropperRef = useRef<CropperRef>(null);
 
   const [art, setArt] = useState<Art | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,6 +30,11 @@ export default function ArtDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  // Cropper states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [cropperImage, setCropperImage] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   //States for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -72,13 +80,30 @@ export default function ArtDetailPage() {
     setUploadSuccess(false);
 
     try {
+      // Get the cropped canvas and create a blob from it
+      const canvas = cropperRef.current?.getCanvas();
+      if (!canvas) {
+        throw new Error("Failed to get cropped image");
+      }
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Failed to create image blob"));
+        }, file.type);
+      });
+
+      // Create File object from Blob
+      const croppedFile = new File([blob], file.name, { type: file.type });
+
       // Get upload URL
       const uploadUrlResponse = await getArtUploadUrl(art.name);
 
       // Upload file to the signed URL
       const response = await fetch(uploadUrlResponse.uploadUrl, {
         method: "PUT",
-        body: file,
+        body: croppedFile,
         headers: {
           "Content-Type": file.type,
         },
@@ -97,6 +122,10 @@ export default function ArtDetailPage() {
         // We still continue since the image was uploaded successfully
       }
 
+      // Reset cropper state
+      setSelectedFile(null);
+      setCropperImage(null);
+      setShowCropper(false);
       setUploadSuccess(true);
 
       // Reload art data after a short delay
@@ -111,6 +140,24 @@ export default function ArtDetailPage() {
     }
   };
 
+  // Process the selected file and prepare for cropping
+  const processFile = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please upload an image file (JPEG, PNG, etc.)");
+      return;
+    }
+
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setCropperImage(e.target.result as string);
+        setShowCropper(true);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Handle file drag and drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -123,22 +170,28 @@ export default function ArtDetailPage() {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      if (file.type.startsWith("image/")) {
-        handleFileUpload(file);
-      } else {
-        setUploadError("Please upload an image file (JPEG, PNG, etc.)");
-      }
+      processFile(file);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      if (file.type.startsWith("image/")) {
-        handleFileUpload(file);
-      } else {
-        setUploadError("Please upload an image file (JPEG, PNG, etc.)");
-      }
+      processFile(file);
+    }
+  };
+
+  // Cancel cropping and reset state
+  const handleCancelCrop = () => {
+    setSelectedFile(null);
+    setCropperImage(null);
+    setShowCropper(false);
+  };
+
+  // Submit cropped image
+  const handleCropSubmit = () => {
+    if (selectedFile) {
+      handleFileUpload(selectedFile);
     }
   };
 
@@ -322,63 +375,129 @@ export default function ArtDetailPage() {
                 message={uploadSuccess ? "Image uploaded successfully!" : null}
               />
 
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 mb-4 text-center cursor-pointer ${
-                  isUploading
-                    ? "bg-dark-300 border-gray-600"
-                    : "border-primary-400 hover:border-primary-300"
-                }`}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                onClick={() => document.getElementById("file-upload")?.click()}
-              >
-                <input
-                  type="file"
-                  id="file-upload"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  disabled={isUploading}
-                />
-                <div className="flex flex-col items-center justify-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-primary-400 mb-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              {showCropper && cropperImage ? (
+                <div>
+                  <div className="rounded-lg overflow-hidden bg-dark-300 p-4 mb-4">
+                    <Cropper
+                      ref={cropperRef}
+                      src={cropperImage}
+                      className="h-[500px] rounded"
+                      stencilComponent={CircleStencil}
+                      stencilProps={{ aspectRatio: 1 }}
                     />
-                  </svg>
-                  <p className="text-slate-300 mb-2">
-                    Drag and drop an image here, or click to select
-                  </p>
-                  <p className="text-slate-400 text-sm">JPEG, PNG (max 10MB)</p>
-
-                  {isUploading && (
-                    <div className="mt-4">
-                      <div className="w-full bg-dark-400 rounded-full h-2 mt-2">
-                        <div
-                          className="bg-primary-500 h-2 rounded-full animate-pulse"
-                          style={{ width: "100%" }}
-                        ></div>
-                      </div>
-                      <p className="text-slate-400 text-sm mt-2">
-                        Uploading...
-                      </p>
-                    </div>
-                  )}
+                  </div>
+                  <div className="flex justify-between">
+                    <button
+                      onClick={handleCancelCrop}
+                      className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
+                      disabled={isUploading}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCropSubmit}
+                      className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors flex items-center"
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Uploading...
+                        </>
+                      ) : (
+                        "Upload Image"
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 mb-4 text-center cursor-pointer ${
+                    isUploading
+                      ? "bg-dark-300 border-gray-600"
+                      : "border-primary-400 hover:border-primary-300"
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() =>
+                    document.getElementById("file-upload")?.click()
+                  }
+                >
+                  <input
+                    type="file"
+                    id="file-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    disabled={isUploading}
+                  />
+                  <div className="flex flex-col items-center justify-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-12 w-12 text-primary-400 mb-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <p className="text-slate-300 mb-2">
+                      Drag and drop an image here, or click to select
+                    </p>
+                    <p className="text-slate-400 text-sm">
+                      JPEG, PNG (max 10MB)
+                    </p>
+
+                    {isUploading && (
+                      <div className="mt-4">
+                        <div className="w-full bg-dark-400 rounded-full h-2 mt-2">
+                          <div
+                            className="bg-primary-500 h-2 rounded-full animate-pulse"
+                            style={{ width: "100%" }}
+                          ></div>
+                        </div>
+                        <p className="text-slate-400 text-sm mt-2">
+                          Uploading...
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="mb-6 p-4 bg-dark-300 rounded-lg text-center">
               <p className="text-slate-300">No image available</p>
+              <button
+                onClick={() => router.push(`/dashboard/arts/${artId}/upload`)}
+                className="px-4 py-2 mt-4 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors"
+              >
+                Upload Image
+              </button>
             </div>
           )}
 
