@@ -20,13 +20,14 @@ mkdir -p ./certs
 
 # Generate certificates for tag.local
 echo "Generating certificates for tag.local..."
-mkcert -cert-file ./certs/tag.local.crt -key-file ./certs/tag.local.key tag.local "*.tag.local"
+mkcert -cert-file ./certs/tag.local.crt -key-file ./certs/tag.local.key tag.local "*.tag.local" storage.tag.local
 
-# Add tag.local to /etc/hosts if not already present
+# Add domains to /etc/hosts if not already present
 if ! grep -q "tag.local" /etc/hosts; then
-  echo "Adding tag.local to /etc/hosts..."
+  echo "Adding domains to /etc/hosts..."
   echo "You might be prompted for your password to modify /etc/hosts"
   sudo sh -c 'echo "127.0.0.1 tag.local" >> /etc/hosts'
+  sudo sh -c 'echo "127.0.0.1 storage.tag.local" >> /etc/hosts'
 fi
 
 echo "Setup complete! Your certificates are in the ./certs directory"

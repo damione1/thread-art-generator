@@ -100,13 +100,31 @@ export default function ArtDetailPage() {
       // Get upload URL
       const uploadUrlResponse = await getArtUploadUrl(art.name);
 
+      // Extract content type from the signed URL if present
+      let contentType = file.type;
+      try {
+        const urlObj = new URL(uploadUrlResponse.uploadUrl);
+        const signedHeaders =
+          urlObj.searchParams.get("X-Amz-SignedHeaders") || "";
+        if (signedHeaders.includes("content-type")) {
+          // If content-type is part of the signed headers, we must use the exact same content type
+          // that was used to generate the signature
+          contentType = file.type; // Use the file's content type
+          console.log(`Using content type: ${contentType} for upload`);
+        }
+      } catch (error) {
+        console.error("Error parsing upload URL:", error);
+      }
+
       // Upload file to the signed URL
       const response = await fetch(uploadUrlResponse.uploadUrl, {
         method: "PUT",
         body: croppedFile,
         headers: {
-          "Content-Type": file.type,
+          "Content-Type": contentType,
         },
+        mode: "cors",
+        credentials: "omit",
       });
 
       if (!response.ok) {
@@ -356,19 +374,7 @@ export default function ArtDetailPage() {
             </p>
           </div>
 
-          {art.imageUrl ? (
-            <div className="mb-6">
-              <div className="rounded-lg overflow-hidden bg-dark-300 aspect-square w-full max-w-xl mx-auto">
-                <Image
-                  src={art.imageUrl}
-                  alt={art.title}
-                  className="w-full h-full object-contain"
-                  width={600}
-                  height={600}
-                />
-              </div>
-            </div>
-          ) : needsImage ? (
+          {needsImage ? (
             <div className="mb-6">
               <ErrorMessage message={uploadError} />
               <SuccessMessage
@@ -489,15 +495,21 @@ export default function ArtDetailPage() {
                 </div>
               )}
             </div>
+          ) : art.imageUrl ? (
+            <div className="mb-6">
+              <div className="rounded-lg overflow-hidden bg-dark-300 aspect-square w-full max-w-xl mx-auto">
+                <Image
+                  src={art.imageUrl}
+                  alt={art.title}
+                  className="w-full h-full object-contain"
+                  width={600}
+                  height={600}
+                />
+              </div>
+            </div>
           ) : (
             <div className="mb-6 p-4 bg-dark-300 rounded-lg text-center">
               <p className="text-slate-300">No image available</p>
-              <button
-                onClick={() => router.push(`/dashboard/arts/${artId}/upload`)}
-                className="px-4 py-2 mt-4 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors"
-              >
-                Upload Image
-              </button>
             </div>
           )}
 

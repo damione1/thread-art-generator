@@ -1,9 +1,8 @@
 package service
 
 import (
+	"context"
 	"fmt"
-
-	"gocloud.dev/blob"
 
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/Damione1/thread-art-generator/core/pb"
@@ -16,7 +15,7 @@ type Server struct {
 	pb.UnimplementedArtGeneratorServiceServer
 	config      util.Config
 	tokenMaker  token.Maker
-	bucket      *blob.Bucket
+	bucket      *storage.BlobStorage
 	mailService mailService.MailService
 }
 
@@ -36,25 +35,52 @@ func NewServer(config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create mail service. %v", err)
 	}
 
+	// Initialize blob storage based on environment
+	ctx := context.Background()
 	switch config.Environment {
 	case "production":
-		//To be implemented
+		// In production, use GCS or S3 based on configuration
+		// if config.StorageProvider == "gcs" {
+		// 	// GCS configuration
+		// 	storageConfig := storage.BlobStorageConfig{
+		// 		Provider:     storage.ProviderGCS,
+		// 		Bucket:       config.BucketName,
+		// 		GCPProjectID: config.GCPProjectID,
+		// 		// GCP credentials will be loaded from environment variables or instance metadata
+		// 	}
+		// 	server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
+		// } else {
+		// 	// Default to S3 for production if not GCS
+		// 	storageConfig := storage.BlobStorageConfig{
+		// 		Provider:  storage.ProviderS3,
+		// 		Bucket:    config.BucketName,
+		// 		Region:    config.AWSRegion,
+		// 		AccessKey: config.AWSAccessKey,
+		// 		SecretKey: config.AWSSecretKey,
+		// 		PublicURL: config.StoragePublicURL,
+		// 		UseSSL:    true,
+		// 	}
+		// 	server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
+		// }
 	case "development":
-		// Use https://tag.local/storage as the public URL for signed URLs
-		// while still connecting to minio:9000 internally
-		server.bucket, err = storage.NewMinioBlobStorage(
-			"minio:9000",                // Internal endpoint for operations
-			"minio",                     // Access key
-			"minio123",                  // Secret key
-			"local-bucket",              // Bucket name
-			false,                       // Use SSL
-			"https://tag.local/storage", // Public URL for signed URLs
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create minio storage. %v", err)
+		// In development, use MinIO with a public URL for signed URLs
+		storageConfig := storage.BlobStorageConfig{
+			Provider:  storage.ProviderMinIO,
+			Bucket:    "local-bucket",
+			Region:    "us-east-1",
+			Endpoint:  "minio:9000",
+			PublicURL: "storage.tag.local",
+			UseSSL:    false,
+			AccessKey: "minio",
+			SecretKey: "minio123",
 		}
+		server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
 	default:
 		return nil, fmt.Errorf("unknown environment: %s", config.Environment)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create blob storage: %v", err)
 	}
 
 	return server, nil
@@ -65,7 +91,7 @@ func (s *Server) GetTokenMaker() token.Maker {
 }
 
 func (s *Server) Close() error {
-	if s.bucket != nil {
+	if s.bucket != nil && s.bucket.Bucket != nil {
 		return s.bucket.Close()
 	}
 	return nil

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/rs/zerolog/log"
 	"gocloud.dev/blob"
 )
@@ -21,7 +22,7 @@ var (
 	mu       sync.Mutex
 )
 
-func GetOrCreateSignedImageURL(ctx context.Context, bucket *blob.Bucket, imageID string, expiry int) (string, error) {
+func GetOrCreateSignedImageURL(ctx context.Context, bucket *storage.BlobStorage, imageID string, expiry int) (string, error) {
 	// Lock the mutex to ensure exclusive access
 	mu.Lock()
 	defer mu.Unlock()

@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
       "lh3.googleusercontent.com",
       "avatars.githubusercontent.com",
       "www.gravatar.com",
-      "minio"
+      "storage.tag.local"
     ],
   },
   // For gRPC-Web we need to configure rewrites to proxy API requests

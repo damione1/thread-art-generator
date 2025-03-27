@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Damione1/thread-art-generator/core/cache"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/rs/zerolog/log"
-	"gocloud.dev/blob"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, art *models.Art) *pb.Art {
+func ArtDbToProto(ctx context.Context, bucket *storage.BlobStorage, art *models.Art) *pb.Art {
 	// Map status from database enum to proto enum
 	var status pb.ArtStatus
 	switch art.Status {
@@ -42,13 +41,19 @@ func ArtDbToProto(ctx context.Context, bucket *blob.Bucket, art *models.Art) *pb
 		{Type: RessourceTypeArts, ID: art.ID},
 	})
 
-	if art.ImageID.Valid {
-		imageUrl, err := cache.GetOrCreateSignedImageURL(ctx, bucket, art.ImageID.String, 10)
+	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) {
+		imageKey := GetResourceName([]Resource{
+			{Type: RessourceTypeUsers, ID: art.AuthorID},
+			{Type: RessourceTypeArts, ID: art.ImageID.String},
+		})
+
+		// Use direct signed URL generation for the image URL
+		signedURL, err := bucket.SignedURL(ctx, imageKey, nil)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get signed URL for image")
 			artPb.ImageUrl = ""
 		} else {
-			artPb.ImageUrl = imageUrl
+			artPb.ImageUrl = signedURL
 		}
 	}
 
