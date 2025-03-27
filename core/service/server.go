@@ -63,16 +63,16 @@ func NewServer(config util.Config) (*Server, error) {
 		// 	server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
 		// }
 	case "development":
-		// In development, use MinIO with a public URL for signed URLs
+		// In development, use MinIO with separate internal and external endpoints
 		storageConfig := storage.BlobStorageConfig{
-			Provider:  storage.ProviderMinIO,
-			Bucket:    "local-bucket",
-			Region:    "us-east-1",
-			Endpoint:  "minio:9000",
-			PublicURL: "storage.tag.local",
-			UseSSL:    false,
-			AccessKey: "minio",
-			SecretKey: "minio123",
+			Provider:         storage.ProviderMinIO,
+			Bucket:           "local-bucket",
+			Region:           "us-east-1",
+			InternalEndpoint: "http://minio:9000",         // Internal HTTP endpoint within Docker
+			ExternalEndpoint: "https://storage.tag.local", // External HTTPS endpoint for clients
+			UseSSL:           false,                       // Don't use SSL for internal communication
+			AccessKey:        "minio",
+			SecretKey:        "minio123",
 		}
 		server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
 	default:

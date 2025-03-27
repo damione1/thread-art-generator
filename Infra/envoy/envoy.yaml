@@ -35,7 +35,7 @@ static_resources:
                           - prefix: "https://"
                           - prefix: "http://"
                         allow_methods: "GET, PUT, DELETE, POST, OPTIONS"
-                        allow_headers: "authorization,content-type,x-amz-date,x-amz-content-sha256,x-amz-security-token,x-forwarded-proto,x-forwarded-host"
+                        allow_headers: "authorization,content-type,x-amz-date,x-amz-content-sha256,x-amz-security-token,x-forwarded-proto,x-forwarded-host,x-amz-acl"
                         expose_headers: "etag"
                         max_age: "86400"
                       routes:
@@ -154,7 +154,7 @@ static_resources:
                     private_key:
                       filename: /certs/tag.local.key
 
-    # HTTP -> HTTPS redirect
+    # HTTP -> HTTPS redirect for all services
     - address:
         socket_address:
           address: 0.0.0.0
@@ -265,7 +265,7 @@ static_resources:
         envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
           "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
           explicit_http_config:
-            http2_protocol_options: {}
+            http_protocol_options: {}
       load_assignment:
         cluster_name: minio_service
         endpoints:

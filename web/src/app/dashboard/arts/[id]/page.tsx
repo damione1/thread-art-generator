@@ -100,28 +100,13 @@ export default function ArtDetailPage() {
       // Get upload URL
       const uploadUrlResponse = await getArtUploadUrl(art.name);
 
-      // Extract content type from the signed URL if present
-      let contentType = file.type;
-      try {
-        const urlObj = new URL(uploadUrlResponse.uploadUrl);
-        const signedHeaders =
-          urlObj.searchParams.get("X-Amz-SignedHeaders") || "";
-        if (signedHeaders.includes("content-type")) {
-          // If content-type is part of the signed headers, we must use the exact same content type
-          // that was used to generate the signature
-          contentType = file.type; // Use the file's content type
-          console.log(`Using content type: ${contentType} for upload`);
-        }
-      } catch (error) {
-        console.error("Error parsing upload URL:", error);
-      }
-
       // Upload file to the signed URL
       const response = await fetch(uploadUrlResponse.uploadUrl, {
         method: "PUT",
         body: croppedFile,
         headers: {
-          "Content-Type": contentType,
+          "Content-Type": file.type,
+          "x-amz-acl": "private",
         },
         mode: "cors",
         credentials: "omit",

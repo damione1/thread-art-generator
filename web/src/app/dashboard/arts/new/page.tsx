@@ -99,6 +99,7 @@ export default function NewArtPage() {
         body: file,
         headers: {
           "Content-Type": file.type,
+          "x-amz-acl": "private",
         },
       });
 

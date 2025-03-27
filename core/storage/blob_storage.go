@@ -30,18 +30,27 @@ const (
 
 // BlobStorageConfig holds configuration for different storage providers
 type BlobStorageConfig struct {
-	Provider  StorageProvider
-	Bucket    string
-	Region    string
-	Endpoint  string // Internal endpoint for operations
-	PublicURL string // Public URL for signed URLs (no protocol)
-	UseSSL    bool
+	Provider         StorageProvider
+	Bucket           string
+	Region           string
+	InternalEndpoint string // Internal endpoint for operations (e.g., http://minio:9000)
+	ExternalEndpoint string // External endpoint for signed URLs (e.g., https://storage.tag.local)
+	UseSSL           bool   // Only used for internal connections
 	// Auth credentials
 	AccessKey string
 	SecretKey string
 	// GCS specific
 	GCPProjectID   string
 	GCPCredentials []byte // Optional JSON credentials
+}
+
+// For backward compatibility
+// PublicURL is now deprecated in favor of ExternalEndpoint
+func (c BlobStorageConfig) PublicURL() string {
+	if c.ExternalEndpoint != "" {
+		return stripProtocol(c.ExternalEndpoint)
+	}
+	return ""
 }
 
 // BlobStorage provides a unified interface for blob storage operations
@@ -85,26 +94,25 @@ func NewBlobStorage(ctx context.Context, config BlobStorageConfig) (*BlobStorage
 		Bucket:     bucket,
 		provider:   config.Provider,
 		bucketName: config.Bucket,
-		publicURL:  config.PublicURL,
+		publicURL:  config.PublicURL(),
 	}
 
-	// Create signing client for S3/MinIO
+	// Create signing client for S3/MinIO specifically for generating external URLs
 	if config.Provider == ProviderS3 || config.Provider == ProviderMinIO {
-		var signingEndpoint string
-		if config.PublicURL != "" {
-			signingEndpoint = config.PublicURL
-		} else {
-			signingEndpoint = config.Endpoint
+		// External endpoint is required for signed URLs
+		if config.ExternalEndpoint == "" {
+			return nil, fmt.Errorf("external endpoint is required for S3/MinIO storage")
 		}
 
-		// Strip protocol if present
-		signingEndpoint = stripProtocol(signingEndpoint)
+		// Strip protocol if present, we'll explicitly use HTTPS for external URLs
+		externalEndpoint := stripProtocol(config.ExternalEndpoint)
 
+		// Create a separate AWS session configured for generating external URLs
 		awsConfig := &aws.Config{
 			Credentials:      credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, ""),
 			Region:           aws.String(config.Region),
-			Endpoint:         aws.String(signingEndpoint),
-			DisableSSL:       aws.Bool(!config.UseSSL),
+			Endpoint:         aws.String(externalEndpoint),
+			DisableSSL:       aws.Bool(false), // Always use HTTPS for external URLs
 			S3ForcePathStyle: aws.Bool(true),
 		}
 
@@ -119,13 +127,21 @@ func NewBlobStorage(ctx context.Context, config BlobStorageConfig) (*BlobStorage
 	return bs, nil
 }
 
-// newS3BlobStorage creates a new S3-compatible blob storage
+// newS3BlobStorage creates a new S3-compatible blob storage for internal operations
 func newS3BlobStorage(ctx context.Context, config BlobStorageConfig) (*blob.Bucket, error) {
+	// Ensure we have an internal endpoint
+	if config.InternalEndpoint == "" {
+		return nil, fmt.Errorf("internal endpoint is required for S3/MinIO storage")
+	}
+
+	// For internal operations, we use the internal endpoint with specified SSL setting
+	internalEndpoint := stripProtocol(config.InternalEndpoint)
+
 	awsConfig := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, ""),
 		Region:           aws.String(config.Region),
-		Endpoint:         aws.String(config.Endpoint),
-		DisableSSL:       aws.Bool(!config.UseSSL),
+		Endpoint:         aws.String(internalEndpoint),
+		DisableSSL:       aws.Bool(!config.UseSSL), // Follow the UseSSL setting for internal ops
 		S3ForcePathStyle: aws.Bool(true),
 	}
 
@@ -198,6 +214,7 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		input := &s3.PutObjectInput{
 			Bucket: aws.String(b.bucketName),
 			Key:    aws.String(key),
+			ACL:    aws.String("private"),
 		}
 		// Add content type in input
 		if opts.ContentType != "" {
@@ -222,12 +239,20 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		return "", fmt.Errorf("failed to create request for method %s", method)
 	}
 
-	// Ensure we're using HTTPS in the signed URL
+	// Ensure HTTPS is used for the request URL
+	req.HTTPRequest.URL.Scheme = "https"
+
+	// Ensure X-Forwarded-Proto header is set to HTTPS
 	req.HTTPRequest.Header.Set("X-Forwarded-Proto", "https")
 
 	url, err := req.Presign(opts.Expiry)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign request: %v", err)
+	}
+
+	// Double-check: force HTTPS scheme if the URL somehow still has HTTP
+	if strings.HasPrefix(url, "http://") {
+		url = "https://" + strings.TrimPrefix(url, "http://")
 	}
 
 	return url, nil
