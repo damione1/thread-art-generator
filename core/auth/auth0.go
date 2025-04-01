@@ -36,6 +36,16 @@ type Auth0Service struct {
 	managementToken    string
 	managementTokenExp time.Time
 	tokenCacheMutex    sync.RWMutex
+
+	// User info cache
+	userInfoCache      map[string]*userInfoCacheEntry
+	userInfoCacheMutex sync.RWMutex
+}
+
+// userInfoCacheEntry represents a cached user info with expiration
+type userInfoCacheEntry struct {
+	info    *UserInfo
+	expires time.Time
 }
 
 // customClaims contains custom data we want from the Auth0 token
@@ -75,11 +85,47 @@ func NewAuth0Service(config Auth0Configuration) (AuthService, error) {
 		return nil, fmt.Errorf("failed to create validator: %v", err)
 	}
 
-	return &Auth0Service{
-		config:     config,
-		validator:  jwtValidator,
-		httpClient: &http.Client{Timeout: 10 * time.Second},
-	}, nil
+	service := &Auth0Service{
+		config:        config,
+		validator:     jwtValidator,
+		httpClient:    &http.Client{Timeout: 10 * time.Second},
+		userInfoCache: make(map[string]*userInfoCacheEntry),
+	}
+
+	// Start a goroutine to clean up expired cache entries
+	go service.startCacheCleanup()
+
+	return service, nil
+}
+
+// startCacheCleanup runs a periodic cleanup of expired cache entries
+func (a *Auth0Service) startCacheCleanup() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		a.cleanupExpiredCache()
+	}
+}
+
+// cleanupExpiredCache removes expired entries from the user info cache
+func (a *Auth0Service) cleanupExpiredCache() {
+	a.userInfoCacheMutex.Lock()
+	defer a.userInfoCacheMutex.Unlock()
+
+	now := time.Now()
+	expired := 0
+
+	for userID, entry := range a.userInfoCache {
+		if now.After(entry.expires) {
+			delete(a.userInfoCache, userID)
+			expired++
+		}
+	}
+
+	if expired > 0 {
+		log.Info().Int("removed_entries", expired).Msg("Cleaned expired user info cache entries")
+	}
 }
 
 // ValidateToken validates the token and returns the claims
@@ -107,8 +153,9 @@ func (a *Auth0Service) ValidateToken(ctx context.Context, tokenString string) (*
 		Picture: customClaims.Picture,
 	}
 
-	// If email or name is missing, fetch from userinfo endpoint
-	if authClaims.Email == "" || authClaims.Name == "" {
+	// Only fetch from userinfo endpoint if both email and name are completely missing
+	// This reduces unnecessary API calls to Auth0
+	if authClaims.Email == "" && authClaims.Name == "" {
 		userInfo, err := a.fetchUserInfo(ctx, tokenString)
 		if err != nil {
 			log.Warn().Err(err).Str("user_id", authClaims.UserID).Msg("Failed to fetch user info, continuing with limited claims")
@@ -190,6 +237,12 @@ func (a *Auth0Service) GetUserInfoFromToken(ctx context.Context, token string) (
 	claims, err := a.ValidateToken(ctx, token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate token: %v", err)
+	}
+
+	// Check if we already have this user in our cache
+	if cachedInfo, ok := a.getCachedUserInfo(claims.UserID); ok {
+		log.Debug().Str("user_id", claims.UserID).Msg("Using cached user info for token request")
+		return cachedInfo, nil
 	}
 
 	// Extract provider from Auth0 ID
@@ -301,7 +354,7 @@ func (a *Auth0Service) GetUserInfoFromToken(ctx context.Context, token string) (
 		}
 	}
 
-	return &UserInfo{
+	result := &UserInfo{
 		ID:        claims.UserID,
 		Email:     userInfo.Email,
 		Name:      userInfo.Name,
@@ -311,7 +364,12 @@ func (a *Auth0Service) GetUserInfoFromToken(ctx context.Context, token string) (
 		CreatedAt: time.Now().Format(time.RFC3339), // Userinfo doesn't provide timestamps
 		UpdatedAt: time.Now().Format(time.RFC3339),
 		Provider:  provider,
-	}, nil
+	}
+
+	// Cache the result
+	a.setCachedUserInfo(claims.UserID, result)
+
+	return result, nil
 }
 
 // getUserInfoCache implements a simple per-request cache for user info lookups
@@ -365,15 +423,51 @@ func withUserInfoCache(ctx context.Context) context.Context {
 	return context.WithValue(ctx, userInfoCacheKey, newUserInfoCache())
 }
 
+// getCachedUserInfo retrieves user info from service-level cache
+func (a *Auth0Service) getCachedUserInfo(userID string) (*UserInfo, bool) {
+	a.userInfoCacheMutex.RLock()
+	defer a.userInfoCacheMutex.RUnlock()
+
+	entry, exists := a.userInfoCache[userID]
+	if !exists {
+		return nil, false
+	}
+
+	// Check if entry is expired
+	if time.Now().After(entry.expires) {
+		return nil, false
+	}
+
+	return entry.info, true
+}
+
+// setCachedUserInfo stores user info in service-level cache with 24-hour expiration
+func (a *Auth0Service) setCachedUserInfo(userID string, info *UserInfo) {
+	a.userInfoCacheMutex.Lock()
+	defer a.userInfoCacheMutex.Unlock()
+
+	// Cache for 24 hours
+	a.userInfoCache[userID] = &userInfoCacheEntry{
+		info:    info,
+		expires: time.Now().Add(24 * time.Hour),
+	}
+}
+
 // GetUserInfo retrieves user information from Auth0
 func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInfo, error) {
-	// Add cache to context if not present
+	// First check service-level cache
+	if cachedInfo, ok := a.getCachedUserInfo(userID); ok {
+		log.Debug().Str("user_id", userID).Msg("Using cached user info from service cache")
+		return cachedInfo, nil
+	}
+
+	// Add request-level cache to context if not present (for backward compatibility)
 	ctx = withUserInfoCache(ctx)
 	cache := getUserInfoCache(ctx)
 
-	// Check cache first
+	// Check request-level cache
 	if cachedInfo, ok := cache.get(userID); ok {
-		log.Debug().Str("user_id", userID).Msg("Using cached user info")
+		log.Debug().Str("user_id", userID).Msg("Using cached user info from request cache")
 		return cachedInfo, nil
 	}
 
@@ -422,8 +516,9 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 					Provider:  provider,
 				}
 
-				// Cache the result
+				// Cache the result in both caches
 				cache.set(userID, result)
+				a.setCachedUserInfo(userID, result)
 				return result, nil
 			}
 		}
@@ -442,8 +537,9 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 			Provider:  provider,
 		}
 
-		// Cache the result even though it's minimal
+		// Cache the result in both caches
 		cache.set(userID, result)
+		a.setCachedUserInfo(userID, result)
 		return result, nil
 	}
 
@@ -471,8 +567,9 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 		Provider:  provider,
 	}
 
-	// Cache the result
+	// Cache the result in both caches
 	cache.set(userID, result)
+	a.setCachedUserInfo(userID, result)
 	return result, nil
 }
 
