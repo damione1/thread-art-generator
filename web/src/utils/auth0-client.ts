@@ -19,6 +19,7 @@ export const getAuth0Client = async (): Promise<Auth0Client> => {
             redirect_uri: typeof window !== 'undefined' ? window.location.origin + '/dashboard' : '',
         },
         cacheLocation: 'localstorage',
+        useRefreshTokens: true,
     };
 
     auth0Client = new Auth0Client(options);

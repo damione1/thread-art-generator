@@ -1,155 +1,152 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/layout/Layout";
-import { User } from "../../types/user";
 import Image from "next/image";
-import { User as ProtoUser } from "@/lib/pb/user_pb";
-import { getCurrentUser } from "@/lib/grpc-client";
 import ProfileEditor from "@/components/profile/ProfileEditor";
-import { useAuth } from "@/hooks/useAuth";
+import { useUser } from "@/contexts/UserContext";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user: authUser, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<User>({ id: "", name: "User", email: "" });
-  const [profileData, setProfileData] = useState<ProtoUser | null>(null);
+  const { user, profile, loading, error, refreshUserData } = useUser();
   const [showEditor, setShowEditor] = useState(false);
 
-  // Update user state when auth user changes
-  useEffect(() => {
-    if (authUser) {
-      setUser({
-        id: authUser.sub || "",
-        name: authUser.name || "User",
-        email: authUser.email || "",
-      });
-    }
-  }, [authUser]);
-
-  // Fetch user data from API when authenticated
-  useEffect(() => {
-    async function fetchUserData() {
-      if (!isAuthenticated || !authUser) {
-        return;
-      }
-
-      try {
-        setLoading(true);
-        // Use our gRPC client with token caching
-        const userData = await getCurrentUser();
-        setProfileData(userData);
-      } catch (err) {
-        console.error("Error fetching user profile:", err);
-        setError(
-          `Error: ${err instanceof Error ? err.message : "Unknown error"}`
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchUserData();
-  }, [isAuthenticated, authUser]);
-
-  // If not logged in, redirect to home
-  if (!authLoading && !isAuthenticated) {
-    router.push("/");
+  // If not loaded yet, show loading state
+  if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <p>Redirecting to login...</p>
-      </div>
+      <Layout title="Profile - ThreadArt">
+        <div className="container mx-auto p-6">
+          <div className="flex justify-center items-center min-h-[200px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // If error occurred, show error state
+  if (error) {
+    return (
+      <Layout title="Profile - ThreadArt">
+        <div className="container mx-auto p-6">
+          <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
+            {error}
+          </div>
+          <button
+            onClick={() => refreshUserData()}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Try Again
+          </button>
+        </div>
+      </Layout>
     );
   }
 
   return (
     <Layout user={user} title="Profile - ThreadArt">
-      <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">User Profile</h1>
-
-        {(loading || authLoading) && (
-          <div className="bg-dark-200 p-8 rounded-lg text-center shadow-inner">
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-100"></div>
-            </div>
-            <p className="text-slate-400 mt-4">Loading profile data...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
-            <span className="block sm:inline">{error}</span>
-          </div>
-        )}
-
-        {profileData && !loading && !authLoading && (
-          <div className="bg-dark-200 rounded-lg p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                {profileData.avatar && (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto bg-dark-200 rounded-lg shadow-lg overflow-hidden">
+          {/* Profile header */}
+          <div className="p-6 sm:p-8 bg-dark-300">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-dark-100">
+                {profile?.avatar || user.picture ? (
                   <Image
-                    src={profileData.avatar}
-                    alt={`${profileData.firstName}'s avatar`}
-                    className="w-24 h-24 rounded-full mr-6 object-cover"
-                    width={96}
-                    height={96}
+                    src={profile?.avatar || user.picture || ""}
+                    alt={user.name}
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
                   />
+                ) : (
+                  <div className="w-full h-full bg-primary-900/30 flex items-center justify-center text-primary-500 text-3xl font-bold">
+                    {user.name?.charAt(0) || "U"}
+                  </div>
                 )}
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-100">
-                    {profileData.firstName} {profileData.lastName}
-                  </h2>
-                  <p className="text-slate-400">{profileData.email}</p>
-                </div>
               </div>
-              <button
-                onClick={() => setShowEditor(!showEditor)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              >
-                {showEditor ? "Cancel" : "Edit Profile"}
-              </button>
-            </div>
+              <div className="text-center sm:text-left">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                  {profile?.firstName && profile?.lastName
+                    ? `${profile.firstName} ${profile.lastName}`
+                    : user.name}
+                </h1>
+                <p className="text-slate-400 mt-2">{user.email}</p>
 
+                {!showEditor && (
+                  <button
+                    onClick={() => setShowEditor(true)}
+                    className="mt-4 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-500 transition"
+                  >
+                    Edit Profile
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Profile content */}
+          <div className="p-6 sm:p-8">
             {showEditor ? (
               <ProfileEditor
-                userData={profileData}
-                onUpdate={(updatedUser) => {
-                  setProfileData(updatedUser);
+                userData={profile || undefined}
+                onCancel={() => setShowEditor(false)}
+                onSuccess={() => {
                   setShowEditor(false);
+                  refreshUserData();
                 }}
               />
             ) : (
-              <div className="border-t border-dark-300 pt-4">
-                <h3 className="text-lg font-semibold mb-3 text-slate-100">
-                  User Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-slate-500 text-sm">First Name</p>
-                    <p className="text-slate-100">{profileData.firstName}</p>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-white mb-3">
+                    Profile Information
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 bg-dark-300 rounded">
+                      <p className="text-slate-400 text-sm">First Name</p>
+                      <p className="text-white mt-1">
+                        {profile?.firstName || "-"}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-dark-300 rounded">
+                      <p className="text-slate-400 text-sm">Last Name</p>
+                      <p className="text-white mt-1">
+                        {profile?.lastName || "-"}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-dark-300 rounded">
+                      <p className="text-slate-400 text-sm">Email</p>
+                      <p className="text-white mt-1">{user.email}</p>
+                    </div>
+                    <div className="p-4 bg-dark-300 rounded">
+                      <p className="text-slate-400 text-sm">User ID</p>
+                      <p className="text-white mt-1 truncate">
+                        {user.id || "-"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-slate-500 text-sm">Last Name</p>
-                    <p className="text-slate-100">{profileData.lastName}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-sm">Email</p>
-                    <p className="text-slate-100">{profileData.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-sm">User ID</p>
-                    <p className="text-sm break-all text-slate-100">
-                      {profileData.name}
-                    </p>
+                </div>
+
+                {/* Account Actions */}
+                <div>
+                  <h2 className="text-xl font-semibold text-white mb-3">
+                    Account Actions
+                  </h2>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => router.push("/dashboard")}
+                      className="px-4 py-2 bg-dark-300 text-white rounded hover:bg-dark-400 transition"
+                    >
+                      Back to Dashboard
+                    </button>
                   </div>
                 </div>
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </Layout>
   );

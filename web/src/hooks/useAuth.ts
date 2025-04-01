@@ -9,16 +9,29 @@ export function useAuth() {
         getAccessTokenSilently,
         loginWithRedirect,
         logout,
+        error,
     } = useAuth0();
 
     const getToken = useCallback(async () => {
         try {
-            return await getAccessTokenSilently();
+            // Always include audience to ensure consistency
+            return await getAccessTokenSilently({
+                authorizationParams: {
+                    audience: process.env.NEXT_PUBLIC_AUTH0_AUDIENCE,
+                    scope: 'openid profile email',
+                }
+            });
         } catch (error) {
             console.error('Error getting token:', error);
+
+            // If login required, redirect
+            if (error && typeof error === 'object' && 'error' in error && error.error === 'login_required') {
+                loginRedirect();
+            }
+
             return undefined;
         }
-    }, [getAccessTokenSilently]);
+    }, [getAccessTokenSilently, loginWithRedirect]);
 
     const loginRedirect = useCallback((options?: Record<string, unknown>) => {
         try {
@@ -26,6 +39,10 @@ export function useAuth() {
                 appState: {
                     returnTo: window.location.pathname,
                 },
+                authorizationParams: {
+                    audience: process.env.NEXT_PUBLIC_AUTH0_AUDIENCE,
+                    scope: 'openid profile email',
+                }
             });
         } catch (error) {
             console.error('Failed to redirect to login:', error);
@@ -52,5 +69,6 @@ export function useAuth() {
         getToken,
         loginRedirect,
         logoutUser,
+        error,
     };
 }

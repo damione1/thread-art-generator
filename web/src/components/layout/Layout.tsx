@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Head from "next/head";
 import Header from "./Header";
 import Footer from "./Footer";
 import { User } from "../../types/user";
-import { useAuth } from "@/hooks/useAuth";
+import { useUser } from "@/contexts/UserContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,19 +18,11 @@ const Layout: React.FC<LayoutProps> = ({
   title = "Thread Art Generator",
   user: initialUser = null,
 }) => {
-  const { user: authUser, isLoading } = useAuth();
-  const [user, setUser] = useState<User | null>(initialUser);
+  // Use centralized user context instead of directly using auth0
+  const { user: contextUser } = useUser();
 
-  // Update user if Auth0 user becomes available
-  useEffect(() => {
-    if (authUser && !isLoading) {
-      setUser({
-        id: authUser.sub || "",
-        name: authUser.name || "User",
-        email: authUser.email || "",
-      });
-    }
-  }, [authUser, isLoading]);
+  // Prefer context user over initialUser prop
+  const user = contextUser.id ? contextUser : initialUser;
 
   return (
     <div className="min-h-screen bg-dark-100 text-white flex flex-col">

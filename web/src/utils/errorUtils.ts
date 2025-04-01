@@ -2,9 +2,20 @@
  * Error utilities for handling backend validation errors
  */
 
+import { ConnectError, Code } from "@connectrpc/connect";
+
 type FieldErrors = {
     [key: string]: string;
 };
+
+// API Error interface for standardized error handling
+export interface ApiError {
+    code: string;
+    message: string;
+    fieldErrors?: FieldErrors;
+    statusCode?: number;
+    isAuthError?: boolean;
+}
 
 /**
  * Field name mapping from backend format to frontend format
@@ -16,6 +27,108 @@ const fieldMapping: { [key: string]: string } = {
     refresh_token: "refreshToken",
     // Add more mappings as needed
 };
+
+/**
+ * Process API errors from gRPC and other sources into a standardized format
+ */
+export function processApiError(error: unknown): ApiError {
+    // Handle ConnectError from gRPC
+    if (error instanceof ConnectError) {
+        const isAuthError = error.code === Code.Unauthenticated ||
+            error.code === Code.PermissionDenied;
+
+        // Parse any validation errors in the message
+        const fieldErrors = parseErrors(error.message);
+
+        return {
+            code: Code[error.code] || String(error.code),
+            message: formatErrorMessage(error.message),
+            fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
+            statusCode: connectCodeToHttp(error.code),
+            isAuthError,
+        };
+    }
+
+    // Handle standard Error objects
+    if (error instanceof Error) {
+        return {
+            code: "UNKNOWN",
+            message: error.message,
+        };
+    }
+
+    // Handle string errors
+    if (typeof error === "string") {
+        return {
+            code: "UNKNOWN",
+            message: error,
+        };
+    }
+
+    // Default fallback for unknown error types
+    return {
+        code: "UNKNOWN",
+        message: "An unknown error occurred",
+    };
+}
+
+/**
+ * Map Connect RPC codes to HTTP status codes for consistency
+ */
+function connectCodeToHttp(code: Code): number {
+    switch (code) {
+        case Code.Canceled:
+            return 499;
+        case Code.Unknown:
+            return 500;
+        case Code.InvalidArgument:
+            return 400;
+        case Code.DeadlineExceeded:
+            return 504;
+        case Code.NotFound:
+            return 404;
+        case Code.AlreadyExists:
+            return 409;
+        case Code.PermissionDenied:
+            return 403;
+        case Code.ResourceExhausted:
+            return 429;
+        case Code.FailedPrecondition:
+            return 400;
+        case Code.Aborted:
+            return 409;
+        case Code.OutOfRange:
+            return 400;
+        case Code.Unimplemented:
+            return 501;
+        case Code.Internal:
+            return 500;
+        case Code.Unavailable:
+            return 503;
+        case Code.DataLoss:
+            return 500;
+        case Code.Unauthenticated:
+            return 401;
+        default:
+            return 500;
+    }
+}
+
+/**
+ * Format error messages to be more user-friendly
+ */
+function formatErrorMessage(message: string): string {
+    // Remove technical prefixes
+    if (message.includes(": ")) {
+        const parts = message.split(": ");
+        if (parts.length > 1) {
+            // Skip the technical prefix (e.g., "failed to validate request")
+            return parts.slice(1).join(": ");
+        }
+    }
+
+    return message;
+}
 
 /**
  * Parses legacy validation errors following the format:
@@ -143,4 +256,12 @@ export function parseErrors(errorMessage: string): FieldErrors {
 
     // Otherwise, try parsing as legacy validation error
     return parseValidationErrors(errorMessage);
+}
+
+/**
+ * Toast-friendly error message
+ */
+export function getErrorMessage(error: unknown): string {
+    const processedError = processApiError(error);
+    return processedError.message;
 }

@@ -9,9 +9,11 @@ import {
   useForm,
 } from "@/components/ui";
 
-interface ProfileEditorProps {
-  userData: User;
-  onUpdate: (updatedUser: User) => void;
+export interface ProfileEditorProps {
+  userData?: User;
+  onUpdate?: (updatedUser: User) => void;
+  onCancel?: () => void;
+  onSuccess?: () => void;
 }
 
 interface ProfileFormValues extends Record<string, unknown> {
@@ -23,6 +25,8 @@ interface ProfileFormValues extends Record<string, unknown> {
 export default function ProfileEditor({
   userData,
   onUpdate,
+  onCancel,
+  onSuccess,
 }: ProfileEditorProps) {
   // Initialize form with useForm hook
   const {
@@ -34,15 +38,18 @@ export default function ProfileEditor({
     generalError,
     isSuccess,
   } = useForm<ProfileFormValues>({
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    email: userData.email,
-    avatar: userData.avatar,
+    firstName: userData?.firstName || "",
+    lastName: userData?.lastName || "",
+    email: userData?.email || "",
   });
 
   // Handle form submission
   const onSubmitForm = async (formValues: ProfileFormValues) => {
     try {
+      if (!userData?.name) {
+        throw new Error("User data is required");
+      }
+
       const updatedUser = await updateUser({
         name: userData.name,
         firstName: formValues.firstName || "",
@@ -50,7 +57,14 @@ export default function ProfileEditor({
         email: formValues.email || "",
       });
 
-      onUpdate(updatedUser);
+      // Call the provided callbacks
+      if (onUpdate) {
+        onUpdate(updatedUser);
+      }
+
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       // Error handling is now managed by the useForm hook
       throw error;
@@ -119,7 +133,17 @@ export default function ProfileEditor({
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-dark-300 text-white rounded hover:bg-dark-400 transition"
+            >
+              Cancel
+            </button>
+          )}
           <button
             type="submit"
             disabled={isSubmitting}

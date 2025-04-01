@@ -2,73 +2,45 @@
 
 import Link from "next/link";
 import Layout from "../../components/layout/Layout";
-import { User } from "../../types/user";
 import { listArts } from "@/lib/grpc-client";
 import { Art } from "@/lib/pb/art_pb";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-
-// Helper function to get status display information
-function getStatusInfo(status: number) {
-  switch (status) {
-    case 3: // ART_STATUS_COMPLETE
-      return { text: "Completed", color: "text-accent-teal" };
-    case 2: // ART_STATUS_PROCESSING
-      return { text: "Processing", color: "text-amber-400" };
-    case 1: // ART_STATUS_PENDING_IMAGE
-      return { text: "Pending Image", color: "text-primary-400" };
-    case 4: // ART_STATUS_FAILED
-      return { text: "Failed", color: "text-red-500" };
-    case 5: // ART_STATUS_ARCHIVED
-      return { text: "Archived", color: "text-slate-400" };
-    default:
-      return { text: "Unknown", color: "text-slate-400" };
-  }
-}
+import { useUser } from "@/contexts/UserContext";
+import { getErrorMessage } from "@/utils/errorUtils";
+import { getStatusInfo } from "@/utils/artUtils";
 
 export default function DashboardPage() {
-  const { user: authUser } = useAuth();
-  const [user, setUser] = useState<User>({
-    id: "",
-    name: "User",
-    email: "",
-  });
+  // Use centralized user context
+  const { user, loading: userLoading } = useUser();
   const [userArts, setUserArts] = useState<Art[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Fetch arts when user is available
   useEffect(() => {
-    if (authUser) {
-      setUser({
-        id: authUser.sub || "",
-        name: authUser.name || "User",
-        email: authUser.email || "",
-      });
-    }
-  }, [authUser]);
-
-  useEffect(() => {
-    async function fetchData() {
+    async function fetchArts() {
       try {
         if (!user.id) return;
 
-        // Fetch user's arts if we have a user ID
+        setLoading(true);
+        // Fetch user's arts
         const parentResource = `users/${user.id}`;
         const artsResponse = await listArts(parentResource, 10);
         setUserArts(artsResponse.arts || []);
+        setErrorMessage("");
       } catch (error) {
-        console.error("Failed to get user data or arts:", error);
-        setErrorMessage(
-          error instanceof Error ? error.message : "Unknown error occurred"
-        );
+        console.error("Failed to get arts:", error);
+        setErrorMessage(getErrorMessage(error));
       } finally {
         setLoading(false);
       }
     }
 
-    fetchData();
+    if (user.id) {
+      fetchArts();
+    }
   }, [user.id]);
 
   return (
@@ -102,7 +74,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {loading ? (
+        {loading || userLoading ? (
           <div className="flex justify-center items-center min-h-[200px]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
           </div>

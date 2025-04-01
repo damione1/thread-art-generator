@@ -1,6 +1,6 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import RequireAuth from "@/components/auth/RequireAuth";
 import React from "react";
 
 export default function DashboardLayout({
@@ -8,5 +8,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>;
+  return <RequireAuth>{children}</RequireAuth>;
 }

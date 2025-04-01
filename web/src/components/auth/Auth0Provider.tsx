@@ -54,6 +54,7 @@ export const Auth0ProviderWithRedirect = ({
       }}
       onRedirectCallback={onRedirectCallback}
       useRefreshTokens={true}
+      useRefreshTokensFallback={true}
       cacheLocation="localstorage"
     >
       {children}

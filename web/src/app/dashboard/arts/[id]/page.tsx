@@ -15,6 +15,7 @@ import { Art } from "@/lib/pb/art_pb";
 import { ErrorMessage, SuccessMessage } from "@/components/ui";
 import { Cropper, CropperRef, CircleStencil } from "react-advanced-cropper";
 import "react-advanced-cropper/dist/style.css";
+import { getStatusInfo } from "@/utils/artUtils";
 
 export default function ArtDetailPage() {
   const router = useRouter();
@@ -219,24 +220,6 @@ export default function ArtDetailPage() {
       setShowDeleteConfirm(false);
     }
   };
-
-  // Helper function to get status display information
-  function getStatusInfo(status: number) {
-    switch (status) {
-      case 3: // ART_STATUS_COMPLETE
-        return { text: "Completed", color: "text-accent-teal" };
-      case 2: // ART_STATUS_PROCESSING
-        return { text: "Processing", color: "text-amber-400" };
-      case 1: // ART_STATUS_PENDING_IMAGE
-        return { text: "Pending Image", color: "text-primary-400" };
-      case 4: // ART_STATUS_FAILED
-        return { text: "Failed", color: "text-red-500" };
-      case 5: // ART_STATUS_ARCHIVED
-        return { text: "Archived", color: "text-slate-400" };
-      default:
-        return { text: "Unknown", color: "text-slate-400" };
-    }
-  }
 
   if (isLoading) {
     return (

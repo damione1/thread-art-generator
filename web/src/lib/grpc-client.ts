@@ -2,6 +2,8 @@ import { createGrpcWebTransport } from "@connectrpc/connect-web";
 import { createClient, ConnectError, Code } from "@connectrpc/connect";
 import { ArtGeneratorService } from "./pb/services_connect";
 import { Art } from "./pb/art_pb";
+import { getAccessToken, refreshAccessToken } from "@/utils/auth-token-manager";
+import { processApiError } from "@/utils/errorUtils";
 
 // Configuration for the gRPC client
 const CONFIG = {
@@ -27,36 +29,6 @@ export const createTransport = () => {
 };
 
 /**
- * Gets the access token from Auth0
- */
-export const getAccessToken = async (): Promise<string | undefined> => {
-    // In a browser environment, we use Auth0
-    if (typeof window !== 'undefined') {
-        try {
-            // Dynamic import to prevent server-side issues
-            const { getAuth0Client } = await import('@/utils/auth0-client');
-            const auth0 = await getAuth0Client();
-
-            // Check if authenticated
-            const isAuthenticated = await auth0.isAuthenticated();
-            if (!isAuthenticated) {
-                console.warn("User is not authenticated");
-                return undefined;
-            }
-
-            // Get token with audience
-            return auth0.getTokenSilently();
-        } catch (error) {
-            console.error("Error getting Auth0 token:", error);
-            return undefined;
-        }
-    }
-
-    // In a non-browser environment (like SSR), no token is available
-    return undefined;
-};
-
-/**
  * Creates a gRPC client with the current access token
  * If no token is provided, it will attempt to fetch one
  */
@@ -67,7 +39,7 @@ export const createGrpcClient = async (providedToken?: string) => {
     // If a token is explicitly provided, use it
     let accessToken = providedToken;
 
-    // Otherwise, get one from Auth0
+    // Otherwise, get one from our token manager
     if (!accessToken) {
         try {
             accessToken = await getAccessToken();
@@ -93,7 +65,7 @@ export const createGrpcClient = async (providedToken?: string) => {
  */
 export class GrpcService {
     /**
-     * Makes a gRPC service call with proper error handling and token refres pdh
+     * Makes a gRPC service call with proper error handling and token refresh
      * @param serviceCall - Function that makes the actual gRPC call
      * @param forceFetchToken - Whether to force fetch a new token
      */
@@ -102,8 +74,8 @@ export class GrpcService {
         forceFetchToken = false
     ): Promise<T> {
         try {
-            // Get the current token (or force fetch a new one)
-            const token = forceFetchToken ? await getAccessToken() : await getAccessToken();
+            // Get the current token
+            const token = await getAccessToken();
 
             // Make the call with the token
             return await serviceCall(token);
@@ -115,12 +87,18 @@ export class GrpcService {
                 (error.code === Code.Unauthenticated || error.code === Code.PermissionDenied) &&
                 !forceFetchToken
             ) {
-                // Try one more time with a fresh token
-                return GrpcService.call(serviceCall, true);
+                // Try one more time with a fresh token by logging out and redirecting
+                await refreshAccessToken();
+
+                // The page will reload, so we don't need to return anything
+                throw error;
             }
 
-            // Otherwise rethrow
-            throw error;
+            // Process error to standardized format
+            const processedError = processApiError(error);
+
+            // Rethrow the processed error for higher-level handling
+            throw processedError;
         }
     }
 }
