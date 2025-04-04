@@ -28,6 +28,16 @@ services:
       AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
       AUTH0_MANAGEMENT_API_CLIENT_ID: ${AUTH0_MANAGEMENT_API_CLIENT_ID}
       AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${AUTH0_MANAGEMENT_API_CLIENT_SECRET}
+      # Storage configuration
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER}
+      STORAGE_BUCKET: ${STORAGE_BUCKET}
+      STORAGE_REGION: ${STORAGE_REGION}
+      STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
+      STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
+      STORAGE_USE_SSL: ${STORAGE_USE_SSL}
+      STORAGE_FORCE_EXTERNAL_SSL: ${STORAGE_FORCE_EXTERNAL_SSL}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
     depends_on:
       - db
       - migrations
@@ -141,20 +151,25 @@ services:
     image: "bitnami/minio:latest"
     container_name: minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9000" # For API operations
+      - "9001:9001" # For MinIO Console UI
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-      MINIO_DEFAULT_BUCKETS: local-bucket
-      MINIO_SERVER_URL: https://storage.tag.local
-      MINIO_BROWSER_REDIRECT_URL: https://storage.tag.local
-      MINIO_DOMAIN: storage.tag.local
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
+      MINIO_DEFAULT_BUCKETS: ${STORAGE_BUCKET}
+      # Allow direct access without forcing SSL
+      MINIO_SERVER_URL: http://localhost:9000
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
     volumes:
       - ./infra/minio/data:/data
       - ./infra/minio/config:/root/.minio
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
 volumes:
   threadmachine:

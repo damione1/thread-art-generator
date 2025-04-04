@@ -106,8 +106,8 @@ export default function ArtDetailPage() {
         method: "PUT",
         body: croppedFile,
         headers: {
-          "Content-Type": file.type,
           "x-amz-acl": "private",
+          "x-forwarded-proto": "http",
         },
         mode: "cors",
         credentials: "omit",

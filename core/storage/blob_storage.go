@@ -34,8 +34,9 @@ type BlobStorageConfig struct {
 	Bucket           string
 	Region           string
 	InternalEndpoint string // Internal endpoint for operations (e.g., http://minio:9000)
-	ExternalEndpoint string // External endpoint for signed URLs (e.g., https://storage.tag.local)
-	UseSSL           bool   // Only used for internal connections
+	ExternalEndpoint string // External endpoint for signed URLs (e.g., http://localhost:9000)
+	UseSSL           bool   // Used for internal connections
+	ForceExternalSSL bool   // Whether to force HTTPS for external URLs
 	// Auth credentials
 	AccessKey string
 	SecretKey string
@@ -57,10 +58,11 @@ func (c BlobStorageConfig) PublicURL() string {
 // with support for different cloud providers
 type BlobStorage struct {
 	*blob.Bucket
-	provider   StorageProvider
-	s3Client   *s3.S3 // For S3/MinIO signed URLs
-	bucketName string
-	publicURL  string
+	provider         StorageProvider
+	s3Client         *s3.S3 // For S3/MinIO signed URLs
+	bucketName       string
+	publicURL        string
+	forceExternalSSL bool
 }
 
 // NewBlobStorage creates a new blob storage client based on provider
@@ -91,10 +93,11 @@ func NewBlobStorage(ctx context.Context, config BlobStorageConfig) (*BlobStorage
 	}
 
 	bs := &BlobStorage{
-		Bucket:     bucket,
-		provider:   config.Provider,
-		bucketName: config.Bucket,
-		publicURL:  config.PublicURL(),
+		Bucket:           bucket,
+		provider:         config.Provider,
+		bucketName:       config.Bucket,
+		publicURL:        config.PublicURL(),
+		forceExternalSSL: config.ForceExternalSSL,
 	}
 
 	// Create signing client for S3/MinIO specifically for generating external URLs
@@ -104,7 +107,7 @@ func NewBlobStorage(ctx context.Context, config BlobStorageConfig) (*BlobStorage
 			return nil, fmt.Errorf("external endpoint is required for S3/MinIO storage")
 		}
 
-		// Strip protocol if present, we'll explicitly use HTTPS for external URLs
+		// Strip protocol if present, we'll explicitly set the protocol based on config
 		externalEndpoint := stripProtocol(config.ExternalEndpoint)
 
 		// Create a separate AWS session configured for generating external URLs
@@ -112,7 +115,7 @@ func NewBlobStorage(ctx context.Context, config BlobStorageConfig) (*BlobStorage
 			Credentials:      credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, ""),
 			Region:           aws.String(config.Region),
 			Endpoint:         aws.String(externalEndpoint),
-			DisableSSL:       aws.Bool(false), // Always use HTTPS for external URLs
+			DisableSSL:       aws.Bool(!config.ForceExternalSSL), // Use ForceExternalSSL setting
 			S3ForcePathStyle: aws.Bool(true),
 		}
 
@@ -216,7 +219,7 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 			Key:    aws.String(key),
 			ACL:    aws.String("private"),
 		}
-		// Add content type in input
+		// Add content type in input only if specified
 		if opts.ContentType != "" {
 			input.ContentType = aws.String(opts.ContentType)
 		}
@@ -239,19 +242,24 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		return "", fmt.Errorf("failed to create request for method %s", method)
 	}
 
-	// Ensure HTTPS is used for the request URL
-	req.HTTPRequest.URL.Scheme = "https"
+	// Set URL scheme based on configuration
+	if b.forceExternalSSL {
+		req.HTTPRequest.URL.Scheme = "https"
+		req.HTTPRequest.Header.Set("X-Forwarded-Proto", "https")
+	} else {
+		req.HTTPRequest.URL.Scheme = "http"
+		req.HTTPRequest.Header.Set("X-Forwarded-Proto", "http")
+	}
 
-	// Ensure X-Forwarded-Proto header is set to HTTPS
-	req.HTTPRequest.Header.Set("X-Forwarded-Proto", "https")
-
+	// Important: Remove any extra headers that shouldn't be part of the signed URL
+	// Only include the headers that are necessary for the operation
 	url, err := req.Presign(opts.Expiry)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign request: %v", err)
 	}
 
-	// Double-check: force HTTPS scheme if the URL somehow still has HTTP
-	if strings.HasPrefix(url, "http://") {
+	// Only force HTTPS if configured to do so
+	if b.forceExternalSSL && strings.HasPrefix(url, "http://") {
 		url = "https://" + strings.TrimPrefix(url, "http://")
 	}
 

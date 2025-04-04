@@ -362,12 +362,11 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	})
 
 	// Generate a signed URL with 15 minutes expiration
-	// Note: We're not specifying ContentType here to allow the client to set it
-	// This is important for S3 signatures which must match exactly
+	// Important: We're using a minimal set of options to keep the signing simple
 	opts := &blob.SignedURLOptions{
 		Expiry: 15 * time.Minute,
 		Method: "PUT",
-		// Not specifying ContentType so it won't be part of the signature
+		// We intentionally DO NOT set ContentType to avoid signature issues
 	}
 
 	signedURL, err := server.bucket.SignedURL(ctx, imageKey, opts)

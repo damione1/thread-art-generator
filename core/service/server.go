@@ -35,50 +35,61 @@ func NewServer(config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create mail service. %v", err)
 	}
 
-	// Initialize blob storage based on environment
+	// Initialize blob storage based on environment and configuration
 	ctx := context.Background()
-	switch config.Environment {
-	case "production":
-		// In production, use GCS or S3 based on configuration
-		// if config.StorageProvider == "gcs" {
-		// 	// GCS configuration
-		// 	storageConfig := storage.BlobStorageConfig{
-		// 		Provider:     storage.ProviderGCS,
-		// 		Bucket:       config.BucketName,
-		// 		GCPProjectID: config.GCPProjectID,
-		// 		// GCP credentials will be loaded from environment variables or instance metadata
-		// 	}
-		// 	server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
-		// } else {
-		// 	// Default to S3 for production if not GCS
-		// 	storageConfig := storage.BlobStorageConfig{
-		// 		Provider:  storage.ProviderS3,
-		// 		Bucket:    config.BucketName,
-		// 		Region:    config.AWSRegion,
-		// 		AccessKey: config.AWSAccessKey,
-		// 		SecretKey: config.AWSSecretKey,
-		// 		PublicURL: config.StoragePublicURL,
-		// 		UseSSL:    true,
-		// 	}
-		// 	server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
-		// }
-	case "development":
-		// In development, use MinIO with separate internal and external endpoints
-		storageConfig := storage.BlobStorageConfig{
-			Provider:         storage.ProviderMinIO,
-			Bucket:           "local-bucket",
-			Region:           "us-east-1",
-			InternalEndpoint: "http://minio:9000",         // Internal HTTP endpoint within Docker
-			ExternalEndpoint: "https://storage.tag.local", // External HTTPS endpoint for clients
-			UseSSL:           false,                       // Don't use SSL for internal communication
-			AccessKey:        "minio",
-			SecretKey:        "minio123",
-		}
-		server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
+
+	// Convert provider string to StorageProvider type
+	var provider storage.StorageProvider
+	switch config.Storage.Provider {
+	case "s3":
+		provider = storage.ProviderS3
+	case "minio":
+		provider = storage.ProviderMinIO
+	case "gcs":
+		provider = storage.ProviderGCS
 	default:
-		return nil, fmt.Errorf("unknown environment: %s", config.Environment)
+		// Default to MinIO in development, S3 in production
+		if config.Environment == "development" {
+			provider = storage.ProviderMinIO
+		} else {
+			provider = storage.ProviderS3
+		}
 	}
 
+	// Create storage configuration from environment variables
+	storageConfig := storage.BlobStorageConfig{
+		Provider:         provider,
+		Bucket:           config.Storage.Bucket,
+		Region:           config.Storage.Region,
+		InternalEndpoint: config.Storage.InternalEndpoint,
+		ExternalEndpoint: config.Storage.ExternalEndpoint,
+		UseSSL:           config.Storage.UseSSL,
+		ForceExternalSSL: config.Storage.ForceExternalSSL,
+		AccessKey:        config.Storage.AccessKey,
+		SecretKey:        config.Storage.SecretKey,
+		GCPProjectID:     config.Storage.GCPProjectID,
+	}
+
+	// If config values are missing, provide reasonable defaults based on environment
+	if storageConfig.Bucket == "" {
+		storageConfig.Bucket = "local-bucket"
+	}
+
+	if storageConfig.Region == "" {
+		storageConfig.Region = "us-east-1" // Default region for S3/MinIO
+	}
+
+	// Set up endpoints based on environment if not provided
+	if config.Environment == "development" && provider == storage.ProviderMinIO {
+		if storageConfig.InternalEndpoint == "" {
+			storageConfig.InternalEndpoint = "http://minio:9000"
+		}
+		if storageConfig.ExternalEndpoint == "" {
+			storageConfig.ExternalEndpoint = "http://localhost:9000"
+		}
+	}
+
+	server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create blob storage: %v", err)
 	}
