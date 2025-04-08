@@ -470,6 +470,7 @@ export default function ArtDetailPage() {
                   src={art.imageUrl}
                   alt={art.title}
                   className="w-full h-full object-contain"
+                  priority={true}
                   width={1000}
                   height={1000}
                   onError={(e) => {

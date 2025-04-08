@@ -52,20 +52,6 @@ export default function DashboardPage() {
             This is your dashboard where you can manage your Thread Art
             projects.
           </p>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href="/dashboard/arts/new"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Create New Art
-            </Link>
-            <Link
-              href="/profile"
-              className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors"
-            >
-              View Profile
-            </Link>
-          </div>
         </div>
 
         {errorMessage && (
@@ -80,9 +66,12 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Project Card - Create New */}
-            <div className="bg-dark-200 rounded-lg p-6 border border-dark-300 border-dashed flex flex-col items-center justify-center text-center h-64 hover:bg-dark-300/50 transition cursor-pointer">
-              <div className="w-16 h-16 rounded-full bg-primary-900/30 flex items-center justify-center mb-4">
+            {/* Project Card - Create New (fully clickable) */}
+            <Link
+              href="/dashboard/arts/new"
+              className="bg-dark-200 rounded-lg p-6 border border-dark-300 border-dashed flex flex-col items-center justify-center text-center h-64 hover:bg-dark-300/50 transition cursor-pointer group"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary-900/30 flex items-center justify-center mb-4 group-hover:bg-primary-900/40 transition">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-8 w-8 text-primary-500"
@@ -104,13 +93,10 @@ export default function DashboardPage() {
               <p className="text-slate-400 mb-6">
                 Start a new thread art project
               </p>
-              <Link
-                href="/dashboard/arts/new"
-                className="text-primary-500 font-medium hover:text-primary-400 transition"
-              >
+              <span className="text-primary-500 font-medium group-hover:text-primary-400 transition">
                 Get Started →
-              </Link>
-            </div>
+              </span>
+            </Link>
 
             {/* Dynamic Art Projects */}
             {userArts.length > 0 ? (
@@ -126,19 +112,23 @@ export default function DashboardPage() {
                     key={art.name}
                     className="bg-dark-200 rounded-lg overflow-hidden shadow-lg"
                   >
-                    <div className="h-40 bg-dark-300 flex items-center justify-center">
+                    <div className="h-40 bg-dark-300 flex items-center justify-center p-3">
                       {art.imageUrl ? (
-                        <Image
-                          src={art.imageUrl}
-                          alt={art.title}
-                          className="h-full w-full object-cover"
-                          width={100}
-                          height={100}
-                        />
+                        <div className="w-full h-full relative flex items-center justify-center">
+                          <div className="aspect-square h-full relative rounded-full overflow-hidden border-2 border-primary-400/30">
+                            <Image
+                              src={art.imageUrl}
+                              alt={art.title}
+                              className="object-cover"
+                              fill
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
+                          </div>
+                        </div>
                       ) : (
-                        <div className="w-24 h-24 rounded-full border border-primary-400 relative">
+                        <div className="w-32 h-32 rounded-full border border-primary-400 relative">
                           <div
-                            className="absolute inset-0"
+                            className="absolute inset-0 rounded-full"
                             style={{
                               background:
                                 "radial-gradient(circle, transparent 50%, transparent 56%), conic-gradient(from 0deg, rgba(90, 127, 255, 0) 0%, rgba(90, 127, 255, 0.1) 20%, rgba(90, 127, 255, 0.3) 40%, rgba(90, 127, 255, 0.7) 60%, rgba(90, 127, 255, 0.3) 80%, rgba(90, 127, 255, 0) 100%)",
