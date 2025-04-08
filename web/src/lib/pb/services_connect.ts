@@ -6,7 +6,7 @@
 import { DeleteUserRequest, GetCurrentUserRequest, GetUserRequest, ListUsersRequest, ListUsersResponse, UpdateUserRequest, User } from "./user_pb";
 import { MethodKind } from "@bufbuild/protobuf";
 import { Empty } from "./google/protobuf/empty_pb";
-import { Art, ConfirmArtImageUploadRequest, CreateArtRequest, DeleteArtRequest, GetArtRequest, GetArtUploadUrlRequest, GetArtUploadUrlResponse, ListArtsRequest, ListArtsResponse, UpdateArtRequest } from "./art_pb";
+import { Art, Composition, ConfirmArtImageUploadRequest, CreateArtRequest, CreateCompositionRequest, DeleteArtRequest, DeleteCompositionRequest, GetArtRequest, GetArtUploadUrlRequest, GetArtUploadUrlResponse, GetCompositionRequest, ListArtsRequest, ListArtsResponse, ListCompositionsRequest, ListCompositionsResponse, UpdateArtRequest, UpdateCompositionRequest } from "./art_pb";
 
 /**
  * @generated from service pb.ArtGeneratorService
@@ -120,6 +120,53 @@ export const ArtGeneratorService = {
       name: "ConfirmArtImageUpload",
       I: ConfirmArtImageUploadRequest,
       O: Art,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Composition RPCs
+     *
+     * @generated from rpc pb.ArtGeneratorService.CreateComposition
+     */
+    createComposition: {
+      name: "CreateComposition",
+      I: CreateCompositionRequest,
+      O: Composition,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc pb.ArtGeneratorService.GetComposition
+     */
+    getComposition: {
+      name: "GetComposition",
+      I: GetCompositionRequest,
+      O: Composition,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc pb.ArtGeneratorService.UpdateComposition
+     */
+    updateComposition: {
+      name: "UpdateComposition",
+      I: UpdateCompositionRequest,
+      O: Composition,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc pb.ArtGeneratorService.ListCompositions
+     */
+    listCompositions: {
+      name: "ListCompositions",
+      I: ListCompositionsRequest,
+      O: ListCompositionsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc pb.ArtGeneratorService.DeleteComposition
+     */
+    deleteComposition: {
+      name: "DeleteComposition",
+      I: DeleteCompositionRequest,
+      O: Empty,
       kind: MethodKind.Unary,
     },
   }

@@ -32,6 +32,11 @@ const (
 	ArtGeneratorService_DeleteArt_FullMethodName             = "/pb.ArtGeneratorService/DeleteArt"
 	ArtGeneratorService_GetArtUploadUrl_FullMethodName       = "/pb.ArtGeneratorService/GetArtUploadUrl"
 	ArtGeneratorService_ConfirmArtImageUpload_FullMethodName = "/pb.ArtGeneratorService/ConfirmArtImageUpload"
+	ArtGeneratorService_CreateComposition_FullMethodName     = "/pb.ArtGeneratorService/CreateComposition"
+	ArtGeneratorService_GetComposition_FullMethodName        = "/pb.ArtGeneratorService/GetComposition"
+	ArtGeneratorService_UpdateComposition_FullMethodName     = "/pb.ArtGeneratorService/UpdateComposition"
+	ArtGeneratorService_ListCompositions_FullMethodName      = "/pb.ArtGeneratorService/ListCompositions"
+	ArtGeneratorService_DeleteComposition_FullMethodName     = "/pb.ArtGeneratorService/DeleteComposition"
 )
 
 // ArtGeneratorServiceClient is the client API for ArtGeneratorService service.
@@ -50,6 +55,12 @@ type ArtGeneratorServiceClient interface {
 	DeleteArt(ctx context.Context, in *DeleteArtRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetArtUploadUrl(ctx context.Context, in *GetArtUploadUrlRequest, opts ...grpc.CallOption) (*GetArtUploadUrlResponse, error)
 	ConfirmArtImageUpload(ctx context.Context, in *ConfirmArtImageUploadRequest, opts ...grpc.CallOption) (*Art, error)
+	// Composition RPCs
+	CreateComposition(ctx context.Context, in *CreateCompositionRequest, opts ...grpc.CallOption) (*Composition, error)
+	GetComposition(ctx context.Context, in *GetCompositionRequest, opts ...grpc.CallOption) (*Composition, error)
+	UpdateComposition(ctx context.Context, in *UpdateCompositionRequest, opts ...grpc.CallOption) (*Composition, error)
+	ListCompositions(ctx context.Context, in *ListCompositionsRequest, opts ...grpc.CallOption) (*ListCompositionsResponse, error)
+	DeleteComposition(ctx context.Context, in *DeleteCompositionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type artGeneratorServiceClient struct {
@@ -180,6 +191,56 @@ func (c *artGeneratorServiceClient) ConfirmArtImageUpload(ctx context.Context, i
 	return out, nil
 }
 
+func (c *artGeneratorServiceClient) CreateComposition(ctx context.Context, in *CreateCompositionRequest, opts ...grpc.CallOption) (*Composition, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Composition)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_CreateComposition_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) GetComposition(ctx context.Context, in *GetCompositionRequest, opts ...grpc.CallOption) (*Composition, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Composition)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_GetComposition_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) UpdateComposition(ctx context.Context, in *UpdateCompositionRequest, opts ...grpc.CallOption) (*Composition, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Composition)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_UpdateComposition_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) ListCompositions(ctx context.Context, in *ListCompositionsRequest, opts ...grpc.CallOption) (*ListCompositionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCompositionsResponse)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_ListCompositions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *artGeneratorServiceClient) DeleteComposition(ctx context.Context, in *DeleteCompositionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ArtGeneratorService_DeleteComposition_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ArtGeneratorServiceServer is the server API for ArtGeneratorService service.
 // All implementations must embed UnimplementedArtGeneratorServiceServer
 // for forward compatibility.
@@ -196,6 +257,12 @@ type ArtGeneratorServiceServer interface {
 	DeleteArt(context.Context, *DeleteArtRequest) (*emptypb.Empty, error)
 	GetArtUploadUrl(context.Context, *GetArtUploadUrlRequest) (*GetArtUploadUrlResponse, error)
 	ConfirmArtImageUpload(context.Context, *ConfirmArtImageUploadRequest) (*Art, error)
+	// Composition RPCs
+	CreateComposition(context.Context, *CreateCompositionRequest) (*Composition, error)
+	GetComposition(context.Context, *GetCompositionRequest) (*Composition, error)
+	UpdateComposition(context.Context, *UpdateCompositionRequest) (*Composition, error)
+	ListCompositions(context.Context, *ListCompositionsRequest) (*ListCompositionsResponse, error)
+	DeleteComposition(context.Context, *DeleteCompositionRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedArtGeneratorServiceServer()
 }
 
@@ -241,6 +308,21 @@ func (UnimplementedArtGeneratorServiceServer) GetArtUploadUrl(context.Context, *
 }
 func (UnimplementedArtGeneratorServiceServer) ConfirmArtImageUpload(context.Context, *ConfirmArtImageUploadRequest) (*Art, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ConfirmArtImageUpload not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) CreateComposition(context.Context, *CreateCompositionRequest) (*Composition, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateComposition not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) GetComposition(context.Context, *GetCompositionRequest) (*Composition, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetComposition not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) UpdateComposition(context.Context, *UpdateCompositionRequest) (*Composition, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateComposition not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) ListCompositions(context.Context, *ListCompositionsRequest) (*ListCompositionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCompositions not implemented")
+}
+func (UnimplementedArtGeneratorServiceServer) DeleteComposition(context.Context, *DeleteCompositionRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteComposition not implemented")
 }
 func (UnimplementedArtGeneratorServiceServer) mustEmbedUnimplementedArtGeneratorServiceServer() {}
 func (UnimplementedArtGeneratorServiceServer) testEmbeddedByValue()                             {}
@@ -479,6 +561,96 @@ func _ArtGeneratorService_ConfirmArtImageUpload_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ArtGeneratorService_CreateComposition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateCompositionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).CreateComposition(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_CreateComposition_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).CreateComposition(ctx, req.(*CreateCompositionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ArtGeneratorService_GetComposition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCompositionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).GetComposition(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_GetComposition_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).GetComposition(ctx, req.(*GetCompositionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ArtGeneratorService_UpdateComposition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCompositionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).UpdateComposition(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_UpdateComposition_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).UpdateComposition(ctx, req.(*UpdateCompositionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ArtGeneratorService_ListCompositions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCompositionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).ListCompositions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_ListCompositions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).ListCompositions(ctx, req.(*ListCompositionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ArtGeneratorService_DeleteComposition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteCompositionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArtGeneratorServiceServer).DeleteComposition(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ArtGeneratorService_DeleteComposition_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArtGeneratorServiceServer).DeleteComposition(ctx, req.(*DeleteCompositionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ArtGeneratorService_ServiceDesc is the grpc.ServiceDesc for ArtGeneratorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -533,6 +705,26 @@ var ArtGeneratorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ConfirmArtImageUpload",
 			Handler:    _ArtGeneratorService_ConfirmArtImageUpload_Handler,
+		},
+		{
+			MethodName: "CreateComposition",
+			Handler:    _ArtGeneratorService_CreateComposition_Handler,
+		},
+		{
+			MethodName: "GetComposition",
+			Handler:    _ArtGeneratorService_GetComposition_Handler,
+		},
+		{
+			MethodName: "UpdateComposition",
+			Handler:    _ArtGeneratorService_UpdateComposition_Handler,
+		},
+		{
+			MethodName: "ListCompositions",
+			Handler:    _ArtGeneratorService_ListCompositions_Handler,
+		},
+		{
+			MethodName: "DeleteComposition",
+			Handler:    _ArtGeneratorService_DeleteComposition_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

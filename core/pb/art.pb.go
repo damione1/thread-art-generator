@@ -90,6 +90,67 @@ func (ArtStatus) EnumDescriptor() ([]byte, []int) {
 	return file_art_proto_rawDescGZIP(), []int{0}
 }
 
+// Status of the composition
+type CompositionStatus int32
+
+const (
+	// Default unspecified status
+	CompositionStatus_COMPOSITION_STATUS_UNSPECIFIED CompositionStatus = 0
+	// Composition created but waiting to be processed
+	CompositionStatus_COMPOSITION_STATUS_PENDING CompositionStatus = 1
+	// Composition is currently being processed
+	CompositionStatus_COMPOSITION_STATUS_PROCESSING CompositionStatus = 2
+	// Composition has been successfully processed
+	CompositionStatus_COMPOSITION_STATUS_COMPLETE CompositionStatus = 3
+	// Composition processing failed
+	CompositionStatus_COMPOSITION_STATUS_FAILED CompositionStatus = 4
+)
+
+// Enum value maps for CompositionStatus.
+var (
+	CompositionStatus_name = map[int32]string{
+		0: "COMPOSITION_STATUS_UNSPECIFIED",
+		1: "COMPOSITION_STATUS_PENDING",
+		2: "COMPOSITION_STATUS_PROCESSING",
+		3: "COMPOSITION_STATUS_COMPLETE",
+		4: "COMPOSITION_STATUS_FAILED",
+	}
+	CompositionStatus_value = map[string]int32{
+		"COMPOSITION_STATUS_UNSPECIFIED": 0,
+		"COMPOSITION_STATUS_PENDING":     1,
+		"COMPOSITION_STATUS_PROCESSING":  2,
+		"COMPOSITION_STATUS_COMPLETE":    3,
+		"COMPOSITION_STATUS_FAILED":      4,
+	}
+)
+
+func (x CompositionStatus) Enum() *CompositionStatus {
+	p := new(CompositionStatus)
+	*p = x
+	return p
+}
+
+func (x CompositionStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CompositionStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_art_proto_enumTypes[1].Descriptor()
+}
+
+func (CompositionStatus) Type() protoreflect.EnumType {
+	return &file_art_proto_enumTypes[1]
+}
+
+func (x CompositionStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CompositionStatus.Descriptor instead.
+func (CompositionStatus) EnumDescriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{1}
+}
+
 type Art struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The name of the Art resource.
@@ -191,6 +252,526 @@ func (x *Art) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Composition represents a configuration for creating a thread art
+type Composition struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The name of the Composition resource.
+	// For example: "users/123/arts/456/compositions/789"
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Status of the composition
+	Status CompositionStatus `protobuf:"varint,3,opt,name=status,proto3,enum=pb.CompositionStatus" json:"status,omitempty"`
+	// Number of nails to use in the circle
+	NailsQuantity int32 `protobuf:"varint,4,opt,name=nails_quantity,json=nailsQuantity,proto3" json:"nails_quantity,omitempty"`
+	// Image size in pixels
+	ImgSize int32 `protobuf:"varint,5,opt,name=img_size,json=imgSize,proto3" json:"img_size,omitempty"`
+	// Maximum number of paths to generate
+	MaxPaths int32 `protobuf:"varint,6,opt,name=max_paths,json=maxPaths,proto3" json:"max_paths,omitempty"`
+	// Starting nail position
+	StartingNail int32 `protobuf:"varint,7,opt,name=starting_nail,json=startingNail,proto3" json:"starting_nail,omitempty"`
+	// Minimum difference between connected nails
+	MinimumDifference int32 `protobuf:"varint,8,opt,name=minimum_difference,json=minimumDifference,proto3" json:"minimum_difference,omitempty"`
+	// Brightness factor for thread lines
+	BrightnessFactor int32 `protobuf:"varint,9,opt,name=brightness_factor,json=brightnessFactor,proto3" json:"brightness_factor,omitempty"`
+	// Image contrast adjustment
+	ImageContrast float32 `protobuf:"fixed32,10,opt,name=image_contrast,json=imageContrast,proto3" json:"image_contrast,omitempty"`
+	// Physical radius of the final artwork in mm
+	PhysicalRadius float32 `protobuf:"fixed32,11,opt,name=physical_radius,json=physicalRadius,proto3" json:"physical_radius,omitempty"`
+	// URL to the preview image of the composition result
+	PreviewUrl string `protobuf:"bytes,12,opt,name=preview_url,json=previewUrl,proto3" json:"preview_url,omitempty"`
+	// URL to download the GCode file
+	GcodeUrl string `protobuf:"bytes,13,opt,name=gcode_url,json=gcodeUrl,proto3" json:"gcode_url,omitempty"`
+	// URL to download the paths list file
+	PathlistUrl string `protobuf:"bytes,14,opt,name=pathlist_url,json=pathlistUrl,proto3" json:"pathlist_url,omitempty"`
+	// Thread length in meters
+	ThreadLength int32 `protobuf:"varint,15,opt,name=thread_length,json=threadLength,proto3" json:"thread_length,omitempty"`
+	// Total number of lines
+	TotalLines int32 `protobuf:"varint,16,opt,name=total_lines,json=totalLines,proto3" json:"total_lines,omitempty"`
+	// Error message if processing failed
+	ErrorMessage string `protobuf:"bytes,17,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	// Creation time
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Last update time
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Composition) Reset() {
+	*x = Composition{}
+	mi := &file_art_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Composition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Composition) ProtoMessage() {}
+
+func (x *Composition) ProtoReflect() protoreflect.Message {
+	mi := &file_art_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Composition.ProtoReflect.Descriptor instead.
+func (*Composition) Descriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Composition) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Composition) GetStatus() CompositionStatus {
+	if x != nil {
+		return x.Status
+	}
+	return CompositionStatus_COMPOSITION_STATUS_UNSPECIFIED
+}
+
+func (x *Composition) GetNailsQuantity() int32 {
+	if x != nil {
+		return x.NailsQuantity
+	}
+	return 0
+}
+
+func (x *Composition) GetImgSize() int32 {
+	if x != nil {
+		return x.ImgSize
+	}
+	return 0
+}
+
+func (x *Composition) GetMaxPaths() int32 {
+	if x != nil {
+		return x.MaxPaths
+	}
+	return 0
+}
+
+func (x *Composition) GetStartingNail() int32 {
+	if x != nil {
+		return x.StartingNail
+	}
+	return 0
+}
+
+func (x *Composition) GetMinimumDifference() int32 {
+	if x != nil {
+		return x.MinimumDifference
+	}
+	return 0
+}
+
+func (x *Composition) GetBrightnessFactor() int32 {
+	if x != nil {
+		return x.BrightnessFactor
+	}
+	return 0
+}
+
+func (x *Composition) GetImageContrast() float32 {
+	if x != nil {
+		return x.ImageContrast
+	}
+	return 0
+}
+
+func (x *Composition) GetPhysicalRadius() float32 {
+	if x != nil {
+		return x.PhysicalRadius
+	}
+	return 0
+}
+
+func (x *Composition) GetPreviewUrl() string {
+	if x != nil {
+		return x.PreviewUrl
+	}
+	return ""
+}
+
+func (x *Composition) GetGcodeUrl() string {
+	if x != nil {
+		return x.GcodeUrl
+	}
+	return ""
+}
+
+func (x *Composition) GetPathlistUrl() string {
+	if x != nil {
+		return x.PathlistUrl
+	}
+	return ""
+}
+
+func (x *Composition) GetThreadLength() int32 {
+	if x != nil {
+		return x.ThreadLength
+	}
+	return 0
+}
+
+func (x *Composition) GetTotalLines() int32 {
+	if x != nil {
+		return x.TotalLines
+	}
+	return 0
+}
+
+func (x *Composition) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *Composition) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *Composition) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+type CreateCompositionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The parent which owns the composition.
+	// For example: "users/123/arts/456"
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// The composition to create.
+	Composition   *Composition `protobuf:"bytes,2,opt,name=composition,proto3" json:"composition,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCompositionRequest) Reset() {
+	*x = CreateCompositionRequest{}
+	mi := &file_art_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCompositionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCompositionRequest) ProtoMessage() {}
+
+func (x *CreateCompositionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_art_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCompositionRequest.ProtoReflect.Descriptor instead.
+func (*CreateCompositionRequest) Descriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreateCompositionRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *CreateCompositionRequest) GetComposition() *Composition {
+	if x != nil {
+		return x.Composition
+	}
+	return nil
+}
+
+type GetCompositionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The name of the Composition resource.
+	// For example: "users/123/arts/456/compositions/789"
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCompositionRequest) Reset() {
+	*x = GetCompositionRequest{}
+	mi := &file_art_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCompositionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCompositionRequest) ProtoMessage() {}
+
+func (x *GetCompositionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_art_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCompositionRequest.ProtoReflect.Descriptor instead.
+func (*GetCompositionRequest) Descriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetCompositionRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type UpdateCompositionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Composition resource to update.
+	Composition *Composition `protobuf:"bytes,1,opt,name=composition,proto3" json:"composition,omitempty"`
+	// The update mask applies to the resource.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCompositionRequest) Reset() {
+	*x = UpdateCompositionRequest{}
+	mi := &file_art_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCompositionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCompositionRequest) ProtoMessage() {}
+
+func (x *UpdateCompositionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_art_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCompositionRequest.ProtoReflect.Descriptor instead.
+func (*UpdateCompositionRequest) Descriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdateCompositionRequest) GetComposition() *Composition {
+	if x != nil {
+		return x.Composition
+	}
+	return nil
+}
+
+func (x *UpdateCompositionRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
+}
+
+type ListCompositionsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The parent which owns the compositions.
+	// For example: "users/123/arts/456"
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// The maximum number of compositions to return.
+	// The service may return fewer than this value.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token, received from a previous `ListCompositions` call.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCompositionsRequest) Reset() {
+	*x = ListCompositionsRequest{}
+	mi := &file_art_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCompositionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCompositionsRequest) ProtoMessage() {}
+
+func (x *ListCompositionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_art_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCompositionsRequest.ProtoReflect.Descriptor instead.
+func (*ListCompositionsRequest) Descriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ListCompositionsRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *ListCompositionsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListCompositionsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListCompositionsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The compositions returned.
+	Compositions []*Composition `protobuf:"bytes,1,rep,name=compositions,proto3" json:"compositions,omitempty"`
+	// A token to retrieve next page of results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCompositionsResponse) Reset() {
+	*x = ListCompositionsResponse{}
+	mi := &file_art_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCompositionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCompositionsResponse) ProtoMessage() {}
+
+func (x *ListCompositionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_art_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCompositionsResponse.ProtoReflect.Descriptor instead.
+func (*ListCompositionsResponse) Descriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListCompositionsResponse) GetCompositions() []*Composition {
+	if x != nil {
+		return x.Compositions
+	}
+	return nil
+}
+
+func (x *ListCompositionsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type DeleteCompositionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The name of the Composition resource.
+	// For example: "users/123/arts/456/compositions/789"
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteCompositionRequest) Reset() {
+	*x = DeleteCompositionRequest{}
+	mi := &file_art_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteCompositionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteCompositionRequest) ProtoMessage() {}
+
+func (x *DeleteCompositionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_art_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteCompositionRequest.ProtoReflect.Descriptor instead.
+func (*DeleteCompositionRequest) Descriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteCompositionRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type CreateArtRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The parent which owns the arts.
@@ -204,7 +785,7 @@ type CreateArtRequest struct {
 
 func (x *CreateArtRequest) Reset() {
 	*x = CreateArtRequest{}
-	mi := &file_art_proto_msgTypes[1]
+	mi := &file_art_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -216,7 +797,7 @@ func (x *CreateArtRequest) String() string {
 func (*CreateArtRequest) ProtoMessage() {}
 
 func (x *CreateArtRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[1]
+	mi := &file_art_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -229,7 +810,7 @@ func (x *CreateArtRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateArtRequest.ProtoReflect.Descriptor instead.
 func (*CreateArtRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{1}
+	return file_art_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateArtRequest) GetParent() string {
@@ -258,7 +839,7 @@ type UpdateArtRequest struct {
 
 func (x *UpdateArtRequest) Reset() {
 	*x = UpdateArtRequest{}
-	mi := &file_art_proto_msgTypes[2]
+	mi := &file_art_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +851,7 @@ func (x *UpdateArtRequest) String() string {
 func (*UpdateArtRequest) ProtoMessage() {}
 
 func (x *UpdateArtRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[2]
+	mi := &file_art_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +864,7 @@ func (x *UpdateArtRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateArtRequest.ProtoReflect.Descriptor instead.
 func (*UpdateArtRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{2}
+	return file_art_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateArtRequest) GetArt() *Art {
@@ -311,7 +892,7 @@ type GetArtRequest struct {
 
 func (x *GetArtRequest) Reset() {
 	*x = GetArtRequest{}
-	mi := &file_art_proto_msgTypes[3]
+	mi := &file_art_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -323,7 +904,7 @@ func (x *GetArtRequest) String() string {
 func (*GetArtRequest) ProtoMessage() {}
 
 func (x *GetArtRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[3]
+	mi := &file_art_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -336,7 +917,7 @@ func (x *GetArtRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetArtRequest.ProtoReflect.Descriptor instead.
 func (*GetArtRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{3}
+	return file_art_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetArtRequest) GetName() string {
@@ -361,7 +942,7 @@ type ListArtsRequest struct {
 
 func (x *ListArtsRequest) Reset() {
 	*x = ListArtsRequest{}
-	mi := &file_art_proto_msgTypes[4]
+	mi := &file_art_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -373,7 +954,7 @@ func (x *ListArtsRequest) String() string {
 func (*ListArtsRequest) ProtoMessage() {}
 
 func (x *ListArtsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[4]
+	mi := &file_art_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -386,7 +967,7 @@ func (x *ListArtsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtsRequest.ProtoReflect.Descriptor instead.
 func (*ListArtsRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{4}
+	return file_art_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListArtsRequest) GetParent() string {
@@ -423,7 +1004,7 @@ type ListArtsResponse struct {
 
 func (x *ListArtsResponse) Reset() {
 	*x = ListArtsResponse{}
-	mi := &file_art_proto_msgTypes[5]
+	mi := &file_art_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -435,7 +1016,7 @@ func (x *ListArtsResponse) String() string {
 func (*ListArtsResponse) ProtoMessage() {}
 
 func (x *ListArtsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[5]
+	mi := &file_art_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -448,7 +1029,7 @@ func (x *ListArtsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtsResponse.ProtoReflect.Descriptor instead.
 func (*ListArtsResponse) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{5}
+	return file_art_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListArtsResponse) GetArts() []*Art {
@@ -476,7 +1057,7 @@ type DeleteArtRequest struct {
 
 func (x *DeleteArtRequest) Reset() {
 	*x = DeleteArtRequest{}
-	mi := &file_art_proto_msgTypes[6]
+	mi := &file_art_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -488,7 +1069,7 @@ func (x *DeleteArtRequest) String() string {
 func (*DeleteArtRequest) ProtoMessage() {}
 
 func (x *DeleteArtRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[6]
+	mi := &file_art_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -501,7 +1082,7 @@ func (x *DeleteArtRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteArtRequest.ProtoReflect.Descriptor instead.
 func (*DeleteArtRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{6}
+	return file_art_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteArtRequest) GetName() string {
@@ -522,7 +1103,7 @@ type GetArtUploadUrlRequest struct {
 
 func (x *GetArtUploadUrlRequest) Reset() {
 	*x = GetArtUploadUrlRequest{}
-	mi := &file_art_proto_msgTypes[7]
+	mi := &file_art_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -534,7 +1115,7 @@ func (x *GetArtUploadUrlRequest) String() string {
 func (*GetArtUploadUrlRequest) ProtoMessage() {}
 
 func (x *GetArtUploadUrlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[7]
+	mi := &file_art_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -547,7 +1128,7 @@ func (x *GetArtUploadUrlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetArtUploadUrlRequest.ProtoReflect.Descriptor instead.
 func (*GetArtUploadUrlRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{7}
+	return file_art_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetArtUploadUrlRequest) GetName() string {
@@ -569,7 +1150,7 @@ type GetArtUploadUrlResponse struct {
 
 func (x *GetArtUploadUrlResponse) Reset() {
 	*x = GetArtUploadUrlResponse{}
-	mi := &file_art_proto_msgTypes[8]
+	mi := &file_art_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -581,7 +1162,7 @@ func (x *GetArtUploadUrlResponse) String() string {
 func (*GetArtUploadUrlResponse) ProtoMessage() {}
 
 func (x *GetArtUploadUrlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[8]
+	mi := &file_art_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -594,7 +1175,7 @@ func (x *GetArtUploadUrlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetArtUploadUrlResponse.ProtoReflect.Descriptor instead.
 func (*GetArtUploadUrlResponse) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{8}
+	return file_art_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetArtUploadUrlResponse) GetUploadUrl() string {
@@ -622,7 +1203,7 @@ type ConfirmArtImageUploadRequest struct {
 
 func (x *ConfirmArtImageUploadRequest) Reset() {
 	*x = ConfirmArtImageUploadRequest{}
-	mi := &file_art_proto_msgTypes[9]
+	mi := &file_art_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +1215,7 @@ func (x *ConfirmArtImageUploadRequest) String() string {
 func (*ConfirmArtImageUploadRequest) ProtoMessage() {}
 
 func (x *ConfirmArtImageUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[9]
+	mi := &file_art_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +1228,7 @@ func (x *ConfirmArtImageUploadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmArtImageUploadRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmArtImageUploadRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{9}
+	return file_art_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ConfirmArtImageUploadRequest) GetName() string {
@@ -676,7 +1257,73 @@ const file_art_proto_rawDesc = "" +
 	"createTime\x12A\n" +
 	"\vupdate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
 	"updateTime:1\xeaA.\n" +
-	"\x13art.example.com/Art\x12\x17users/{user}/arts/{art}\"\xfb\x01\n" +
+	"\x13art.example.com/Art\x12\x17users/{user}/arts/{art}\"\x83\v\n" +
+	"\vComposition\x128\n" +
+	"\x04name\x18\x01 \x01(\tB$\xe2A\x01\x03\xfaA\x1d\n" +
+	"\x1bart.example.com/CompositionR\x04name\x123\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x15.pb.CompositionStatusB\x04\xe2A\x01\x03R\x06status\x121\n" +
+	"\x0enails_quantity\x18\x04 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xe8\a \x00R\rnailsQuantity\x12%\n" +
+	"\bimg_size\x18\x05 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\x88' \x00R\aimgSize\x12(\n" +
+	"\tmax_paths\x18\x06 \x01(\x05B\v\xbaH\b\x1a\x06\x18\xa0\x9c\x01 \x00R\bmaxPaths\x12,\n" +
+	"\rstarting_nail\x18\a \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fstartingNail\x129\n" +
+	"\x12minimum_difference\x18\b \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xc8\x01 \x00R\x11minimumDifference\x127\n" +
+	"\x11brightness_factor\x18\t \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xff\x01 \x00R\x10brightnessFactor\x126\n" +
+	"\x0eimage_contrast\x18\n" +
+	" \x01(\x02B\x0f\xbaH\f\n" +
+	"\n" +
+	"\x1d\x00\x00\xc8B%\x00\x00\x00\x00R\rimageContrast\x123\n" +
+	"\x0fphysical_radius\x18\v \x01(\x02B\n" +
+	"\xbaH\a\n" +
+	"\x05%\x00\x00\x00\x00R\x0ephysicalRadius\x12\xb2\x01\n" +
+	"\vpreview_url\x18\f \x01(\tB\x90\x01\xe2A\x01\x03\xbaH\x88\x01\xba\x01\x84\x01\n" +
+	"(composition.preview_url.uri_when_present\x12,Preview URL must be a valid URI when present\x1a*this == '' || this.matches('^https?://.+')R\n" +
+	"previewUrl\x12\xaa\x01\n" +
+	"\tgcode_url\x18\r \x01(\tB\x8c\x01\xe2A\x01\x03\xbaH\x84\x01\xba\x01\x80\x01\n" +
+	"&composition.gcode_url.uri_when_present\x12*GCode URL must be a valid URI when present\x1a*this == '' || this.matches('^https?://.+')R\bgcodeUrl\x12\xb6\x01\n" +
+	"\fpathlist_url\x18\x0e \x01(\tB\x92\x01\xe2A\x01\x03\xbaH\x8a\x01\xba\x01\x86\x01\n" +
+	")composition.pathlist_url.uri_when_present\x12-Pathlist URL must be a valid URI when present\x1a*this == '' || this.matches('^https?://.+')R\vpathlistUrl\x12)\n" +
+	"\rthread_length\x18\x0f \x01(\x05B\x04\xe2A\x01\x03R\fthreadLength\x12%\n" +
+	"\vtotal_lines\x18\x10 \x01(\x05B\x04\xe2A\x01\x03R\n" +
+	"totalLines\x12)\n" +
+	"\rerror_message\x18\x11 \x01(\tB\x04\xe2A\x01\x03R\ferrorMessage\x12A\n" +
+	"\vcreate_time\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"createTime\x12A\n" +
+	"\vupdate_time\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"updateTime:T\xeaAQ\n" +
+	"\x1bart.example.com/Composition\x122users/{user}/arts/{art}/compositions/{composition}\"\xc3\x02\n" +
+	"\x18CreateCompositionRequest\x12\xe7\x01\n" +
+	"\x06parent\x18\x01 \x01(\tB\xce\x01\xe2A\x01\x02\xfaA\x15\n" +
+	"\x13art.example.com/Art\xbaH\xae\x01\xba\x01\xaa\x01\n" +
+	" create_composition.parent.format\x12IParent resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x06parent\x12=\n" +
+	"\vcomposition\x18\x02 \x01(\v2\x0f.pb.CompositionB\n" +
+	"\xe2A\x01\x02\xbaH\x03\xc8\x01\x01R\vcomposition\"\xa7\x02\n" +
+	"\x15GetCompositionRequest\x12\x8d\x02\n" +
+	"\x04name\x18\x01 \x01(\tB\xf8\x01\xe2A\x01\x02\xfaA\x1d\n" +
+	"\x1bart.example.com/Composition\xbaH\xd0\x01\xba\x01\xcc\x01\n" +
+	"\x1bget_composition.name.format\x12]Composition resource name is required and must follow pattern 'users/*/arts/*/compositions/*'\x1aNthis.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+/compositions/[^/]+$')R\x04name\"\x9e\x01\n" +
+	"\x18UpdateCompositionRequest\x12=\n" +
+	"\vcomposition\x18\x01 \x01(\v2\x0f.pb.CompositionB\n" +
+	"\xe2A\x01\x02\xbaH\x03\xc8\x01\x01R\vcomposition\x12C\n" +
+	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"updateMask\"\xc9\x02\n" +
+	"\x17ListCompositionsRequest\x12\xe6\x01\n" +
+	"\x06parent\x18\x01 \x01(\tB\xcd\x01\xe2A\x01\x02\xfaA\x15\n" +
+	"\x13art.example.com/Art\xbaH\xad\x01\xba\x01\xa9\x01\n" +
+	"\x1flist_compositions.parent.format\x12IParent resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x06parent\x12&\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d \x00R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"w\n" +
+	"\x18ListCompositionsResponse\x123\n" +
+	"\fcompositions\x18\x01 \x03(\v2\x0f.pb.CompositionR\fcompositions\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xad\x02\n" +
+	"\x18DeleteCompositionRequest\x12\x90\x02\n" +
+	"\x04name\x18\x01 \x01(\tB\xfb\x01\xe2A\x01\x02\xfaA\x1d\n" +
+	"\x1bart.example.com/Composition\xbaH\xd3\x01\xba\x01\xcf\x01\n" +
+	"\x1edelete_composition.name.format\x12]Composition resource name is required and must follow pattern 'users/*/arts/*/compositions/*'\x1aNthis.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+/compositions/[^/]+$')R\x04name\"\xfb\x01\n" +
 	"\x10CreateArtRequest\x12\xbf\x01\n" +
 	"\x06parent\x18\x01 \x01(\tB\xa6\x01\xe2A\x01\x02\xfaA\x16\n" +
 	"\x14art.example.com/User\xbaH\x85\x01\xba\x01\x81\x01\n" +
@@ -724,7 +1371,13 @@ const file_art_proto_rawDesc = "" +
 	"\x15ART_STATUS_PROCESSING\x10\x02\x12\x17\n" +
 	"\x13ART_STATUS_COMPLETE\x10\x03\x12\x15\n" +
 	"\x11ART_STATUS_FAILED\x10\x04\x12\x17\n" +
-	"\x13ART_STATUS_ARCHIVED\x10\x05B$Z\"thread-art-generator/core/proto;pbb\x06proto3"
+	"\x13ART_STATUS_ARCHIVED\x10\x05*\xba\x01\n" +
+	"\x11CompositionStatus\x12\"\n" +
+	"\x1eCOMPOSITION_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aCOMPOSITION_STATUS_PENDING\x10\x01\x12!\n" +
+	"\x1dCOMPOSITION_STATUS_PROCESSING\x10\x02\x12\x1f\n" +
+	"\x1bCOMPOSITION_STATUS_COMPLETE\x10\x03\x12\x1d\n" +
+	"\x19COMPOSITION_STATUS_FAILED\x10\x04B$Z\"thread-art-generator/core/proto;pbb\x06proto3"
 
 var (
 	file_art_proto_rawDescOnce sync.Once
@@ -738,37 +1391,52 @@ func file_art_proto_rawDescGZIP() []byte {
 	return file_art_proto_rawDescData
 }
 
-var file_art_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_art_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_art_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_art_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_art_proto_goTypes = []any{
 	(ArtStatus)(0),                       // 0: pb.ArtStatus
-	(*Art)(nil),                          // 1: pb.Art
-	(*CreateArtRequest)(nil),             // 2: pb.CreateArtRequest
-	(*UpdateArtRequest)(nil),             // 3: pb.UpdateArtRequest
-	(*GetArtRequest)(nil),                // 4: pb.GetArtRequest
-	(*ListArtsRequest)(nil),              // 5: pb.ListArtsRequest
-	(*ListArtsResponse)(nil),             // 6: pb.ListArtsResponse
-	(*DeleteArtRequest)(nil),             // 7: pb.DeleteArtRequest
-	(*GetArtUploadUrlRequest)(nil),       // 8: pb.GetArtUploadUrlRequest
-	(*GetArtUploadUrlResponse)(nil),      // 9: pb.GetArtUploadUrlResponse
-	(*ConfirmArtImageUploadRequest)(nil), // 10: pb.ConfirmArtImageUploadRequest
-	(*timestamppb.Timestamp)(nil),        // 11: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),        // 12: google.protobuf.FieldMask
+	(CompositionStatus)(0),               // 1: pb.CompositionStatus
+	(*Art)(nil),                          // 2: pb.Art
+	(*Composition)(nil),                  // 3: pb.Composition
+	(*CreateCompositionRequest)(nil),     // 4: pb.CreateCompositionRequest
+	(*GetCompositionRequest)(nil),        // 5: pb.GetCompositionRequest
+	(*UpdateCompositionRequest)(nil),     // 6: pb.UpdateCompositionRequest
+	(*ListCompositionsRequest)(nil),      // 7: pb.ListCompositionsRequest
+	(*ListCompositionsResponse)(nil),     // 8: pb.ListCompositionsResponse
+	(*DeleteCompositionRequest)(nil),     // 9: pb.DeleteCompositionRequest
+	(*CreateArtRequest)(nil),             // 10: pb.CreateArtRequest
+	(*UpdateArtRequest)(nil),             // 11: pb.UpdateArtRequest
+	(*GetArtRequest)(nil),                // 12: pb.GetArtRequest
+	(*ListArtsRequest)(nil),              // 13: pb.ListArtsRequest
+	(*ListArtsResponse)(nil),             // 14: pb.ListArtsResponse
+	(*DeleteArtRequest)(nil),             // 15: pb.DeleteArtRequest
+	(*GetArtUploadUrlRequest)(nil),       // 16: pb.GetArtUploadUrlRequest
+	(*GetArtUploadUrlResponse)(nil),      // 17: pb.GetArtUploadUrlResponse
+	(*ConfirmArtImageUploadRequest)(nil), // 18: pb.ConfirmArtImageUploadRequest
+	(*timestamppb.Timestamp)(nil),        // 19: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),        // 20: google.protobuf.FieldMask
 }
 var file_art_proto_depIdxs = []int32{
 	0,  // 0: pb.Art.status:type_name -> pb.ArtStatus
-	11, // 1: pb.Art.create_time:type_name -> google.protobuf.Timestamp
-	11, // 2: pb.Art.update_time:type_name -> google.protobuf.Timestamp
-	1,  // 3: pb.CreateArtRequest.art:type_name -> pb.Art
-	1,  // 4: pb.UpdateArtRequest.art:type_name -> pb.Art
-	12, // 5: pb.UpdateArtRequest.update_mask:type_name -> google.protobuf.FieldMask
-	1,  // 6: pb.ListArtsResponse.arts:type_name -> pb.Art
-	11, // 7: pb.GetArtUploadUrlResponse.expiration_time:type_name -> google.protobuf.Timestamp
-	8,  // [8:8] is the sub-list for method output_type
-	8,  // [8:8] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	19, // 1: pb.Art.create_time:type_name -> google.protobuf.Timestamp
+	19, // 2: pb.Art.update_time:type_name -> google.protobuf.Timestamp
+	1,  // 3: pb.Composition.status:type_name -> pb.CompositionStatus
+	19, // 4: pb.Composition.create_time:type_name -> google.protobuf.Timestamp
+	19, // 5: pb.Composition.update_time:type_name -> google.protobuf.Timestamp
+	3,  // 6: pb.CreateCompositionRequest.composition:type_name -> pb.Composition
+	3,  // 7: pb.UpdateCompositionRequest.composition:type_name -> pb.Composition
+	20, // 8: pb.UpdateCompositionRequest.update_mask:type_name -> google.protobuf.FieldMask
+	3,  // 9: pb.ListCompositionsResponse.compositions:type_name -> pb.Composition
+	2,  // 10: pb.CreateArtRequest.art:type_name -> pb.Art
+	2,  // 11: pb.UpdateArtRequest.art:type_name -> pb.Art
+	20, // 12: pb.UpdateArtRequest.update_mask:type_name -> google.protobuf.FieldMask
+	2,  // 13: pb.ListArtsResponse.arts:type_name -> pb.Art
+	19, // 14: pb.GetArtUploadUrlResponse.expiration_time:type_name -> google.protobuf.Timestamp
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_art_proto_init() }
@@ -781,8 +1449,8 @@ func file_art_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_art_proto_rawDesc), len(file_art_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   10,
+			NumEnums:      2,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

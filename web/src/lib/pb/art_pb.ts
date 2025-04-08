@@ -67,6 +67,56 @@ proto3.util.setEnumType(ArtStatus, "pb.ArtStatus", [
 ]);
 
 /**
+ * Status of the composition
+ *
+ * @generated from enum pb.CompositionStatus
+ */
+export enum CompositionStatus {
+  /**
+   * Default unspecified status
+   *
+   * @generated from enum value: COMPOSITION_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Composition created but waiting to be processed
+   *
+   * @generated from enum value: COMPOSITION_STATUS_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * Composition is currently being processed
+   *
+   * @generated from enum value: COMPOSITION_STATUS_PROCESSING = 2;
+   */
+  PROCESSING = 2,
+
+  /**
+   * Composition has been successfully processed
+   *
+   * @generated from enum value: COMPOSITION_STATUS_COMPLETE = 3;
+   */
+  COMPLETE = 3,
+
+  /**
+   * Composition processing failed
+   *
+   * @generated from enum value: COMPOSITION_STATUS_FAILED = 4;
+   */
+  FAILED = 4,
+}
+// Retrieve enum metadata with: proto3.getEnumType(CompositionStatus)
+proto3.util.setEnumType(CompositionStatus, "pb.CompositionStatus", [
+  { no: 0, name: "COMPOSITION_STATUS_UNSPECIFIED" },
+  { no: 1, name: "COMPOSITION_STATUS_PENDING" },
+  { no: 2, name: "COMPOSITION_STATUS_PROCESSING" },
+  { no: 3, name: "COMPOSITION_STATUS_COMPLETE" },
+  { no: 4, name: "COMPOSITION_STATUS_FAILED" },
+]);
+
+/**
  * @generated from message pb.Art
  */
 export class Art extends Message<Art> {
@@ -152,6 +202,463 @@ export class Art extends Message<Art> {
 
   static equals(a: Art | PlainMessage<Art> | undefined, b: Art | PlainMessage<Art> | undefined): boolean {
     return proto3.util.equals(Art, a, b);
+  }
+}
+
+/**
+ * Composition represents a configuration for creating a thread art
+ *
+ * @generated from message pb.Composition
+ */
+export class Composition extends Message<Composition> {
+  /**
+   * The name of the Composition resource.
+   * For example: "users/123/arts/456/compositions/789"
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * Status of the composition
+   *
+   * @generated from field: pb.CompositionStatus status = 3;
+   */
+  status = CompositionStatus.UNSPECIFIED;
+
+  /**
+   * Number of nails to use in the circle
+   *
+   * @generated from field: int32 nails_quantity = 4;
+   */
+  nailsQuantity = 0;
+
+  /**
+   * Image size in pixels
+   *
+   * @generated from field: int32 img_size = 5;
+   */
+  imgSize = 0;
+
+  /**
+   * Maximum number of paths to generate
+   *
+   * @generated from field: int32 max_paths = 6;
+   */
+  maxPaths = 0;
+
+  /**
+   * Starting nail position
+   *
+   * @generated from field: int32 starting_nail = 7;
+   */
+  startingNail = 0;
+
+  /**
+   * Minimum difference between connected nails
+   *
+   * @generated from field: int32 minimum_difference = 8;
+   */
+  minimumDifference = 0;
+
+  /**
+   * Brightness factor for thread lines
+   *
+   * @generated from field: int32 brightness_factor = 9;
+   */
+  brightnessFactor = 0;
+
+  /**
+   * Image contrast adjustment
+   *
+   * @generated from field: float image_contrast = 10;
+   */
+  imageContrast = 0;
+
+  /**
+   * Physical radius of the final artwork in mm
+   *
+   * @generated from field: float physical_radius = 11;
+   */
+  physicalRadius = 0;
+
+  /**
+   * URL to the preview image of the composition result
+   *
+   * @generated from field: string preview_url = 12;
+   */
+  previewUrl = "";
+
+  /**
+   * URL to download the GCode file
+   *
+   * @generated from field: string gcode_url = 13;
+   */
+  gcodeUrl = "";
+
+  /**
+   * URL to download the paths list file
+   *
+   * @generated from field: string pathlist_url = 14;
+   */
+  pathlistUrl = "";
+
+  /**
+   * Thread length in meters
+   *
+   * @generated from field: int32 thread_length = 15;
+   */
+  threadLength = 0;
+
+  /**
+   * Total number of lines
+   *
+   * @generated from field: int32 total_lines = 16;
+   */
+  totalLines = 0;
+
+  /**
+   * Error message if processing failed
+   *
+   * @generated from field: string error_message = 17;
+   */
+  errorMessage = "";
+
+  /**
+   * Creation time
+   *
+   * @generated from field: google.protobuf.Timestamp create_time = 18;
+   */
+  createTime?: Timestamp;
+
+  /**
+   * Last update time
+   *
+   * @generated from field: google.protobuf.Timestamp update_time = 19;
+   */
+  updateTime?: Timestamp;
+
+  constructor(data?: PartialMessage<Composition>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.Composition";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "status", kind: "enum", T: proto3.getEnumType(CompositionStatus) },
+    { no: 4, name: "nails_quantity", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "img_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "max_paths", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "starting_nail", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "minimum_difference", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "brightness_factor", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 10, name: "image_contrast", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 11, name: "physical_radius", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 12, name: "preview_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 13, name: "gcode_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 14, name: "pathlist_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 15, name: "thread_length", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 16, name: "total_lines", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 17, name: "error_message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 18, name: "create_time", kind: "message", T: Timestamp },
+    { no: 19, name: "update_time", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Composition {
+    return new Composition().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Composition {
+    return new Composition().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Composition {
+    return new Composition().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Composition | PlainMessage<Composition> | undefined, b: Composition | PlainMessage<Composition> | undefined): boolean {
+    return proto3.util.equals(Composition, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.CreateCompositionRequest
+ */
+export class CreateCompositionRequest extends Message<CreateCompositionRequest> {
+  /**
+   * The parent which owns the composition.
+   * For example: "users/123/arts/456"
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent = "";
+
+  /**
+   * The composition to create.
+   *
+   * @generated from field: pb.Composition composition = 2;
+   */
+  composition?: Composition;
+
+  constructor(data?: PartialMessage<CreateCompositionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.CreateCompositionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "parent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "composition", kind: "message", T: Composition },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCompositionRequest {
+    return new CreateCompositionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCompositionRequest {
+    return new CreateCompositionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCompositionRequest {
+    return new CreateCompositionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateCompositionRequest | PlainMessage<CreateCompositionRequest> | undefined, b: CreateCompositionRequest | PlainMessage<CreateCompositionRequest> | undefined): boolean {
+    return proto3.util.equals(CreateCompositionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.GetCompositionRequest
+ */
+export class GetCompositionRequest extends Message<GetCompositionRequest> {
+  /**
+   * The name of the Composition resource.
+   * For example: "users/123/arts/456/compositions/789"
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetCompositionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.GetCompositionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionRequest {
+    return new GetCompositionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCompositionRequest {
+    return new GetCompositionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCompositionRequest {
+    return new GetCompositionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCompositionRequest | PlainMessage<GetCompositionRequest> | undefined, b: GetCompositionRequest | PlainMessage<GetCompositionRequest> | undefined): boolean {
+    return proto3.util.equals(GetCompositionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.UpdateCompositionRequest
+ */
+export class UpdateCompositionRequest extends Message<UpdateCompositionRequest> {
+  /**
+   * The Composition resource to update.
+   *
+   * @generated from field: pb.Composition composition = 1;
+   */
+  composition?: Composition;
+
+  /**
+   * The update mask applies to the resource.
+   *
+   * @generated from field: google.protobuf.FieldMask update_mask = 2;
+   */
+  updateMask?: FieldMask;
+
+  constructor(data?: PartialMessage<UpdateCompositionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.UpdateCompositionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "composition", kind: "message", T: Composition },
+    { no: 2, name: "update_mask", kind: "message", T: FieldMask },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCompositionRequest {
+    return new UpdateCompositionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCompositionRequest {
+    return new UpdateCompositionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCompositionRequest {
+    return new UpdateCompositionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCompositionRequest | PlainMessage<UpdateCompositionRequest> | undefined, b: UpdateCompositionRequest | PlainMessage<UpdateCompositionRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateCompositionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.ListCompositionsRequest
+ */
+export class ListCompositionsRequest extends Message<ListCompositionsRequest> {
+  /**
+   * The parent which owns the compositions.
+   * For example: "users/123/arts/456"
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent = "";
+
+  /**
+   * The maximum number of compositions to return.
+   * The service may return fewer than this value.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize = 0;
+
+  /**
+   * A page token, received from a previous `ListCompositions` call.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken = "";
+
+  constructor(data?: PartialMessage<ListCompositionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.ListCompositionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "parent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCompositionsRequest {
+    return new ListCompositionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCompositionsRequest {
+    return new ListCompositionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCompositionsRequest {
+    return new ListCompositionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListCompositionsRequest | PlainMessage<ListCompositionsRequest> | undefined, b: ListCompositionsRequest | PlainMessage<ListCompositionsRequest> | undefined): boolean {
+    return proto3.util.equals(ListCompositionsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.ListCompositionsResponse
+ */
+export class ListCompositionsResponse extends Message<ListCompositionsResponse> {
+  /**
+   * The compositions returned.
+   *
+   * @generated from field: repeated pb.Composition compositions = 1;
+   */
+  compositions: Composition[] = [];
+
+  /**
+   * A token to retrieve next page of results.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken = "";
+
+  constructor(data?: PartialMessage<ListCompositionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.ListCompositionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "compositions", kind: "message", T: Composition, repeated: true },
+    { no: 2, name: "next_page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCompositionsResponse {
+    return new ListCompositionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCompositionsResponse {
+    return new ListCompositionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCompositionsResponse {
+    return new ListCompositionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListCompositionsResponse | PlainMessage<ListCompositionsResponse> | undefined, b: ListCompositionsResponse | PlainMessage<ListCompositionsResponse> | undefined): boolean {
+    return proto3.util.equals(ListCompositionsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message pb.DeleteCompositionRequest
+ */
+export class DeleteCompositionRequest extends Message<DeleteCompositionRequest> {
+  /**
+   * The name of the Composition resource.
+   * For example: "users/123/arts/456/compositions/789"
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteCompositionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "pb.DeleteCompositionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCompositionRequest {
+    return new DeleteCompositionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCompositionRequest {
+    return new DeleteCompositionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCompositionRequest {
+    return new DeleteCompositionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCompositionRequest | PlainMessage<DeleteCompositionRequest> | undefined, b: DeleteCompositionRequest | PlainMessage<DeleteCompositionRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteCompositionRequest, a, b);
   }
 }
 
