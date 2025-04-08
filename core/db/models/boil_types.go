@@ -103,6 +103,54 @@ func (e ArtStatusEnum) Ordinal() int {
 	}
 }
 
+type CompositionStatusEnum string
+
+// Enum values for CompositionStatusEnum
+const (
+	CompositionStatusEnumPENDING    CompositionStatusEnum = "PENDING"
+	CompositionStatusEnumPROCESSING CompositionStatusEnum = "PROCESSING"
+	CompositionStatusEnumCOMPLETE   CompositionStatusEnum = "COMPLETE"
+	CompositionStatusEnumFAILED     CompositionStatusEnum = "FAILED"
+)
+
+func AllCompositionStatusEnum() []CompositionStatusEnum {
+	return []CompositionStatusEnum{
+		CompositionStatusEnumPENDING,
+		CompositionStatusEnumPROCESSING,
+		CompositionStatusEnumCOMPLETE,
+		CompositionStatusEnumFAILED,
+	}
+}
+
+func (e CompositionStatusEnum) IsValid() error {
+	switch e {
+	case CompositionStatusEnumPENDING, CompositionStatusEnumPROCESSING, CompositionStatusEnumCOMPLETE, CompositionStatusEnumFAILED:
+		return nil
+	default:
+		return errors.New("enum is not valid")
+	}
+}
+
+func (e CompositionStatusEnum) String() string {
+	return string(e)
+}
+
+func (e CompositionStatusEnum) Ordinal() int {
+	switch e {
+	case CompositionStatusEnumPENDING:
+		return 0
+	case CompositionStatusEnumPROCESSING:
+		return 1
+	case CompositionStatusEnumCOMPLETE:
+		return 2
+	case CompositionStatusEnumFAILED:
+		return 3
+
+	default:
+		panic(errors.New("enum is not valid"))
+	}
+}
+
 type RoleEnum string
 
 // Enum values for RoleEnum

@@ -7,12 +7,14 @@ var TableNames = struct {
 	AccountActivations string
 	ArtVariations      string
 	Arts               string
+	Compositions       string
 	SchemaMigrations   string
 	Users              string
 }{
 	AccountActivations: "account_activations",
 	ArtVariations:      "art_variations",
 	Arts:               "arts",
+	Compositions:       "compositions",
 	SchemaMigrations:   "schema_migrations",
 	Users:              "users",
 }
