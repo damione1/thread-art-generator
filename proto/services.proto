@@ -48,6 +48,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     description: "Endpoints for art management"
   }
   tags: {
+    name: "Compositions"
+    description: "Endpoints for thread art compositions"
+  }
+  tags: {
     name: "Media"
     description: "Endpoints for media management"
   }
@@ -193,6 +197,69 @@ service ArtGeneratorService {
       summary: "Confirm art image upload"
       description: "Mark an art resource as complete after image upload."
       tags: "Media";
+    };
+    option (google.api.method_signature) = "name";
+  }
+
+  // Composition RPCs
+  rpc CreateComposition (CreateCompositionRequest) returns (Composition) {
+    option (google.api.http) = {
+      post: "/v1/{parent=users/*/arts/*}/compositions"
+      body: "composition"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Create a new composition"
+      description: "Create a new thread art composition for a specific art."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "parent,composition";
+  }
+
+  rpc GetComposition (GetCompositionRequest) returns (Composition) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*/arts/*/compositions/*}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get composition information"
+      description: "Retrieve information for a specific composition."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "name";
+  }
+
+  rpc UpdateComposition (UpdateCompositionRequest) returns (Composition) {
+    option (google.api.http) = {
+      patch: "/v1/{composition.name=users/*/arts/*/compositions/*}"
+      body: "composition"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Update a composition"
+      description: "Modify the settings of a specific composition."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "composition,update_mask";
+  }
+
+  rpc ListCompositions (ListCompositionsRequest) returns (ListCompositionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/{parent=users/*/arts/*}/compositions"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "List all compositions"
+      description: "Retrieve a list of all compositions for a specific art."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "parent";
+  }
+
+  rpc DeleteComposition (DeleteCompositionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/{name=users/*/arts/*/compositions/*}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Delete a composition"
+      description: "Remove a specific composition from the system."
+      tags: "Compositions";
     };
     option (google.api.method_signature) = "name";
   }

@@ -75,6 +75,215 @@ message Art {
     google.protobuf.Timestamp update_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Status of the composition
+enum CompositionStatus {
+    // Default unspecified status
+    COMPOSITION_STATUS_UNSPECIFIED = 0;
+    // Composition created but waiting to be processed
+    COMPOSITION_STATUS_PENDING = 1;
+    // Composition is currently being processed
+    COMPOSITION_STATUS_PROCESSING = 2;
+    // Composition has been successfully processed
+    COMPOSITION_STATUS_COMPLETE = 3;
+    // Composition processing failed
+    COMPOSITION_STATUS_FAILED = 4;
+}
+
+// Composition represents a configuration for creating a thread art
+message Composition {
+    option (google.api.resource) = {
+        type: "art.example.com/Composition"
+        pattern: "users/{user}/arts/{art}/compositions/{composition}"
+    };
+
+    // The name of the Composition resource.
+    // For example: "users/123/arts/456/compositions/789"
+    string name = 1 [
+        (google.api.field_behavior) = OUTPUT_ONLY,
+        (google.api.resource_reference) = {type: "art.example.com/Composition"}
+    ];
+
+    // Status of the composition
+    CompositionStatus status = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Number of nails to use in the circle
+    int32 nails_quantity = 4 [
+        (buf.validate.field).int32 = {gt: 0, lte: 1000}
+    ];
+
+    // Image size in pixels
+    int32 img_size = 5 [
+        (buf.validate.field).int32 = {gt: 0, lte: 5000}
+    ];
+
+    // Maximum number of paths to generate
+    int32 max_paths = 6 [
+        (buf.validate.field).int32 = {gt: 0, lte: 20000}
+    ];
+
+    // Starting nail position
+    int32 starting_nail = 7 [
+        (buf.validate.field).int32 = {gte: 0}
+    ];
+
+    // Minimum difference between connected nails
+    int32 minimum_difference = 8 [
+        (buf.validate.field).int32 = {gt: 0, lte: 200}
+    ];
+
+    // Brightness factor for thread lines
+    int32 brightness_factor = 9 [
+        (buf.validate.field).int32 = {gt: 0, lte: 255}
+    ];
+
+    // Image contrast adjustment
+    float image_contrast = 10 [
+        (buf.validate.field).float = {gt: 0, lte: 100}
+    ];
+
+    // Physical radius of the final artwork in mm
+    float physical_radius = 11 [
+        (buf.validate.field).float = {gt: 0}
+    ];
+
+    // URL to the preview image of the composition result
+    string preview_url = 12 [
+        (google.api.field_behavior) = OUTPUT_ONLY,
+        (buf.validate.field).cel = {
+            id: "composition.preview_url.uri_when_present",
+            message: "Preview URL must be a valid URI when present",
+            expression: "this == '' || this.matches('^https?://.+')"
+        }
+    ];
+
+    // URL to download the GCode file
+    string gcode_url = 13 [
+        (google.api.field_behavior) = OUTPUT_ONLY,
+        (buf.validate.field).cel = {
+            id: "composition.gcode_url.uri_when_present",
+            message: "GCode URL must be a valid URI when present",
+            expression: "this == '' || this.matches('^https?://.+')"
+        }
+    ];
+
+    // URL to download the paths list file
+    string pathlist_url = 14 [
+        (google.api.field_behavior) = OUTPUT_ONLY,
+        (buf.validate.field).cel = {
+            id: "composition.pathlist_url.uri_when_present",
+            message: "Pathlist URL must be a valid URI when present",
+            expression: "this == '' || this.matches('^https?://.+')"
+        }
+    ];
+
+    // Thread length in meters
+    int32 thread_length = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Total number of lines
+    int32 total_lines = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Error message if processing failed
+    string error_message = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Creation time
+    google.protobuf.Timestamp create_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Last update time
+    google.protobuf.Timestamp update_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message CreateCompositionRequest {
+    // The parent which owns the composition.
+    // For example: "users/123/arts/456"
+    string parent = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/Art"},
+        (buf.validate.field).cel = {
+            id: "create_composition.parent.format",
+            message: "Parent resource name is required and must follow pattern 'users/*/arts/*'",
+            expression: "this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')"
+        }
+    ];
+
+    // The composition to create.
+    Composition composition = 2 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).required = true
+    ];
+}
+
+message GetCompositionRequest {
+    // The name of the Composition resource.
+    // For example: "users/123/arts/456/compositions/789"
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/Composition"},
+        (buf.validate.field).cel = {
+            id: "get_composition.name.format",
+            message: "Composition resource name is required and must follow pattern 'users/*/arts/*/compositions/*'",
+            expression: "this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+/compositions/[^/]+$')"
+        }
+    ];
+}
+
+message UpdateCompositionRequest {
+    // The Composition resource to update.
+    Composition composition = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).required = true
+    ];
+
+    // The update mask applies to the resource.
+    google.protobuf.FieldMask update_mask = 2 [
+        (buf.validate.field).required = true
+    ];
+}
+
+message ListCompositionsRequest {
+    // The parent which owns the compositions.
+    // For example: "users/123/arts/456"
+    string parent = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/Art"},
+        (buf.validate.field).cel = {
+            id: "list_compositions.parent.format",
+            message: "Parent resource name is required and must follow pattern 'users/*/arts/*'",
+            expression: "this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')"
+        }
+    ];
+
+    // The maximum number of compositions to return.
+    // The service may return fewer than this value.
+    int32 page_size = 2 [
+        (buf.validate.field).int32 = {gt: 0, lte: 100}
+    ];
+
+    // A page token, received from a previous `ListCompositions` call.
+    string page_token = 3;
+}
+
+message ListCompositionsResponse {
+    // The compositions returned.
+    repeated Composition compositions = 1;
+
+    // A token to retrieve next page of results.
+    string next_page_token = 2;
+}
+
+message DeleteCompositionRequest {
+    // The name of the Composition resource.
+    // For example: "users/123/arts/456/compositions/789"
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference) = {type: "art.example.com/Composition"},
+        (buf.validate.field).cel = {
+            id: "delete_composition.name.format",
+            message: "Composition resource name is required and must follow pattern 'users/*/arts/*/compositions/*'",
+            expression: "this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+/compositions/[^/]+$')"
+        }
+    ];
+}
+
 message CreateArtRequest {
     // The parent which owns the arts.
     // For example: "users/456"
