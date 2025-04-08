@@ -1,14 +1,18 @@
 load('ext://restart_process', 'docker_build_with_restart')
 
-#compile and set executable. But for the cli one, we need to build it for the current platform and make it executable
+# ================================================
+# BUILD CONFIGURATIONS
+# ================================================
+
+# Compile Go binaries
 local_resource(
   'go-compile',
   cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && go build -o build/cli cmd/cli/main.go',
-  labels=["scripts"],
+  labels=["build"],
   deps=['cmd/', 'core/', 'threadGenerator/', 'web/**/*.go'],
 )
 
-
+# API image build
 docker_build(
   'api-image',
   '.',
@@ -19,8 +23,10 @@ docker_build(
   live_update=[
     sync('./build/api', '/app/build/api'),
     restart_container()
-  ])
+  ]
+)
 
+# Migrations image build
 docker_build(
   'migrations-image',
   '.',
@@ -32,31 +38,29 @@ docker_build(
   live_update=[
     sync('./build/migrations', '/app/build/migrations'),
     sync('./core/db/migrations', '/migrations'),
-  ])
+  ]
+)
 
+# ================================================
+# DOCKER COMPOSE CONFIGURATION
+# ================================================
 
-# Load the docker compose configuration
+# Load Docker Compose configuration
 docker_compose('docker-compose.yml')
 
-# Add proto file watching for automatic rebuilds
+# ================================================
+# LOCAL DEVELOPMENT RESOURCES
+# ================================================
+
+# Proto file watcher - detects changes in proto files
 local_resource(
   'proto-watch',
-  cmd='echo "Proto files changed - rebuilding..."',
+  cmd='echo "Proto files changed"',
   deps=['proto/'],
-  resource_deps=['proto-rebuild'],
-  labels=["auto-proto"]
+  labels=["proto"],
 )
 
-# Combined proto rebuild resource
-local_resource(
-  'proto-rebuild',
-  cmd='docker-compose run --rm proto-build',
-  trigger_mode=TRIGGER_MODE_MANUAL,
-  auto_init=False,
-  labels=["auto-proto"]
-)
-
-# Initial local dev setup resource
+# Local development setup
 local_resource(
   'setup-local-dev',
   cmd='./scripts/local_setup.sh',
@@ -74,36 +78,53 @@ local_resource(
   auto_init=True
 )
 
-# Set resources
+# ================================================
+# SERVICE CONFIGURATION
+# ================================================
+
+# Define all resources with consistent configuration format
 resources = {
-  'db': {'labels': ['database']},
+  # Database services
+  'db': {
+    'labels': ['database'],
+  },
+
   'migrations': {
+    'labels': ['database'],
+    'resource_deps': ['go-compile', 'db'],
     'auto_init': True,
     'trigger_mode': TRIGGER_MODE_MANUAL,
-    'labels': ['database'],
-    'resource_deps': ['go-compile', 'db']
-    },
+  },
+
   'generate-models': {
+    'labels': ['database'],
+    'resource_deps': ['db'],
     'auto_init': False,
     'trigger_mode': TRIGGER_MODE_MANUAL,
-    'labels': ['scripts'],
-    'resource_deps': ['db']
-    },
+  },
+
+  # Proto handling
   'proto-build': {
-    'auto_init': False,
-    'trigger_mode': TRIGGER_MODE_MANUAL,
-    'labels': ['scripts'],
-    },
+    'labels': ['proto'],
+    'resource_deps': ['proto-watch'],
+    'auto_init': True,
+    'trigger_mode': TRIGGER_MODE_AUTO,
+  },
+
+  # Application services
   'api': {
-    'labels': ['services'],
+    'labels': ['application'],
     'resource_deps': ['go-compile', 'db', 'migrations'],
     'trigger_mode': TRIGGER_MODE_AUTO,
   },
+
   'frontend': {
-    'labels': ['frontend'],
+    'labels': ['application'],
     'resource_deps': ['api'],
     'trigger_mode': TRIGGER_MODE_AUTO,
   },
+
+  # Networking
   'envoy': {
     'labels': ['networking'],
     'resource_deps': ['api', 'frontend'],
@@ -111,12 +132,15 @@ resources = {
       link('https://tag.local', 'Thread Art Generator (HTTPS)'),
     ]
   },
+
+  # Storage
   'minio': {
     'labels': ['storage'],
     'resource_deps': ['db']
   },
 }
 
+# Create resources from configuration
 for resource_name, resource_config in resources.items():
     dc_resource(
         resource_name,

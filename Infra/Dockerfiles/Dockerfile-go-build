@@ -44,10 +44,10 @@ COPY ./scripts/ ./scripts/
 COPY ./core/ ./core/
 
 # Make the script executable
-RUN chmod +x /app/scripts/build-protos.sh
+RUN chmod +x /app/scripts/build/build-protos.sh
 
 # Run the proto generation script
-RUN /app/scripts/build-protos.sh
+RUN /app/scripts/build/build-protos.sh
 
 # Final stage to combine all artifacts
 FROM scratch AS final

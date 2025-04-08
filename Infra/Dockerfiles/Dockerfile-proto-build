@@ -60,4 +60,4 @@ WORKDIR /app
 RUN mkdir -p /app/core/pb /app/web/src/lib/pb
 
 # Set entrypoint
-ENTRYPOINT ["/app/scripts/build-protos.sh"]
+ENTRYPOINT ["/app/scripts/build/build-protos.sh"]
