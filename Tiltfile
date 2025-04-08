@@ -56,28 +56,22 @@ local_resource(
   labels=["auto-proto"]
 )
 
-# Function to ensure mkcert is installed
-def ensure_mkcert():
-    """Ensures mkcert is installed and generates certificates for tag.local"""
-    local('which mkcert || brew install mkcert')
-    local('mkcert -install')
-
-    # Create certs directory if it doesn't exist
-    local('mkdir -p ./certs')
-
-    # Generate certificates for tag.local
-    local('mkcert -cert-file ./certs/tag.local.crt -key-file ./certs/tag.local.key tag.local "*.tag.local"')
-
-    # Add tag.local to /etc/hosts if not already present
-    local('grep -q "tag.local" /etc/hosts || sudo sh -c \'echo "127.0.0.1 tag.local" >> /etc/hosts\'')
-
-# Run mkcert setup
+# Initial local dev setup resource
 local_resource(
-  'setup-mkcert',
-  cmd='./scripts/setup_mkcert.sh',
-  labels=["scripts"],
+  'setup-local-dev',
+  cmd='./scripts/local_setup.sh',
+  labels=["setup"],
   trigger_mode=TRIGGER_MODE_MANUAL,
   auto_init=False
+)
+
+# MinIO setup after container starts
+local_resource(
+  'setup-minio',
+  cmd='./scripts/dev/tilt-minio-setup.sh',
+  labels=["storage"],
+  resource_deps=['minio'],
+  auto_init=True
 )
 
 # Set resources
@@ -117,7 +111,10 @@ resources = {
       link('https://tag.local', 'Thread Art Generator (HTTPS)'),
     ]
   },
-  'minio': {'labels': ['database'], 'resource_deps': ['db']},
+  'minio': {
+    'labels': ['storage'],
+    'resource_deps': ['db']
+  },
 }
 
 for resource_name, resource_config in resources.items():

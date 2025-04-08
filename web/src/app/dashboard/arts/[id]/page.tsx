@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
-import Image from "next/image";
 import {
   getArt,
   getArtUploadUrl,
@@ -466,12 +465,15 @@ export default function ArtDetailPage() {
           ) : art.imageUrl ? (
             <div className="mb-6">
               <div className="rounded-lg overflow-hidden bg-dark-300 aspect-square w-full max-w-xl mx-auto">
-                <Image
+                <img
                   src={art.imageUrl}
                   alt={art.title}
                   className="w-full h-full object-contain"
-                  width={600}
-                  height={600}
+                  onError={(e) => {
+                    console.error("Image failed to load:", art.imageUrl);
+                    e.currentTarget.src =
+                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23444'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' fill='%23fff'%3EImage Error%3C/text%3E%3C/svg%3E";
+                  }}
                 />
               </div>
             </div>

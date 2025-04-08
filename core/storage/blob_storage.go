@@ -115,7 +115,7 @@ func NewBlobStorage(ctx context.Context, config BlobStorageConfig) (*BlobStorage
 			Credentials:      credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, ""),
 			Region:           aws.String(config.Region),
 			Endpoint:         aws.String(externalEndpoint),
-			DisableSSL:       aws.Bool(!config.ForceExternalSSL), // Use ForceExternalSSL setting
+			DisableSSL:       aws.Bool(!config.ForceExternalSSL),
 			S3ForcePathStyle: aws.Bool(true),
 		}
 
@@ -144,7 +144,7 @@ func newS3BlobStorage(ctx context.Context, config BlobStorageConfig) (*blob.Buck
 		Credentials:      credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, ""),
 		Region:           aws.String(config.Region),
 		Endpoint:         aws.String(internalEndpoint),
-		DisableSSL:       aws.Bool(!config.UseSSL), // Follow the UseSSL setting for internal ops
+		DisableSSL:       aws.Bool(!config.UseSSL),
 		S3ForcePathStyle: aws.Bool(true),
 	}
 
@@ -209,21 +209,25 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 	var req *request.Request
 	switch method {
 	case "GET":
-		req, _ = b.s3Client.GetObjectRequest(&s3.GetObjectInput{
+		input := &s3.GetObjectInput{
 			Bucket: aws.String(b.bucketName),
 			Key:    aws.String(key),
-		})
+		}
+		req, _ = b.s3Client.GetObjectRequest(input)
+		// Add X-Forwarded-Proto for GET requests as well
+		req.HTTPRequest.Header.Set("X-Forwarded-Proto", "http")
 	case "PUT":
 		input := &s3.PutObjectInput{
 			Bucket: aws.String(b.bucketName),
 			Key:    aws.String(key),
-			ACL:    aws.String("private"),
 		}
 		// Add content type in input only if specified
 		if opts.ContentType != "" {
 			input.ContentType = aws.String(opts.ContentType)
 		}
 		req, _ = b.s3Client.PutObjectRequest(input)
+		// For PUT requests, we need X-Forwarded-Proto for MinIO
+		req.HTTPRequest.Header.Set("X-Forwarded-Proto", req.HTTPRequest.URL.Scheme)
 	case "DELETE":
 		req, _ = b.s3Client.DeleteObjectRequest(&s3.DeleteObjectInput{
 			Bucket: aws.String(b.bucketName),
@@ -245,14 +249,11 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 	// Set URL scheme based on configuration
 	if b.forceExternalSSL {
 		req.HTTPRequest.URL.Scheme = "https"
-		req.HTTPRequest.Header.Set("X-Forwarded-Proto", "https")
 	} else {
 		req.HTTPRequest.URL.Scheme = "http"
-		req.HTTPRequest.Header.Set("X-Forwarded-Proto", "http")
 	}
 
 	// Important: Remove any extra headers that shouldn't be part of the signed URL
-	// Only include the headers that are necessary for the operation
 	url, err := req.Presign(opts.Expiry)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign request: %v", err)
@@ -290,6 +291,21 @@ func (b *BlobStorage) Upload(ctx context.Context, key string, data io.Reader, co
 // Download downloads data from a blob
 func (b *BlobStorage) Download(ctx context.Context, key string) (io.ReadCloser, error) {
 	return b.Bucket.NewReader(ctx, key, nil)
+}
+
+// GetPublicURL returns a direct URL for public access without signing
+func (b *BlobStorage) GetPublicURL(key string) string {
+	protocol := "http"
+	if b.forceExternalSSL {
+		protocol = "https"
+	}
+
+	// Use the external endpoint for public URLs
+	if b.publicURL == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("%s://%s/%s/%s", protocol, b.publicURL, b.bucketName, key)
 }
 
 // Helper to strip protocol from URL

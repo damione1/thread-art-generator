@@ -1,5 +1,103 @@
 # Thread Art Generator
 
+A platform for generating thread art from images.
+
+## Local Development Setup
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Go 1.22+
+- Node.js 18+
+- Tilt (for local development)
+
+### Quick Start
+
+1. **Initial Setup**
+
+```bash
+# Run the one-time setup script to configure your local environment
+make setup
+```
+
+This will:
+
+- Check for required tools
+- Set up SSL certificates
+- Create an `.env` file with generated keys
+- Configure local hostnames
+- Build the CLI tool
+
+2. **Start Development Environment**
+
+```bash
+# Start all services with Tilt
+make up
+
+# Or directly
+tilt up
+```
+
+3. **Access the Application**
+
+- Web UI: https://tag.local
+- API: https://tag.local/grpc-api
+- MinIO Console: http://localhost:9001 (credentials in .env)
+
+### Working with the CLI
+
+```bash
+# The CLI wrapper automatically builds and configures the CLI
+./scripts/cli <command>
+
+# Examples:
+./scripts/cli user list
+./scripts/cli art create --title "My Artwork"
+```
+
+### Development Commands
+
+```bash
+# Restart all services
+make restart
+
+# Stop all services
+make down
+
+# Access PostgreSQL directly
+make psql
+
+# Run manual database migrations
+tilt trigger migrations
+
+# Rebuild proto files after changes
+tilt trigger proto-rebuild
+```
+
+## Project Structure
+
+- `/cmd` - Application entry points
+- `/core` - Core business logic
+- `/proto` - Protocol buffer definitions
+- `/web` - Next.js frontend
+- `/threadGenerator` - Thread art generation algorithm
+- `/infra` - Infrastructure configuration
+- `/scripts` - Utility scripts
+
+## Storage Options
+
+The application supports multiple storage providers:
+
+- **Local MinIO** (development): Configured automatically
+- **GCS** (production): Requires GCP credentials
+- **S3** (production): Requires AWS credentials
+
+The storage provider is configured in the `.env` file.
+
+## Production Deployment
+
+Production deployment instructions are available in the `/infra/README.md` file.
+
 ![thread art generator](https://github.com/Damione1/thread-art-generator/assets/14912510/6b6ef9e1-9bad-4dd7-8579-17fe55ae9c13)
 
 Thread Art Generator is a project that allows you to transform your images into unique pieces of circular thread art. This project is written in Golang, a powerful programming language renowned for its efficiency and simplicity.
