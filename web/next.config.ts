@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
       "www.gravatar.com",
       "storage.tag.local"
     ],
+    unoptimized: process.env.NODE_ENV === 'development', // Only in dev
   },
   // For gRPC-Web we need to configure rewrites to proxy API requests
   async rewrites() {

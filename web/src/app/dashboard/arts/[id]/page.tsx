@@ -15,6 +15,7 @@ import { ErrorMessage, SuccessMessage } from "@/components/ui";
 import { Cropper, CropperRef, CircleStencil } from "react-advanced-cropper";
 import "react-advanced-cropper/dist/style.css";
 import { getStatusInfo } from "@/utils/artUtils";
+import Image from "next/image";
 
 export default function ArtDetailPage() {
   const router = useRouter();
@@ -465,10 +466,12 @@ export default function ArtDetailPage() {
           ) : art.imageUrl ? (
             <div className="mb-6">
               <div className="rounded-lg overflow-hidden bg-dark-300 aspect-square w-full max-w-xl mx-auto">
-                <img
+                <Image
                   src={art.imageUrl}
                   alt={art.title}
                   className="w-full h-full object-contain"
+                  width={1000}
+                  height={1000}
                   onError={(e) => {
                     console.error("Image failed to load:", art.imageUrl);
                     e.currentTarget.src =
