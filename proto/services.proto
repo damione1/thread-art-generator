@@ -228,7 +228,7 @@ service ArtGeneratorService {
   }
 
   rpc UpdateComposition (UpdateCompositionRequest) returns (Composition) {
-    option (google.api.http) = {
+  option (google.api.http) = {
       patch: "/v1/{composition.name=users/*/arts/*/compositions/*}"
       body: "composition"
     };

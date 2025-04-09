@@ -9,13 +9,241 @@ import {
   confirmArtImageUpload,
   getCurrentUser,
   deleteArt,
+  createComposition,
+  listCompositions,
 } from "@/lib/grpc-client";
-import { Art } from "@/lib/pb/art_pb";
+import { Art, Composition } from "@/lib/pb/art_pb";
 import { ErrorMessage, SuccessMessage } from "@/components/ui";
 import { Cropper, CropperRef, CircleStencil } from "react-advanced-cropper";
 import "react-advanced-cropper/dist/style.css";
 import { getStatusInfo } from "@/utils/artUtils";
 import Image from "next/image";
+
+interface CompositionFormData {
+  nailsQuantity: number;
+  imgSize: number;
+  maxPaths: number;
+  startingNail: number;
+  minimumDifference: number;
+  brightnessFactor: number;
+  imageContrast: number;
+  physicalRadius: number;
+}
+
+interface CompositionFormProps {
+  onSubmit: (formData: CompositionFormData) => void;
+  initialValues?: Partial<CompositionFormData> | null;
+  isLoading?: boolean;
+}
+
+interface CompositionTimelineProps {
+  compositions: Composition[];
+  onClone: (composition: Composition) => void;
+}
+
+const SliderInput = ({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+  unit = "",
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+}) => (
+  <div>
+    <div className="flex justify-between">
+      <label className="block text-sm font-medium text-slate-300">
+        {label}
+      </label>
+      <span className="text-sm text-slate-400">
+        {value}
+        {unit}
+      </span>
+    </div>
+    <input
+      type="range"
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+      className="mt-2 w-full h-2 bg-dark-400 rounded-lg appearance-none cursor-pointer accent-primary-500"
+      min={min}
+      max={max}
+      step={step}
+    />
+    <div className="flex justify-between mt-1">
+      <span className="text-xs text-slate-500">
+        {min}
+        {unit}
+      </span>
+      <span className="text-xs text-slate-500">
+        {max}
+        {unit}
+      </span>
+    </div>
+  </div>
+);
+
+// Composition form component
+const CompositionForm = ({
+  onSubmit,
+  initialValues = null,
+  isLoading = false,
+}: CompositionFormProps) => {
+  const [formData, setFormData] = useState<CompositionFormData>({
+    nailsQuantity: initialValues?.nailsQuantity ?? 200,
+    imgSize: initialValues?.imgSize ?? 800,
+    maxPaths: initialValues?.maxPaths ?? 2000,
+    startingNail: initialValues?.startingNail ?? 0,
+    minimumDifference: initialValues?.minimumDifference ?? 40,
+    brightnessFactor: initialValues?.brightnessFactor ?? 70,
+    imageContrast: initialValues?.imageContrast ?? 50,
+    physicalRadius: initialValues?.physicalRadius ?? 150,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 bg-dark-300 p-6 rounded-lg"
+    >
+      <h3 className="text-xl font-semibold text-slate-100 mb-4">
+        New Composition
+      </h3>
+
+      <div className="grid grid-cols-1 gap-6">
+        <SliderInput
+          label="Nails Quantity"
+          value={formData.nailsQuantity}
+          onChange={(value) =>
+            setFormData({ ...formData, nailsQuantity: value })
+          }
+          min={1}
+          max={1000}
+        />
+
+        <SliderInput
+          label="Image Size"
+          value={formData.imgSize}
+          onChange={(value) => setFormData({ ...formData, imgSize: value })}
+          min={100}
+          max={5000}
+          step={100}
+          unit="px"
+        />
+
+        <SliderInput
+          label="Max Paths"
+          value={formData.maxPaths}
+          onChange={(value) => setFormData({ ...formData, maxPaths: value })}
+          min={100}
+          max={20000}
+          step={100}
+        />
+
+        <SliderInput
+          label="Starting Nail"
+          value={formData.startingNail}
+          onChange={(value) =>
+            setFormData({ ...formData, startingNail: value })
+          }
+          min={0}
+          max={formData.nailsQuantity - 1}
+        />
+
+        <SliderInput
+          label="Minimum Difference"
+          value={formData.minimumDifference}
+          onChange={(value) =>
+            setFormData({ ...formData, minimumDifference: value })
+          }
+          min={1}
+          max={200}
+        />
+
+        <SliderInput
+          label="Brightness Factor"
+          value={formData.brightnessFactor}
+          onChange={(value) =>
+            setFormData({ ...formData, brightnessFactor: value })
+          }
+          min={1}
+          max={255}
+        />
+
+        <SliderInput
+          label="Image Contrast"
+          value={formData.imageContrast}
+          onChange={(value) =>
+            setFormData({ ...formData, imageContrast: value })
+          }
+          min={0}
+          max={100}
+          step={0.1}
+          unit="%"
+        />
+
+        <SliderInput
+          label="Physical Radius"
+          value={formData.physicalRadius}
+          onChange={(value) =>
+            setFormData({ ...formData, physicalRadius: value })
+          }
+          min={50}
+          max={500}
+          step={1}
+          unit="mm"
+        />
+      </div>
+
+      <div className="flex justify-end mt-6">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+        >
+          {isLoading ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Creating...
+            </>
+          ) : (
+            "Create Composition"
+          )}
+        </button>
+      </div>
+    </form>
+  );
+};
 
 export default function ArtDetailPage() {
   const router = useRouter();
@@ -24,8 +252,10 @@ export default function ArtDetailPage() {
   const cropperRef = useRef<CropperRef>(null);
 
   const [art, setArt] = useState<Art | null>(null);
+  const [compositions, setCompositions] = useState<Composition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCompositionForm, setShowCompositionForm] = useState(true);
 
   // Upload states
   const [isUploading, setIsUploading] = useState(false);
@@ -42,21 +272,34 @@ export default function ArtDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Fetch art and user data
+  // Fetch art, compositions and check for pending status
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Get current user
         const currentUser = await getCurrentUser();
+        if (!artId) return;
 
-        // Get art details
-        if (artId) {
-          // Format the art resource name correctly
-          const artResourceName = `${currentUser.name}/arts/${artId}`;
-          const artData = await getArt(artResourceName);
-          setArt(artData);
+        const artResourceName = `${currentUser.name}/arts/${artId}`;
+
+        // First get the art to ensure it exists
+        const artData = await getArt(artResourceName);
+        setArt(artData);
+
+        // Only fetch compositions if we have a valid art
+        if (artData) {
+          const compositionsResponse = await listCompositions({
+            parent: artResourceName,
+            pageSize: 100, // Add page size as it's required by the proto
+          });
+          setCompositions(compositionsResponse.compositions || []);
+
+          // Hide form if there's a pending composition
+          const hasPendingComposition = compositionsResponse.compositions?.some(
+            (comp) => comp.status === 1 || comp.status === 2 // PENDING or PROCESSING
+          );
+          setShowCompositionForm(!hasPendingComposition);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -68,6 +311,39 @@ export default function ArtDetailPage() {
 
     fetchData();
   }, [artId]);
+
+  // Poll for pending compositions
+  useEffect(() => {
+    if (
+      !art?.name ||
+      !compositions.some((comp) => comp.status === 1 || comp.status === 2)
+    ) {
+      return;
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const compositionsResponse = await listCompositions({
+          parent: art.name,
+          pageSize: 100, // Add page size as it's required by the proto
+        });
+        const newCompositions = compositionsResponse.compositions || [];
+        setCompositions(newCompositions);
+
+        if (
+          !newCompositions.some(
+            (comp) => comp.status === 1 || comp.status === 2
+          )
+        ) {
+          setShowCompositionForm(true);
+        }
+      } catch (error) {
+        console.error("Error polling compositions:", error);
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [art?.name]);
 
   // Handle file upload
   const handleFileUpload = async (file: File) => {
@@ -219,6 +495,98 @@ export default function ArtDetailPage() {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
     }
+  };
+
+  const CompositionCard = ({ composition }: { composition: Composition }) => {
+    const getStatusInfo = (status: number) => {
+      switch (status) {
+        case 1:
+          return { text: "Pending", color: "text-yellow-400" };
+        case 2:
+          return { text: "Processing", color: "text-blue-400" };
+        case 3:
+          return { text: "Complete", color: "text-green-400" };
+        case 4:
+          return { text: "Failed", color: "text-red-400" };
+        default:
+          return { text: "Unknown", color: "text-gray-400" };
+      }
+    };
+
+    const statusInfo = getStatusInfo(composition.status);
+
+    return (
+      <div className="bg-dark-300 rounded-lg p-4 mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className={`${statusInfo.color} font-medium`}>
+            {statusInfo.text}
+          </div>
+          <div className="text-sm text-slate-400">
+            {new Date(
+              Number(composition.createTime?.seconds) * 1000
+            ).toLocaleString()}
+          </div>
+        </div>
+
+        {composition.previewUrl ? (
+          <div className="aspect-square w-full mb-4">
+            <Image
+              src={composition.previewUrl}
+              alt="Composition preview"
+              width={400}
+              height={400}
+              className="w-full h-full object-contain rounded"
+            />
+          </div>
+        ) : (
+          <div className="aspect-square w-full mb-4 bg-dark-400 rounded flex items-center justify-center">
+            {composition.status === 4 ? (
+              <div className="text-red-400 text-center p-4">
+                <p className="font-medium mb-2">Generation Failed</p>
+                <p className="text-sm">{composition.errorMessage}</p>
+              </div>
+            ) : (
+              <div className="animate-pulse text-slate-500">Processing...</div>
+            )}
+          </div>
+        )}
+
+        {composition.status === 3 && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Thread Length:</span>
+              <span className="text-slate-300">
+                {composition.threadLength}m
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Total Lines:</span>
+              <span className="text-slate-300">{composition.totalLines}</span>
+            </div>
+            <div className="flex space-x-2 mt-4">
+              {composition.gcodeUrl && (
+                <a
+                  href={composition.gcodeUrl}
+                  download
+                  className="flex-1 px-3 py-2 bg-primary-500 text-white text-center rounded hover:bg-primary-600 transition-colors text-sm"
+                >
+                  Download GCode
+                </a>
+              )}
+              {composition.pathlistUrl && (
+                <a
+                  href={composition.pathlistUrl}
+                  download
+                  className="flex-1 px-3 py-2 bg-primary-500 text-white text-center rounded hover:bg-primary-600 transition-colors text-sm"
+                >
+                  Download Paths
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -484,6 +852,70 @@ export default function ArtDetailPage() {
           ) : (
             <div className="mb-6 p-4 bg-dark-300 rounded-lg text-center">
               <p className="text-slate-300">No image available</p>
+            </div>
+          )}
+
+          {art.imageUrl && (
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-slate-100 mb-4">
+                Compositions
+              </h3>
+
+              {compositions.length > 0 ? (
+                <div className="space-y-4">
+                  {compositions.map((composition) => (
+                    <CompositionCard
+                      key={composition.name}
+                      composition={composition}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-400 text-center py-8">
+                  No compositions yet. Create your first one below!
+                </p>
+              )}
+
+              {showCompositionForm && (
+                <>
+                  <h3 className="text-xl font-semibold text-slate-100 my-6">
+                    Create New Composition
+                  </h3>
+                  <CompositionForm
+                    onSubmit={async (formData) => {
+                      try {
+                        await createComposition({
+                          parent: art.name,
+                          composition: {
+                            nailsQuantity: formData.nailsQuantity,
+                            imgSize: formData.imgSize,
+                            maxPaths: formData.maxPaths,
+                            startingNail: formData.startingNail,
+                            minimumDifference: formData.minimumDifference,
+                            brightnessFactor: formData.brightnessFactor,
+                            imageContrast: formData.imageContrast,
+                            physicalRadius: formData.physicalRadius,
+                          },
+                        });
+
+                        // Fetch latest compositions immediately
+                        const compositionsResponse = await listCompositions({
+                          parent: art.name,
+                        });
+                        setCompositions(
+                          compositionsResponse.compositions || []
+                        );
+                        setShowCompositionForm(false);
+                      } catch (error) {
+                        console.error("Failed to create composition:", error);
+                        setError(
+                          "Failed to create composition. Please try again."
+                        );
+                      }
+                    }}
+                  />
+                </>
+              )}
             </div>
           )}
 

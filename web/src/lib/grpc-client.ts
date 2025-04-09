@@ -1,7 +1,7 @@
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
 import { createClient, ConnectError, Code } from "@connectrpc/connect";
 import { ArtGeneratorService } from "./pb/services_connect";
-import { Art } from "./pb/art_pb";
+import { Art, Composition } from "./pb/art_pb";
 import { getAccessToken, refreshAccessToken } from "@/utils/auth-token-manager";
 import { processApiError } from "@/utils/errorUtils";
 
@@ -295,5 +295,69 @@ export const deleteUser = async (userId: string) => {
     return GrpcService.call(async (token) => {
         const { client, callOptions } = await createGrpcClient(token);
         return client.deleteUser(new DeleteUserRequest({ name: userId }), callOptions);
+    });
+};
+
+/**
+ * Create a new composition
+ */
+export const createComposition = async (request: {
+    parent: string;
+    composition: Partial<Composition>;
+}) => {
+    const { CreateCompositionRequest } = await import("./pb/art_pb");
+
+    return GrpcService.call(async (token) => {
+        const { client, callOptions } = await createGrpcClient(token);
+        const grpcRequest = new CreateCompositionRequest({
+            parent: request.parent,
+            composition: request.composition as Composition
+        });
+        return client.createComposition(grpcRequest, callOptions);
+    });
+};
+
+/**
+ * List compositions for an art piece
+ */
+export const listCompositions = async (request: {
+    parent: string;
+    pageSize?: number;
+    pageToken?: string;
+}) => {
+    const { ListCompositionsRequest } = await import("./pb/art_pb");
+
+    return GrpcService.call(async (token) => {
+        const { client, callOptions } = await createGrpcClient(token);
+        const grpcRequest = new ListCompositionsRequest({
+            parent: request.parent,
+            pageSize: request.pageSize,
+            pageToken: request.pageToken
+        });
+        return client.listCompositions(grpcRequest, callOptions);
+    });
+};
+
+/**
+ * Get a composition by ID
+ */
+export const getComposition = async (name: string) => {
+    const { GetCompositionRequest } = await import("./pb/art_pb");
+
+    return GrpcService.call(async (token) => {
+        const { client, callOptions } = await createGrpcClient(token);
+        return client.getComposition(new GetCompositionRequest({ name }), callOptions);
+    });
+};
+
+/**
+ * Delete a composition
+ */
+export const deleteComposition = async (name: string) => {
+    const { DeleteCompositionRequest } = await import("./pb/art_pb");
+
+    return GrpcService.call(async (token) => {
+        const { client, callOptions } = await createGrpcClient(token);
+        return client.deleteComposition(new DeleteCompositionRequest({ name }), callOptions);
     });
 };
