@@ -20,7 +20,6 @@ static_resources:
                 stream_idle_timeout: 300s
                 http_protocol_options:
                   accept_http_10: true
-                  default_host_for_http_10: storage.tag.local
                 access_log:
                   - name: envoy.access_loggers.stdout
                     typed_config:
@@ -28,45 +27,6 @@ static_resources:
                 route_config:
                   name: local_route
                   virtual_hosts:
-                    - name: storage_service
-                      domains: ["storage.tag.local"]
-                      cors:
-                        allow_origin_string_match:
-                          - prefix: "https://"
-                          - prefix: "http://"
-                        allow_methods: "GET, PUT, DELETE, POST, OPTIONS"
-                        allow_headers: "authorization,content-type,x-amz-date,x-amz-content-sha256,x-amz-security-token,x-forwarded-proto,x-forwarded-host,x-amz-acl"
-                        expose_headers: "etag"
-                        max_age: "86400"
-                      routes:
-                        - match:
-                            prefix: "/"
-                          route:
-                            cluster: minio_service
-                            timeout: 0s
-                            host_rewrite_literal: minio
-                            retry_policy:
-                              retry_on: "5xx,connect-failure,refused-stream"
-                              num_retries: 3
-                              per_try_timeout: 5s
-                          response_headers_to_add:
-                            - header:
-                                key: "X-Forwarded-Proto"
-                                value: "https"
-                              append: false
-                            - header:
-                                key: "X-Forwarded-Host"
-                                value: "storage.tag.local"
-                              append: false
-                          request_headers_to_add:
-                            - header:
-                                key: "X-Forwarded-Proto"
-                                value: "https"
-                              append: false
-                            - header:
-                                key: "X-Forwarded-Host"
-                                value: "storage.tag.local"
-                              append: false
                     - name: tag_local
                       domains: ["tag.local", "*.tag.local"]
                       cors:
@@ -78,33 +38,6 @@ static_resources:
                         expose_headers: "etag"
                         max_age: "86400"
                       routes:
-                        - match:
-                            prefix: "/storage/"
-                          route:
-                            cluster: minio_service
-                            timeout: 0s
-                            retry_policy:
-                              retry_on: "5xx,connect-failure,refused-stream"
-                              num_retries: 3
-                              per_try_timeout: 5s
-                          response_headers_to_add:
-                            - header:
-                                key: "X-Forwarded-Proto"
-                                value: "https"
-                              append: false
-                            - header:
-                                key: "X-Forwarded-Host"
-                                value: "tag.local"
-                              append: false
-                          request_headers_to_add:
-                            - header:
-                                key: "X-Forwarded-Proto"
-                                value: "https"
-                              append: false
-                            - header:
-                                key: "X-Forwarded-Host"
-                                value: "tag.local"
-                              append: false
                         - match:
                             prefix: "/pb.ArtGeneratorService/"
                           route:
@@ -250,47 +183,3 @@ static_resources:
             expected_statuses:
               start: 200
               end: 399
-
-    - name: minio_service
-      type: STRICT_DNS
-      lb_policy: ROUND_ROBIN
-      circuit_breakers:
-        thresholds:
-          - priority: DEFAULT
-            max_connections: 100
-            max_pending_requests: 100
-            max_requests: 1000
-            max_retries: 3
-      typed_extension_protocol_options:
-        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-          explicit_http_config:
-            http_protocol_options: {}
-      load_assignment:
-        cluster_name: minio_service
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    socket_address:
-                      address: minio
-                      port_value: 9000
-      connect_timeout: 5s
-      dns_refresh_rate: 30s
-      dns_failure_refresh_rate:
-        base_interval: 2s
-        max_interval: 10s
-      outlier_detection:
-        consecutive_5xx: 3
-        base_ejection_time: 30s
-        max_ejection_percent: 50
-      health_checks:
-        - timeout: 1s
-          interval: 10s
-          unhealthy_threshold: 3
-          healthy_threshold: 1
-          http_health_check:
-            path: "/minio/health/ready"
-            expected_statuses:
-              start: 200
-              end: 299
