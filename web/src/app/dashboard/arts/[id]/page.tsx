@@ -36,11 +36,6 @@ interface CompositionFormProps {
   isLoading?: boolean;
 }
 
-interface CompositionTimelineProps {
-  compositions: Composition[];
-  onClone: (composition: Composition) => void;
-}
-
 const SliderInput = ({
   label,
   value,
@@ -272,6 +267,9 @@ export default function ArtDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Add new state for composition modal
+  const [showCompositionModal, setShowCompositionModal] = useState(false);
+
   // Fetch art, compositions and check for pending status
   useEffect(() => {
     const fetchData = async () => {
@@ -314,36 +312,39 @@ export default function ArtDetailPage() {
 
   // Poll for pending compositions
   useEffect(() => {
-    if (
-      !art?.name ||
-      !compositions.some((comp) => comp.status === 1 || comp.status === 2)
-    ) {
-      return;
-    }
+    if (!params?.id || !compositions || !art) return;
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const compositionsResponse = await listCompositions({
-          parent: art.name,
-          pageSize: 100, // Add page size as it's required by the proto
-        });
-        const newCompositions = compositionsResponse.compositions || [];
-        setCompositions(newCompositions);
+    const hasPendingCompositions = compositions.some(
+      (comp) => comp.status === 1 || comp.status === 2
+    );
 
-        if (
-          !newCompositions.some(
+    if (hasPendingCompositions) {
+      const interval = setInterval(async () => {
+        try {
+          // Use the actual art name from the art object instead of constructing it manually
+          const response = await listCompositions({
+            parent: art.name,
+            pageSize: 100,
+          });
+          setCompositions(response.compositions);
+
+          // Check if there are still pending compositions
+          const stillPending = response.compositions.some(
             (comp) => comp.status === 1 || comp.status === 2
-          )
-        ) {
-          setShowCompositionForm(true);
-        }
-      } catch (error) {
-        console.error("Error polling compositions:", error);
-      }
-    }, 5000);
+          );
 
-    return () => clearInterval(pollInterval);
-  }, [art?.name]);
+          // If no more pending compositions, clear the interval
+          if (!stillPending) {
+            clearInterval(interval);
+          }
+        } catch (error) {
+          console.error("Error polling compositions:", error);
+        }
+      }, 2000); // Poll every 2 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [params?.id, compositions, art]);
 
   // Handle file upload
   const handleFileUpload = async (file: File) => {
@@ -498,6 +499,7 @@ export default function ArtDetailPage() {
   };
 
   const CompositionCard = ({ composition }: { composition: Composition }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
     const getStatusInfo = (status: number) => {
       switch (status) {
         case 1:
@@ -535,18 +537,31 @@ export default function ArtDetailPage() {
               alt="Composition preview"
               width={400}
               height={400}
-              className="w-full h-full object-contain rounded"
+              className="w-full h-full object-contain rounded-full"
             />
           </div>
         ) : (
-          <div className="aspect-square w-full mb-4 bg-dark-400 rounded flex items-center justify-center">
-            {composition.status === 4 ? (
+          <div className="aspect-square w-full mb-4 bg-dark-400 rounded-full flex items-center justify-center">
+            {composition.status === 1 || composition.status === 2 ? (
+              <div className="animate-pulse text-slate-500">Processing...</div>
+            ) : composition.status === 3 ? (
+              <div className="text-orange-400 text-center p-4">
+                <p className="font-medium mb-2">Image Generation Failed</p>
+                <p className="text-sm">
+                  The preview image couldn&apos;t be generated.
+                </p>
+              </div>
+            ) : composition.status === 4 ? (
               <div className="text-red-400 text-center p-4">
                 <p className="font-medium mb-2">Generation Failed</p>
-                <p className="text-sm">{composition.errorMessage}</p>
+                <p className="text-sm">
+                  {composition.errorMessage || "Unknown error occurred"}
+                </p>
               </div>
             ) : (
-              <div className="animate-pulse text-slate-500">Processing...</div>
+              <div className="text-slate-400 text-center p-4">
+                <p className="font-medium">No Preview Available</p>
+              </div>
             )}
           </div>
         )}
@@ -567,7 +582,9 @@ export default function ArtDetailPage() {
               {composition.gcodeUrl && (
                 <a
                   href={composition.gcodeUrl}
-                  download
+                  download={`thread-art-${composition.name
+                    .split("/")
+                    .pop()}.gcode`}
                   className="flex-1 px-3 py-2 bg-primary-500 text-white text-center rounded hover:bg-primary-600 transition-colors text-sm"
                 >
                   Download GCode
@@ -576,7 +593,9 @@ export default function ArtDetailPage() {
               {composition.pathlistUrl && (
                 <a
                   href={composition.pathlistUrl}
-                  download
+                  download={`thread-art-${composition.name
+                    .split("/")
+                    .pop()}.txt`}
                   className="flex-1 px-3 py-2 bg-primary-500 text-white text-center rounded hover:bg-primary-600 transition-colors text-sm"
                 >
                   Download Paths
@@ -585,6 +604,79 @@ export default function ArtDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Settings Accordion */}
+        <div className="mt-4 border-t border-dark-400 pt-4">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full flex justify-between items-center text-slate-300 hover:text-slate-200"
+          >
+            <span className="text-sm font-medium">Settings</span>
+            <svg
+              className={`w-5 h-5 transform transition-transform ${
+                isExpanded ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          {isExpanded && (
+            <div className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Nails Quantity:</span>
+                <span className="text-slate-300">
+                  {composition.nailsQuantity}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Image Size:</span>
+                <span className="text-slate-300">{composition.imgSize}px</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Max Paths:</span>
+                <span className="text-slate-300">{composition.maxPaths}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Starting Nail:</span>
+                <span className="text-slate-300">
+                  {composition.startingNail}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Minimum Difference:</span>
+                <span className="text-slate-300">
+                  {composition.minimumDifference}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Brightness Factor:</span>
+                <span className="text-slate-300">
+                  {composition.brightnessFactor}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Image Contrast:</span>
+                <span className="text-slate-300">
+                  {composition.imageContrast}%
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Physical Radius:</span>
+                <span className="text-slate-300">
+                  {composition.physicalRadius}mm
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -592,7 +684,7 @@ export default function ArtDetailPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="flex justify-center items-center min-h-[300px]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
           </div>
@@ -604,7 +696,7 @@ export default function ArtDetailPage() {
   if (error || !art) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="bg-dark-200 rounded-lg p-6 shadow-lg">
             <h2 className="text-xl font-semibold mb-4 text-slate-100">Error</h2>
             <p className="text-slate-300 mb-4">{error || "Art not found"}</p>
@@ -621,14 +713,227 @@ export default function ArtDetailPage() {
   }
 
   const statusInfo = getStatusInfo(art.status);
-  const needsImage = art.status === 1; // ART_STATUS_PENDING_IMAGE
+  const needsImage = art.status === 1;
   const created = art.createTime
     ? new Date(Number(art.createTime.seconds) * 1000)
     : new Date();
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-100">{art.title}</h1>
+            <p className="text-slate-400 text-sm mt-1">
+              Created on {created.toLocaleDateString()} at{" "}
+              {created.toLocaleTimeString()}
+            </p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span
+              className={`${statusInfo.color} px-3 py-1 rounded-full text-sm border border-current`}
+            >
+              {statusInfo.text}
+            </span>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Delete Art
+            </button>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left column - Art image */}
+          <div>
+            {needsImage ? (
+              <div className="bg-dark-200 rounded-lg p-6">
+                <ErrorMessage message={uploadError} />
+                <SuccessMessage
+                  message={
+                    uploadSuccess ? "Image uploaded successfully!" : null
+                  }
+                />
+
+                {showCropper && cropperImage ? (
+                  <div>
+                    <div className="rounded-lg overflow-hidden bg-dark-300 p-4 mb-4">
+                      <Cropper
+                        ref={cropperRef}
+                        src={cropperImage}
+                        className="h-[500px] rounded"
+                        stencilComponent={CircleStencil}
+                        stencilProps={{ aspectRatio: 1 }}
+                      />
+                    </div>
+                    <div className="flex justify-between">
+                      <button
+                        onClick={handleCancelCrop}
+                        className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
+                        disabled={isUploading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleCropSubmit}
+                        className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors flex items-center"
+                        disabled={isUploading}
+                      >
+                        {isUploading ? (
+                          <>
+                            <svg
+                              className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Uploading...
+                          </>
+                        ) : (
+                          "Upload Image"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer ${
+                      isUploading
+                        ? "bg-dark-300 border-gray-600"
+                        : "border-primary-400 hover:border-primary-300"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onClick={() =>
+                      document.getElementById("file-upload")?.click()
+                    }
+                  >
+                    <input
+                      type="file"
+                      id="file-upload"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      disabled={isUploading}
+                    />
+                    <div className="flex flex-col items-center justify-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-12 w-12 text-primary-400 mb-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      <p className="text-slate-300 mb-2">
+                        Drag and drop an image here, or click to select
+                      </p>
+                      <p className="text-slate-400 text-sm">
+                        JPEG, PNG (max 10MB)
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : art.imageUrl ? (
+              <div className="bg-dark-200 rounded-lg p-6">
+                <div className="rounded-lg overflow-hidden bg-dark-300 aspect-square">
+                  <Image
+                    src={art.imageUrl}
+                    alt={art.title}
+                    className="w-full h-full object-contain"
+                    priority={true}
+                    width={1000}
+                    height={1000}
+                    onError={(e) => {
+                      console.error("Image failed to load:", art.imageUrl);
+                      e.currentTarget.src =
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23444'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' fill='%23fff'%3EImage Error%3C/text%3E%3C/svg%3E";
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-dark-200 rounded-lg p-6">
+                <div className="rounded-lg bg-dark-300 aspect-square flex items-center justify-center">
+                  <p className="text-slate-300">No image available</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right column - Compositions */}
+          <div>
+            {art.imageUrl && (
+              <div className="bg-dark-200 rounded-lg p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-slate-100">
+                    Compositions
+                  </h2>
+                  {showCompositionForm && (
+                    <button
+                      onClick={() => setShowCompositionModal(true)}
+                      className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors"
+                    >
+                      New Composition
+                    </button>
+                  )}
+                </div>
+
+                {compositions.length > 0 ? (
+                  <div className="space-y-4 max-h-[800px] overflow-y-auto pr-2">
+                    {[...compositions]
+                      .sort((a, b) => {
+                        const aTime = Number(a.createTime?.seconds) || 0;
+                        const bTime = Number(b.createTime?.seconds) || 0;
+                        return bTime - aTime;
+                      })
+                      .map((composition) => (
+                        <CompositionCard
+                          key={composition.name}
+                          composition={composition}
+                        />
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-center py-8">
+                    No compositions yet. Create your first one!
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Delete confirmation modal */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -691,250 +996,68 @@ export default function ArtDetailPage() {
           </div>
         )}
 
-        <div className="bg-dark-200 rounded-lg p-6 shadow-lg mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-slate-100">
-              {art.title}
-            </h2>
-            <span
-              className={`${statusInfo.color} px-3 py-1 rounded-full text-sm border border-current`}
-            >
-              {statusInfo.text}
-            </span>
-          </div>
-
-          <div className="mb-6">
-            <p className="text-slate-400 text-sm">
-              Created on {created.toLocaleDateString()} at{" "}
-              {created.toLocaleTimeString()}
-            </p>
-          </div>
-
-          {needsImage ? (
-            <div className="mb-6">
-              <ErrorMessage message={uploadError} />
-              <SuccessMessage
-                message={uploadSuccess ? "Image uploaded successfully!" : null}
-              />
-
-              {showCropper && cropperImage ? (
-                <div>
-                  <div className="rounded-lg overflow-hidden bg-dark-300 p-4 mb-4">
-                    <Cropper
-                      ref={cropperRef}
-                      src={cropperImage}
-                      className="h-[500px] rounded"
-                      stencilComponent={CircleStencil}
-                      stencilProps={{ aspectRatio: 1 }}
-                    />
-                  </div>
-                  <div className="flex justify-between">
-                    <button
-                      onClick={handleCancelCrop}
-                      className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
-                      disabled={isUploading}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleCropSubmit}
-                      className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors flex items-center"
-                      disabled={isUploading}
-                    >
-                      {isUploading ? (
-                        <>
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Uploading...
-                        </>
-                      ) : (
-                        "Upload Image"
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className={`border-2 border-dashed rounded-lg p-8 mb-4 text-center cursor-pointer ${
-                    isUploading
-                      ? "bg-dark-300 border-gray-600"
-                      : "border-primary-400 hover:border-primary-300"
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onClick={() =>
-                    document.getElementById("file-upload")?.click()
-                  }
+        {/* New composition modal */}
+        {showCompositionModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-dark-200 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-slate-100">
+                  Create New Composition
+                </h3>
+                <button
+                  onClick={() => setShowCompositionModal(false)}
+                  className="text-slate-400 hover:text-slate-300"
                 >
-                  <input
-                    type="file"
-                    id="file-upload"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    disabled={isUploading}
-                  />
-                  <div className="flex flex-col items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-12 w-12 text-primary-400 mb-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                      />
-                    </svg>
-                    <p className="text-slate-300 mb-2">
-                      Drag and drop an image here, or click to select
-                    </p>
-                    <p className="text-slate-400 text-sm">
-                      JPEG, PNG (max 10MB)
-                    </p>
-
-                    {isUploading && (
-                      <div className="mt-4">
-                        <div className="w-full bg-dark-400 rounded-full h-2 mt-2">
-                          <div
-                            className="bg-primary-500 h-2 rounded-full animate-pulse"
-                            style={{ width: "100%" }}
-                          ></div>
-                        </div>
-                        <p className="text-slate-400 text-sm mt-2">
-                          Uploading...
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : art.imageUrl ? (
-            <div className="mb-6">
-              <div className="rounded-lg overflow-hidden bg-dark-300 aspect-square w-full max-w-xl mx-auto">
-                <Image
-                  src={art.imageUrl}
-                  alt={art.title}
-                  className="w-full h-full object-contain"
-                  priority={true}
-                  width={1000}
-                  height={1000}
-                  onError={(e) => {
-                    console.error("Image failed to load:", art.imageUrl);
-                    e.currentTarget.src =
-                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23444'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' fill='%23fff'%3EImage Error%3C/text%3E%3C/svg%3E";
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="mb-6 p-4 bg-dark-300 rounded-lg text-center">
-              <p className="text-slate-300">No image available</p>
-            </div>
-          )}
-
-          {art.imageUrl && (
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-slate-100 mb-4">
-                Compositions
-              </h3>
-
-              {compositions.length > 0 ? (
-                <div className="space-y-4">
-                  {compositions.map((composition) => (
-                    <CompositionCard
-                      key={composition.name}
-                      composition={composition}
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
                     />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate-400 text-center py-8">
-                  No compositions yet. Create your first one below!
-                </p>
-              )}
+                  </svg>
+                </button>
+              </div>
 
-              {showCompositionForm && (
-                <>
-                  <h3 className="text-xl font-semibold text-slate-100 my-6">
-                    Create New Composition
-                  </h3>
-                  <CompositionForm
-                    onSubmit={async (formData) => {
-                      try {
-                        await createComposition({
-                          parent: art.name,
-                          composition: {
-                            nailsQuantity: formData.nailsQuantity,
-                            imgSize: formData.imgSize,
-                            maxPaths: formData.maxPaths,
-                            startingNail: formData.startingNail,
-                            minimumDifference: formData.minimumDifference,
-                            brightnessFactor: formData.brightnessFactor,
-                            imageContrast: formData.imageContrast,
-                            physicalRadius: formData.physicalRadius,
-                          },
-                        });
+              <CompositionForm
+                onSubmit={async (formData) => {
+                  try {
+                    await createComposition({
+                      parent: art.name,
+                      composition: {
+                        nailsQuantity: formData.nailsQuantity,
+                        imgSize: formData.imgSize,
+                        maxPaths: formData.maxPaths,
+                        startingNail: formData.startingNail,
+                        minimumDifference: formData.minimumDifference,
+                        brightnessFactor: formData.brightnessFactor,
+                        imageContrast: formData.imageContrast,
+                        physicalRadius: formData.physicalRadius,
+                      },
+                    });
 
-                        // Fetch latest compositions immediately
-                        const compositionsResponse = await listCompositions({
-                          parent: art.name,
-                        });
-                        setCompositions(
-                          compositionsResponse.compositions || []
-                        );
-                        setShowCompositionForm(false);
-                      } catch (error) {
-                        console.error("Failed to create composition:", error);
-                        setError(
-                          "Failed to create composition. Please try again."
-                        );
-                      }
-                    }}
-                  />
-                </>
-              )}
+                    // Fetch latest compositions immediately
+                    const compositionsResponse = await listCompositions({
+                      parent: art.name,
+                      pageSize: 100,
+                    });
+                    setCompositions(compositionsResponse.compositions || []);
+                    setShowCompositionForm(false);
+                    setShowCompositionModal(false);
+                  } catch (error) {
+                    console.error("Failed to create composition:", error);
+                    setError("Failed to create composition. Please try again.");
+                  }
+                }}
+              />
             </div>
-          )}
-
-          <div className="flex justify-between mt-6">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="px-4 py-2 bg-dark-300 text-slate-300 rounded hover:bg-dark-400 transition-colors"
-            >
-              Back to Dashboard
-            </button>
-
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-            >
-              Delete Art
-            </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

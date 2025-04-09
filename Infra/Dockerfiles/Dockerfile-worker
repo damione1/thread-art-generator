@@ -1,5 +1,5 @@
 # Dockerfile-worker
 FROM alpine
 WORKDIR /app
-ADD build/worker build/worker
-ENTRYPOINT build/worker
+COPY build/worker /app/build/worker
+ENTRYPOINT ["/app/build/worker"]

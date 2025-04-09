@@ -50,7 +50,7 @@ docker_build(
     './build/worker',
   ],
   live_update=[
-    sync('./build/worker', '/app/worker'),
+    sync('./build/worker', '/app/build/worker'),
     restart_container()
   ]
 )

@@ -287,6 +287,12 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		{Type: pbx.RessourceTypeArts, ID: art.ImageID.String},
 	})
 
+	log.Info().
+		Str("imageKey", imageKey).
+		Str("artID", art.ID).
+		Str("imageID", art.ImageID.String).
+		Msg("Attempting to download source image")
+
 	reader, err := bucket.Download(ctx, imageKey)
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to download source image: %v", err))
@@ -294,10 +300,25 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 	}
 	defer reader.Close()
 
-	_, err = io.Copy(sourceFile, reader)
+	written, err := io.Copy(sourceFile, reader)
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to write source image: %v", err))
 		return fmt.Errorf("failed to write source image: %w", err)
+	}
+
+	log.Info().
+		Int64("bytesWritten", written).
+		Str("path", sourceImagePath).
+		Msg("Source image downloaded and saved")
+
+	// Verify the file exists and has content
+	if fi, err := os.Stat(sourceImagePath); err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to verify source image: %v", err))
+		return fmt.Errorf("failed to verify source image: %w", err)
+	} else {
+		log.Info().
+			Int64("size", fi.Size()).
+			Msg("Source image file verified")
 	}
 
 	// Initialize thread generator with composition settings
@@ -323,12 +344,19 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		return fmt.Errorf("failed to generate thread art: %w", err)
 	}
 
+	log.Info().
+		Int("threadLength", stats.ThreadLength).
+		Int("totalLines", stats.TotalLines).
+		Msgf("Thread art generation completed")
+
 	// Generate preview image
 	previewImage, err := generator.GeneratePathsImage()
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to generate preview image: %v", err))
 		return fmt.Errorf("failed to generate preview image: %w", err)
 	}
+
+	log.Info().Msg("Preview image generated")
 
 	// Save preview image
 	previewPath := filepath.Join(tempDir, "preview.png")
@@ -345,6 +373,8 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		return fmt.Errorf("failed to encode preview image: %w", err)
 	}
 
+	log.Info().Msg("Preview image saved to temp file")
+
 	// Generate GCode
 	gcode := generator.GetGcode()
 	gcodePath := filepath.Join(tempDir, "gcode.txt")
@@ -353,6 +383,8 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to write gcode file: %v", err))
 		return fmt.Errorf("failed to write gcode file: %w", err)
 	}
+
+	log.Info().Msg("GCode file generated")
 
 	// Get paths list
 	paths := generator.GetPathsList()
@@ -368,6 +400,8 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to write paths file: %v", err))
 		return fmt.Errorf("failed to write paths file: %w", err)
 	}
+
+	log.Info().Msg("Paths list file generated")
 
 	// Upload files to storage
 	previewKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/preview.png", art.AuthorID, art.ID, composition.ID)
@@ -388,6 +422,8 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		return fmt.Errorf("failed to upload preview image: %w", err)
 	}
 
+	log.Info().Str("key", previewKey).Msg("Preview image uploaded to bucket")
+
 	// Upload GCode file
 	gcodeFile, err := os.Open(gcodePath)
 	if err != nil {
@@ -402,6 +438,8 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		return fmt.Errorf("failed to upload gcode file: %w", err)
 	}
 
+	log.Info().Str("key", gcodeKey).Msg("GCode file uploaded to bucket")
+
 	// Upload paths file
 	pathsFile, err := os.Open(pathsPath)
 	if err != nil {
@@ -415,6 +453,8 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload paths file: %v", err))
 		return fmt.Errorf("failed to upload paths file: %w", err)
 	}
+
+	log.Info().Str("key", pathsKey).Msg("Paths file uploaded to bucket")
 
 	// Update composition with results
 	composition.Status = models.CompositionStatusEnumCOMPLETE
@@ -438,7 +478,9 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 
 	log.Info().
 		Str("compositionID", composition.ID).
-		Msg("Composition processing completed")
+		Int("threadLength", stats.ThreadLength).
+		Int("totalLines", stats.TotalLines).
+		Msg("Composition processing completed successfully")
 
 	return nil
 }
