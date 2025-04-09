@@ -103,6 +103,16 @@ resources = {
     'trigger_mode': TRIGGER_MODE_MANUAL,
   },
 
+  # Queue services
+  'rabbitmq': {
+    'labels': ['queue'],
+    'auto_init': True,
+    'trigger_mode': TRIGGER_MODE_AUTO,
+    'links': [
+      link('http://localhost:15672', 'RabbitMQ Management (guest/guest)'),
+    ]
+  },
+
   # Proto handling
   'proto-build': {
     'labels': ['proto'],
@@ -114,7 +124,7 @@ resources = {
   # Application services
   'api': {
     'labels': ['application'],
-    'resource_deps': ['go-compile', 'db', 'migrations'],
+    'resource_deps': ['go-compile', 'db', 'migrations', 'rabbitmq'],
     'trigger_mode': TRIGGER_MODE_AUTO,
   },
 

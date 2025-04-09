@@ -31,6 +31,14 @@ type StorageConfig struct {
 	GCPProjectID     string `mapstructure:"GCP_PROJECT_ID"`
 }
 
+// QueueConfig stores queue-specific configuration
+type QueueConfig struct {
+	URL                   string `mapstructure:"RABBITMQ_URL"`
+	User                  string `mapstructure:"RABBITMQ_USER"`
+	Password              string `mapstructure:"RABBITMQ_PASSWORD"`
+	CompositionProcessing string `mapstructure:"QUEUE_COMPOSITION_PROCESSING"`
+}
+
 // Config stores all configuration of the application.
 // The values are read by viper from a config file or environment variable.
 type Config struct {
@@ -50,6 +58,7 @@ type Config struct {
 	FrontendUrl         string        `mapstructure:"FRONTEND_URL"`
 	Auth0               Auth0Config   `mapstructure:",squash"`
 	Storage             StorageConfig `mapstructure:",squash"`
+	Queue               QueueConfig   `mapstructure:",squash"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -88,6 +97,12 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("STORAGE_ACCESS_KEY")
 	viper.BindEnv("STORAGE_SECRET_KEY")
 	viper.BindEnv("GCP_PROJECT_ID")
+
+	// Queue configuration
+	viper.BindEnv("RABBITMQ_URL")
+	viper.BindEnv("RABBITMQ_USER")
+	viper.BindEnv("RABBITMQ_PASSWORD")
+	viper.BindEnv("QUEUE_COMPOSITION_PROCESSING")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)

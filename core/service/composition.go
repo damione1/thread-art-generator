@@ -10,6 +10,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
+	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/friendsofgo/errors"
 	"github.com/google/uuid"
@@ -329,12 +330,37 @@ func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompo
 
 // Helper function to enqueue a composition for processing
 func (server *Server) enqueueCompositionForProcessing(ctx context.Context, composition *models.Composition, art *models.Art) error {
-	// TODO: Implement queue message sending
-	// For now, we'll just log that this would happen
+	// Check if queue client is initialized
+	if server.queueClient == nil {
+		return fmt.Errorf("queue client not initialized")
+	}
+
+	// Create a queue message
+	message := queue.NewCompositionProcessingMessage(art.ID, composition.ID)
+
+	// Convert to JSON
+	jsonData, err := message.ToJSON()
+	if err != nil {
+		return fmt.Errorf("failed to serialize composition processing message: %w", err)
+	}
+
+	// Get queue name from config
+	queueName := server.config.Queue.CompositionProcessing
+	if queueName == "" {
+		queueName = "composition-processing" // Default queue name
+	}
+
+	// Publish to queue
+	err = server.queueClient.PublishMessage(ctx, queueName, jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to publish composition to queue: %w", err)
+	}
+
 	log.Info().
 		Str("compositionID", composition.ID).
 		Str("artID", art.ID).
-		Msg("Would enqueue composition for processing")
+		Str("queue", queueName).
+		Msg("Composition enqueued for processing")
 
 	return nil
 }

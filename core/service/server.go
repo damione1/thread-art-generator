@@ -6,6 +6,7 @@ import (
 
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/token"
 	"github.com/Damione1/thread-art-generator/core/util"
@@ -17,6 +18,7 @@ type Server struct {
 	tokenMaker  token.Maker
 	bucket      *storage.BlobStorage
 	mailService mailService.MailService
+	queueClient queue.QueueClient
 }
 
 func NewServer(config util.Config) (*Server, error) {
@@ -94,6 +96,14 @@ func NewServer(config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create blob storage: %v", err)
 	}
 
+	// Initialize queue client if URL is provided
+	if config.Queue.URL != "" {
+		server.queueClient, err = queue.NewRabbitMQClient(config.Queue.URL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create queue client: %v", err)
+		}
+	}
+
 	return server, nil
 }
 
@@ -102,8 +112,25 @@ func (s *Server) GetTokenMaker() token.Maker {
 }
 
 func (s *Server) Close() error {
+	var err error
+
+	// Close bucket connection
 	if s.bucket != nil && s.bucket.Bucket != nil {
-		return s.bucket.Close()
+		if bucketErr := s.bucket.Close(); bucketErr != nil {
+			err = bucketErr
+		}
 	}
-	return nil
+
+	// Close queue connection
+	if s.queueClient != nil {
+		if queueErr := s.queueClient.Close(); queueErr != nil {
+			if err == nil {
+				err = queueErr
+			} else {
+				err = fmt.Errorf("%v; %v", err, queueErr)
+			}
+		}
+	}
+
+	return err
 }
