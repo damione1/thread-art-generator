@@ -588,17 +588,6 @@ export default function ArtDetailPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 px-3 py-2 bg-primary-500 text-white text-center rounded hover:bg-primary-600 transition-colors text-sm"
-                  onClick={() => {
-                    // Try to force download by programmatically creating a download link
-                    const link = document.createElement("a");
-                    link.href = composition.gcodeUrl || "";
-                    link.download = `thread-art-${composition.name
-                      .split("/")
-                      .pop()}.gcode`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
                 >
                   Download GCode
                 </a>
@@ -612,17 +601,6 @@ export default function ArtDetailPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 px-3 py-2 bg-primary-500 text-white text-center rounded hover:bg-primary-600 transition-colors text-sm"
-                  onClick={() => {
-                    // Try to force download by programmatically creating a download link
-                    const link = document.createElement("a");
-                    link.href = composition.pathlistUrl || "";
-                    link.download = `thread-art-${composition.name
-                      .split("/")
-                      .pop()}.txt`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
                 >
                   Download Paths
                 </a>
