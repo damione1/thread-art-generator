@@ -40,10 +40,38 @@ services:
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
       # Queue configuration
       RABBITMQ_URL: ${RABBITMQ_URL}
+      QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
     depends_on:
       - db
       - migrations
       - rabbitmq
+
+  # Worker service for processing compositions
+  worker:
+    image: worker-image
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ENVIRONMENT: ${ENVIRONMENT}
+      # Storage configuration
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER}
+      STORAGE_BUCKET: ${STORAGE_BUCKET}
+      STORAGE_REGION: ${STORAGE_REGION}
+      STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
+      STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
+      STORAGE_USE_SSL: ${STORAGE_USE_SSL}
+      STORAGE_FORCE_EXTERNAL_SSL: ${STORAGE_FORCE_EXTERNAL_SSL}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      # Queue configuration
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
+    depends_on:
+      - db
+      - rabbitmq
+      - api
+    restart: unless-stopped
 
   # RabbitMQ service for queue
   rabbitmq:

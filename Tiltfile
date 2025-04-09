@@ -7,7 +7,7 @@ load('ext://restart_process', 'docker_build_with_restart')
 # Compile Go binaries
 local_resource(
   'go-compile',
-  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && go build -o build/cli cmd/cli/main.go',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/worker cmd/worker/main.go && go build -o build/cli cmd/cli/main.go',
   labels=["build"],
   deps=['cmd/', 'core/', 'threadGenerator/', 'web/**/*.go'],
 )
@@ -38,6 +38,20 @@ docker_build(
   live_update=[
     sync('./build/migrations', '/app/build/migrations'),
     sync('./core/db/migrations', '/migrations'),
+  ]
+)
+
+# Worker image build
+docker_build(
+  'worker-image',
+  '.',
+  dockerfile='Infra/Dockerfiles/Dockerfile-worker',
+  only=[
+    './build/worker',
+  ],
+  live_update=[
+    sync('./build/worker', '/app/worker'),
+    restart_container()
   ]
 )
 
@@ -111,6 +125,14 @@ resources = {
     'links': [
       link('http://localhost:15672', 'RabbitMQ Management (guest/guest)'),
     ]
+  },
+
+  # Worker service
+  'worker': {
+    'labels': ['worker'],
+    'resource_deps': ['go-compile', 'db', 'rabbitmq'],
+    'auto_init': True,
+    'trigger_mode': TRIGGER_MODE_AUTO,
   },
 
   # Proto handling
