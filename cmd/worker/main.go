@@ -3,9 +3,14 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"image/png"
+	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -13,13 +18,16 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/db/models"
+	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/util"
+	"github.com/Damione1/thread-art-generator/threadGenerator"
 )
 
 func main() {
@@ -244,7 +252,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 	}
 
 	// Get the art (needed for accessing the image)
-	_, err = models.Arts(
+	art, err := models.Arts(
 		models.ArtWhere.ID.EQ(message.ArtID),
 	).One(ctx, db)
 	if err != nil {
@@ -258,23 +266,174 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		return fmt.Errorf("failed to update composition status: %w", err)
 	}
 
-	// TODO: Actual thread generation processing here
-
-	// Simulate processing time for now
-	time.Sleep(5 * time.Second)
-
-	// For now, just update the status to COMPLETE
-	// In the real implementation, we will:
-	// 1. Generate the thread art using the composition settings
-	// 2. Save the preview image to storage
-	// 3. Save the GCode and path list files to storage
-	// 4. Update the composition record with file URLs
-
-	// Update status to complete
-	composition.Status = models.CompositionStatusEnumCOMPLETE
-	_, err = composition.Update(ctx, db, boil.Whitelist(models.CompositionColumns.Status))
+	// Create temporary directory for processing
+	tempDir, err := os.MkdirTemp("", "composition-*")
 	if err != nil {
-		return fmt.Errorf("failed to update composition status: %w", err)
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Download source image
+	sourceImagePath := filepath.Join(tempDir, "source.jpg")
+	sourceFile, err := os.Create(sourceImagePath)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to create source file: %v", err))
+		return fmt.Errorf("failed to create source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	imageKey := pbx.GetResourceName([]pbx.Resource{
+		{Type: pbx.RessourceTypeUsers, ID: art.AuthorID},
+		{Type: pbx.RessourceTypeArts, ID: art.ImageID.String},
+	})
+
+	reader, err := bucket.Download(ctx, imageKey)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to download source image: %v", err))
+		return fmt.Errorf("failed to download source image: %w", err)
+	}
+	defer reader.Close()
+
+	_, err = io.Copy(sourceFile, reader)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to write source image: %v", err))
+		return fmt.Errorf("failed to write source image: %w", err)
+	}
+
+	// Initialize thread generator with composition settings
+	config := threadGenerator.DefaultConfig()
+	config.NailsQuantity = composition.NailsQuantity
+	config.ImgSize = composition.ImgSize
+	config.MaxPaths = composition.MaxPaths
+	config.StartingNail = composition.StartingNail
+	config.MinimumDifference = composition.MinimumDifference
+	config.BrightnessFactor = composition.BrightnessFactor
+	config.ImageContrast = composition.ImageContrast
+	config.PhysicalRadius = composition.PhysicalRadius
+
+	generator := threadGenerator.NewThreadGenerator(config)
+	generator.SetImage(sourceImagePath)
+
+	// Generate thread art
+	stats, err := generator.Generate(threadGenerator.Args{
+		ImageName: sourceImagePath,
+	})
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to generate thread art: %v", err))
+		return fmt.Errorf("failed to generate thread art: %w", err)
+	}
+
+	// Generate preview image
+	previewImage, err := generator.GeneratePathsImage()
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to generate preview image: %v", err))
+		return fmt.Errorf("failed to generate preview image: %w", err)
+	}
+
+	// Save preview image
+	previewPath := filepath.Join(tempDir, "preview.png")
+	previewFile, err := os.Create(previewPath)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to create preview file: %v", err))
+		return fmt.Errorf("failed to create preview file: %w", err)
+	}
+	defer previewFile.Close()
+
+	err = png.Encode(previewFile, previewImage)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to encode preview image: %v", err))
+		return fmt.Errorf("failed to encode preview image: %w", err)
+	}
+
+	// Generate GCode
+	gcode := generator.GetGcode()
+	gcodePath := filepath.Join(tempDir, "gcode.txt")
+	err = os.WriteFile(gcodePath, []byte(strings.Join(gcode, "\n")), 0644)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to write gcode file: %v", err))
+		return fmt.Errorf("failed to write gcode file: %w", err)
+	}
+
+	// Get paths list
+	paths := generator.GetPathsList()
+	pathsJSON, err := json.Marshal(paths)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to marshal paths list: %v", err))
+		return fmt.Errorf("failed to marshal paths list: %w", err)
+	}
+
+	pathsPath := filepath.Join(tempDir, "paths.json")
+	err = os.WriteFile(pathsPath, pathsJSON, 0644)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to write paths file: %v", err))
+		return fmt.Errorf("failed to write paths file: %w", err)
+	}
+
+	// Upload files to storage
+	previewKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/preview.png", art.AuthorID, art.ID, composition.ID)
+	gcodeKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/gcode.txt", art.AuthorID, art.ID, composition.ID)
+	pathsKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/paths.json", art.AuthorID, art.ID, composition.ID)
+
+	// Upload preview image
+	previewFile, err = os.Open(previewPath)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to open preview file: %v", err))
+		return fmt.Errorf("failed to open preview file: %w", err)
+	}
+	defer previewFile.Close()
+
+	err = bucket.Upload(ctx, previewKey, previewFile, "image/png")
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload preview image: %v", err))
+		return fmt.Errorf("failed to upload preview image: %w", err)
+	}
+
+	// Upload GCode file
+	gcodeFile, err := os.Open(gcodePath)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to open gcode file: %v", err))
+		return fmt.Errorf("failed to open gcode file: %w", err)
+	}
+	defer gcodeFile.Close()
+
+	err = bucket.Upload(ctx, gcodeKey, gcodeFile, "text/plain")
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload gcode file: %v", err))
+		return fmt.Errorf("failed to upload gcode file: %w", err)
+	}
+
+	// Upload paths file
+	pathsFile, err := os.Open(pathsPath)
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to open paths file: %v", err))
+		return fmt.Errorf("failed to open paths file: %w", err)
+	}
+	defer pathsFile.Close()
+
+	err = bucket.Upload(ctx, pathsKey, pathsFile, "application/json")
+	if err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload paths file: %v", err))
+		return fmt.Errorf("failed to upload paths file: %w", err)
+	}
+
+	// Update composition with results
+	composition.Status = models.CompositionStatusEnumCOMPLETE
+	composition.PreviewURL = null.StringFrom(previewKey)
+	composition.GcodeURL = null.StringFrom(gcodeKey)
+	composition.PathlistURL = null.StringFrom(pathsKey)
+	composition.ThreadLength = null.IntFrom(stats.ThreadLength)
+	composition.TotalLines = null.IntFrom(stats.TotalLines)
+
+	_, err = composition.Update(ctx, db, boil.Whitelist(
+		models.CompositionColumns.Status,
+		models.CompositionColumns.PreviewURL,
+		models.CompositionColumns.GcodeURL,
+		models.CompositionColumns.PathlistURL,
+		models.CompositionColumns.ThreadLength,
+		models.CompositionColumns.TotalLines,
+	))
+	if err != nil {
+		return fmt.Errorf("failed to update composition with results: %w", err)
 	}
 
 	log.Info().
@@ -282,4 +441,16 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		Msg("Composition processing completed")
 
 	return nil
+}
+
+func setCompositionError(ctx context.Context, db *sql.DB, composition *models.Composition, errorMessage string) {
+	composition.Status = models.CompositionStatusEnumFAILED
+	composition.ErrorMessage = null.StringFrom(errorMessage)
+	_, err := composition.Update(ctx, db, boil.Whitelist(
+		models.CompositionColumns.Status,
+		models.CompositionColumns.ErrorMessage,
+	))
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to update composition error status")
+	}
 }

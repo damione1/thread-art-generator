@@ -52,6 +52,21 @@ type (
 		PhysicalRadius    float64
 	}
 
+	// Config holds all possible configuration options for ThreadGenerator
+	Config struct {
+		NailsQuantity     int     // Number of nails around the circle
+		ImgSize           int     // Size of the image in pixels
+		MaxPaths          int     // Maximum number of paths to generate
+		StartingNail      int     // Starting nail index
+		MinimumDifference int     // Minimum difference between nails
+		BrightnessFactor  int     // Brightness factor for line drawing
+		ImageContrast     float64 // Image contrast adjustment
+		PhysicalRadius    float64 // Physical radius in mm
+		RotationAxis      string  // Rotation axis name
+		NeedleAxis        string  // Needle axis name
+		SpindleAxis       string  // Spindle axis name
+	}
+
 	OutputStats struct {
 		TotalLines   int
 		ThreadLength int
@@ -64,6 +79,46 @@ type (
 		NailIdx int
 	}
 )
+
+// DefaultConfig returns a Config with default values
+func DefaultConfig() Config {
+	return Config{
+		NailsQuantity:     300,
+		ImgSize:           800,
+		MaxPaths:          10000,
+		StartingNail:      0,
+		MinimumDifference: 10,
+		BrightnessFactor:  50,
+		ImageContrast:     40,
+		PhysicalRadius:    609.6, // 24 inches
+		RotationAxis:      "A",
+		NeedleAxis:        "X",
+		SpindleAxis:       "Y",
+	}
+}
+
+// NewThreadGenerator creates a new ThreadGenerator with the given configuration
+func NewThreadGenerator(config Config) *ThreadGenerator {
+	return &ThreadGenerator{
+		nailsQuantity:     config.NailsQuantity,
+		imgSize:           config.ImgSize,
+		maxPaths:          config.MaxPaths,
+		startingNail:      config.StartingNail,
+		minimumDifference: config.MinimumDifference,
+		brightnessFactor:  config.BrightnessFactor,
+		imageContrast:     config.ImageContrast,
+		physicalRadius:    config.PhysicalRadius,
+		rotationAxis:      config.RotationAxis,
+		needleAxis:        config.NeedleAxis,
+		spindleAxis:       config.SpindleAxis,
+		pixelSize:         config.PhysicalRadius / float64(config.ImgSize),
+	}
+}
+
+// SetImage sets the image to process
+func (tg *ThreadGenerator) SetImage(imagePath string) {
+	tg.imageName = imagePath
+}
 
 func (tg *ThreadGenerator) getDefaults() {
 	tg.nailsQuantity = 300
