@@ -153,25 +153,52 @@ func (a *Auth0Service) ValidateToken(ctx context.Context, tokenString string) (*
 		Picture: customClaims.Picture,
 	}
 
-	// Only fetch from userinfo endpoint if both email and name are completely missing
-	// This reduces unnecessary API calls to Auth0
-	if authClaims.Email == "" && authClaims.Name == "" {
-		userInfo, err := a.fetchUserInfo(ctx, tokenString)
-		if err != nil {
-			log.Warn().Err(err).Str("user_id", authClaims.UserID).Msg("Failed to fetch user info, continuing with limited claims")
-		} else {
-			// Update with data from userinfo endpoint
-			if authClaims.Email == "" {
-				authClaims.Email = userInfo.Email
-			}
-			if authClaims.Name == "" {
-				authClaims.Name = userInfo.Name
-			}
-			if authClaims.Picture == "" {
-				authClaims.Picture = userInfo.Picture
-			}
-		}
+	// Check if we have sufficient information from the token
+	if authClaims.Email != "" && authClaims.Name != "" {
+		return authClaims, nil
 	}
+
+	// Check if we have cached user info
+	if cachedInfo, ok := a.getCachedUserInfo(authClaims.UserID); ok {
+		// Update missing fields from cache
+		if authClaims.Email == "" {
+			authClaims.Email = cachedInfo.Email
+		}
+		if authClaims.Name == "" {
+			authClaims.Name = cachedInfo.Name
+		}
+		if authClaims.Picture == "" {
+			authClaims.Picture = cachedInfo.Picture
+		}
+		return authClaims, nil
+	}
+
+	// Only fetch from userinfo endpoint if both email and name are missing
+	// and we don't have cached data
+	userInfo, err := a.fetchUserInfo(ctx, tokenString)
+	if err != nil {
+		log.Warn().Err(err).Str("user_id", authClaims.UserID).Msg("Failed to fetch user info, continuing with limited claims")
+		return authClaims, nil
+	}
+
+	// Update with data from userinfo endpoint
+	if authClaims.Email == "" {
+		authClaims.Email = userInfo.Email
+	}
+	if authClaims.Name == "" {
+		authClaims.Name = userInfo.Name
+	}
+	if authClaims.Picture == "" {
+		authClaims.Picture = userInfo.Picture
+	}
+
+	// Cache the complete user info
+	a.setCachedUserInfo(authClaims.UserID, &UserInfo{
+		ID:      authClaims.UserID,
+		Email:   userInfo.Email,
+		Name:    userInfo.Name,
+		Picture: userInfo.Picture,
+	})
 
 	return authClaims, nil
 }
@@ -461,17 +488,19 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 		return cachedInfo, nil
 	}
 
-	// Add request-level cache to context if not present (for backward compatibility)
+	// Add request-level cache to context if not present
 	ctx = withUserInfoCache(ctx)
 	cache := getUserInfoCache(ctx)
 
 	// Check request-level cache
 	if cachedInfo, ok := cache.get(userID); ok {
 		log.Debug().Str("user_id", userID).Msg("Using cached user info from request cache")
+		// Also update service-level cache
+		a.setCachedUserInfo(userID, cachedInfo)
 		return cachedInfo, nil
 	}
 
-	// Extract the auth0 identifier - typically in format "provider|userid"
+	// Extract the auth0 identifier
 	parts := strings.Split(userID, "|")
 	provider := "auth0"
 	if len(parts) > 1 {
@@ -481,37 +510,19 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 	// Try to get the user info from Auth0 Management API
 	userInfo, err := a.fetchUserInfoFromManagement(ctx, userID)
 	if err != nil {
-		log.Warn().Err(err).Str("user_id", userID).Msg("Failed to fetch user from Management API, trying context token")
+		log.Warn().Err(err).Str("user_id", userID).Msg("Failed to fetch user from Management API")
 
-		// Try to extract token from context
+		// If we have a token in context, try userinfo endpoint
 		if token, ok := ctx.Value("token").(string); ok && token != "" {
-			// Try userinfo endpoint as fallback
 			log.Debug().Str("user_id", userID).Msg("Found token in context, trying userinfo endpoint")
 
-			uiInfo, uiErr := a.fetchUserInfo(ctx, token)
-			if uiErr != nil {
-				log.Warn().Err(uiErr).Str("user_id", userID).Msg("Failed to fetch user from userinfo endpoint")
-			} else {
-				// Parse name into first/last name components if possible
-				firstName, lastName := "", ""
-				if uiInfo.Name != "" {
-					nameParts := strings.SplitN(uiInfo.Name, " ", 2)
-					if len(nameParts) > 0 {
-						firstName = nameParts[0]
-						if len(nameParts) > 1 {
-							lastName = nameParts[1]
-						}
-					}
-				}
-
+			if uiInfo, uiErr := a.fetchUserInfo(ctx, token); uiErr == nil {
 				result := &UserInfo{
 					ID:        userID,
 					Email:     uiInfo.Email,
 					Name:      uiInfo.Name,
-					FirstName: firstName,
-					LastName:  lastName,
 					Picture:   uiInfo.Picture,
-					CreatedAt: time.Now().Format(time.RFC3339), // Userinfo doesn't provide timestamps
+					CreatedAt: time.Now().Format(time.RFC3339),
 					UpdatedAt: time.Now().Format(time.RFC3339),
 					Provider:  provider,
 				}
@@ -523,44 +534,25 @@ func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInf
 			}
 		}
 
-		// Fall back to minimal info if both methods fail
-		log.Warn().Str("user_id", userID).Msg("Using minimal profile as fallback")
+		// Fall back to minimal info
 		result := &UserInfo{
 			ID:        userID,
-			Email:     "",
-			Name:      "",
-			FirstName: "",
-			LastName:  "",
-			Picture:   "",
+			Provider:  provider,
 			CreatedAt: time.Now().Format(time.RFC3339),
 			UpdatedAt: time.Now().Format(time.RFC3339),
-			Provider:  provider,
 		}
 
-		// Cache the result in both caches
+		// Cache the minimal info
 		cache.set(userID, result)
 		a.setCachedUserInfo(userID, result)
 		return result, nil
 	}
 
-	// Parse name into first/last name components if possible
-	firstName, lastName := "", ""
-	if userInfo.Name != "" {
-		nameParts := strings.SplitN(userInfo.Name, " ", 2)
-		if len(nameParts) > 0 {
-			firstName = nameParts[0]
-			if len(nameParts) > 1 {
-				lastName = nameParts[1]
-			}
-		}
-	}
-
+	// Create full user info
 	result := &UserInfo{
 		ID:        userID,
 		Email:     userInfo.Email,
 		Name:      userInfo.Name,
-		FirstName: firstName,
-		LastName:  lastName,
 		Picture:   userInfo.Picture,
 		CreatedAt: userInfo.CreatedAt,
 		UpdatedAt: userInfo.UpdatedAt,
