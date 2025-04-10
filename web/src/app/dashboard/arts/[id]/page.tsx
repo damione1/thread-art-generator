@@ -336,6 +336,7 @@ export default function ArtDetailPage() {
           // If no more pending compositions, clear the interval
           if (!stillPending) {
             clearInterval(interval);
+            setShowCompositionForm(true);
           }
         } catch (error) {
           console.error("Error polling compositions:", error);

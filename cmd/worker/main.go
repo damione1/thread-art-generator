@@ -224,6 +224,8 @@ func startQueueProcessing(ctx context.Context, config util.Config, bucket *stora
 
 // processMessage processes a single message from the queue
 func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storage.BlobStorage) error {
+	processingStartTime := time.Now()
+
 	// Parse the message
 	var message queue.CompositionProcessingMessage
 	err := message.FromJSON(body)
@@ -332,10 +334,23 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 	config.ImageContrast = composition.ImageContrast
 	config.PhysicalRadius = composition.PhysicalRadius
 
+	// Log the configuration settings being used
+	log.Info().
+		Int("nailsQuantity", composition.NailsQuantity).
+		Int("imgSize", composition.ImgSize).
+		Int("maxPaths", composition.MaxPaths).
+		Int("startingNail", composition.StartingNail).
+		Int("minimumDifference", composition.MinimumDifference).
+		Int("brightnessFactor", composition.BrightnessFactor).
+		Float64("imageContrast", composition.ImageContrast).
+		Float64("physicalRadius", composition.PhysicalRadius).
+		Msg("Applying thread generator settings")
+
 	generator := threadGenerator.NewThreadGenerator(config)
 	generator.SetImage(sourceImagePath)
 
-	// Generate thread art
+	// Generate thread art - now we can just pass the image name
+	startTime := time.Now()
 	stats, err := generator.Generate(threadGenerator.Args{
 		ImageName: sourceImagePath,
 	})
@@ -344,18 +359,21 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		return fmt.Errorf("failed to generate thread art: %w", err)
 	}
 
+	generationTime := time.Since(startTime)
 	log.Info().
 		Int("threadLength", stats.ThreadLength).
 		Int("totalLines", stats.TotalLines).
-		Msgf("Thread art generation completed")
+		Msg("Thread art generation completed")
 
 	// Generate preview image
+	previewStartTime := time.Now()
 	previewImage, err := generator.GeneratePathsImage()
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to generate preview image: %v", err))
 		return fmt.Errorf("failed to generate preview image: %w", err)
 	}
 
+	previewGenerationTime := time.Since(previewStartTime)
 	log.Info().Msg("Preview image generated")
 
 	// Save preview image
@@ -404,6 +422,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 	log.Info().Msg("Paths list file generated")
 
 	// Upload files to storage
+	uploadStartTime := time.Now()
 	previewKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/preview.png", art.AuthorID, art.ID, composition.ID)
 	gcodeKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/gcode.txt", art.AuthorID, art.ID, composition.ID)
 	pathsKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/paths.json", art.AuthorID, art.ID, composition.ID)
@@ -456,6 +475,9 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 
 	log.Info().Str("key", pathsKey).Msg("Paths file uploaded to bucket")
 
+	uploadTime := time.Since(uploadStartTime)
+	log.Info().Msg("All files uploaded")
+
 	// Update composition with results
 	composition.Status = models.CompositionStatusEnumCOMPLETE
 	composition.PreviewURL = null.StringFrom(previewKey)
@@ -481,6 +503,21 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		Int("threadLength", stats.ThreadLength).
 		Int("totalLines", stats.TotalLines).
 		Msg("Composition processing completed successfully")
+
+	totalProcessingTime := time.Since(processingStartTime)
+	log.Info().
+		Str("compositionID", composition.ID).
+		Dur("totalTime", totalProcessingTime).
+		Dur("generationTime", generationTime).
+		Dur("previewGenerationTime", previewGenerationTime).
+		Dur("uploadTime", uploadTime).
+		Int("threadLength", stats.ThreadLength).
+		Int("totalLines", stats.TotalLines).
+		Msgf("🎉 Processing summary: Total: %s | Thread art: %s | Preview: %s | Upload: %s",
+			totalProcessingTime,
+			generationTime,
+			previewGenerationTime,
+			uploadTime)
 
 	return nil
 }
