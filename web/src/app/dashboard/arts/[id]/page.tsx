@@ -113,7 +113,7 @@ const CompositionForm = ({
       className="space-y-6 bg-dark-300 p-6 rounded-lg"
     >
       <h3 className="text-xl font-semibold text-slate-100 mb-4">
-        New Composition
+        {initialValues ? "Edit Composition" : "New Composition"}
       </h3>
 
       <div className="grid grid-cols-1 gap-6">
@@ -261,6 +261,9 @@ export default function ArtDetailPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [cropperImage, setCropperImage] = useState<string | null>(null);
   const [showCropper, setShowCropper] = useState(false);
+  const [isBlackAndWhite, setIsBlackAndWhite] = useState(true);
+  const [imageContrast, setImageContrast] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   //States for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -269,6 +272,9 @@ export default function ArtDetailPage() {
 
   // Add new state for composition modal
   const [showCompositionModal, setShowCompositionModal] = useState(false);
+  // Add new state for the composition being edited
+  const [editingComposition, setEditingComposition] =
+    useState<Composition | null>(null);
 
   // Fetch art, compositions and check for pending status
   useEffect(() => {
@@ -347,6 +353,85 @@ export default function ArtDetailPage() {
     }
   }, [params?.id, compositions, art]);
 
+  // Apply black and white filter to the cropped canvas
+  const applyFilters = (canvas: HTMLCanvasElement): HTMLCanvasElement => {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return canvas;
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      // Convert to grayscale if black and white is enabled
+      if (isBlackAndWhite) {
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        data[i] = data[i + 1] = data[i + 2] = avg;
+      }
+
+      // Apply contrast
+      if (imageContrast !== 0) {
+        const factor =
+          (259 * (imageContrast + 255)) / (255 * (259 - imageContrast));
+        for (let j = 0; j < 3; j++) {
+          data[i + j] = factor * (data[i + j] - 128) + 128;
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
+  };
+
+  // Generate preview with current filters
+  const updatePreview = () => {
+    if (!cropperRef.current) {
+      console.log("No cropper ref available");
+      return;
+    }
+
+    try {
+      const canvas = cropperRef.current.getCanvas();
+      if (!canvas) {
+        console.log("Failed to get canvas from cropper");
+        return;
+      }
+
+      // Clone the canvas to avoid modifying the original
+      const clonedCanvas = document.createElement("canvas");
+      clonedCanvas.width = canvas.width;
+      clonedCanvas.height = canvas.height;
+      const ctx = clonedCanvas.getContext("2d");
+      if (!ctx) {
+        console.log("Failed to get 2d context");
+        return;
+      }
+      ctx.drawImage(canvas, 0, 0);
+
+      // Apply filters to the cloned canvas
+      const processedCanvas = applyFilters(clonedCanvas);
+      const dataUrl = processedCanvas.toDataURL();
+      console.log("Generated preview URL:", dataUrl.substring(0, 50) + "...");
+      setPreviewUrl(dataUrl);
+    } catch (error) {
+      console.error("Error generating preview:", error);
+    }
+  };
+
+  // Update preview when filters change
+  useEffect(() => {
+    if (showCropper && cropperRef.current) {
+      console.log("Updating preview due to filter change");
+      updatePreview();
+    }
+  }, [isBlackAndWhite, imageContrast, showCropper]);
+
+  // Update preview when cropper changes
+  const handleCropperUpdate = () => {
+    console.log("Cropper updated, refreshing preview");
+    // Use setTimeout to ensure the cropper has finished updating
+    setTimeout(updatePreview, 100);
+  };
+
   // Handle file upload
   const handleFileUpload = async (file: File) => {
     if (!art || !art.name) {
@@ -365,9 +450,14 @@ export default function ArtDetailPage() {
         throw new Error("Failed to get cropped image");
       }
 
+      // Apply black and white filter and contrast
+      const processedCanvas = applyFilters(
+        canvas.cloneNode(true) as HTMLCanvasElement
+      );
+
       // Convert canvas to blob
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) => {
+        processedCanvas.toBlob((blob) => {
           if (blob) resolve(blob);
           else reject(new Error("Failed to create image blob"));
         }, file.type);
@@ -435,6 +525,11 @@ export default function ArtDetailPage() {
       if (e.target?.result) {
         setCropperImage(e.target.result as string);
         setShowCropper(true);
+        // Initialize preview after a short delay to ensure cropper is ready
+        setTimeout(() => {
+          console.log("Initial preview generation after load");
+          updatePreview();
+        }, 500);
       }
     };
     reader.readAsDataURL(file);
@@ -518,16 +613,32 @@ export default function ArtDetailPage() {
 
     const statusInfo = getStatusInfo(composition.status);
 
+    // Handler for edit button
+    const handleEdit = () => {
+      setEditingComposition(composition);
+      setShowCompositionModal(true);
+    };
+
     return (
       <div className="bg-dark-300 rounded-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">
           <div className={`${statusInfo.color} font-medium`}>
             {statusInfo.text}
           </div>
-          <div className="text-sm text-slate-400">
-            {new Date(
-              Number(composition.createTime?.seconds) * 1000
-            ).toLocaleString()}
+          <div className="flex items-center space-x-2">
+            {composition.status === 3 && (
+              <button
+                onClick={handleEdit}
+                className="text-sm px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                Edit
+              </button>
+            )}
+            <div className="text-sm text-slate-400">
+              {new Date(
+                Number(composition.createTime?.seconds) * 1000
+              ).toLocaleString()}
+            </div>
           </div>
         </div>
 
@@ -778,7 +889,111 @@ export default function ArtDetailPage() {
                         className="h-[500px] rounded"
                         stencilComponent={CircleStencil}
                         stencilProps={{ aspectRatio: 1 }}
+                        onChange={handleCropperUpdate}
+                        onReady={() => {
+                          console.log(
+                            "Cropper ready, generating initial preview"
+                          );
+                          setTimeout(updatePreview, 200);
+                        }}
                       />
+
+                      {/* Image processing controls */}
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-dark-400 rounded p-4">
+                          <h3 className="text-lg font-medium text-slate-300 mb-3">
+                            Image Settings
+                          </h3>
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-sm font-medium text-slate-300">
+                                Black & White
+                              </label>
+                              <div className="relative inline-block w-10 align-middle select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={isBlackAndWhite}
+                                  onChange={() =>
+                                    setIsBlackAndWhite(!isBlackAndWhite)
+                                  }
+                                  className="sr-only"
+                                  id="toggle-bw"
+                                />
+                                <label
+                                  htmlFor="toggle-bw"
+                                  className={`block overflow-hidden h-6 rounded-full cursor-pointer ${
+                                    isBlackAndWhite
+                                      ? "bg-primary-500"
+                                      : "bg-dark-300"
+                                  }`}
+                                >
+                                  <span
+                                    className={`block h-6 w-6 rounded-full bg-white transform transition-transform ${
+                                      isBlackAndWhite
+                                        ? "translate-x-4"
+                                        : "translate-x-0"
+                                    }`}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <label className="text-sm font-medium text-slate-300">
+                                Contrast
+                              </label>
+                              <span className="text-sm text-slate-400">
+                                {imageContrast}
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min="-100"
+                              max="100"
+                              value={imageContrast}
+                              onChange={(e) =>
+                                setImageContrast(parseInt(e.target.value))
+                              }
+                              className="w-full h-2 bg-dark-500 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                            />
+                            <div className="flex justify-between mt-1">
+                              <span className="text-xs text-slate-500">
+                                -100
+                              </span>
+                              <span className="text-xs text-slate-500">0</span>
+                              <span className="text-xs text-slate-500">
+                                +100
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Preview panel */}
+                        <div className="bg-dark-400 rounded p-4">
+                          <h3 className="text-lg font-medium text-slate-300 mb-3">
+                            Preview
+                          </h3>
+                          <div className="aspect-square rounded-full overflow-hidden bg-dark-500 flex items-center justify-center">
+                            {previewUrl ? (
+                              <img
+                                src={previewUrl}
+                                alt="Filter preview"
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <div className="text-slate-400 text-sm">
+                                Processing preview...
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-2 text-center">
+                            This shows how your image will look with the current
+                            settings
+                          </p>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex justify-between">
                       <button
@@ -1007,10 +1222,15 @@ export default function ArtDetailPage() {
             <div className="bg-dark-200 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-slate-100">
-                  Create New Composition
+                  {editingComposition
+                    ? "Edit Composition"
+                    : "Create New Composition"}
                 </h3>
                 <button
-                  onClick={() => setShowCompositionModal(false)}
+                  onClick={() => {
+                    setShowCompositionModal(false);
+                    setEditingComposition(null);
+                  }}
                   className="text-slate-400 hover:text-slate-300"
                 >
                   <svg
@@ -1030,6 +1250,20 @@ export default function ArtDetailPage() {
               </div>
 
               <CompositionForm
+                initialValues={
+                  editingComposition
+                    ? {
+                        nailsQuantity: editingComposition.nailsQuantity,
+                        imgSize: editingComposition.imgSize,
+                        maxPaths: editingComposition.maxPaths,
+                        startingNail: editingComposition.startingNail,
+                        minimumDifference: editingComposition.minimumDifference,
+                        brightnessFactor: editingComposition.brightnessFactor,
+                        imageContrast: editingComposition.imageContrast,
+                        physicalRadius: editingComposition.physicalRadius,
+                      }
+                    : null
+                }
                 onSubmit={async (formData) => {
                   try {
                     await createComposition({
@@ -1054,6 +1288,7 @@ export default function ArtDetailPage() {
                     setCompositions(compositionsResponse.compositions || []);
                     setShowCompositionForm(false);
                     setShowCompositionModal(false);
+                    setEditingComposition(null);
                   } catch (error) {
                     console.error("Failed to create composition:", error);
                     setError("Failed to create composition. Please try again.");

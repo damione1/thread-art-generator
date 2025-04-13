@@ -2,9 +2,7 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -145,120 +143,26 @@ func (a *Auth0Service) ValidateToken(ctx context.Context, tokenString string) (*
 		return nil, fmt.Errorf("failed to cast to custom claims")
 	}
 
-	// Create basic claims from the token
+	// Extract provider from Auth0 ID
+	parts := strings.Split(customClaims.Auth0ID, "|")
+	provider := "auth0"
+	if len(parts) > 1 {
+		provider = parts[0]
+	}
+
+	// Create auth claims directly from token without extra fetching
 	authClaims := &AuthClaims{
-		UserID:  customClaims.Auth0ID,
-		Email:   customClaims.Email,
-		Name:    customClaims.Name,
-		Picture: customClaims.Picture,
+		UserID:   customClaims.Auth0ID,
+		Email:    customClaims.Email,
+		Name:     customClaims.Name,
+		Picture:  customClaims.Picture,
+		Provider: provider,
 	}
-
-	// Check if we have sufficient information from the token
-	if authClaims.Email != "" && authClaims.Name != "" {
-		return authClaims, nil
-	}
-
-	// Check if we have cached user info
-	if cachedInfo, ok := a.getCachedUserInfo(authClaims.UserID); ok {
-		// Update missing fields from cache
-		if authClaims.Email == "" {
-			authClaims.Email = cachedInfo.Email
-		}
-		if authClaims.Name == "" {
-			authClaims.Name = cachedInfo.Name
-		}
-		if authClaims.Picture == "" {
-			authClaims.Picture = cachedInfo.Picture
-		}
-		return authClaims, nil
-	}
-
-	// Only fetch from userinfo endpoint if both email and name are missing
-	// and we don't have cached data
-	userInfo, err := a.fetchUserInfo(ctx, tokenString)
-	if err != nil {
-		log.Warn().Err(err).Str("user_id", authClaims.UserID).Msg("Failed to fetch user info, continuing with limited claims")
-		return authClaims, nil
-	}
-
-	// Update with data from userinfo endpoint
-	if authClaims.Email == "" {
-		authClaims.Email = userInfo.Email
-	}
-	if authClaims.Name == "" {
-		authClaims.Name = userInfo.Name
-	}
-	if authClaims.Picture == "" {
-		authClaims.Picture = userInfo.Picture
-	}
-
-	// Cache the complete user info
-	a.setCachedUserInfo(authClaims.UserID, &UserInfo{
-		ID:      authClaims.UserID,
-		Email:   userInfo.Email,
-		Name:    userInfo.Name,
-		Picture: userInfo.Picture,
-	})
 
 	return authClaims, nil
 }
 
-// fetchUserInfo fetches user profile data from Auth0 userinfo endpoint
-func (a *Auth0Service) fetchUserInfo(ctx context.Context, tokenString string) (*struct {
-	Sub     string `json:"sub"`
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	Picture string `json:"picture"`
-}, error) {
-	// Create request to Auth0 userinfo endpoint
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		fmt.Sprintf("https://%s/userinfo", a.config.Domain),
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create userinfo request: %v", err)
-	}
-
-	// Add Authorization header
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", tokenString))
-
-	// Execute request
-	resp, err := a.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch userinfo: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("userinfo returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	// Parse the response
-	var userInfo struct {
-		Sub     string `json:"sub"`
-		Email   string `json:"email"`
-		Name    string `json:"name"`
-		Picture string `json:"picture"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return nil, fmt.Errorf("failed to decode userinfo response: %v", err)
-	}
-
-	return &userInfo, nil
-}
-
-// GetAuthMiddleware returns the validator for middleware integration
-func (a *Auth0Service) GetAuthMiddleware() interface{} {
-	return a.validator
-}
-
-// GetUserInfoFromToken retrieves user information directly from Auth0 userinfo endpoint using a token
-// This is a simpler alternative to the Management API when you already have a user token
+// GetUserInfoFromToken retrieves user information directly from the token without extra fetching
 func (a *Auth0Service) GetUserInfoFromToken(ctx context.Context, token string) (*UserInfo, error) {
 	// Extract the auth0 identifier from token claims
 	claims, err := a.ValidateToken(ctx, token)
@@ -266,113 +170,10 @@ func (a *Auth0Service) GetUserInfoFromToken(ctx context.Context, token string) (
 		return nil, fmt.Errorf("failed to validate token: %v", err)
 	}
 
-	// Check if we already have this user in our cache
-	if cachedInfo, ok := a.getCachedUserInfo(claims.UserID); ok {
-		log.Debug().Str("user_id", claims.UserID).Msg("Using cached user info for token request")
-		return cachedInfo, nil
-	}
-
-	// Extract provider from Auth0 ID
-	parts := strings.Split(claims.UserID, "|")
-	provider := "auth0"
-	if len(parts) > 1 {
-		provider = parts[0]
-	}
-
-	// Try userinfo endpoint
-	userInfo, err := a.fetchUserInfo(ctx, token)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch user info: %v", err)
-	}
-
-	// Special case for GitHub users - they often don't share email by default
-	if provider == "github" && userInfo.Email == "" {
-		// Try to fetch email from GitHub API directly if we have Management API access
-		if a.config.ManagementApiClientID != "" && a.config.ManagementApiClientSecret != "" {
-			githubUserID := ""
-			if len(parts) > 1 {
-				githubUserID = parts[1]
-				log.Debug().Str("github_id", githubUserID).Msg("Trying to fetch GitHub email using Management API")
-
-				// First get a management token
-				mgmtToken, err := a.getManagementToken(ctx)
-				if err == nil {
-					// Use the Management API to get the user's identities
-					mReq, err := http.NewRequestWithContext(
-						ctx,
-						"GET",
-						fmt.Sprintf("https://%s/api/v2/users/%s", a.config.Domain, url.PathEscape(claims.UserID)),
-						nil,
-					)
-					if err == nil {
-						mReq.Header.Add("Authorization", fmt.Sprintf("Bearer %s", mgmtToken))
-
-						mResp, err := a.httpClient.Do(mReq)
-						if err == nil {
-							defer mResp.Body.Close()
-
-							if mResp.StatusCode == http.StatusOK {
-								var userObj struct {
-									Email      string `json:"email"`
-									GithubMeta struct {
-										Email       string `json:"email"`
-										PublicEmail string `json:"public_email"`
-									} `json:"github_meta"`
-									Identities []struct {
-										Provider    string `json:"provider"`
-										UserID      string `json:"user_id"`
-										IsSocial    bool   `json:"isSocial"`
-										ProfileData struct {
-											Email string `json:"email"`
-										} `json:"profileData"`
-									} `json:"identities"`
-								}
-
-								if err := json.NewDecoder(mResp.Body).Decode(&userObj); err == nil {
-									// Check if we got an email from the user object directly
-									if userObj.Email != "" {
-										userInfo.Email = userObj.Email
-										log.Debug().Str("email", userObj.Email).Msg("Found email in user object")
-									} else {
-										// Check identities
-										for _, identity := range userObj.Identities {
-											if identity.Provider == "github" && identity.ProfileData.Email != "" {
-												userInfo.Email = identity.ProfileData.Email
-												log.Debug().Str("email", identity.ProfileData.Email).Msg("Found email in identity profile data")
-												break
-											}
-										}
-
-										// If we still don't have an email, check the GitHub metadata
-										if userInfo.Email == "" && userObj.GithubMeta.Email != "" {
-											userInfo.Email = userObj.GithubMeta.Email
-											log.Debug().Str("email", userObj.GithubMeta.Email).Msg("Found email in GitHub metadata")
-										}
-
-										if userInfo.Email == "" && userObj.GithubMeta.PublicEmail != "" {
-											userInfo.Email = userObj.GithubMeta.PublicEmail
-											log.Debug().Str("email", userObj.GithubMeta.PublicEmail).Msg("Found public email in GitHub metadata")
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// If we still don't have an email, use a placeholder
-		if userInfo.Email == "" {
-			log.Warn().Str("user_id", claims.UserID).Msg("Unable to retrieve email for GitHub user, using placeholder")
-			userInfo.Email = fmt.Sprintf("github-%s@placeholder.local", parts[1])
-		}
-	}
-
 	// Parse name into first/last name components if possible
 	firstName, lastName := "", ""
-	if userInfo.Name != "" {
-		nameParts := strings.SplitN(userInfo.Name, " ", 2)
+	if claims.Name != "" {
+		nameParts := strings.SplitN(claims.Name, " ", 2)
 		if len(nameParts) > 0 {
 			firstName = nameParts[0]
 			if len(nameParts) > 1 {
@@ -381,22 +182,67 @@ func (a *Auth0Service) GetUserInfoFromToken(ctx context.Context, token string) (
 		}
 	}
 
+	// Just use what's in the token
 	result := &UserInfo{
 		ID:        claims.UserID,
-		Email:     userInfo.Email,
-		Name:      userInfo.Name,
+		Email:     claims.Email,
+		Name:      claims.Name,
 		FirstName: firstName,
 		LastName:  lastName,
-		Picture:   userInfo.Picture,
-		CreatedAt: time.Now().Format(time.RFC3339), // Userinfo doesn't provide timestamps
+		Picture:   claims.Picture,
+		CreatedAt: time.Now().Format(time.RFC3339), // Use current time as we don't have this info
 		UpdatedAt: time.Now().Format(time.RFC3339),
-		Provider:  provider,
+		Provider:  claims.Provider,
 	}
 
-	// Cache the result
-	a.setCachedUserInfo(claims.UserID, result)
-
 	return result, nil
+}
+
+// GetUserInfo retrieves user information from the token and caches it
+func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInfo, error) {
+	// First check service-level cache
+	if cachedInfo, ok := a.getCachedUserInfo(userID); ok {
+		log.Debug().Str("user_id", userID).Msg("Using cached user info from service cache")
+		return cachedInfo, nil
+	}
+
+	// Check if we have a token in context
+	token, ok := ctx.Value("token").(string)
+	if ok && token != "" {
+		// Try to use the token directly
+		userInfo, err := a.GetUserInfoFromToken(ctx, token)
+		if err == nil {
+			// Cache the result
+			a.setCachedUserInfo(userID, userInfo)
+			return userInfo, nil
+		}
+		// Log error but don't fail - we'll return minimal info
+		log.Warn().Err(err).Str("user_id", userID).Msg("Failed to get user info from token")
+	}
+
+	// Extract the auth0 identifier
+	parts := strings.Split(userID, "|")
+	provider := "auth0"
+	if len(parts) > 1 {
+		provider = parts[0]
+	}
+
+	// Return minimal info when we don't have a token
+	result := &UserInfo{
+		ID:        userID,
+		Provider:  provider,
+		CreatedAt: time.Now().Format(time.RFC3339),
+		UpdatedAt: time.Now().Format(time.RFC3339),
+	}
+
+	// Cache the minimal info too
+	a.setCachedUserInfo(userID, result)
+	return result, nil
+}
+
+// GetAuthMiddleware returns the validator for middleware integration
+func (a *Auth0Service) GetAuthMiddleware() interface{} {
+	return a.validator
 }
 
 // getUserInfoCache implements a simple per-request cache for user info lookups
@@ -478,260 +324,6 @@ func (a *Auth0Service) setCachedUserInfo(userID string, info *UserInfo) {
 		info:    info,
 		expires: time.Now().Add(24 * time.Hour),
 	}
-}
-
-// GetUserInfo retrieves user information from Auth0
-func (a *Auth0Service) GetUserInfo(ctx context.Context, userID string) (*UserInfo, error) {
-	// First check service-level cache
-	if cachedInfo, ok := a.getCachedUserInfo(userID); ok {
-		log.Debug().Str("user_id", userID).Msg("Using cached user info from service cache")
-		return cachedInfo, nil
-	}
-
-	// Add request-level cache to context if not present
-	ctx = withUserInfoCache(ctx)
-	cache := getUserInfoCache(ctx)
-
-	// Check request-level cache
-	if cachedInfo, ok := cache.get(userID); ok {
-		log.Debug().Str("user_id", userID).Msg("Using cached user info from request cache")
-		// Also update service-level cache
-		a.setCachedUserInfo(userID, cachedInfo)
-		return cachedInfo, nil
-	}
-
-	// Extract the auth0 identifier
-	parts := strings.Split(userID, "|")
-	provider := "auth0"
-	if len(parts) > 1 {
-		provider = parts[0]
-	}
-
-	// Try to get the user info from Auth0 Management API
-	userInfo, err := a.fetchUserInfoFromManagement(ctx, userID)
-	if err != nil {
-		log.Warn().Err(err).Str("user_id", userID).Msg("Failed to fetch user from Management API")
-
-		// If we have a token in context, try userinfo endpoint
-		if token, ok := ctx.Value("token").(string); ok && token != "" {
-			log.Debug().Str("user_id", userID).Msg("Found token in context, trying userinfo endpoint")
-
-			if uiInfo, uiErr := a.fetchUserInfo(ctx, token); uiErr == nil {
-				result := &UserInfo{
-					ID:        userID,
-					Email:     uiInfo.Email,
-					Name:      uiInfo.Name,
-					Picture:   uiInfo.Picture,
-					CreatedAt: time.Now().Format(time.RFC3339),
-					UpdatedAt: time.Now().Format(time.RFC3339),
-					Provider:  provider,
-				}
-
-				// Cache the result in both caches
-				cache.set(userID, result)
-				a.setCachedUserInfo(userID, result)
-				return result, nil
-			}
-		}
-
-		// Fall back to minimal info
-		result := &UserInfo{
-			ID:        userID,
-			Provider:  provider,
-			CreatedAt: time.Now().Format(time.RFC3339),
-			UpdatedAt: time.Now().Format(time.RFC3339),
-		}
-
-		// Cache the minimal info
-		cache.set(userID, result)
-		a.setCachedUserInfo(userID, result)
-		return result, nil
-	}
-
-	// Create full user info
-	result := &UserInfo{
-		ID:        userID,
-		Email:     userInfo.Email,
-		Name:      userInfo.Name,
-		Picture:   userInfo.Picture,
-		CreatedAt: userInfo.CreatedAt,
-		UpdatedAt: userInfo.UpdatedAt,
-		Provider:  provider,
-	}
-
-	// Cache the result in both caches
-	cache.set(userID, result)
-	a.setCachedUserInfo(userID, result)
-	return result, nil
-}
-
-// fetchUserInfoFromManagement fetches user info from Auth0 Management API
-func (a *Auth0Service) fetchUserInfoFromManagement(ctx context.Context, userID string) (*struct {
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	Picture   string `json:"picture"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-}, error) {
-	// First, get a management API token
-	token, err := a.getManagementToken(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create request to Auth0 Management API
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		fmt.Sprintf("https://%s/api/v2/users/%s", a.config.Domain, url.PathEscape(userID)),
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create user request: %v", err)
-	}
-
-	// Add Authorization header with management token
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
-
-	// Execute request
-	resp, err := a.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch user: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("user request returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	// Parse the response
-	var userInfo struct {
-		Email     string `json:"email"`
-		Name      string `json:"name"`
-		Picture   string `json:"picture"`
-		CreatedAt string `json:"created_at"`
-		UpdatedAt string `json:"updated_at"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return nil, fmt.Errorf("failed to decode user response: %v", err)
-	}
-
-	return &userInfo, nil
-}
-
-// getManagementToken gets an access token for the Auth0 Management API
-func (a *Auth0Service) getManagementToken(ctx context.Context) (string, error) {
-	// Check cache first with read lock
-	a.tokenCacheMutex.RLock()
-	cachedToken := a.managementToken
-	tokenExpiration := a.managementTokenExp
-	a.tokenCacheMutex.RUnlock()
-
-	// If we have a valid cached token, return it
-	if cachedToken != "" && time.Now().Before(tokenExpiration) {
-		log.Debug().Msg("Using cached Auth0 management token")
-		return cachedToken, nil
-	}
-
-	// Need to fetch a new token - use write lock
-	a.tokenCacheMutex.Lock()
-	defer a.tokenCacheMutex.Unlock()
-
-	// Double-check if another goroutine refreshed the token while we were waiting
-	if a.managementToken != "" && time.Now().Before(a.managementTokenExp) {
-		log.Debug().Msg("Another goroutine refreshed the token, using that")
-		return a.managementToken, nil
-	}
-
-	// Debug log the management API configuration but mask secrets
-	log.Debug().
-		Str("domain", a.config.Domain).
-		Str("management_client_id", a.config.ManagementApiClientID).
-		Str("management_client_secret_length", fmt.Sprintf("%d chars", len(a.config.ManagementApiClientSecret))).
-		Msg("Getting new management API token")
-
-	// Check if management credentials are set
-	if a.config.ManagementApiClientID == "" || a.config.ManagementApiClientSecret == "" {
-		return "", fmt.Errorf("management API credentials not set")
-	}
-
-	data := url.Values{}
-	data.Set("grant_type", "client_credentials")
-	data.Set("client_id", a.config.ManagementApiClientID)
-	data.Set("client_secret", a.config.ManagementApiClientSecret)
-
-	// IMPORTANT: The audience for the Management API must be fixed format
-	data.Set("audience", fmt.Sprintf("https://%s/api/v2/", a.config.Domain))
-
-	// Debug request data
-	reqBody := data.Encode()
-	log.Debug().
-		Str("endpoint", fmt.Sprintf("https://%s/oauth/token", a.config.Domain)).
-		Str("audience", fmt.Sprintf("https://%s/api/v2/", a.config.Domain)).
-		Msg("Auth0 management token request")
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		fmt.Sprintf("https://%s/oauth/token", a.config.Domain),
-		strings.NewReader(reqBody),
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to create token request: %v", err)
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := a.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to get management token: %v", err)
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		// Log both status code and response body for debugging
-		log.Debug().
-			Int("status_code", resp.StatusCode).
-			Str("response", string(bodyBytes)).
-			Msg("Auth0 management token request failed")
-
-		return "", fmt.Errorf("token request returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	// Re-create reader from bodyBytes since we've consumed it
-	var tokenResp struct {
-		AccessToken string `json:"access_token"`
-		TokenType   string `json:"token_type"`
-		ExpiresIn   int    `json:"expires_in"`
-	}
-
-	if err := json.Unmarshal(bodyBytes, &tokenResp); err != nil {
-		return "", fmt.Errorf("failed to decode token response: %v", err)
-	}
-
-	log.Debug().
-		Str("token_type", tokenResp.TokenType).
-		Int("expires_in", tokenResp.ExpiresIn).
-		Msg("Auth0 management token obtained successfully")
-
-	// Cache the token
-	expiryTime := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
-	// Apply a 5-minute buffer to ensure we refresh before actual expiration
-	safeExpiryTime := expiryTime.Add(-5 * time.Minute)
-
-	a.managementToken = tokenResp.AccessToken
-	a.managementTokenExp = safeExpiryTime
-
-	log.Info().
-		Time("expiry", safeExpiryTime).
-		Msg("Cached new Auth0 management token")
-
-	return tokenResp.AccessToken, nil
 }
 
 func (a *Auth0Service) UpdateUserPassword(ctx context.Context, userID string, newPassword string) error {

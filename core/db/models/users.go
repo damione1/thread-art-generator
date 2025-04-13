@@ -25,7 +25,7 @@ import (
 // User is an object representing the database table.
 type User struct {
 	ID        string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Email     string      `boil:"email" json:"email" toml:"email" yaml:"email"`
+	Email     null.String `boil:"email" json:"email,omitempty" toml:"email" yaml:"email,omitempty"`
 	AvatarID  null.String `boil:"avatar_id" json:"avatar_id,omitempty" toml:"avatar_id" yaml:"avatar_id,omitempty"`
 	Active    bool        `boil:"active" json:"active" toml:"active" yaml:"active"`
 	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
@@ -126,7 +126,7 @@ func (w whereHelperRoleEnum) NIN(slice []RoleEnum) qm.QueryMod {
 
 var UserWhere = struct {
 	ID        whereHelperstring
-	Email     whereHelperstring
+	Email     whereHelpernull_String
 	AvatarID  whereHelpernull_String
 	Active    whereHelperbool
 	CreatedAt whereHelpertime_Time
@@ -137,7 +137,7 @@ var UserWhere = struct {
 	Auth0ID   whereHelperstring
 }{
 	ID:        whereHelperstring{field: "\"users\".\"id\""},
-	Email:     whereHelperstring{field: "\"users\".\"email\""},
+	Email:     whereHelpernull_String{field: "\"users\".\"email\""},
 	AvatarID:  whereHelpernull_String{field: "\"users\".\"avatar_id\""},
 	Active:    whereHelperbool{field: "\"users\".\"active\""},
 	CreatedAt: whereHelpertime_Time{field: "\"users\".\"created_at\""},
@@ -197,8 +197,8 @@ type userL struct{}
 
 var (
 	userAllColumns            = []string{"id", "email", "avatar_id", "active", "created_at", "updated_at", "role", "first_name", "last_name", "auth0_id"}
-	userColumnsWithoutDefault = []string{"email", "first_name", "auth0_id"}
-	userColumnsWithDefault    = []string{"id", "avatar_id", "active", "created_at", "updated_at", "role", "last_name"}
+	userColumnsWithoutDefault = []string{"first_name", "auth0_id"}
+	userColumnsWithDefault    = []string{"id", "email", "avatar_id", "active", "created_at", "updated_at", "role", "last_name"}
 	userPrimaryKeyColumns     = []string{"id"}
 	userGeneratedColumns      = []string{}
 )

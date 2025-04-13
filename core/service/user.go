@@ -69,8 +69,17 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	}
 
 	if pbUser.GetEmail() != "" {
-		user.Email = pbUser.GetEmail()
+		user.Email.Valid = true
+		user.Email.String = pbUser.GetEmail()
 	}
+
+	// If avatar is provided in the request, update it
+	// This allows clients to set a custom avatar if needed
+	if pbUser.GetAvatar() != "" && pbUser.GetAvatar() != user.AvatarID.String {
+		user.AvatarID.Valid = true
+		user.AvatarID.String = pbUser.GetAvatar()
+	}
+	// Note: We don't reset AvatarID if it's not provided to preserve the Auth0 avatar
 
 	if _, err = user.Update(ctx, server.config.DB, boil.Infer()); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {

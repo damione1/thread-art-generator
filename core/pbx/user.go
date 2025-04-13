@@ -4,13 +4,30 @@ import (
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/util"
+	"github.com/volatiletech/null/v8"
 )
 
 func DbUserToProto(user *models.User) *pb.User {
 	userPb := &pb.User{
-		Email:     user.Email,
 		FirstName: user.FirstName,
-		Avatar:    util.NewGravatarFromEmail(user.Email).GetURL(),
+	}
+
+	// Handle nullable email
+	if user.Email.Valid {
+		userPb.Email = user.Email.String
+	}
+
+	// Avatar priority:
+	// 1. Use stored AvatarID from Auth0 if available
+	// 2. Fall back to Gravatar based on email
+	if user.AvatarID.Valid && user.AvatarID.String != "" {
+		userPb.Avatar = user.AvatarID.String
+	} else if user.Email.Valid {
+		// Fall back to Gravatar if we have an email
+		userPb.Avatar = util.NewGravatarFromEmail(user.Email.String).GetURL()
+	} else {
+		// Default avatar when no email and no stored avatar
+		userPb.Avatar = util.NewGravatarFromEmail("").GetURL()
 	}
 
 	if user.LastName.Valid {
@@ -26,8 +43,14 @@ func DbUserToProto(user *models.User) *pb.User {
 
 func ProtoUserToDb(user *pb.User) *models.User {
 	userDb := &models.User{
-		Email:     user.GetEmail(),
 		FirstName: user.GetFirstName(),
+	}
+
+	// Handle email conversion to null.String
+	if user.GetEmail() != "" {
+		userDb.Email = null.StringFrom(user.GetEmail())
+	} else {
+		userDb.Email = null.String{}
 	}
 
 	if user.GetName() != "" {
@@ -39,8 +62,9 @@ func ProtoUserToDb(user *pb.User) *models.User {
 	}
 
 	if user.GetLastName() != "" {
-		userDb.LastName.String = user.GetLastName()
-		userDb.LastName.Valid = true
+		userDb.LastName = null.StringFrom(user.GetLastName())
+	} else {
+		userDb.LastName = null.String{}
 	}
 
 	return userDb

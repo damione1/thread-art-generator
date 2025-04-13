@@ -71,78 +71,7 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 	).One(ctx, db)
 
 	if err == nil {
-		// User found, only update if really necessary
-		// Check if we have all required fields
-		if user.Email != "" && user.FirstName != "" {
-			// We have all the essential info, no need to fetch from Auth0 again
-			log.Debug().Str("user_id", user.ID).Msg("User found with complete profile, skipping Auth0 fetch")
-			return user.ID, nil
-		}
-
-		// Missing essential info, need to update
-		needsUpdate := false
-
-		// Check if token is in context for direct userinfo
-		token, tokenOk := ctx.Value("token").(string)
-
-		// Get latest Auth0 info anyway to ensure we have the most up-to-date data
-		var authUser *auth.UserInfo
-		var authErr error
-
-		// Try first with direct token method if available (more reliable)
-		if tokenOk && token != "" {
-			// Try to use the token-based method which uses userinfo endpoint
-			if auth0Service, ok := userProvider.(auth.AuthService); ok {
-				authUser, authErr = auth0Service.GetUserInfoFromToken(ctx, token)
-				if authErr != nil {
-					log.Warn().Err(authErr).Str("auth0_id", auth0ID).Msg("Failed to get user info from token, will try regular method")
-				}
-			}
-		}
-
-		// Fall back to standard method if token method failed
-		if authUser == nil {
-			authUser, authErr = userProvider.GetUserInfo(ctx, auth0ID)
-		}
-
-		if authErr == nil {
-			// Only update if Auth0 has data and our local data is empty
-			if authUser.Email != "" && user.Email == "" {
-				user.Email = authUser.Email
-				needsUpdate = true
-				log.Debug().Str("user_id", user.ID).Str("email", authUser.Email).Msg("Updating user email from Auth0")
-			}
-
-			if authUser.Name != "" && (user.FirstName == "" || user.LastName.String == "") {
-				firstName, lastName := parseNameFromAuth0(authUser.Name)
-				if firstName != "" && user.FirstName == "" {
-					user.FirstName = firstName
-					needsUpdate = true
-					log.Debug().Str("user_id", user.ID).Str("first_name", firstName).Msg("Updating user first name from Auth0")
-				}
-				if lastName != "" && user.LastName.String == "" {
-					user.LastName = null.StringFrom(lastName)
-					needsUpdate = true
-					log.Debug().Str("user_id", user.ID).Str("last_name", lastName).Msg("Updating user last name from Auth0")
-				}
-			}
-
-			if needsUpdate {
-				user.UpdatedAt = time.Now()
-				_, updateErr := user.Update(ctx, db, boil.Infer())
-				if updateErr != nil {
-					log.Warn().Err(updateErr).Str("user_id", user.ID).Msg("Failed to update user with Auth0 info")
-					// Don't fail the operation just because we couldn't update
-				} else {
-					log.Info().Str("user_id", user.ID).Msg("Updated user with latest Auth0 info")
-				}
-			}
-		} else {
-			// Just log the error but continue
-			log.Warn().Err(authErr).Str("auth0_id", auth0ID).Msg("Couldn't fetch updated user info from Auth0")
-		}
-
-		// Return internal ID even if update failed
+		// User found, we'll use what we have
 		return user.ID, nil
 	}
 
@@ -151,58 +80,38 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 		return "", err
 	}
 
-	// User not found, fetch details from Auth0
-	// Try first with direct token method if available (more reliable)
-	var authUser *auth.UserInfo
-	var authErr error
-
-	token, tokenOk := ctx.Value("token").(string)
-	if tokenOk && token != "" {
-		// Try to use the token-based method which uses userinfo endpoint
-		if auth0Service, ok := userProvider.(auth.AuthService); ok {
-			authUser, authErr = auth0Service.GetUserInfoFromToken(ctx, token)
-			if authErr != nil {
-				log.Warn().Err(authErr).Str("auth0_id", auth0ID).Msg("Failed to get user info from token, will try regular method")
-			}
-		}
+	// User not found, get info from token and create new user
+	claims, ok := ctx.Value("claims").(*auth.AuthClaims)
+	if !ok {
+		// If claims aren't in context, just create with minimal info
+		log.Warn().Str("auth0_id", auth0ID).Msg("Creating user with minimal info, no claims in context")
+		return createMinimalUser(ctx, db, auth0ID)
 	}
-
-	// Fall back to standard method if token method failed
-	if authUser == nil {
-		authUser, authErr = userProvider.GetUserInfo(ctx, auth0ID)
-		if authErr != nil {
-			return "", authErr
-		}
-	}
-
-	log.Info().
-		Str("id", authUser.ID).
-		Str("email", authUser.Email).
-		Str("name", authUser.Name).
-		Str("provider", authUser.Provider).
-		Msg("Creating new user from Auth0 info")
 
 	// Parse name into first name and last name
-	firstName, lastName := parseNameFromAuth0(authUser.Name)
+	firstName, lastName := parseNameFromAuth0(claims.Name)
 
-	// If Auth0 didn't provide a name, use a default based on provider
+	// If Auth0 didn't provide a name, use a default
 	if firstName == "" {
-		if authUser.Provider != "" {
-			firstName = "User from " + authUser.Provider
-		} else {
-			firstName = "New User"
-		}
+		firstName = "New User"
 	}
 
-	// Create new user
+	// Get avatar URL from Auth0 token or default to empty
+	avatarURL := ""
+	if claims.Picture != "" {
+		avatarURL = claims.Picture
+		log.Debug().Str("auth0_id", auth0ID).Str("avatar_url", avatarURL).Msg("Using avatar from Auth0")
+	}
+
+	// Create new user with info from token
 	internalID := uuid.New().String()
 	newUser := &models.User{
 		ID:        internalID,
-		Auth0ID:   authUser.ID,
-		Email:     authUser.Email,
+		Auth0ID:   auth0ID,
+		Email:     null.StringFrom(claims.Email),
 		FirstName: firstName,
 		LastName:  null.StringFrom(lastName),
-		AvatarID:  null.StringFrom(""), // We could store the picture URL from Auth0 if needed
+		AvatarID:  null.StringFrom(avatarURL),
 		Active:    true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -214,7 +123,32 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvid
 		return "", err
 	}
 
-	log.Info().Str("user_id", internalID).Str("auth0_id", auth0ID).Msg("Created new user from Auth0")
+	log.Info().Str("user_id", internalID).Str("auth0_id", auth0ID).Msg("Created new user from token claims")
+	return internalID, nil
+}
+
+// createMinimalUser creates a user with minimal information
+func createMinimalUser(ctx context.Context, db *sql.DB, auth0ID string) (string, error) {
+	internalID := uuid.New().String()
+	newUser := &models.User{
+		ID:        internalID,
+		Auth0ID:   auth0ID,
+		Email:     null.String{}, // Empty email
+		FirstName: "New User",
+		LastName:  null.String{},
+		AvatarID:  null.String{}, // Empty avatar, will fall back to Gravatar
+		Active:    true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Role:      models.RoleEnumUser,
+	}
+
+	err := newUser.Insert(ctx, db, boil.Infer())
+	if err != nil {
+		return "", err
+	}
+
+	log.Info().Str("user_id", internalID).Str("auth0_id", auth0ID).Msg("Created new user with minimal info")
 	return internalID, nil
 }
 
@@ -252,16 +186,19 @@ func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerI
 			return nil, err
 		}
 
+		// Store claims in context for user creation if needed
+		ctxWithClaims := context.WithValue(ctx, "claims", claims)
+
 		// Get or create user in our database
-		internalID, err := getOrCreateUser(ctx, db, claims.UserID, authService)
+		internalID, err := getOrCreateUser(ctxWithClaims, db, claims.UserID, authService)
 		if err != nil {
 			log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
 			return nil, status.Errorf(codes.Internal, "internal error")
 		}
 
 		// Add internal user ID and raw token to context
-		newCtx := context.WithValue(ctx, middleware.AuthKey, internalID)
-		// Store the raw token in context for later use in GetUserInfo
+		newCtx := context.WithValue(ctxWithClaims, middleware.AuthKey, internalID)
+		// Store the raw token in context for later use
 		newCtx = context.WithValue(newCtx, "token", token)
 		return handler(newCtx, req)
 	}
