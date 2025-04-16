@@ -4,12 +4,30 @@ load('ext://restart_process', 'docker_build_with_restart')
 # BUILD CONFIGURATIONS
 # ================================================
 
-# Compile Go binaries
+
+
+# Watch the generated files to trigger rebuilds only when needed
+watch_file('core/pb')
+watch_file('web/src/lib/pb')
+watch_file('api/openapi')
+
+# Compile Go binaries - depends on proto generation but only specific files
 local_resource(
   'go-compile',
   cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/worker cmd/worker/main.go && go build -o build/cli cmd/cli/main.go',
   labels=["build"],
-  deps=['cmd/', 'core/', 'threadGenerator/', 'web/**/*.go'],
+  deps=[
+    'cmd/',
+    'core/',
+    'threadGenerator/',
+    'web/**/*.go',
+  ],
+  ignore=[
+    'proto/',
+    'core/pb/',
+    'web/src/lib/pb/',
+    'api/openapi/',
+  ],
 )
 
 # API image build
@@ -65,14 +83,6 @@ docker_compose('docker-compose.yml')
 # ================================================
 # LOCAL DEVELOPMENT RESOURCES
 # ================================================
-
-# Proto file watcher - detects changes in proto files
-local_resource(
-  'proto-watch',
-  cmd='echo "Proto files changed"',
-  deps=['proto/'],
-  labels=["proto"],
-)
 
 # Local development setup
 local_resource(
@@ -131,14 +141,6 @@ resources = {
   'worker': {
     'labels': ['worker'],
     'resource_deps': ['go-compile', 'db', 'rabbitmq'],
-    'auto_init': True,
-    'trigger_mode': TRIGGER_MODE_AUTO,
-  },
-
-  # Proto handling
-  'proto-build': {
-    'labels': ['proto'],
-    'resource_deps': ['proto-watch'],
     'auto_init': True,
     'trigger_mode': TRIGGER_MODE_AUTO,
   },

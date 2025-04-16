@@ -48,3 +48,5 @@ build/
 # Tilt
 .tilt-cache/
 certs/
+
+plan.md

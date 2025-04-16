@@ -1,5 +1,6 @@
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
-import { createClient, ConnectError, Code } from "@connectrpc/connect";
+import { createPromiseClient } from "@connectrpc/connect";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { ArtGeneratorService } from "./pb/services_connect";
 import { Art, Composition } from "./pb/art_pb";
 import { getAccessToken, refreshAccessToken } from "@/utils/auth-token-manager";
@@ -34,7 +35,7 @@ export const createTransport = () => {
  */
 export const createGrpcClient = async (providedToken?: string) => {
     const transport = createTransport();
-    const client = createClient(ArtGeneratorService, transport);
+    const client = createPromiseClient(ArtGeneratorService, transport);
 
     // If a token is explicitly provided, use it
     let accessToken = providedToken;

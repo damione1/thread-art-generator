@@ -1,0 +1,1167 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Thread art Generator API",
+    "version": "0.0.1",
+    "contact": {
+      "name": "Damien Goehrig",
+      "url": "github.com/Damione1/thread-art-generator",
+      "email": "thread-art-generator@damiengoehrig.ca"
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Endpoints for authentication"
+    },
+    {
+      "name": "Users",
+      "description": "Endpoints for user management"
+    },
+    {
+      "name": "Arts",
+      "description": "Endpoints for art management"
+    },
+    {
+      "name": "Compositions",
+      "description": "Endpoints for thread art compositions"
+    },
+    {
+      "name": "Media",
+      "description": "Endpoints for media management"
+    },
+    {
+      "name": "ArtGeneratorService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/users": {
+      "get": {
+        "summary": "List all users",
+        "description": "Retrieve a list of all users in the system.",
+        "operationId": "ArtGeneratorService_ListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbListUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageToken",
+            "description": "PageToken is the token to retrieve the next page of results.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "PageSize is the number of users to return in a single page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users/{name}": {
+      "get": {
+        "summary": "Get a user's information",
+        "description": "Retrieve information for a specific user by their ID.",
+        "operationId": "ArtGeneratorService_GetUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "Name is the unique identifier for the user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      },
+      "delete": {
+        "summary": "Delete a user",
+        "description": "Remove a specific user from the system.",
+        "operationId": "ArtGeneratorService_DeleteUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "Name is the unique identifier for the user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users/{user.name}": {
+      "patch": {
+        "summary": "Update a user's information",
+        "description": "Modify the information of a specific user.",
+        "operationId": "ArtGeneratorService_UpdateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user.name",
+            "description": "Name is the unique identifier for the user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "user",
+            "description": "User is the user to be updated.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "firstName": {
+                  "type": "string",
+                  "description": "FirstName is the user's first name."
+                },
+                "lastName": {
+                  "type": "string",
+                  "description": "LastName is the user's last name."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Email is the user's email."
+                },
+                "avatar": {
+                  "type": "string",
+                  "description": "Avatar is the user's avatar url.",
+                  "readOnly": true
+                }
+              },
+              "title": "User is the user to be updated.",
+              "required": [
+                "firstName",
+                "lastName",
+                "email"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users:me": {
+      "get": {
+        "summary": "Get the current user",
+        "description": "Retrieve information for the currently authenticated user.",
+        "operationId": "ArtGeneratorService_GetCurrentUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/{art.name}": {
+      "patch": {
+        "summary": "Update a post's information",
+        "description": "Modify the information of a specific art.",
+        "operationId": "ArtGeneratorService_UpdateArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "art.name",
+            "description": "The name of the Art resource.\nFor example: \"users/123/arts/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "art",
+            "description": "The Art resource to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Title is the art's title."
+                },
+                "imageUrl": {
+                  "type": "string",
+                  "description": "ImageURL is the art's image URL.",
+                  "readOnly": true
+                },
+                "status": {
+                  "$ref": "#/definitions/pbArtStatus",
+                  "title": "Status of the art",
+                  "readOnly": true
+                },
+                "author": {
+                  "type": "string",
+                  "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\"",
+                  "readOnly": true
+                },
+                "createTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "CreatedAt is the art's creation time. Output only.",
+                  "readOnly": true
+                },
+                "updateTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "UpdatedAt is the art's last update time.",
+                  "readOnly": true
+                }
+              },
+              "title": "The Art resource to update.",
+              "required": [
+                "title"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      }
+    },
+    "/v1/{composition.name}": {
+      "patch": {
+        "summary": "Update a composition",
+        "description": "Modify the settings of a specific composition.",
+        "operationId": "ArtGeneratorService_UpdateComposition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbComposition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "composition.name",
+            "description": "The name of the Composition resource.\nFor example: \"users/123/arts/456/compositions/789\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+/compositions/[^/]+"
+          },
+          {
+            "name": "composition",
+            "description": "The Composition resource to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "$ref": "#/definitions/pbCompositionStatus",
+                  "title": "Status of the composition",
+                  "readOnly": true
+                },
+                "nailsQuantity": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Number of nails to use in the circle"
+                },
+                "imgSize": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Image size in pixels"
+                },
+                "maxPaths": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Maximum number of paths to generate"
+                },
+                "startingNail": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Starting nail position"
+                },
+                "minimumDifference": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Minimum difference between connected nails"
+                },
+                "brightnessFactor": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Brightness factor for thread lines"
+                },
+                "imageContrast": {
+                  "type": "number",
+                  "format": "float",
+                  "title": "Image contrast adjustment"
+                },
+                "physicalRadius": {
+                  "type": "number",
+                  "format": "float",
+                  "title": "Physical radius of the final artwork in mm"
+                },
+                "previewUrl": {
+                  "type": "string",
+                  "title": "URL to the preview image of the composition result",
+                  "readOnly": true
+                },
+                "gcodeUrl": {
+                  "type": "string",
+                  "title": "URL to download the GCode file",
+                  "readOnly": true
+                },
+                "pathlistUrl": {
+                  "type": "string",
+                  "title": "URL to download the paths list file",
+                  "readOnly": true
+                },
+                "threadLength": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Thread length in meters",
+                  "readOnly": true
+                },
+                "totalLines": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Total number of lines",
+                  "readOnly": true
+                },
+                "errorMessage": {
+                  "type": "string",
+                  "title": "Error message if processing failed",
+                  "readOnly": true
+                },
+                "createTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "title": "Creation time",
+                  "readOnly": true
+                },
+                "updateTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "title": "Last update time",
+                  "readOnly": true
+                }
+              },
+              "title": "The Composition resource to update."
+            }
+          }
+        ],
+        "tags": [
+          "Compositions"
+        ]
+      }
+    },
+    "/v1/{name_1}": {
+      "get": {
+        "summary": "Get composition information",
+        "description": "Retrieve information for a specific composition.",
+        "operationId": "ArtGeneratorService_GetComposition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbComposition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name_1",
+            "description": "The name of the Composition resource.\nFor example: \"users/123/arts/456/compositions/789\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+/compositions/[^/]+"
+          }
+        ],
+        "tags": [
+          "Compositions"
+        ]
+      },
+      "delete": {
+        "summary": "Delete a composition",
+        "description": "Remove a specific composition from the system.",
+        "operationId": "ArtGeneratorService_DeleteComposition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name_1",
+            "description": "The name of the Composition resource.\nFor example: \"users/123/arts/456/compositions/789\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+/compositions/[^/]+"
+          }
+        ],
+        "tags": [
+          "Compositions"
+        ]
+      }
+    },
+    "/v1/{name}": {
+      "get": {
+        "summary": "Get an art's information",
+        "description": "Retrieve information for a specific art by its ID.",
+        "operationId": "ArtGeneratorService_GetArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Art resource.\nFor example: \"users/{user}/arts/{art}\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      },
+      "delete": {
+        "summary": "Delete an art",
+        "description": "Remove a specific art from the system.",
+        "operationId": "ArtGeneratorService_DeleteArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Art resource.\nFor example: \"users/123/arts/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      }
+    },
+    "/v1/{name}:confirmImageUpload": {
+      "post": {
+        "summary": "Confirm art image upload",
+        "description": "Mark an art resource as complete after image upload.",
+        "operationId": "ArtGeneratorService_ConfirmArtImageUpload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Art resource that has been uploaded.\nFor example: \"users/123/arts/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ArtGeneratorServiceConfirmArtImageUploadBody"
+            }
+          }
+        ],
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/v1/{name}:getUploadUrl": {
+      "get": {
+        "summary": "Get upload URL for art image",
+        "description": "Generate a signed URL for uploading an image for a specific art.",
+        "operationId": "ArtGeneratorService_GetArtUploadUrl",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbGetArtUploadUrlResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Art resource to upload an image for.\nFor example: \"users/123/arts/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          }
+        ],
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/v1/{parent}/arts": {
+      "get": {
+        "summary": "List all arts",
+        "description": "Retrieve a list of all arts in the system.",
+        "operationId": "ArtGeneratorService_ListArts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbListArtsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "parent",
+            "description": "The parent which owns the arts.\nFor example: \"users/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+"
+          },
+          {
+            "name": "pageSize",
+            "description": "The maximum number of arts to return. The service may return fewer than this value.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "A page token, received from a previous `ListArts` call.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      },
+      "post": {
+        "summary": "Create a new art",
+        "description": "Create a new art to the system.",
+        "operationId": "ArtGeneratorService_CreateArt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "parent",
+            "description": "The parent which owns the arts.\nFor example: \"users/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+"
+          },
+          {
+            "name": "art",
+            "description": "The art to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbArt",
+              "required": [
+                "art"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Arts"
+        ]
+      }
+    },
+    "/v1/{parent}/compositions": {
+      "get": {
+        "summary": "List all compositions",
+        "description": "Retrieve a list of all compositions for a specific art.",
+        "operationId": "ArtGeneratorService_ListCompositions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbListCompositionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "parent",
+            "description": "The parent which owns the compositions.\nFor example: \"users/123/arts/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "pageSize",
+            "description": "The maximum number of compositions to return.\nThe service may return fewer than this value.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "A page token, received from a previous `ListCompositions` call.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Compositions"
+        ]
+      },
+      "post": {
+        "summary": "Create a new composition",
+        "description": "Create a new thread art composition for a specific art.",
+        "operationId": "ArtGeneratorService_CreateComposition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbComposition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "parent",
+            "description": "The parent which owns the composition.\nFor example: \"users/123/arts/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "composition",
+            "description": "The composition to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbComposition",
+              "required": [
+                "composition"
+              ]
+            }
+          }
+        ],
+        "tags": [
+          "Compositions"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ArtGeneratorServiceConfirmArtImageUploadBody": {
+      "type": "object"
+    },
+    "pbArt": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "The name of the Art resource.\nFor example: \"users/123/arts/456\"",
+          "readOnly": true
+        },
+        "title": {
+          "type": "string",
+          "description": "Title is the art's title."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "ImageURL is the art's image URL.",
+          "readOnly": true
+        },
+        "status": {
+          "$ref": "#/definitions/pbArtStatus",
+          "title": "Status of the art",
+          "readOnly": true
+        },
+        "author": {
+          "type": "string",
+          "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\"",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "CreatedAt is the art's creation time. Output only.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UpdatedAt is the art's last update time.",
+          "readOnly": true
+        }
+      },
+      "required": [
+        "title"
+      ]
+    },
+    "pbArtStatus": {
+      "type": "string",
+      "enum": [
+        "ART_STATUS_UNSPECIFIED",
+        "ART_STATUS_PENDING_IMAGE",
+        "ART_STATUS_PROCESSING",
+        "ART_STATUS_COMPLETE",
+        "ART_STATUS_FAILED",
+        "ART_STATUS_ARCHIVED"
+      ],
+      "default": "ART_STATUS_UNSPECIFIED",
+      "description": "- ART_STATUS_UNSPECIFIED: Default unspecified status\n - ART_STATUS_PENDING_IMAGE: Art is created but image is pending upload\n - ART_STATUS_PROCESSING: Image is uploaded and being processed\n - ART_STATUS_COMPLETE: Art is complete with processed image\n - ART_STATUS_FAILED: Processing failed\n - ART_STATUS_ARCHIVED: Art is archived/hidden but not deleted",
+      "title": "Status of the art"
+    },
+    "pbComposition": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "The name of the Composition resource.\nFor example: \"users/123/arts/456/compositions/789\"",
+          "readOnly": true
+        },
+        "status": {
+          "$ref": "#/definitions/pbCompositionStatus",
+          "title": "Status of the composition",
+          "readOnly": true
+        },
+        "nailsQuantity": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of nails to use in the circle"
+        },
+        "imgSize": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Image size in pixels"
+        },
+        "maxPaths": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Maximum number of paths to generate"
+        },
+        "startingNail": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Starting nail position"
+        },
+        "minimumDifference": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Minimum difference between connected nails"
+        },
+        "brightnessFactor": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Brightness factor for thread lines"
+        },
+        "imageContrast": {
+          "type": "number",
+          "format": "float",
+          "title": "Image contrast adjustment"
+        },
+        "physicalRadius": {
+          "type": "number",
+          "format": "float",
+          "title": "Physical radius of the final artwork in mm"
+        },
+        "previewUrl": {
+          "type": "string",
+          "title": "URL to the preview image of the composition result",
+          "readOnly": true
+        },
+        "gcodeUrl": {
+          "type": "string",
+          "title": "URL to download the GCode file",
+          "readOnly": true
+        },
+        "pathlistUrl": {
+          "type": "string",
+          "title": "URL to download the paths list file",
+          "readOnly": true
+        },
+        "threadLength": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Thread length in meters",
+          "readOnly": true
+        },
+        "totalLines": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Total number of lines",
+          "readOnly": true
+        },
+        "errorMessage": {
+          "type": "string",
+          "title": "Error message if processing failed",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Creation time",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Last update time",
+          "readOnly": true
+        }
+      },
+      "title": "Composition represents a configuration for creating a thread art"
+    },
+    "pbCompositionStatus": {
+      "type": "string",
+      "enum": [
+        "COMPOSITION_STATUS_UNSPECIFIED",
+        "COMPOSITION_STATUS_PENDING",
+        "COMPOSITION_STATUS_PROCESSING",
+        "COMPOSITION_STATUS_COMPLETE",
+        "COMPOSITION_STATUS_FAILED"
+      ],
+      "default": "COMPOSITION_STATUS_UNSPECIFIED",
+      "description": "- COMPOSITION_STATUS_UNSPECIFIED: Default unspecified status\n - COMPOSITION_STATUS_PENDING: Composition created but waiting to be processed\n - COMPOSITION_STATUS_PROCESSING: Composition is currently being processed\n - COMPOSITION_STATUS_COMPLETE: Composition has been successfully processed\n - COMPOSITION_STATUS_FAILED: Composition processing failed",
+      "title": "Status of the composition"
+    },
+    "pbGetArtUploadUrlResponse": {
+      "type": "object",
+      "properties": {
+        "uploadUrl": {
+          "type": "string",
+          "title": "The signed URL to upload the art image to"
+        },
+        "expirationTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "The expiration time for the signed URL"
+        }
+      }
+    },
+    "pbListArtsResponse": {
+      "type": "object",
+      "properties": {
+        "arts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/pbArt"
+          },
+          "description": "The arts returned."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "A token to retrieve next page of results.\nPass this value in ListArtsRequest.page_token field in the subsequent call to `ListArts` method to retrieve the next page of results."
+        }
+      }
+    },
+    "pbListCompositionsResponse": {
+      "type": "object",
+      "properties": {
+        "compositions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/pbComposition"
+          },
+          "description": "The compositions returned."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "A token to retrieve next page of results."
+        }
+      }
+    },
+    "pbListUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/pbUser"
+          },
+          "description": "Users is the list of users."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "NextPageToken is the token to retrieve the next page of results."
+        }
+      }
+    },
+    "pbUser": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name is the unique identifier for the user.",
+          "readOnly": true
+        },
+        "firstName": {
+          "type": "string",
+          "description": "FirstName is the user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "LastName is the user's last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email is the user's email."
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Avatar is the user's avatar url.",
+          "readOnly": true
+        }
+      },
+      "required": [
+        "firstName",
+        "lastName",
+        "email"
+      ]
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "description": "Access token obtained from the login endpoint. Bearer authentication should be used with the format: 'Bearer {access_token}'.",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    }
+  ]
+}

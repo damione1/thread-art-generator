@@ -200,6 +200,8 @@ func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerI
 		newCtx := context.WithValue(ctxWithClaims, middleware.AuthKey, internalID)
 		// Store the raw token in context for later use
 		newCtx = context.WithValue(newCtx, "token", token)
+		// Pass the server instance through the context
+		newCtx = context.WithValue(newCtx, "server", info.Server)
 		return handler(newCtx, req)
 	}
 }

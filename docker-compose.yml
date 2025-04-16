@@ -170,16 +170,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Combined proto build service
-  proto-build:
-    build:
-      context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-proto-build
-    volumes:
-      - ./:/app
-    container_name: "proto-build"
-    restart: "no"
-
   generate-models:
     build:
       context: .
@@ -224,6 +214,19 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+
+  proto-build:
+    build:
+      context: .
+      dockerfile: Infra/Dockerfiles/Dockerfile-proto-build
+    volumes:
+      - ./proto:/app/proto
+      - ./core/pb:/app/core/pb
+      - ./web/src/lib/pb:/app/web/src/lib/pb
+      - ./api/openapi:/app/api/openapi
+    working_dir: /app/proto
+    container_name: "proto-build"
+    restart: "no"
 
 volumes:
   threadmachine:
