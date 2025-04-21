@@ -51,7 +51,7 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 		log.Info().Msgf("CreateArt failed to get user: %s", err)
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
-	log.Info().Msgf("CreateArt user: %s", user)
+	log.Info().Str("user_id", user.ID).Str("email", user.Email.String).Msg("CreateArt found user")
 	if user.Role != models.RoleEnumUser {
 		log.Info().Msgf("CreateArt user is not a user")
 		return nil, pbErrors.PermissionDeniedError("only users can create art")

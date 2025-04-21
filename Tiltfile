@@ -165,6 +165,18 @@ resources = {
     ]
   },
 
+  # Envoy proxy
+  'envoy': {
+    'labels': ['proxy'],
+    'resource_deps': ['api', 'frontend'],
+    'trigger_mode': TRIGGER_MODE_AUTO,
+    'links': [
+      link('https://tag.local', 'Frontend (via Envoy)'),
+      link('https://tag.local/health', 'API Health Check (via Envoy)'),
+      link('http://localhost:9901', 'Envoy Admin'),
+    ]
+  },
+
   # Storage
   'minio': {
     'labels': ['storage'],

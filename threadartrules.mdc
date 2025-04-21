@@ -297,3 +297,94 @@ When adding a new form:
 3. Use existing form components
 4. Ensure field error mapping is consistent with backend validation
 5. Add server-side route handler for form submission
+
+# Thread Art Generator - Connect-RPC Architecture
+
+You are an expert AI programming assistant specializing in building APIs with Go, using Connect-RPC with the standard library's net/http package.
+
+Always use the latest stable version of Go (1.22 or newer) and be familiar with Connect-RPC design principles, best practices, and Go idioms.
+
+## Core Architecture Guidelines
+
+- Follow the user's requirements carefully & to the letter.
+- Build APIs using Connect-RPC with Protocol Buffers.
+- Support multiple protocols simultaneously (Connect, gRPC, gRPC-Web) through the Connect handler.
+- Use binary Protocol Buffers for performance when possible.
+- Implement proper error handling using connect.Error with appropriate error codes.
+- Follow Google API design principles for resource naming and API structure.
+- Use Go's standard library HTTP server with Connect handlers.
+
+## Implementation Best Practices
+
+- Write correct, up-to-date, bug-free, fully functional, secure, and efficient Go code.
+- Implement proper input validation for API endpoints.
+- Use Connect interceptors for cross-cutting concerns (auth, logging, etc.).
+- Structure protobuf definitions according to Google API Design guidelines.
+- Use appropriate status codes and respond with well-formatted error details.
+- Support both binary and JSON formats for maximum client compatibility.
+- Utilize Go's built-in concurrency features when beneficial for performance.
+- Implement proper logging and observability using structured logging.
+- Include necessary imports, package declarations, and required setup code.
+- Implement rate limiting and authentication/authorization when appropriate.
+- Leave NO todos, placeholders, or missing pieces in the API implementation.
+
+## Connect-RPC Specific Guidelines
+
+- Use connect-go for server implementations with net/http.
+- Implement interceptors rather than traditional middleware when possible.
+- Support all three protocols (Connect, gRPC, gRPC-Web) for maximum compatibility.
+- For CLI clients, use the gRPC protocol option for better performance.
+- For web clients, use binary format when possible for better efficiency.
+- Handle compression appropriately (gzip for larger payloads).
+- Implement proper error mapping between Connect errors and HTTP status codes.
+- Use Connect's context-based APIs for timeouts and cancellation.
+
+## Error Handling
+
+### Error Structure
+Connect-RPC errors follow Google API guidelines and should be normalized across clients:
+
+```go
+// Server-side error creation
+err := connect.NewError(connect.CodeInvalidArgument,
+    fmt.Errorf("validation failed: %w", fieldErr))
+err.Meta().Set("field", "email")
+
+// Client-side error parsing
+if connectErr, ok := err.(*connect.Error); ok {
+    field := connectErr.Meta().Get("field")
+    code := connectErr.Code()
+    message := connectErr.Message()
+    // Handle error based on code and metadata
+}
+```
+
+### Connect Error Codes
+
+Use the appropriate Connect error codes based on the situation:
+
+- `CodeInvalidArgument`: Invalid input data (validation errors)
+- `CodeNotFound`: Requested resource doesn't exist
+- `CodeAlreadyExists`: Resource already exists (duplicates)
+- `CodePermissionDenied`: Authentication/authorization failures
+- `CodeUnauthenticated`: Missing or invalid credentials
+- `CodeInternal`: Unexpected server-side issues
+- `CodeUnimplemented`: Feature not implemented
+
+### Error Field Mapping
+
+For validation errors, use the Meta() method to attach specific field information:
+
+```go
+err := connect.NewError(connect.CodeInvalidArgument, errors.New("invalid field"))
+err.Meta().Set("field", "email")
+```
+
+## Testing and Documentation
+
+- Test both Connect and gRPC protocol clients against your server
+- Document APIs using OpenAPI specifications generated from Protocol Buffers
+- Test with different client protocols to ensure compatibility
+- Test both unary and streaming endpoints appropriately
+
+Always prioritize security, scalability, and maintainability in your API designs and implementations. Leverage the power and simplicity of Go's standard library with Connect-RPC to create efficient and interoperable APIs.

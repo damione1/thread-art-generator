@@ -22,10 +22,16 @@ interface ConnectErrorDetails {
  * Creates a transport for Connect
  */
 export const createTransport = () => {
+    // Setup for direct communication with the API server
     return createConnectTransport({
         baseUrl: CONFIG.baseUrl,
         useBinaryFormat: true,
+        // We're passing credentials to allow cookies to be sent in cross-origin requests
         credentials: 'include',
+        // For Connect protocols
+        interceptors: [],
+        // Default values that will be used for each request
+        defaultTimeoutMs: 30000, // 30 seconds timeout
     });
 };
 

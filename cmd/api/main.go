@@ -60,11 +60,30 @@ func runConnectServer(config util.Config) {
 
 	// Setup CORS
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"}, // Adjust this in production
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Connect-Protocol-Version"},
-		ExposedHeaders:   []string{"Connect-Protocol-Version"},
+		AllowedOrigins: []string{"*"}, // Adjust this in production
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders: []string{
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"Connect-Protocol-Version",
+			"X-Requested-With",
+			"X-User-Agent",
+			"X-Grpc-Web",
+			"Origin",
+			"Access-Control-Request-Method",
+			"Access-Control-Request-Headers",
+		},
+		ExposedHeaders: []string{
+			"Connect-Protocol-Version",
+			"Grpc-Status",
+			"Grpc-Message",
+			"Access-Control-Allow-Origin",
+			"Access-Control-Allow-Credentials",
+		},
 		AllowCredentials: true,
+		MaxAge:           86400,                               // 24 hours
+		Debug:            config.Environment == "development", // Enable debug for development
 	})
 
 	// Create a mux for routing

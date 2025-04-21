@@ -73,6 +73,22 @@ services:
       - api
     restart: unless-stopped
 
+  # Envoy proxy for TLS termination and domain routing
+  envoy:
+    image: envoyproxy/envoy:v1.27-latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9901:9901" # Admin interface
+    volumes:
+      - ./Infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+      - ./certs:/certs
+    depends_on:
+      - api
+      - frontend
+    restart: unless-stopped
+    container_name: envoy
+
   # RabbitMQ service for queue
   rabbitmq:
     image: rabbitmq:3-management

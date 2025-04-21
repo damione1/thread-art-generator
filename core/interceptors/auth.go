@@ -56,7 +56,7 @@ func authorizeUserFromHeaders(ctx context.Context, headers http.Header, authenti
 }
 
 // getOrCreateUser checks if a user exists in the database and creates one if it doesn't
-func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string, userProvider auth.UserProvider) (string, error) {
+func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string) (string, error) {
 	// Try to find user by Auth0 ID - using null.StringFrom to convert string to null.String
 	user, err := models.Users(
 		models.UserWhere.Auth0ID.EQ(auth0ID),
@@ -183,7 +183,7 @@ func AuthMiddleware(authService auth.AuthService, db *sql.DB) connect.UnaryInter
 			ctxWithClaims := context.WithValue(ctx, "claims", claims)
 
 			// Get or create user in our database
-			internalID, err := getOrCreateUser(ctxWithClaims, db, claims.UserID, authService)
+			internalID, err := getOrCreateUser(ctxWithClaims, db, claims.UserID)
 			if err != nil {
 				log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
 				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))

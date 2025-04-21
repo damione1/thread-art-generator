@@ -251,50 +251,11 @@ type userInfoCache struct {
 	mu    sync.RWMutex
 }
 
-// newUserInfoCache creates a new cache
-func newUserInfoCache() *userInfoCache {
-	return &userInfoCache{
-		cache: make(map[string]*UserInfo),
-	}
-}
-
-// get retrieves a cached user info if available
-func (c *userInfoCache) get(userID string) (*UserInfo, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	info, ok := c.cache[userID]
-	return info, ok
-}
-
-// set caches user info
-func (c *userInfoCache) set(userID string, info *UserInfo) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cache[userID] = info
-}
-
 // contextKey is a private type for context keys to avoid collisions
 type contextKey string
 
 // userInfoCacheKey is the context key for the user info cache
 const userInfoCacheKey contextKey = "userInfoCache"
-
-// getUserInfoCache gets or creates a user info cache in the context
-func getUserInfoCache(ctx context.Context) *userInfoCache {
-	if cache, ok := ctx.Value(userInfoCacheKey).(*userInfoCache); ok {
-		return cache
-	}
-	return newUserInfoCache()
-}
-
-// withUserInfoCache adds a user info cache to the context if not already present
-func withUserInfoCache(ctx context.Context) context.Context {
-	if _, ok := ctx.Value(userInfoCacheKey).(*userInfoCache); ok {
-		// Cache already exists
-		return ctx
-	}
-	return context.WithValue(ctx, userInfoCacheKey, newUserInfoCache())
-}
 
 // getCachedUserInfo retrieves user info from service-level cache
 func (a *Auth0Service) getCachedUserInfo(userID string) (*UserInfo, bool) {
