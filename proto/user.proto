@@ -1,12 +1,11 @@
 syntax = "proto3";
 
 package pb;
-import "google/protobuf/timestamp.proto";
-import "google/protobuf/field_mask.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "buf/validate/validate.proto";
 
-option go_package = "thread-art-generator/pkg/proto;pb";
+option go_package = "github.com/Damione1/thread-art-generator/core/pb";
 
 
 message User {
@@ -21,43 +20,80 @@ message User {
         (google.api.resource_reference).type = "art.example.com/User"
         ];
     // FirstName is the user's first name.
-    string first_name = 3 [(google.api.field_behavior) = REQUIRED];
-    // LastName is the user's last name.
-    string last_name = 4 [(google.api.field_behavior) = REQUIRED];
-    // Email is the user's email.
-    string email = 5 [(google.api.field_behavior) = REQUIRED];
-    // Password is the user's password.
-    string password = 6 [
+    string first_name = 3 [
         (google.api.field_behavior) = REQUIRED,
-        (google.api.field_behavior) = INPUT_ONLY
-        ];
-}
+        (buf.validate.field).cel = {
+            id: "user.first_name.format",
+            message: "First name must contain only letters",
+            expression: "this.matches(\"^[a-zA-Z]+$\")"
+        },
+        (buf.validate.field).cel = {
+            id: "user.first_name.required",
+            message: "First name is required",
+            expression: "this.size() > 0"
+        }
+    ];
+    // LastName is the user's last name.
+    string last_name = 4 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).cel = {
+            id: "user.last_name.format",
+            message: "Last name must contain only letters",
+            expression: "this.matches(\"^[a-zA-Z]+$\")"
+        },
+        (buf.validate.field).cel = {
+            id: "user.last_name.required",
+            message: "Last name is required",
+            expression: "this.size() > 0"
+        }
+    ];
+    // Email is the user's email.
+    string email = 5 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).cel = {
+            id: "user.email.format",
+            message: "Please enter a valid email address",
+            expression: "this.matches(\"^[^@]+@[^@]+\\\\.[^@]+$\")"
+        },
+        (buf.validate.field).cel = {
+            id: "user.email.required",
+            message: "Email address is required",
+            expression: "this.size() > 0"
+        }
+    ];
 
-message CreateUserRequest {
-    // User is the user to be created.
-    User user = 1 [(google.api.field_behavior) = REQUIRED];
+    // Avatar is the user's avatar url.
+    string avatar = 7 [
+        (google.api.field_behavior) = OUTPUT_ONLY
+    ];
 }
 
 message GetUserRequest {
     // Name is the unique identifier for the user.
     string name = 1 [
         (google.api.field_behavior) = REQUIRED,
-        (google.api.resource_reference).type = "art.example.com/User"
-        ];
+        (google.api.resource_reference).type = "art.example.com/User",
+        (buf.validate.field).cel = {
+            id: "get_user.name.format",
+            message: "User resource name is required and must start with 'users/'",
+            expression: "this.size() > 0 && this.startsWith('users/')"
+        }
+    ];
 }
 
 message UpdateUserRequest {
     // User is the user to be updated.
-    User user = 1 [(google.api.field_behavior) = REQUIRED];
-    // UpdateMask is the field mask representing which fields to update.
-    google.protobuf.FieldMask update_mask = 2;
+    User user = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).required = true
+    ];
 }
 
 message ListUsersRequest {
     // PageToken is the token to retrieve the next page of results.
     string page_token = 1;
     // PageSize is the number of users to return in a single page.
-    int32 page_size = 2;
+    int32 page_size = 2 [(buf.validate.field).int32 = {gt: 0, lte: 100}];
 }
 
 message ListUsersResponse {
@@ -69,68 +105,19 @@ message ListUsersResponse {
 
 message DeleteUserRequest {
     // Name is the unique identifier for the user.
-    string name = 1 [(google.api.field_behavior) = REQUIRED, (google.api.resource_reference).type = "art.example.com/User"];
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference).type = "art.example.com/User",
+        (buf.validate.field).cel = {
+            id: "delete_user.name.format",
+            message: "User resource name is required and must start with 'users/'",
+            expression: "this.size() > 0 && this.startsWith('users/')"
+        }
+    ];
 }
 
-message CreateSessionRequest {
-    // Email is the user's email.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
-    // Password is the user's password.
-    string password = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message CreateSessionResponse {
-    // User is the user.
-    User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // Session ID
-    string session_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // AccessToken is the access token.
-    string access_token = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshToken is the refresh token.
-    string refresh_token = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // AccessTokenExpiresTime is the access token expiration time.
-    google.protobuf.Timestamp access_token_expire_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshTokenExpiresTime is the refresh token expiration time.
-    google.protobuf.Timestamp refresh_token_expire_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-}
-
-message RefreshTokenRequest {
-    // RefreshToken is the refresh token that the user provides.
-    string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-message RefreshTokenResponse {
-    // AccessToken is the new access token that the user can use for authentication.
-    string access_token = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshToken is the new refresh token that the user can use to get a new access token when the current one expires.
-    string refresh_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // AccessTokenExpiresTime is the access token expiration time.
-    google.protobuf.Timestamp access_token_expire_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
-    // RefreshTokenExpiresTime is the refresh token expiration time.
-    google.protobuf.Timestamp refresh_token_expire_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
-}
-
-message DeleteSessionRequest {
-    // RefreshToken is the refresh token of the session that needs to be deleted.
-    string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-//reset password
-message ResetPasswordRequest {
-    // The email of the user who wants to reset the password.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-//validate email
-message ValidateEmailRequest {
-    // The email of the user who wants to validate the email.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
-    // The validation number that the user needs to input.
-    int64 validationNumber = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message SendValidationEmailRequest {
-    // The email of the user who wants to validate the email.
-    string email = 1 [(google.api.field_behavior) = REQUIRED];
+// GetCurrentUserRequest is an empty request to get the currently authenticated user.
+// Following AIP principles of having a separate method for getting the current user.
+message GetCurrentUserRequest {
+    // Intentionally empty - uses the authentication context to identify the user
 }

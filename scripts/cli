@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+# Directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Check if CLI is built
+CLI_PATH="$PROJECT_ROOT/build/cli"
+if [ ! -f "$CLI_PATH" ]; then
+  echo "Building CLI..."
+  mkdir -p "$PROJECT_ROOT/build"
+  (cd "$PROJECT_ROOT" && go build -o build/cli cmd/cli/main.go)
+  chmod +x "$CLI_PATH"
+  echo "CLI built successfully"
+fi
+
+# Load environment variables
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
+
+# Pass all arguments to the CLI
+"$CLI_PATH" "$@"

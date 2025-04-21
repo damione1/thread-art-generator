@@ -52,6 +52,21 @@ type (
 		PhysicalRadius    float64
 	}
 
+	// Config holds all possible configuration options for ThreadGenerator
+	Config struct {
+		NailsQuantity     int     // Number of nails around the circle
+		ImgSize           int     // Size of the image in pixels
+		MaxPaths          int     // Maximum number of paths to generate
+		StartingNail      int     // Starting nail index
+		MinimumDifference int     // Minimum difference between nails
+		BrightnessFactor  int     // Brightness factor for line drawing
+		ImageContrast     float64 // Image contrast adjustment
+		PhysicalRadius    float64 // Physical radius in mm
+		RotationAxis      string  // Rotation axis name
+		NeedleAxis        string  // Needle axis name
+		SpindleAxis       string  // Spindle axis name
+	}
+
 	OutputStats struct {
 		TotalLines   int
 		ThreadLength int
@@ -64,6 +79,46 @@ type (
 		NailIdx int
 	}
 )
+
+// DefaultConfig returns a Config with default values
+func DefaultConfig() Config {
+	return Config{
+		NailsQuantity:     300,
+		ImgSize:           800,
+		MaxPaths:          10000,
+		StartingNail:      0,
+		MinimumDifference: 10,
+		BrightnessFactor:  50,
+		ImageContrast:     40,
+		PhysicalRadius:    609.6, // 24 inches
+		RotationAxis:      "A",
+		NeedleAxis:        "X",
+		SpindleAxis:       "Y",
+	}
+}
+
+// NewThreadGenerator creates a new ThreadGenerator with the given configuration
+func NewThreadGenerator(config Config) *ThreadGenerator {
+	return &ThreadGenerator{
+		nailsQuantity:     config.NailsQuantity,
+		imgSize:           config.ImgSize,
+		maxPaths:          config.MaxPaths,
+		startingNail:      config.StartingNail,
+		minimumDifference: config.MinimumDifference,
+		brightnessFactor:  config.BrightnessFactor,
+		imageContrast:     config.ImageContrast,
+		physicalRadius:    config.PhysicalRadius,
+		rotationAxis:      config.RotationAxis,
+		needleAxis:        config.NeedleAxis,
+		spindleAxis:       config.SpindleAxis,
+		pixelSize:         config.PhysicalRadius / float64(config.ImgSize),
+	}
+}
+
+// SetImage sets the image to process
+func (tg *ThreadGenerator) SetImage(imagePath string) {
+	tg.imageName = imagePath
+}
 
 func (tg *ThreadGenerator) getDefaults() {
 	tg.nailsQuantity = 300
@@ -80,7 +135,7 @@ func (tg *ThreadGenerator) getDefaults() {
 }
 
 func (tg *ThreadGenerator) mergeArgs(args Args) error {
-	tg.getDefaults()
+	// Don't reset to defaults here - only apply values from args if provided
 
 	if args.NailsQuantity > 0 {
 		tg.nailsQuantity = args.NailsQuantity
@@ -91,7 +146,7 @@ func (tg *ThreadGenerator) mergeArgs(args Args) error {
 	if args.MaxPaths > 0 {
 		tg.maxPaths = args.MaxPaths
 	}
-	if args.StartingNail > 0 {
+	if args.StartingNail >= 0 { // Changed from > 0 to >= 0 to allow starting at nail 0
 		tg.startingNail = args.StartingNail
 	}
 	if args.MinimumDifference > 0 {
@@ -105,7 +160,10 @@ func (tg *ThreadGenerator) mergeArgs(args Args) error {
 		tg.physicalRadius = args.PhysicalRadius
 	}
 
-	tg.pixelSize = tg.physicalRadius / float64(tg.imgSize)
+	// Recalculate pixelSize if either imgSize or physicalRadius changed
+	if args.ImgSize > 0 || args.PhysicalRadius > 0 {
+		tg.pixelSize = tg.physicalRadius / float64(tg.imgSize)
+	}
 
 	if args.ImageName != "" {
 		tg.imageName = args.ImageName
@@ -116,11 +174,27 @@ func (tg *ThreadGenerator) mergeArgs(args Args) error {
 	return nil
 }
 
+// Generate processes the image and creates thread art based on configuration
 func (tg *ThreadGenerator) Generate(args Args) (*OutputStats, error) {
 	start := time.Now()
-	err := tg.mergeArgs(args)
-	if err != nil {
-		return nil, err
+
+	// If only ImageName is provided, don't modify other settings
+	if args.ImageName != "" &&
+		args.NailsQuantity == 0 &&
+		args.ImgSize == 0 &&
+		args.MaxPaths == 0 &&
+		args.StartingNail == 0 &&
+		args.MinimumDifference == 0 &&
+		args.BrightnessFactor == 0 &&
+		args.PhysicalRadius == 0 {
+		// Just set the image name
+		tg.imageName = args.ImageName
+	} else {
+		// Otherwise apply all provided arguments
+		err := tg.mergeArgs(args)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sourceImage, err := tg.getSourceImage()

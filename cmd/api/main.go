@@ -1,22 +1,20 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
-	"net"
 	"net/http"
 
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/bufbuild/connect-go"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-	"google.golang.org/protobuf/encoding/protojson"
 
-	database "github.com/Damione1/thread-art-generator/pkg/db"
-	"github.com/Damione1/thread-art-generator/pkg/grpcApi"
-	"github.com/Damione1/thread-art-generator/pkg/pb"
-	"github.com/Damione1/thread-art-generator/pkg/util"
+	"github.com/Damione1/thread-art-generator/core/auth"
+	"github.com/Damione1/thread-art-generator/core/cache"
+	database "github.com/Damione1/thread-art-generator/core/db"
+	"github.com/Damione1/thread-art-generator/core/interceptors"
+	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
+	"github.com/Damione1/thread-art-generator/core/service"
+	"github.com/Damione1/thread-art-generator/core/util"
 )
 
 func main() {
@@ -24,83 +22,106 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to load config")
 	}
-	db, err := database.ConnectDb(&config)
+
+	_, err = database.ConnectDb(&config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
 
-	go runGatewayServer(config, db)
-	runGrpcServer(config, db)
-
+	go cache.CleanExpiredCacheEntries()
+	runConnectServer(config)
 }
 
-func runGrpcServer(config util.Config, store *sql.DB) {
-	log.Print("🍩 Starting gRPC server...")
-	server, err := grpcApi.NewServer(config)
+func runConnectServer(config util.Config) {
+	log.Print("🍩 Starting Connect server...")
+	server, err := service.NewServer(config)
 	if err != nil {
-		log.Print(fmt.Sprintf("Failed to create gRPC server. %v", err))
+		log.Fatal().Err(err).Msg("Failed to create server")
 	}
 	defer server.Close()
-	log.Print("🍩 gRPC server created")
-	gprcLogger := grpc.UnaryInterceptor(grpcApi.GrpcLogger)
-	grpcServer := grpc.NewServer(gprcLogger)
-	pb.RegisterArtGeneratorServiceServer(grpcServer, server)
-	reflection.Register(grpcServer)
+	log.Print("🍩 Server created")
 
-	log.Print("🍩 Starting to listen on port " + config.GRPCServerPort)
-
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.GRPCServerPort))
+	authService, err := createAuthService(config)
 	if err != nil {
-		log.Print(fmt.Sprintf("🍩 Failed to listen. %v", err))
+		log.Fatal().Err(err).Msg("Failed to initialize auth service")
 	}
 
-	err = grpcServer.Serve(listener)
-	if err != nil {
-		log.Print(fmt.Sprintf("🍩 Failed to serve gRPC server over port %s. %v", listener.Addr().String(), err))
-	}
-}
-
-func runGatewayServer(config util.Config, store *sql.DB) {
-	log.Print("🍦 Starting HTTP server...")
-	server, err := grpcApi.NewServer(config)
-	if err != nil {
-		log.Print(fmt.Sprintf("🍦 Failed to create HTTP server. %v", err))
-	}
-	defer server.Close()
-
-	grpcMux := runtime.NewServeMux(
-		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
-			MarshalOptions: protojson.MarshalOptions{
-				UseProtoNames: true,
-			},
-			UnmarshalOptions: protojson.UnmarshalOptions{
-				DiscardUnknown: true,
-			},
-		}),
+	// Define our Connect interceptors
+	interceptorChain := connect.WithInterceptors(
+		interceptors.ConnectLogger(),
+		interceptors.AuthMiddleware(authService, config.DB),
 	)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	err = pb.RegisterArtGeneratorServiceHandlerServer(ctx, grpcMux, server)
-	if err != nil {
-		log.Fatal().Err(err).Msg("🍦 Failed to register HTTP gateway server.")
-	}
 
+	// Create Connect adapter
+	adapter := service.NewConnectAdapter(server)
+
+	// Create API handler
+	path, handler := pbconnect.NewArtGeneratorServiceHandler(adapter, interceptorChain)
+
+	// Setup CORS
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"}, // Adjust this in production
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders: []string{
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"Connect-Protocol-Version",
+			"X-Requested-With",
+			"X-User-Agent",
+			"X-Grpc-Web",
+			"Origin",
+			"Access-Control-Request-Method",
+			"Access-Control-Request-Headers",
+		},
+		ExposedHeaders: []string{
+			"Connect-Protocol-Version",
+			"Grpc-Status",
+			"Grpc-Message",
+			"Access-Control-Allow-Origin",
+			"Access-Control-Allow-Credentials",
+		},
+		AllowCredentials: true,
+		MaxAge:           86400,                               // 24 hours
+		Debug:            config.Environment == "development", // Enable debug for development
+	})
+
+	// Create a mux for routing
 	mux := http.NewServeMux()
-	mux.Handle("/", grpcMux)
 
-	fs := http.FileServer(http.Dir("./doc/swagger"))
-	mux.Handle("/swagger/", http.StripPrefix("/swagger", fs))
-	log.Print(fmt.Sprintf("🍨 Swagger UI server started on http://localhost:%s/swagger/", config.HTTPServerPort))
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.HTTPServerPort))
+	// Register the service
+	mux.Handle(path, corsHandler.Handler(handler))
+
+	// Create the server
+	serverPort := config.HTTPServerPort
+	if serverPort == "" {
+		serverPort = config.GRPCServerPort // Fallback to GRPC port if HTTP port not set
+		log.Warn().Msg("HTTP_SERVER_PORT not set, using GRPC_SERVER_PORT instead")
+	}
+	addr := fmt.Sprintf("0.0.0.0:%s", serverPort)
+	log.Print("🍩 Starting to listen on " + addr)
+
+	err = http.ListenAndServe(addr, interceptors.HttpLogger(mux))
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to listen.")
+		log.Fatal().Err(err).Msg("Failed to start server")
+	}
+}
+
+func createAuthService(config util.Config) (auth.AuthService, error) {
+	auth0Config := auth.Auth0Configuration{
+		Domain:                    config.Auth0.Domain,
+		Audience:                  config.Auth0.Audience,
+		ClientID:                  config.Auth0.ClientID,
+		ClientSecret:              config.Auth0.ClientSecret,
+		ManagementApiClientID:     config.Auth0.ManagementApiClientID,
+		ManagementApiClientSecret: config.Auth0.ManagementApiClientSecret,
 	}
 
-	log.Print(fmt.Sprintf("🍦 HTTP server started on http://localhost:%s/v1/", config.HTTPServerPort))
-	handler := grpcApi.HttpLogger(mux)
-	err = http.Serve(listener, handler)
-	if err != nil {
-		log.Fatal().Err(err).Msg(fmt.Sprintf("🍦 Failed to serve HTTP gateway server over port %s.", listener.Addr().String()))
-	}
+	return auth.NewAuth0Service(auth0Config)
 }

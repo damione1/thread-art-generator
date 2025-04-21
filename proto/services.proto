@@ -9,7 +9,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/descriptor.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-option go_package = "thread-art-generator/pkg/proto;pb";
+option go_package = "github.com/Damione1/thread-art-generator/core/pb";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -47,45 +47,17 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     name: "Arts"
     description: "Endpoints for art management"
   }
+  tags: {
+    name: "Compositions"
+    description: "Endpoints for thread art compositions"
+  }
+  tags: {
+    name: "Media"
+    description: "Endpoints for media management"
+  }
 };
 
 service ArtGeneratorService {
-  rpc CreateSession (CreateSessionRequest) returns (CreateSessionResponse) {
-    option (google.api.http) = {
-      post: "/v1/sessions"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Log in a user"
-      description: "Authenticate a user with their email and password and return an access token."
-      security: {};
-      tags: "Authentication";
-    };
-  }
-
-  rpc DeleteSession (DeleteSessionRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/v1/sessions/{refresh_token}"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Logout a user"
-      description: "Delete a user's session, effectively logging them out."
-      tags: "Users";
-    };
-  }
-
-  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse) {
-    option (google.api.http) = {
-      post: "/v1/tokens:refresh"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Refresh a user's token"
-      description: "Refresh a user's authentication token."
-      tags: "Users";
-    };
-  }
-
   rpc UpdateUser (UpdateUserRequest) returns (User) {
     option (google.api.http) = {
       patch: "/v1/users/{user.name}"
@@ -120,18 +92,6 @@ service ArtGeneratorService {
     };
   }
 
-  rpc CreateUser (CreateUserRequest) returns (User) {
-    option (google.api.http) = {
-      post: "/v1/users"
-      body: "user"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Create a new user"
-      description: "Create a new user in the system."
-      tags: "Users";
-    };
-  }
-
   rpc DeleteUser (DeleteUserRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/v1/users/{name}"
@@ -143,38 +103,13 @@ service ArtGeneratorService {
     };
   }
 
-  rpc ResetPassword (ResetPasswordRequest) returns (google.protobuf.Empty) {
+  rpc GetCurrentUser (GetCurrentUserRequest) returns (User) {
     option (google.api.http) = {
-      post: "/v1/users/{email}:resetPassword"
-      body: "*"
+      get: "/v1/users:me"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Reset a user's password"
-      description: "Send a password reset email to a user's registered email address."
-      tags: "Users";
-    };
-  }
-
-  rpc ValidateEmail (ValidateEmailRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/v1/users/{email}:validateEmail"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Validate a user's email"
-      description: "Enter a validation number received by email to validate a user's email address."
-      tags: "Users";
-    };
-  }
-
-  rpc SendValidationEmail (SendValidationEmailRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/v1/users/{email}:sendValidationEmail"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Send a validation email"
-      description: "Ask the system to send a validation email to a user's registered email address."
+      summary: "Get the current user"
+      description: "Retrieve information for the currently authenticated user."
       tags: "Users";
     };
   }
@@ -194,10 +129,10 @@ service ArtGeneratorService {
 
   rpc GetArt (GetArtRequest) returns (Art) {
     option (google.api.http) = {
-      get: "/v1/{name=authors/*/arts/*}"
+      get: "/v1/{name=users/*/arts/*}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Get a arts's information"
+      summary: "Get an art's information"
       description: "Retrieve information for a specific art by its ID."
       tags: "Arts";
     };
@@ -241,16 +176,91 @@ service ArtGeneratorService {
     option (google.api.method_signature) = "name";
   }
 
-  rpc UploadArt (stream UploadArtRequest) returns (Art) {
+  rpc GetArtUploadUrl (GetArtUploadUrlRequest) returns (GetArtUploadUrlResponse) {
     option (google.api.http) = {
-      post: "/v1/arts:upload"
+      get: "/v1/{name=users/*/arts/*}:getUploadUrl"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get upload URL for art image"
+      description: "Generate a signed URL for uploading an image for a specific art."
+      tags: "Media";
+    };
+    option (google.api.method_signature) = "name";
+  }
+
+  rpc ConfirmArtImageUpload (ConfirmArtImageUploadRequest) returns (Art) {
+    option (google.api.http) = {
+      post: "/v1/{name=users/*/arts/*}:confirmImageUpload"
       body: "*"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Upload an art"
-      description: "Upload an art to the system."
-      tags: "Arts";
+      summary: "Confirm art image upload"
+      description: "Mark an art resource as complete after image upload."
+      tags: "Media";
+    };
+    option (google.api.method_signature) = "name";
+  }
+
+  // Composition RPCs
+  rpc CreateComposition (CreateCompositionRequest) returns (Composition) {
+    option (google.api.http) = {
+      post: "/v1/{parent=users/*/arts/*}/compositions"
+      body: "composition"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Create a new composition"
+      description: "Create a new thread art composition for a specific art."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "parent,composition";
+  }
+
+  rpc GetComposition (GetCompositionRequest) returns (Composition) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*/arts/*/compositions/*}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get composition information"
+      description: "Retrieve information for a specific composition."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "name";
+  }
+
+  rpc UpdateComposition (UpdateCompositionRequest) returns (Composition) {
+  option (google.api.http) = {
+      patch: "/v1/{composition.name=users/*/arts/*/compositions/*}"
+      body: "composition"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Update a composition"
+      description: "Modify the settings of a specific composition."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "composition,update_mask";
+  }
+
+  rpc ListCompositions (ListCompositionsRequest) returns (ListCompositionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/{parent=users/*/arts/*}/compositions"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "List all compositions"
+      description: "Retrieve a list of all compositions for a specific art."
+      tags: "Compositions";
     };
     option (google.api.method_signature) = "parent";
+  }
+
+  rpc DeleteComposition (DeleteCompositionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/{name=users/*/arts/*/compositions/*}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Delete a composition"
+      description: "Remove a specific composition from the system."
+      tags: "Compositions";
+    };
+    option (google.api.method_signature) = "name";
   }
 }

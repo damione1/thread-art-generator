@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Elegant blue theme */
+  --color-primary-50: #f0f7ff;
+  --color-primary-100: #e0eeff;
+  --color-primary-200: #c7ddff;
+  --color-primary-300: #a4c4ff;
+  --color-primary-400: #7ba2ff;
+  --color-primary-500: #5a7fff;
+  --color-primary-600: #3a56f5;
+  --color-primary-700: #2c41db;
+  --color-primary-800: #2536b3;
+  --color-primary-900: #1f318c;
+  --color-primary-950: #121c54;
+
+  /* Dark blue background shades */
+  --color-dark-50: #f5f7fa;
+  --color-dark-100: #0f172a;
+  --color-dark-200: #0d1425;
+  --color-dark-300: #0b1120;
+  --color-dark-400: #090e1b;
+  --color-dark-500: #070b16;
+  --color-dark-600: #050811;
+  --color-dark-700: #03050c;
+  --color-dark-800: #020307;
+  --color-dark-900: #010102;
+
+  /* Accent colors */
+  --color-accent-teal: #0d9488;
+  --color-accent-purple: #8b5cf6;
+  --color-accent-rose: #e11d48;
+}
+
+:root {
+  --foreground-rgb: 226, 232, 240;
+  --background-start: 15, 23, 42;
+  --background-end: 7, 11, 22;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--background-start)),
+    rgb(var(--background-end))
+  );
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+}

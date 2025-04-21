@@ -11,23 +11,152 @@ services:
   api:
     image: api-image
     ports:
-      - "9090:9090"
-      - "9091:9091"
+      - "9090:9090" # HTTP server port for Connect
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      HTTP_SERVER_PORT: ${HTTP_SERVER_PORT}
+      HTTP_SERVER_PORT: ${HTTP_SERVER_PORT:-9090}
       GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
       TOKEN_SYMMETRIC_KEY: ${TOKEN_SYMMETRIC_KEY}
-      ACCESS_TOKEN_DURATION: ${ACCESS_TOKEN_DURATION}
-      REFRESH_TOKEN_DURATION: ${REFRESH_TOKEN_DURATION}
       ENVIRONMENT: ${ENVIRONMENT}
       SENDINBLUE_API_KEY: ${SENDINBLUE_API_KEY}
-      DOMAIN: ${DOMAIN}
+      FRONTEND_URL: ${FRONTEND_URL}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
+      AUTH0_MANAGEMENT_API_CLIENT_ID: ${AUTH0_MANAGEMENT_API_CLIENT_ID}
+      AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${AUTH0_MANAGEMENT_API_CLIENT_SECRET}
+      # Storage configuration
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER}
+      STORAGE_BUCKET: ${STORAGE_BUCKET}
+      STORAGE_REGION: ${STORAGE_REGION}
+      STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
+      STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
+      STORAGE_USE_SSL: ${STORAGE_USE_SSL}
+      STORAGE_FORCE_EXTERNAL_SSL: ${STORAGE_FORCE_EXTERNAL_SSL}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      # Queue configuration
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
     depends_on:
       - db
       - migrations
+      - rabbitmq
+
+  # Worker service for processing compositions
+  worker:
+    image: worker-image
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ENVIRONMENT: ${ENVIRONMENT}
+      # Storage configuration
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER}
+      STORAGE_BUCKET: ${STORAGE_BUCKET}
+      STORAGE_REGION: ${STORAGE_REGION}
+      STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
+      STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
+      STORAGE_USE_SSL: ${STORAGE_USE_SSL}
+      STORAGE_FORCE_EXTERNAL_SSL: ${STORAGE_FORCE_EXTERNAL_SSL}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      # Queue configuration
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
+    depends_on:
+      - db
+      - rabbitmq
+      - api
+    restart: unless-stopped
+
+  # Envoy proxy for TLS termination and domain routing
+  envoy:
+    image: envoyproxy/envoy:v1.27-latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9901:9901" # Admin interface
+    volumes:
+      - ./Infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+      - ./certs:/certs
+    depends_on:
+      - api
+      - frontend
+    restart: unless-stopped
+    container_name: envoy
+
+  # RabbitMQ service for queue
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672" # AMQP port
+      - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    container_name: rabbitmq
+    restart: unless-stopped
+
+  # Production frontend service
+  # frontend-prod:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - NEXTAUTH_URL=https://tag.local
+  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+  #     - API_URL=https://tag.local/grpc-api
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #   depends_on:
+  #     - api
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_NODE_ENV=development
+      - NEXT_PUBLIC_APP_BASE_URL=${FRONTEND_URL}
+      - NEXT_PUBLIC_AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - NEXT_PUBLIC_AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
+      - NEXT_PUBLIC_AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      - NEXT_PUBLIC_API_URL=${API_URL:-http://localhost:9090}
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   db:
     image: postgres:latest
     ports:
@@ -44,14 +173,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  go-proto-generator:
-    build:
-      context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-go-proto
-    command: make build-go-proto
-    volumes:
-      - ./:/app
 
   generate-models:
     build:
@@ -75,45 +196,46 @@ services:
     image: "bitnami/minio:latest"
     container_name: minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9000" # For API operations
+      - "9001:9001" # For MinIO Console UI
     environment:
-      MINIO_DEFAULT_BUCKETS: local-bucket
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
+      MINIO_DEFAULT_BUCKETS: ${STORAGE_BUCKET}
+      # Allow direct access without forcing SSL
+      MINIO_SERVER_URL: http://localhost:9000
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+      # Allow anonymous access for GET operations
+      MINIO_BROWSER_LOGIN_ANIMATION: off
+      MINIO_ANONYMOUS_POLICY: download
+    volumes:
+      - ./infra/minio/data:/data
+      - ./infra/minio/config:/root/.minio
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
-    # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: worker  # Overriding the default CMD in the Dockerfile
-  #   ports:
-  #     - '8080:8080'
-  #   environment:
-  #     - QUEUE_HOST=rabbitmq
-  #   depends_on:
-  #     - rabbitmq
-
-  web:
+  proto-build:
     build:
       context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-web
-    ports:
-      - "3000:3000"
+      dockerfile: Infra/Dockerfiles/Dockerfile-proto-build
     volumes:
-      - ./web:/app
-      - /app/node_modules
-
-  envoy:
-    image: envoyproxy/envoy:v1.30-latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./envoy.yaml:/etc/envoy/envoy.yaml
-
-  # rabbitmq:
-  #   image: rabbitmq:management
-  #   ports:
-  #     - "15672:15672"
-  #     - "5672:5672"
+      - ./proto:/app/proto
+      - ./core/pb:/app/core/pb
+      - ./web/src/lib/pb:/app/web/src/lib/pb
+      - ./api/openapi:/app/api/openapi
+    working_dir: /app/proto
+    container_name: "proto-build"
+    restart: "no"
 
 volumes:
   threadmachine:
+  rabbitmq_data:
+
+networks:
+  default:
+    name: thread-art-network

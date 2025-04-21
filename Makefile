@@ -10,28 +10,34 @@ down:
 restart:
 	tilt down && tilt up
 
+.PHONY: setup
+setup:
+	@echo "Running local development setup..."
+	@./scripts/local_setup.sh
 
-.PHONY: build-go-proto
-build-go-proto:
-	rm -f pkg/pb/*.go
-	rm -f doc/swagger/*.swagger.json
-	protoc --go-grpc_out=pkg/pb --go_out=pkg/pb --proto_path=proto --go-grpc_opt=paths=source_relative \
-	--go_opt=paths=source_relative --grpc-gateway_out=pkg/pb --grpc-gateway_opt=paths=source_relative \
-	--openapiv2_out=doc/swagger --openapiv2_opt=allow_merge=true,merge_file_name=thread-generator \
-	./proto/*.proto
+.PHONY: psql
+psql:
+	@eval $$(grep -e "POSTGRES_USER\|POSTGRES_PASSWORD\|POSTGRES_DB" .env | sed 's/^/export /'); \
+	PGPASSWORD=$$POSTGRES_PASSWORD psql -h localhost -U $$POSTGRES_USER -d $$POSTGRES_DB
 
+.PHONY: migration
+migration:
+	@if [ -z "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		echo "Error: Migration name required. Usage: make migration Your Migration Name"; \
+		exit 1; \
+	fi; \
+	migration_name=$$(echo "$(filter-out $@,$(MAKECMDGOALS))" | tr '[:upper:]' '[:lower:]' | tr ' ' '_'); \
+	latest_num=$$(ls -1 core/db/migrations/*.up.sql 2>/dev/null | sed 's/.*\/\([0-9]\{6\}\)_.*/\1/' | sort -nr | head -1 || echo "000000"); \
+	next_num=$$(printf "%06d" $$((10#$${latest_num} + 1))); \
+	echo "Creating migration $$next_num"_"$$migration_name"; \
+	touch "core/db/migrations/$$next_num"_"$$migration_name.up.sql"; \
+	touch "core/db/migrations/$$next_num"_"$$migration_name.down.sql"; \
+	echo "-- Migration $$next_num: $$migration_name (up)" > "core/db/migrations/$$next_num"_"$$migration_name.up.sql"; \
+	echo "-- Migration $$next_num: $$migration_name (down)" > "core/db/migrations/$$next_num"_"$$migration_name.down.sql"; \
+	echo "Created migration files:"; \
+	echo "  - core/db/migrations/$$next_num"_"$$migration_name.up.sql"; \
+	echo "  - core/db/migrations/$$next_num"_"$$migration_name.down.sql"
 
-.PHONY: build-web-proto
-build-web-proto:
-	rm -rf web/grpc/*
-	protoc --proto_path ./proto \
-		--plugin=protoc-gen-grpc-web=web/node_modules/.bin/protoc-gen-grpc-web \
-		--plugin=protoc-gen-js=web/node_modules/.bin/protoc-gen-js \
-		--js_out=import_style=commonjs,binary:web/grpc \
-		--grpc-web_out=import_style=typescript,mode=grpcweb:web/grpc \
-		 `find ./proto -name '*.proto'`
-
-.PHONY: generate-sim-key
-generate-sim-key:
-	TOKEN_SYMMETRIC_KEY=$$(openssl rand -hex 16); \
-	echo "TOKEN_SYMMETRIC_KEY=$$TOKEN_SYMMETRIC_KEY" >> .env
+# This rule allows capturing arbitrary targets as arguments
+%:
+	@:
