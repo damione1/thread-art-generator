@@ -1,0 +1,19 @@
+# Use the golang base image
+FROM golang:1.24.2
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the go mod and sum files
+COPY go.mod go.sum ./
+
+# Install sqlboiler and the PostgreSQL driver
+RUN go install github.com/volatiletech/sqlboiler/v4@latest && \
+    go install github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql@latest && \
+    go mod download
+
+# Copy the source code into the container
+COPY .env .env
+
+# Copy the source code into the container
+COPY . .

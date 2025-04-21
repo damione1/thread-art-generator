@@ -1,0 +1,19 @@
+output   = "core/db/models"
+wipe     = true
+no-tests = true
+add-enum-types = true
+
+[psql]
+  host   = "db"
+  dbname = "threadmachine"
+  user   = "postgres"
+  pass   = "postgres"
+  schema = "public"
+  sslmode  = "disable"
+  blacklist = ["migrations", "other"]
+
+[aliases.tables.medias]
+  up_plural     = "Medias"
+  up_singular   = "Media"
+  down_plural   = "medias"
+  down_singular = "media"

@@ -1,0 +1,19 @@
+version: v1
+plugins:
+  # Go outputs
+  - name: go
+    out: ../core/pb
+    opt: paths=source_relative
+  - name: connect-go
+    out: ../core/pb
+    opt: paths=source_relative
+  # TypeScript outputs
+  - name: es
+    out: ../web/src/lib/pb
+    opt: target=ts,import_extension=none
+  - name: connect-es
+    out: ../web/src/lib/pb
+    opt: target=ts,import_extension=none
+  # OpenAPI generation
+  - name: openapiv2
+    out: ../api/openapi

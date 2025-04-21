@@ -1,0 +1,14 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+# 2 space indentation by default
+indent_style = space
+indent_size = 2
+
+# tab indentation for go language
+[*.go]
+indent_style = tab
+indent_size = 4

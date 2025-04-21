@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package pb;
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/Damione1/thread-art-generator/core/pb";
+
+
+message User {
+    option (google.api.resource) = {
+        type: "art.example.com/User"
+        pattern: "users/{user}"
+    };
+
+    // Name is the unique identifier for the user.
+    string name = 1 [
+        (google.api.field_behavior) = OUTPUT_ONLY,
+        (google.api.resource_reference).type = "art.example.com/User"
+        ];
+    // FirstName is the user's first name.
+    string first_name = 3 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).cel = {
+            id: "user.first_name.format",
+            message: "First name must contain only letters",
+            expression: "this.matches(\"^[a-zA-Z]+$\")"
+        },
+        (buf.validate.field).cel = {
+            id: "user.first_name.required",
+            message: "First name is required",
+            expression: "this.size() > 0"
+        }
+    ];
+    // LastName is the user's last name.
+    string last_name = 4 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).cel = {
+            id: "user.last_name.format",
+            message: "Last name must contain only letters",
+            expression: "this.matches(\"^[a-zA-Z]+$\")"
+        },
+        (buf.validate.field).cel = {
+            id: "user.last_name.required",
+            message: "Last name is required",
+            expression: "this.size() > 0"
+        }
+    ];
+    // Email is the user's email.
+    string email = 5 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).cel = {
+            id: "user.email.format",
+            message: "Please enter a valid email address",
+            expression: "this.matches(\"^[^@]+@[^@]+\\\\.[^@]+$\")"
+        },
+        (buf.validate.field).cel = {
+            id: "user.email.required",
+            message: "Email address is required",
+            expression: "this.size() > 0"
+        }
+    ];
+
+    // Avatar is the user's avatar url.
+    string avatar = 7 [
+        (google.api.field_behavior) = OUTPUT_ONLY
+    ];
+}
+
+message GetUserRequest {
+    // Name is the unique identifier for the user.
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference).type = "art.example.com/User",
+        (buf.validate.field).cel = {
+            id: "get_user.name.format",
+            message: "User resource name is required and must start with 'users/'",
+            expression: "this.size() > 0 && this.startsWith('users/')"
+        }
+    ];
+}
+
+message UpdateUserRequest {
+    // User is the user to be updated.
+    User user = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).required = true
+    ];
+}
+
+message ListUsersRequest {
+    // PageToken is the token to retrieve the next page of results.
+    string page_token = 1;
+    // PageSize is the number of users to return in a single page.
+    int32 page_size = 2 [(buf.validate.field).int32 = {gt: 0, lte: 100}];
+}
+
+message ListUsersResponse {
+    // Users is the list of users.
+    repeated User users = 1;
+    // NextPageToken is the token to retrieve the next page of results.
+    string next_page_token = 2;
+}
+
+message DeleteUserRequest {
+    // Name is the unique identifier for the user.
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference).type = "art.example.com/User",
+        (buf.validate.field).cel = {
+            id: "delete_user.name.format",
+            message: "User resource name is required and must start with 'users/'",
+            expression: "this.size() > 0 && this.startsWith('users/')"
+        }
+    ];
+}
+
+// GetCurrentUserRequest is an empty request to get the currently authenticated user.
+// Following AIP principles of having a separate method for getting the current user.
+message GetCurrentUserRequest {
+    // Intentionally empty - uses the authentication context to identify the user
+}
