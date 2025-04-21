@@ -150,27 +150,28 @@ resources = {
     'labels': ['application'],
     'resource_deps': ['go-compile', 'db', 'migrations', 'rabbitmq'],
     'trigger_mode': TRIGGER_MODE_AUTO,
+    'links': [
+      link('http://localhost:9090', 'Connect API'),
+      link('http://localhost:9090/health', 'API Health Check'),
+    ]
   },
 
   'frontend': {
     'labels': ['application'],
     'resource_deps': ['api'],
     'trigger_mode': TRIGGER_MODE_AUTO,
-  },
-
-  # Networking
-  'envoy': {
-    'labels': ['networking'],
-    'resource_deps': ['api', 'frontend'],
     'links': [
-      link('https://tag.local', 'Thread Art Generator (HTTPS)'),
+      link('http://localhost:3000', 'Frontend'),
     ]
   },
 
   # Storage
   'minio': {
     'labels': ['storage'],
-    'resource_deps': ['db']
+    'resource_deps': ['db'],
+    'links': [
+      link('http://localhost:9001', 'MinIO Console'),
+    ]
   },
 }
 

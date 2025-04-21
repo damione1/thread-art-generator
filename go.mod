@@ -7,6 +7,7 @@ require (
 	github.com/alecthomas/kong v1.9.0
 	github.com/auth0/go-jwt-middleware/v2 v2.1.0
 	github.com/aws/aws-sdk-go v1.53.7
+	github.com/bufbuild/connect-go v1.10.0
 	github.com/bufbuild/protovalidate-go v0.9.2
 	github.com/disintegration/imaging v1.6.2
 	github.com/friendsofgo/errors v0.9.2
@@ -19,6 +20,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/pkg/errors v0.9.1
 	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.32.0
 	github.com/sendinblue/APIv3-go-library/v2 v2.1.2
 	github.com/spf13/viper v1.18.2
@@ -68,7 +70,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.24.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.9 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
-	github.com/bufbuild/connect-go v1.10.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect

@@ -44,6 +44,7 @@ type QueueConfig struct {
 type Config struct {
 	Environment         string        `mapstructure:"ENVIRONMENT"`
 	GRPCServerPort      string        `mapstructure:"GRPC_SERVER_PORT"`
+	HTTPServerPort      string        `mapstructure:"HTTP_SERVER_PORT"`
 	TokenSymmetricKey   string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
 	EmailSenderName     string        `mapstructure:"EMAIL_SENDER_NAME"`
 	EmailSenderAddress  string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
@@ -68,6 +69,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("ENVIRONMENT")
 	viper.BindEnv("MIGRATION_PATH")
 	viper.BindEnv("GRPC_SERVER_PORT")
+	viper.BindEnv("HTTP_SERVER_PORT")
 	viper.BindEnv("TOKEN_SYMMETRIC_KEY")
 	viper.BindEnv("EMAIL_SENDER_NAME")
 	viper.BindEnv("EMAIL_SENDER_ADDRESS")

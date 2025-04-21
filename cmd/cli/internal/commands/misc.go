@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bufbuild/connect-go"
+
 	"github.com/Damione1/thread-art-generator/cmd/cli/internal/client"
 	"github.com/Damione1/thread-art-generator/core/pb"
 )
@@ -34,12 +36,13 @@ func (cmd *StatusCmd) Run(clientService *client.Service) error {
 		return err
 	}
 
-	user, err := grpcClient.GetCurrentUser(ctx, &pb.GetCurrentUserRequest{})
+	req := connect.NewRequest(&pb.GetCurrentUserRequest{})
+	user, err := grpcClient.GetCurrentUser(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to get current user: %v", err)
 	}
 
-	fmt.Printf("Logged in as %s (ID: %s)\n", user.Name, user.Name)
+	fmt.Printf("Logged in as %s (ID: %s)\n", user.Msg.Name, user.Msg.Name)
 	fmt.Printf("Token valid until %s\n", clientService.ConfigManager.Config.ExpiresAt.Format(time.RFC1123))
 	return nil
 }

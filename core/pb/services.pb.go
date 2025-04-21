@@ -67,7 +67,7 @@ const file_services_proto_rawDesc = "" +
 	"\x10ListCompositions\x12\x1b.pb.ListCompositionsRequest\x1a\x1c.pb.ListCompositionsResponse\"\x9a\x01\x92A^\n" +
 	"\fCompositions\x12\x15List all compositions\x1a7Retrieve a list of all compositions for a specific art.\xdaA\x06parent\x82\xd3\xe4\x93\x02*\x12(/v1/{parent=users/*/arts/*}/compositions\x12\xda\x01\n" +
 	"\x11DeleteComposition\x12\x1c.pb.DeleteCompositionRequest\x1a\x16.google.protobuf.Empty\"\x8e\x01\x92AT\n" +
-	"\fCompositions\x12\x14Delete a composition\x1a.Remove a specific composition from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02**(/v1/{name=users/*/arts/*/compositions/*}B\xbe\x04\x92A\x96\x04\x12\x84\x01\n" +
+	"\fCompositions\x12\x14Delete a composition\x1a.Remove a specific composition from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02**(/v1/{name=users/*/arts/*/compositions/*}B\xcc\x04\x92A\x96\x04\x12\x84\x01\n" +
 	"\x18Thread art Generator API\"a\n" +
 	"\x0eDamien Goehrig\x12(github.com/Damione1/thread-art-generator\x1a%thread-art-generator@damiengoehrig.ca2\x050.0.1Z\xa0\x01\n" +
 	"\x9d\x01\n" +
@@ -79,7 +79,7 @@ const file_services_proto_rawDesc = "" +
 	"\x05Users\x12\x1dEndpoints for user managementj$\n" +
 	"\x04Arts\x12\x1cEndpoints for art managementj5\n" +
 	"\fCompositions\x12%Endpoints for thread art compositionsj'\n" +
-	"\x05Media\x12\x1eEndpoints for media managementZ\"thread-art-generator/core/proto;pbb\x06proto3"
+	"\x05Media\x12\x1eEndpoints for media managementZ0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
 
 var file_services_proto_goTypes = []any{
 	(*UpdateUserRequest)(nil),            // 0: pb.UpdateUserRequest

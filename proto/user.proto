@@ -5,7 +5,7 @@ import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "buf/validate/validate.proto";
 
-option go_package = "thread-art-generator/core/proto;pb";
+option go_package = "github.com/Damione1/thread-art-generator/core/pb";
 
 
 message User {

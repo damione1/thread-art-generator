@@ -3,61 +3,53 @@ package interceptors
 import (
 	"context"
 	"database/sql"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/middleware"
+	"github.com/bufbuild/connect-go"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 const (
-	authorizationHeader = "authorization"
-	authorizationBearer = "bearer"
+	authorizationHeader = "Authorization"
+	authorizationBearer = "Bearer"
 )
 
-var whiteListedMethods = []string{
+var whiteListedPaths = []string{
 	"/pb.ArtGeneratorService/GetMediaUploadUrl",
 	"/pb.ArtGeneratorService/GetMediaDownloadUrl",
 	"/pb.ArtGeneratorService/CreateUser",
 }
 
-// Helper function to extract and validate token from gRPC metadata
-func authorizeUserFromContext(ctx context.Context, authenticator auth.Authenticator) (*auth.AuthClaims, string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, "", status.Errorf(codes.Unauthenticated, "metadata is not provided")
+// Helper function to extract and validate token from HTTP headers
+func authorizeUserFromHeaders(ctx context.Context, headers http.Header, authenticator auth.Authenticator) (*auth.AuthClaims, string, error) {
+	authHeader := headers.Get(authorizationHeader)
+	if authHeader == "" {
+		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("authorization token is not provided"))
 	}
 
-	values := md.Get(authorizationHeader)
-	if len(values) == 0 {
-		return nil, "", status.Errorf(codes.Unauthenticated, "authorization token is not provided")
-	}
-
-	bearerToken := values[0]
-	fields := strings.Fields(bearerToken)
+	fields := strings.Fields(authHeader)
 	if len(fields) < 2 {
-		return nil, "", status.Errorf(codes.Unauthenticated, "invalid authorization header format")
+		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("invalid authorization header format"))
 	}
 
 	authType := strings.ToLower(fields[0])
-	if authType != authorizationBearer {
-		return nil, "", status.Errorf(codes.Unauthenticated, "unsupported authorization type: %s", authType)
+	if authType != strings.ToLower(authorizationBearer) {
+		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("unsupported authorization type"))
 	}
 
 	token := fields[1]
-	claims, err := authenticator.ValidateToken(context.Background(), token)
+	claims, err := authenticator.ValidateToken(ctx, token)
 	if err != nil {
-		return nil, "", status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("invalid token"))
 	}
 
 	return claims, token, nil
@@ -166,49 +158,51 @@ func parseNameFromAuth0(fullName string) (firstName, lastName string) {
 	return parts[0], strings.Join(parts[1:], " ")
 }
 
-// AuthInterceptor creates a gRPC interceptor for authentication
-func AuthInterceptor(authService auth.AuthService, db *sql.DB) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		// Skip auth for whitelisted methods
-		if isWhiteListedMethod(info.FullMethod) {
-			return handler(ctx, req)
+// AuthMiddleware creates a Connect middleware for authentication
+func AuthMiddleware(authService auth.AuthService, db *sql.DB) connect.UnaryInterceptorFunc {
+	interceptor := func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			// Skip auth for whitelisted paths
+			if isWhiteListedPath(req.Spec().Procedure) {
+				return next(ctx, req)
+			}
+
+			// Check if user ID is already in context (e.g., from previous middleware)
+			if userID, ok := ctx.Value(middleware.AuthKey).(string); ok && userID != "" {
+				log.Debug().Str("user_id", userID).Msg("User already authenticated, skipping auth check")
+				// User already authenticated, proceed with handler
+				return next(ctx, req)
+			}
+
+			claims, token, err := authorizeUserFromHeaders(ctx, req.Header(), authService)
+			if err != nil {
+				return nil, err
+			}
+
+			// Store claims in context for user creation if needed
+			ctxWithClaims := context.WithValue(ctx, "claims", claims)
+
+			// Get or create user in our database
+			internalID, err := getOrCreateUser(ctxWithClaims, db, claims.UserID, authService)
+			if err != nil {
+				log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+
+			// Add internal user ID and raw token to context
+			newCtx := context.WithValue(ctxWithClaims, middleware.AuthKey, internalID)
+			// Store the raw token in context for later use
+			newCtx = context.WithValue(newCtx, "token", token)
+
+			return next(newCtx, req)
 		}
-
-		// Check if user ID is already in context (e.g., from previous middleware)
-		if userID, ok := ctx.Value(middleware.AuthKey).(string); ok && userID != "" {
-			log.Debug().Str("user_id", userID).Msg("User already authenticated, skipping auth check")
-			// User already authenticated, proceed with handler
-			return handler(ctx, req)
-		}
-
-		claims, token, err := authorizeUserFromContext(ctx, authService)
-		if err != nil {
-			return nil, err
-		}
-
-		// Store claims in context for user creation if needed
-		ctxWithClaims := context.WithValue(ctx, "claims", claims)
-
-		// Get or create user in our database
-		internalID, err := getOrCreateUser(ctxWithClaims, db, claims.UserID, authService)
-		if err != nil {
-			log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
-			return nil, status.Errorf(codes.Internal, "internal error")
-		}
-
-		// Add internal user ID and raw token to context
-		newCtx := context.WithValue(ctxWithClaims, middleware.AuthKey, internalID)
-		// Store the raw token in context for later use
-		newCtx = context.WithValue(newCtx, "token", token)
-		// Pass the server instance through the context
-		newCtx = context.WithValue(newCtx, "server", info.Server)
-		return handler(newCtx, req)
 	}
+	return interceptor
 }
 
-func isWhiteListedMethod(method string) bool {
-	for _, whiteListedMethod := range whiteListedMethods {
-		if whiteListedMethod == method {
+func isWhiteListedPath(path string) bool {
+	for _, whiteListedPath := range whiteListedPaths {
+		if whiteListedPath == path {
 			return true
 		}
 	}

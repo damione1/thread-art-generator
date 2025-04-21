@@ -423,7 +423,7 @@ const file_user_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tB\xa8\x01\xe0A\x02\xfaA\x16\n" +
 	"\x14art.example.com/User\xbaH\x88\x01\xba\x01\x84\x01\n" +
 	"\x17delete_user.name.format\x12;User resource name is required and must start with 'users/'\x1a,this.size() > 0 && this.startsWith('users/')R\x04name\"\x17\n" +
-	"\x15GetCurrentUserRequestB$Z\"thread-art-generator/core/proto;pbb\x06proto3"
+	"\x15GetCurrentUserRequestB2Z0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
 
 var (
 	file_user_proto_rawDescOnce sync.Once

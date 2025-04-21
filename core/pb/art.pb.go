@@ -1374,7 +1374,7 @@ const file_art_proto_rawDesc = "" +
 	"\x1aCOMPOSITION_STATUS_PENDING\x10\x01\x12!\n" +
 	"\x1dCOMPOSITION_STATUS_PROCESSING\x10\x02\x12\x1f\n" +
 	"\x1bCOMPOSITION_STATUS_COMPLETE\x10\x03\x12\x1d\n" +
-	"\x19COMPOSITION_STATUS_FAILED\x10\x04B$Z\"thread-art-generator/core/proto;pbb\x06proto3"
+	"\x19COMPOSITION_STATUS_FAILED\x10\x04B2Z0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
 
 var (
 	file_art_proto_rawDescOnce sync.Once

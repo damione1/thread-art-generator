@@ -3,17 +3,16 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
+	"github.com/bufbuild/connect-go"
 
 	"github.com/Damione1/thread-art-generator/cmd/cli/internal/config"
-	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 )
 
-// Service handles gRPC client operations
+// Service handles Connect-RPC client operations
 type Service struct {
 	ConfigManager *config.Manager
 	ServerAddress string
@@ -23,36 +22,57 @@ type Service struct {
 func NewService(configManager *config.Manager) *Service {
 	return &Service{
 		ConfigManager: configManager,
-		ServerAddress: "tag.local:9090", // Could make this configurable
+		ServerAddress: "http://tag.local:9090", // Now requires http:// prefix
 	}
 }
 
-// GetClient creates a new gRPC client with authentication
-func (s *Service) GetClient() (pb.ArtGeneratorServiceClient, error) {
+// GetClient creates a new Connect-RPC client with authentication
+func (s *Service) GetClient() (pbconnect.ArtGeneratorServiceClient, error) {
 	// Check if token is valid
 	if !s.ConfigManager.IsTokenValid() {
 		return nil, fmt.Errorf("not authenticated or token expired")
 	}
 
-	// Create a connection with the gRPC server
-	conn, err := grpc.Dial(s.ServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to gRPC server: %v", err)
+	// Create an HTTP client with auth interceptor
+	httpClient := &http.Client{
+		Transport: &authTransport{
+			token: s.ConfigManager.Config.AccessToken,
+			base:  http.DefaultTransport,
+		},
 	}
 
-	// Create and return client
-	return pb.NewArtGeneratorServiceClient(conn), nil
+	// Create and return Connect client with gRPC protocol (full binary)
+	// gRPC mode gives us better performance for CLI tools
+	return pbconnect.NewArtGeneratorServiceClient(
+		httpClient,
+		s.ServerAddress,
+		connect.WithGRPC(),                  // Use gRPC protocol for full binary mode
+		connect.WithSendCompression("gzip"), // Use gzip compression for sending
+	), nil
 }
 
-// GetAuthContext creates a context with auth metadata
+// authTransport is an http.RoundTripper that adds auth headers
+type authTransport struct {
+	token string
+	base  http.RoundTripper
+}
+
+// RoundTrip implements http.RoundTripper
+func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", "Bearer "+t.token)
+	return t.base.RoundTrip(req)
+}
+
+// GetAuthContext creates a context with auth metadata - no longer needed for Connect
+// but kept for backwards compatibility
 func (s *Service) GetAuthContext() (context.Context, error) {
 	if s.ConfigManager.Config.AccessToken == "" {
 		return nil, fmt.Errorf("not logged in")
 	}
 
-	ctx := context.Background()
-	md := metadata.Pairs("authorization", "Bearer "+s.ConfigManager.Config.AccessToken)
-	return metadata.NewOutgoingContext(ctx, md), nil
+	// Connect client doesn't use context for auth, but we'll keep this method
+	// to maintain backward compatibility with existing code
+	return context.Background(), nil
 }
 
 // GetAuthContextWithTimeout creates a context with auth metadata and timeout

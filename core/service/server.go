@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
-	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/token"
@@ -13,7 +12,6 @@ import (
 )
 
 type Server struct {
-	pbconnect.UnimplementedArtGeneratorServiceHandler
 	config      util.Config
 	tokenMaker  token.Maker
 	bucket      *storage.BlobStorage

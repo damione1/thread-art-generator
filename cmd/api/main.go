@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
-	"net"
+	"net/http"
 
+	"github.com/bufbuild/connect-go"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 
 	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/cache"
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/interceptors"
-	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 	"github.com/Damione1/thread-art-generator/core/service"
 	"github.com/Damione1/thread-art-generator/core/util"
 )
@@ -29,41 +29,68 @@ func main() {
 	}
 
 	go cache.CleanExpiredCacheEntries()
-	runGrpcServer(config)
+	runConnectServer(config)
 }
 
-func runGrpcServer(config util.Config) {
-	log.Print("🍩 Starting gRPC server...")
+func runConnectServer(config util.Config) {
+	log.Print("🍩 Starting Connect server...")
 	server, err := service.NewServer(config)
 	if err != nil {
-		log.Print(fmt.Sprintf("Failed to create gRPC server. %v", err))
+		log.Fatal().Err(err).Msg("Failed to create server")
 	}
 	defer server.Close()
-	log.Print("🍩 gRPC server created")
+	log.Print("🍩 Server created")
 
 	authService, err := createAuthService(config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize auth service")
 	}
 
-	chainedInterceptors := grpc.ChainUnaryInterceptor(
-		interceptors.GrpcLogger,
-		interceptors.AuthInterceptor(authService, config.DB),
+	// Define our Connect interceptors
+	interceptorChain := connect.WithInterceptors(
+		interceptors.ConnectLogger(),
+		interceptors.AuthMiddleware(authService, config.DB),
 	)
-	grpcServer := grpc.NewServer(chainedInterceptors)
-	pb.RegisterArtGeneratorServiceServer(grpcServer, server)
-	reflection.Register(grpcServer)
 
-	log.Print("🍩 Starting to listen on port " + config.GRPCServerPort)
+	// Create Connect adapter
+	adapter := service.NewConnectAdapter(server)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.GRPCServerPort))
-	if err != nil {
-		log.Print(fmt.Sprintf("🍩 Failed to listen. %v", err))
+	// Create API handler
+	path, handler := pbconnect.NewArtGeneratorServiceHandler(adapter, interceptorChain)
+
+	// Setup CORS
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Adjust this in production
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Connect-Protocol-Version"},
+		ExposedHeaders:   []string{"Connect-Protocol-Version"},
+		AllowCredentials: true,
+	})
+
+	// Create a mux for routing
+	mux := http.NewServeMux()
+
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	// Register the service
+	mux.Handle(path, corsHandler.Handler(handler))
+
+	// Create the server
+	serverPort := config.HTTPServerPort
+	if serverPort == "" {
+		serverPort = config.GRPCServerPort // Fallback to GRPC port if HTTP port not set
+		log.Warn().Msg("HTTP_SERVER_PORT not set, using GRPC_SERVER_PORT instead")
 	}
+	addr := fmt.Sprintf("0.0.0.0:%s", serverPort)
+	log.Print("🍩 Starting to listen on " + addr)
 
-	err = grpcServer.Serve(listener)
+	err = http.ListenAndServe(addr, interceptors.HttpLogger(mux))
 	if err != nil {
-		log.Print(fmt.Sprintf("🍩 Failed to serve gRPC server over port %s. %v", listener.Addr().String(), err))
+		log.Fatal().Err(err).Msg("Failed to start server")
 	}
 }
 
