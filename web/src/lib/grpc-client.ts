@@ -22,10 +22,10 @@ interface ConnectErrorDetails {
  * Creates a transport for Connect
  */
 export const createTransport = () => {
-    // Setup for direct communication with the API server
+    // Setup for communication with the API server through Envoy proxy
     return createConnectTransport({
         baseUrl: CONFIG.baseUrl,
-        useBinaryFormat: true,
+        useBinaryFormat: true, // Using binary format for better performance
         // We're passing credentials to allow cookies to be sent in cross-origin requests
         credentials: 'include',
         // For Connect protocols
@@ -40,6 +40,7 @@ export const createTransport = () => {
  * If no token is provided, it will attempt to fetch one
  */
 export const createConnectClient = async (providedToken?: string) => {
+    console.log(`Creating Connect client with baseUrl: ${CONFIG.baseUrl}`);
     const transport = createTransport();
     const client = createPromiseClient(ArtGeneratorService, transport);
 
@@ -50,6 +51,7 @@ export const createConnectClient = async (providedToken?: string) => {
     if (!accessToken) {
         try {
             accessToken = await getAccessToken();
+            console.log("Got access token successfully");
         } catch (error) {
             console.error("Failed to get access token:", error);
         }
@@ -83,17 +85,21 @@ export class ConnectService {
         try {
             // Get the current token
             const token = await getAccessToken();
+            console.log("ConnectService.call: Making service call with token");
 
             // Make the call with the token
             return await serviceCall(token);
 
         } catch (error) {
+            console.error("ConnectService.call error:", error);
+
             // Handle auth errors by refreshing the token and retrying once
             if (
                 error instanceof ConnectError &&
                 (error.code === Code.Unauthenticated || error.code === Code.PermissionDenied) &&
                 !forceFetchToken
             ) {
+                console.log("ConnectService.call: Auth error, refreshing token");
                 // Try one more time with a fresh token by logging out and redirecting
                 await refreshAccessToken();
 
@@ -103,6 +109,7 @@ export class ConnectService {
 
             // Process error to standardized format
             const processedError = processApiError(error);
+            console.error("ConnectService.call: Processed error:", processedError);
 
             // Rethrow the processed error for higher-level handling
             throw processedError;

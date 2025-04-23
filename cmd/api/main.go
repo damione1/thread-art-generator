@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 
@@ -67,17 +68,25 @@ func runConnectServer(config util.Config) {
 			"Authorization",
 			"Content-Type",
 			"Connect-Protocol-Version",
+			"Connect-Timeout-Ms",
 			"X-Requested-With",
 			"X-User-Agent",
 			"X-Grpc-Web",
 			"Origin",
 			"Access-Control-Request-Method",
 			"Access-Control-Request-Headers",
+			"Grpc-Accept-Encoding",
+			"Grpc-Timeout",
+			"Grpc-Status-Details-Bin",
 		},
 		ExposedHeaders: []string{
 			"Connect-Protocol-Version",
+			"Connect-Timeout-Ms",
 			"Grpc-Status",
 			"Grpc-Message",
+			"Grpc-Accept-Encoding",
+			"Grpc-Timeout",
+			"Grpc-Status-Details-Bin",
 			"Access-Control-Allow-Origin",
 			"Access-Control-Allow-Credentials",
 		},
@@ -107,7 +116,36 @@ func runConnectServer(config util.Config) {
 	addr := fmt.Sprintf("0.0.0.0:%s", serverPort)
 	log.Print("🍩 Starting to listen on " + addr)
 
-	err = http.ListenAndServe(addr, interceptors.HttpLogger(mux))
+	// Configure HTTP/2 server
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: interceptors.HttpLogger(mux),
+		// Configure TLS for HTTP/2
+		TLSConfig: &tls.Config{
+			NextProtos: []string{"h2", "http/1.1"},
+			MinVersion: tls.VersionTLS12,
+		},
+	}
+
+	// Get certificate file paths from config
+	certFile := config.TLSCertFile
+	keyFile := config.TLSKeyFile
+
+	// Determine whether to use HTTP/2 with TLS or fallback to HTTP/1.1
+	if certFile != "" && keyFile != "" {
+		// Enable HTTP/2 with TLS using certificates
+		log.Info().
+			Str("certFile", certFile).
+			Str("keyFile", keyFile).
+			Msg("Starting server with HTTP/2 and TLS")
+
+		err = srv.ListenAndServeTLS(certFile, keyFile)
+	} else {
+		// Fallback to HTTP/1.1 without TLS
+		log.Warn().Msg("TLS certificates not specified. Starting with HTTP/1.1 without TLS")
+		err = srv.ListenAndServe()
+	}
+
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to start server")
 	}
