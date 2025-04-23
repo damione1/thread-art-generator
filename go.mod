@@ -27,7 +27,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.16.2
-	github.com/volatiletech/strmangle v0.0.6
+	github.com/volatiletech/strmangle v0.0.8
 	go.einride.tech/aip v0.67.1
 	gocloud.dev v0.37.0
 	golang.org/x/crypto v0.35.0
