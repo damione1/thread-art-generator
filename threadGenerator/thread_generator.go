@@ -120,20 +120,6 @@ func (tg *ThreadGenerator) SetImage(imagePath string) {
 	tg.imageName = imagePath
 }
 
-func (tg *ThreadGenerator) getDefaults() {
-	tg.nailsQuantity = 300
-	tg.imgSize = 800
-	tg.maxPaths = 10000
-	tg.startingNail = 0
-	tg.minimumDifference = 10
-	tg.brightnessFactor = 50
-	tg.imageContrast = 40
-	tg.physicalRadius = 609.6 // 24 inches
-	tg.rotationAxis = "A"
-	tg.needleAxis = "X"
-	tg.spindleAxis = "Y"
-}
-
 func (tg *ThreadGenerator) mergeArgs(args Args) error {
 	// Don't reset to defaults here - only apply values from args if provided
 

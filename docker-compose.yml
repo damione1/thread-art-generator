@@ -28,6 +28,8 @@ services:
       AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
       AUTH0_MANAGEMENT_API_CLIENT_ID: ${AUTH0_MANAGEMENT_API_CLIENT_ID}
       AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${AUTH0_MANAGEMENT_API_CLIENT_SECRET}
+      TLS_CERT_FILE: ${TLS_CERT_FILE:-/certs/tag.local.crt}
+      TLS_KEY_FILE: ${TLS_KEY_FILE:-/certs/tag.local.key}
       # Storage configuration
       STORAGE_PROVIDER: ${STORAGE_PROVIDER}
       STORAGE_BUCKET: ${STORAGE_BUCKET}
@@ -41,6 +43,8 @@ services:
       # Queue configuration
       RABBITMQ_URL: ${RABBITMQ_URL}
       QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
+    volumes:
+      - ./certs:/certs
     depends_on:
       - db
       - migrations

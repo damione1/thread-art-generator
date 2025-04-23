@@ -57,6 +57,8 @@ type Config struct {
 	GCSBucketName       string        `mapstructure:"GCS_BUCKET_NAME"`
 	SendInBlueAPIKey    string        `mapstructure:"SENDINBLUE_API_KEY"`
 	FrontendUrl         string        `mapstructure:"FRONTEND_URL"`
+	TLSCertFile         string        `mapstructure:"TLS_CERT_FILE"`
+	TLSKeyFile          string        `mapstructure:"TLS_KEY_FILE"`
 	Auth0               Auth0Config   `mapstructure:",squash"`
 	Storage             StorageConfig `mapstructure:",squash"`
 	Queue               QueueConfig   `mapstructure:",squash"`
@@ -81,6 +83,8 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("GCS_BUCKET_NAME")
 	viper.BindEnv("SENDINBLUE_API_KEY")
 	viper.BindEnv("FRONTEND_URL")
+	viper.BindEnv("TLS_CERT_FILE")
+	viper.BindEnv("TLS_KEY_FILE")
 	viper.BindEnv("AUTH0_DOMAIN")
 	viper.BindEnv("AUTH0_AUDIENCE")
 	viper.BindEnv("AUTH0_CLIENT_ID")
