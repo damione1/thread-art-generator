@@ -2,7 +2,7 @@
 
 ![Thread Art Generator](https://github.com/Damione1/thread-art-generator/assets/14912510/6b6ef9e1-9bad-4dd7-8579-17fe55ae9c13)
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/damione1/thread-art-generator)](https://goreportcard.com/report/github.com/damione1/thread-art-generator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Damione1/thread-art-generator)](https://goreportcard.com/report/github.com/Damione1/thread-art-generator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Thread Art Generator transforms your images into unique pieces of circular thread art. Upload images, customize settings, create compositions, and generate physical thread art with visualization and machine instructions (GCode).
