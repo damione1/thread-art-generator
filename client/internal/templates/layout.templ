@@ -1,0 +1,24 @@
+package templates
+
+templ Base(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - Thread Art Generator</title>
+			<meta name="description" content="Generate beautiful thread art patterns"/>
+			<link rel="icon" href="/static/images/favicon.ico"/>
+			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+			<link rel="stylesheet" href="/static/css/tailwind.css"/>
+			<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+		</head>
+		<body class="min-h-screen bg-dark-100 text-white flex flex-col">
+			@Header(false)
+			<main class="flex-grow">
+				{ children... }
+			</main>
+			@Footer()
+		</body>
+	</html>
+}

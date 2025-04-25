@@ -1,0 +1,106 @@
+package templates
+
+import (
+	"strconv"
+	"time"
+)
+
+templ Header(isLoggedIn bool) {
+	<header class="sticky top-0 z-50 border-b border-dark-300 bg-dark-100/80 backdrop-blur-md">
+		<div class="container mx-auto flex items-center justify-between p-4">
+			<div class="flex items-center gap-3">
+				<a href="/" class="text-2xl font-bold tracking-tight text-slate-100">
+					Thread<span class="text-primary-500">Art</span>
+				</a>
+			</div>
+			@Navigation(isLoggedIn)
+			<div class="flex items-center space-x-4">
+				if !isLoggedIn {
+					@AuthLinks()
+				} else {
+					@UserMenu()
+				}
+			</div>
+		</div>
+	</header>
+}
+
+templ Navigation(isLoggedIn bool) {
+	<nav class="hidden space-x-8 md:flex">
+		<a href="/" class="text-primary-400 hover:text-primary-300 transition">
+			Home
+		</a>
+		<a href="/gallery" class="text-slate-300 hover:text-white transition">
+			Gallery
+		</a>
+		if isLoggedIn {
+			<a href="/dashboard/arts/new" class="text-slate-300 hover:text-white transition">
+				Create
+			</a>
+		} else {
+			<a href="/about" class="text-slate-300 hover:text-white transition">
+				About
+			</a>
+		}
+	</nav>
+}
+
+templ AuthLinks() {
+	<button
+		hx-get="/login"
+		class="px-4 py-2 rounded-md text-slate-200 hover:text-primary-300 transition"
+	>
+		Log in
+	</button>
+	<button
+		hx-get="/signup"
+		class="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition shadow-lg shadow-primary-900/20"
+	>
+		Sign up
+	</button>
+}
+
+templ UserMenu() {
+	<div class="flex items-center gap-2">
+		<span class="text-sm text-slate-300">User Name</span>
+		<button class="p-2 rounded-full bg-dark-300 hover:bg-dark-200 transition">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+			</svg>
+		</button>
+	</div>
+}
+
+templ Footer() {
+	<footer class="w-full border-t border-dark-300 bg-dark-200 mt-auto">
+		<div class="container mx-auto p-6">
+			<div class="flex flex-col md:flex-row justify-between items-center">
+				<div class="mb-4 md:mb-0">
+					<a
+						href="/"
+						class="text-xl font-bold tracking-tight text-slate-100"
+					>
+						Thread<span class="text-primary-500">Art</span>
+					</a>
+					<p class="mt-2 text-sm text-slate-400">
+						Generate beautiful thread art from images
+					</p>
+				</div>
+				<div class="flex space-x-6">
+					<a href="#" class="text-slate-400 hover:text-white transition">
+						Privacy
+					</a>
+					<a href="#" class="text-slate-400 hover:text-white transition">
+						Terms
+					</a>
+					<a href="#" class="text-slate-400 hover:text-white transition">
+						Contact
+					</a>
+				</div>
+			</div>
+			<div class="mt-8 border-t border-dark-300 pt-8 text-center text-sm text-slate-400">
+				© { strconv.Itoa(time.Now().Year()) } ThreadArt. All rights reserved.
+			</div>
+		</div>
+	</footer>
+}

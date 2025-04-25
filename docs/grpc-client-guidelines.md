@@ -1,476 +1,671 @@
-# Thread Art Generator - gRPC Client Implementation Guidelines
+# Thread Art Generator - Connect-RPC Client Implementation Guidelines for Go
 
-This document provides guidelines for working with the gRPC client in the Thread Art Generator application.
+This document provides guidelines for implementing and using Connect-RPC clients in the Go+HTMX frontend of the Thread Art Generator application.
 
 ## Architecture Overview
 
 Our system uses:
 
-1. Next.js frontend connecting to a gRPC backend via gRPC-Web
-2. Envoy proxy to handle HTTP/gRPC protocol translation
-3. Token-based authentication with automatic refresh
+1. Go+HTMX frontend connecting to a gRPC backend via Connect-RPC
+2. Server-side rendered templates with progressive enhancement
+3. Session-based authentication with Auth0
+4. Redis for distributed session storage
 
 The request flow is as follows:
 
-- Frontend makes gRPC-Web calls to backend services
-- Requests go through Envoy proxy (port 443), which forwards them to the appropriate backend service
-- Authentication is handled via Bearer tokens with automatic refresh logic
+- Browser makes HTTP requests to the Go frontend
+- Go frontend makes Connect-RPC calls to backend services
+- Results are rendered as HTML and returned to the browser
+- HTMX handles partial updates without full page refreshes
 
 ## Core Architecture Components
 
-### 1. gRPC Client Setup
+### 1. Connect-RPC Client Setup
 
-```typescript
-// Client creation with transport configuration
-const transport = createGrpcWebTransport({
-  baseUrl: CONFIG.baseUrl,
-  useBinaryFormat: true,
-  credentials: "include",
-});
-const client = createClient(ArtGeneratorService, transport);
-```
+```go
+package client
 
-### 2. Authentication Handling
+import (
+	"context"
+	"net/http"
+	"time"
 
-Our authentication system includes:
+	"github.com/bufbuild/connect-go"
+	"github.com/your-org/thread-art-generator/core/pb/artgenerator/v1/artgeneratorv1connect"
+)
 
-- Token caching to minimize requests
-- Automatic token refresh when expired
-- Authorization header injection
-- Retry mechanism for auth failures
+// ClientConfig holds configuration for Connect clients
+type ClientConfig struct {
+	BaseURL         string
+	Timeout         time.Duration
+	RetryMax        int
+	RetryDelay      time.Duration
+	RetryDelayMax   time.Duration
+}
 
-```typescript
-// Example of token handling
-export const getAccessToken = async (): Promise<string> => {
-  // Check if we have a cached token that's not expired
-  if (
-    tokenCache.token &&
-    Date.now() < tokenCache.expiresAt - CONFIG.tokenExpiryBufferMs
-  ) {
-    return tokenCache.token;
-  }
+// NewArtGeneratorClient creates a new Connect client for the art generator service
+func NewArtGeneratorClient(config ClientConfig) artgeneratorv1connect.ArtGeneratorServiceClient {
+	// Create HTTP client with timeout
+	httpClient := &http.Client{
+		Timeout: config.Timeout,
+	}
 
-  // Fetch a new token
-  return fetchAccessToken();
-};
-```
+	// Create Connect client with interceptors
+	client := artgeneratorv1connect.NewArtGeneratorServiceClient(
+		httpClient,
+		config.BaseURL,
+		connect.WithInterceptors(
+			NewAuthInterceptor(),
+			NewRetryInterceptor(config),
+			NewLoggingInterceptor(),
+		),
+	)
 
-### 3. Service Wrapper
-
-The `GrpcService` class provides:
-
-- Standardized error handling
-- Automatic token refresh on auth errors
-- Simplified method calling pattern
-
-```typescript
-export class GrpcService {
-  static async call<T>(
-    serviceCall: (token: string | undefined) => Promise<T>,
-    forceFetchToken = false
-  ): Promise<T> {
-    try {
-      // Get the current token (or force fetch a new one)
-      const token = forceFetchToken
-        ? await fetchAccessToken()
-        : await getAccessToken();
-
-      // Make the call with the token
-      return await serviceCall(token);
-    } catch (error) {
-      // Handle auth errors by refreshing the token and retrying once
-      if (
-        error instanceof ConnectError &&
-        (error.code === Code.Unauthenticated ||
-          error.code === Code.PermissionDenied) &&
-        !forceFetchToken
-      ) {
-        // Try one more time with a fresh token
-        return GrpcService.call(serviceCall, true);
-      }
-
-      // Otherwise rethrow
-      throw error;
-    }
-  }
+	return client
 }
 ```
 
-## Guidelines for Implementing Endpoints
+### 2. Authentication Interceptor
 
-### Adding New Endpoints
+```go
+// NewAuthInterceptor creates an interceptor that adds auth headers to requests
+func NewAuthInterceptor() connect.UnaryInterceptorFunc {
+	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			// Get token from context (if available)
+			if token, ok := auth.TokenFromContext(ctx); ok {
+				req.Header().Set("Authorization", "Bearer "+token)
+			}
 
-When adding new endpoints, follow this pattern:
+			return next(ctx, req)
+		}
+	})
+}
 
-```typescript
-export const someNewEndpoint = async (params) => {
-  // Dynamic import of the proto definition
-  const { SomeNewRequest } = await import("./pb/some_file_pb");
+// WithToken adds an auth token to a context
+func WithToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, authTokenKey, token)
+}
 
-  return GrpcService.call(async (token) => {
-    const { client, callOptions } = await createGrpcClient(token);
-    const request = new SomeNewRequest({
-      // map parameters to request object
-    });
-    return client.someNewEndpoint(request, callOptions);
-  });
-};
-```
-
-### Implementing CRUD Operations
-
-#### Read Operations
-
-```typescript
-// Get single resource
-export const getResource = async (resourceId: string) => {
-  const { GetResourceRequest } = await import("./pb/resource_pb");
-
-  return GrpcService.call(async (token) => {
-    const { client, callOptions } = await createGrpcClient(token);
-    return client.getResource(
-      new GetResourceRequest({ name: resourceId }),
-      callOptions
-    );
-  });
-};
-
-// List resources
-export const listResources = async (
-  parent: string,
-  pageSize: number = 10,
-  pageToken?: string
-) => {
-  const { ListResourcesRequest } = await import("./pb/resource_pb");
-
-  return GrpcService.call(async (token) => {
-    const { client, callOptions } = await createGrpcClient(token);
-    const request = new ListResourcesRequest({
-      parent,
-      pageSize,
-      pageToken,
-    });
-    return client.listResources(request, callOptions);
-  });
-};
-```
-
-#### Create Operations
-
-```typescript
-export const createResource = async (
-  resource: Partial<Resource>,
-  parent: string
-) => {
-  const { CreateResourceRequest } = await import("./pb/resource_pb");
-
-  return GrpcService.call(async (token) => {
-    const { client, callOptions } = await createGrpcClient(token);
-    const request = new CreateResourceRequest({
-      parent,
-      resource: resource as Resource,
-    });
-    return client.createResource(request, callOptions);
-  });
-};
-```
-
-#### Update Operations
-
-Always include an appropriate field mask for partial updates:
-
-```typescript
-export const updateResource = async (
-  resource: Partial<Resource>,
-  updateMask: string[] = []
-) => {
-  const { UpdateResourceRequest } = await import("./pb/resource_pb");
-  const { FieldMask } = await import("./pb/google/protobuf/field_mask_pb");
-
-  return GrpcService.call(async (token) => {
-    const { client, callOptions } = await createGrpcClient(token);
-    const request = new UpdateResourceRequest({
-      resource: resource as Resource,
-      updateMask: new FieldMask({ paths: updateMask }),
-    });
-    return client.updateResource(request, callOptions);
-  });
-};
-```
-
-#### Delete Operations
-
-```typescript
-export const deleteResource = async (resourceId: string) => {
-  const { DeleteResourceRequest } = await import("./pb/resource_pb");
-
-  return GrpcService.call(async (token) => {
-    const { client, callOptions } = await createGrpcClient(token);
-    return client.deleteResource(
-      new DeleteResourceRequest({ name: resourceId }),
-      callOptions
-    );
-  });
-};
-```
-
-## UI Implementation Best Practices
-
-When consuming gRPC services in React components:
-
-### Data Fetching Pattern
-
-```typescript
-import { useState, useEffect } from "react";
-import { getResource } from "@/lib/grpc-client";
-
-function ResourceComponent({ resourceId }) {
-  const [resource, setResource] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    async function fetchResource() {
-      try {
-        setLoading(true);
-        const result = await getResource(resourceId);
-        setResource(result);
-      } catch (err) {
-        console.error("Error fetching resource:", err);
-        setError(
-          `Error: ${err instanceof Error ? err.message : "Unknown error"}`
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchResource();
-  }, [resourceId]);
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!resource) return <div>Resource not found</div>;
-
-  return (
-    <div>
-      <h1>{resource.title}</h1>
-      {/* Render resource details */}
-    </div>
-  );
+// TokenFromContext extracts an auth token from a context
+func TokenFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(authTokenKey).(string)
+	return token, ok
 }
 ```
 
-### Form Submission Pattern
+### 3. Error Handling
 
-```typescript
-import { useState } from "react";
-import { updateResource } from "@/lib/grpc-client";
+```go
+// HandleConnectError processes Connect-RPC errors into user-friendly messages
+func HandleConnectError(err error) (FieldErrors, string) {
+	fieldErrors := make(FieldErrors)
+	var generalError string
 
-function EditResourceForm({ resource, onSuccess }) {
-  const [formData, setFormData] = useState({
-    title: resource.title,
-    description: resource.description,
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+	if connectErr, ok := err.(*connect.Error); ok {
+		switch connectErr.Code() {
+		case connect.CodeUnauthenticated:
+			generalError = "Authentication required. Please log in."
+		case connect.CodePermissionDenied:
+			generalError = "You don't have permission to perform this action."
+		case connect.CodeInvalidArgument:
+			// Parse field violations from the error
+			fieldErrors = ParseValidationErrors(err)
+			if len(fieldErrors) == 0 {
+				generalError = "Invalid input provided."
+			}
+		case connect.CodeNotFound:
+			generalError = "The requested resource was not found."
+		case connect.CodeResourceExhausted:
+			generalError = "Too many requests. Please try again later."
+		case connect.CodeInternal:
+			generalError = "An internal error occurred. Please try again later."
+		default:
+			generalError = "An error occurred. Please try again."
+		}
+	} else if err != nil {
+		generalError = "An unexpected error occurred. Please try again."
+	}
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+	return fieldErrors, generalError
+}
+```
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
+## Handler Implementation Patterns
 
-    try {
-      // Only include changed fields in the update
-      const updateFields = {};
-      const updateMask = [];
+### 1. Basic Handler Pattern
 
-      if (formData.title !== resource.title) {
-        updateFields.title = formData.title;
-        updateMask.push("title");
-      }
+```go
+// UserProfileHandler handles the user profile page
+func (h *Handlers) UserProfileHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user from session
+	session, err := h.sessionStore.Get(r, "user-session")
+	if err != nil {
+		http.Error(w, "Invalid session", http.StatusBadRequest)
+		return
+	}
 
-      if (formData.description !== resource.description) {
-        updateFields.description = formData.description;
-        updateMask.push("description");
-      }
+	// Check if user is authenticated
+	if session.Values["access_token"] == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
-      // Only make the API call if there are changes
-      if (updateMask.length > 0) {
-        // Include the resource name for the update
-        const updatedResource = await updateResource(
-          {
-            name: resource.name,
-            ...updateFields,
-          },
-          updateMask
-        );
+	// Get token and user ID
+	token := session.Values["access_token"].(string)
+	userID := session.Values["user_id"].(string)
 
-        onSuccess(updatedResource);
-      } else {
-        onSuccess(resource); // No changes, just return the original
-      }
-    } catch (err) {
-      console.error("Error updating resource:", err);
-      setError(
-        `Error: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
+	// Create a context with the token
+	ctx := auth.WithToken(r.Context(), token)
 
-  return (
-    <form onSubmit={handleSubmit}>
-      {error && <div className="error">{error}</div>}
+	// Create the request
+	req := connect.NewRequest(&userv1.GetUserRequest{
+		Name: userID,
+	})
 
-      <div>
-        <label htmlFor="title">Title:</label>
-        <input
-          id="title"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          disabled={submitting}
-        />
-      </div>
+	// Call the API
+	client := h.clients.UserClient
+	resp, err := client.GetUser(ctx, req)
 
-      <div>
-        <label htmlFor="description">Description:</label>
-        <textarea
-          id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          disabled={submitting}
-        />
-      </div>
+	// Handle errors
+	if err != nil {
+		fieldErrors, generalError := HandleConnectError(err)
+		tmplData := map[string]interface{}{
+			"Errors":       fieldErrors,
+			"GeneralError": generalError,
+		}
+		h.templates.ExecuteTemplate(w, "error.html", tmplData)
+		return
+	}
 
-      <button type="submit" disabled={submitting}>
-        {submitting ? "Saving..." : "Save Changes"}
-      </button>
-    </form>
-  );
+	// Render the template with the user data
+	tmplData := map[string]interface{}{
+		"User": resp.Msg.User,
+	}
+	h.templates.ExecuteTemplate(w, "profile.html", tmplData)
+}
+```
+
+### 2. HTMX Handler Pattern
+
+```go
+// CompositionListHandler handles the composition list page/fragment
+func (h *Handlers) CompositionListHandler(w http.ResponseWriter, r *http.Request) {
+	// Get token from session
+	session, _ := h.sessionStore.Get(r, "user-session")
+	token := session.Values["access_token"].(string)
+	ctx := auth.WithToken(r.Context(), token)
+
+	// Determine if this is an HTMX request
+	isHtmx := r.Header.Get("HX-Request") == "true"
+
+	// Parse pagination parameters
+	pageSize := 10
+	pageToken := r.URL.Query().Get("pageToken")
+
+	// Create the request
+	req := connect.NewRequest(&compositionv1.ListCompositionsRequest{
+		Parent:    "users/me",
+		PageSize:  int32(pageSize),
+		PageToken: pageToken,
+	})
+
+	// Call the API
+	client := h.clients.CompositionClient
+	resp, err := client.ListCompositions(ctx, req)
+
+	// Handle errors
+	if err != nil {
+		if isHtmx {
+			// For HTMX requests, return just the error fragment
+			fieldErrors, generalError := HandleConnectError(err)
+			tmplData := map[string]interface{}{
+				"Errors":       fieldErrors,
+				"GeneralError": generalError,
+			}
+			h.templates.ExecuteTemplate(w, "components/error-alert.html", tmplData)
+		} else {
+			// For full page requests, render the full error page
+			fieldErrors, generalError := HandleConnectError(err)
+			tmplData := map[string]interface{}{
+				"Errors":       fieldErrors,
+				"GeneralError": generalError,
+			}
+			h.templates.ExecuteTemplate(w, "error.html", tmplData)
+		}
+		return
+	}
+
+	// Prepare template data
+	tmplData := map[string]interface{}{
+		"Compositions": resp.Msg.Compositions,
+		"NextPageToken": resp.Msg.NextPageToken,
+	}
+
+	// Render the appropriate template based on request type
+	if isHtmx {
+		// For HTMX requests, return just the list fragment
+		h.templates.ExecuteTemplate(w, "components/composition-list.html", tmplData)
+	} else {
+		// For full page requests, return the full page
+		h.templates.ExecuteTemplate(w, "compositions.html", tmplData)
+	}
+}
+```
+
+### 3. Form Submission Pattern
+
+```go
+// CreateCompositionHandler handles composition creation
+func (h *Handlers) CreateCompositionHandler(w http.ResponseWriter, r *http.Request) {
+	// Get token from session
+	session, _ := h.sessionStore.Get(r, "user-session")
+	token := session.Values["access_token"].(string)
+	ctx := auth.WithToken(r.Context(), token)
+
+	// Determine if this is an HTMX request
+	isHtmx := r.Header.Get("HX-Request") == "true"
+
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	// Create the composition request
+	req := connect.NewRequest(&compositionv1.CreateCompositionRequest{
+		Parent: "users/me",
+		Composition: &compositionv1.Composition{
+			Title:       r.FormValue("title"),
+			Description: r.FormValue("description"),
+			Settings: &compositionv1.CompositionSettings{
+				PinCount:   parseInt32(r.FormValue("pinCount"), 200),
+				LineCount:  parseInt32(r.FormValue("lineCount"), 2000),
+				MinWeight:  parseFloat(r.FormValue("minWeight"), 0.1),
+				MaxWeight:  parseFloat(r.FormValue("maxWeight"), 1.0),
+				Background: r.FormValue("background"),
+			},
+			ImageId: r.FormValue("imageId"),
+		},
+	})
+
+	// Call the API
+	client := h.clients.CompositionClient
+	resp, err := client.CreateComposition(ctx, req)
+
+	// Handle errors
+	if err != nil {
+		fieldErrors, generalError := HandleConnectError(err)
+		tmplData := map[string]interface{}{
+			"Errors":       fieldErrors,
+			"GeneralError": generalError,
+			"FormData":     r.Form, // Include form data for re-rendering
+		}
+
+		if isHtmx {
+			// For HTMX requests, return just the form with errors
+			h.templates.ExecuteTemplate(w, "components/composition-form.html", tmplData)
+		} else {
+			// For full page requests, render the full page with errors
+			h.templates.ExecuteTemplate(w, "create-composition.html", tmplData)
+		}
+		return
+	}
+
+	// On success, redirect or return success fragment
+	if isHtmx {
+		// For HTMX requests, trigger a redirect via HTMX
+		w.Header().Set("HX-Redirect", "/compositions/"+resp.Msg.Composition.Name)
+		w.WriteHeader(http.StatusOK)
+	} else {
+		// For standard requests, use a regular redirect
+		http.Redirect(w, r, "/compositions/"+resp.Msg.Composition.Name, http.StatusSeeOther)
+	}
+}
+```
+
+## Advanced Patterns
+
+### 1. Concurrent API Calls
+
+```go
+// DashboardHandler fetches multiple resources concurrently
+func (h *Handlers) DashboardHandler(w http.ResponseWriter, r *http.Request) {
+	// Get token from session
+	session, _ := h.sessionStore.Get(r, "user-session")
+	token := session.Values["access_token"].(string)
+	ctx := auth.WithToken(r.Context(), token)
+
+	// Create channels for results
+	type userResult struct {
+		user *userv1.User
+		err  error
+	}
+	type compositionsResult struct {
+		compositions []*compositionv1.Composition
+		err          error
+	}
+	type statsResult struct {
+		stats *statsv1.UserStats
+		err   error
+	}
+
+	userCh := make(chan userResult, 1)
+	compositionsCh := make(chan compositionsResult, 1)
+	statsCh := make(chan statsResult, 1)
+
+	// Fetch user profile
+	go func() {
+		req := connect.NewRequest(&userv1.GetUserRequest{
+			Name: "users/me",
+		})
+		resp, err := h.clients.UserClient.GetUser(ctx, req)
+		if err != nil {
+			userCh <- userResult{nil, err}
+			return
+		}
+		userCh <- userResult{resp.Msg.User, nil}
+	}()
+
+	// Fetch recent compositions
+	go func() {
+		req := connect.NewRequest(&compositionv1.ListCompositionsRequest{
+			Parent:   "users/me",
+			PageSize: 5,
+		})
+		resp, err := h.clients.CompositionClient.ListCompositions(ctx, req)
+		if err != nil {
+			compositionsCh <- compositionsResult{nil, err}
+			return
+		}
+		compositionsCh <- compositionsResult{resp.Msg.Compositions, nil}
+	}()
+
+	// Fetch user stats
+	go func() {
+		req := connect.NewRequest(&statsv1.GetUserStatsRequest{
+			Name: "users/me/stats",
+		})
+		resp, err := h.clients.StatsClient.GetUserStats(ctx, req)
+		if err != nil {
+			statsCh <- statsResult{nil, err}
+			return
+		}
+		statsCh <- statsResult{resp.Msg.Stats, nil}
+	}()
+
+	// Collect results
+	userRes := <-userCh
+	compositionsRes := <-compositionsCh
+	statsRes := <-statsCh
+
+	// Check for errors
+	if userRes.err != nil || compositionsRes.err != nil || statsRes.err != nil {
+		var errorMsg string
+		if userRes.err != nil {
+			_, errorMsg = HandleConnectError(userRes.err)
+		} else if compositionsRes.err != nil {
+			_, errorMsg = HandleConnectError(compositionsRes.err)
+		} else {
+			_, errorMsg = HandleConnectError(statsRes.err)
+		}
+
+		tmplData := map[string]interface{}{
+			"GeneralError": errorMsg,
+		}
+		h.templates.ExecuteTemplate(w, "error.html", tmplData)
+		return
+	}
+
+	// Render dashboard with all data
+	tmplData := map[string]interface{}{
+		"User":         userRes.user,
+		"Compositions": compositionsRes.compositions,
+		"Stats":        statsRes.stats,
+	}
+	h.templates.ExecuteTemplate(w, "dashboard.html", tmplData)
+}
+```
+
+### 2. Streaming Data with Server-Sent Events (SSE)
+
+```go
+// CompositionProgressHandler streams progress updates using SSE
+func (h *Handlers) CompositionProgressHandler(w http.ResponseWriter, r *http.Request) {
+	// Get composition ID from path
+	compositionID := chi.URLParam(r, "id")
+
+	// Get token from session
+	session, _ := h.sessionStore.Get(r, "user-session")
+	token := session.Values["access_token"].(string)
+	ctx := auth.WithToken(r.Context(), token)
+
+	// Set up SSE response headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no") // Disable buffering for Nginx
+
+	// Create the streaming request
+	req := connect.NewRequest(&compositionv1.WatchCompositionRequest{
+		Name: compositionID,
+	})
+
+	// Call the streaming API
+	client := h.clients.CompositionClient
+	stream, err := client.WatchComposition(ctx, req)
+	if err != nil {
+		_, errMsg := HandleConnectError(err)
+		fmt.Fprintf(w, "event: error\ndata: %s\n\n", errMsg)
+		return
+	}
+
+	// Set up a ticker for heartbeat messages
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Create a done channel for cleanup
+	done := make(chan bool)
+	defer close(done)
+
+	// Handle client disconnection
+	go func() {
+		<-r.Context().Done()
+		done <- true
+	}()
+
+	// Stream updates to the client
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			// Send heartbeat to keep connection alive
+			fmt.Fprintf(w, ": heartbeat\n\n")
+			flusher.Flush()
+		default:
+			// Try to receive a message
+			msg, err := stream.Receive()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					// Normal stream end
+					fmt.Fprintf(w, "event: complete\ndata: {\"status\":\"completed\"}\n\n")
+					flusher.Flush()
+					return
+				}
+				// Error in stream
+				_, errMsg := HandleConnectError(err)
+				fmt.Fprintf(w, "event: error\ndata: %s\n\n", errMsg)
+				flusher.Flush()
+				return
+			}
+
+			// Send the update
+			progress := msg.Msg.Progress
+			jsonData, _ := json.Marshal(progress)
+			fmt.Fprintf(w, "event: progress\ndata: %s\n\n", jsonData)
+			flusher.Flush()
+
+			// If complete, end the stream
+			if progress.Status == compositionv1.ProcessingStatus_COMPLETED {
+				fmt.Fprintf(w, "event: complete\ndata: {\"status\":\"completed\"}\n\n")
+				flusher.Flush()
+				return
+			}
+		}
+	}
 }
 ```
 
 ## Best Practices
 
-1. **Keep imports dynamic** for better code-splitting
-2. **Use typed interfaces** for all request/response handling
-3. **Follow resource patterns** from Google API Design Guidelines
-4. **Add error handling** specific to your domain when needed
-5. **Document new endpoints** as you add them
-6. **Use consistent naming** across all endpoints
-7. **Handle pagination properly** in list operations
-8. **Use field masks correctly** for partial updates
-9. **Respect resource hierarchies** (parent-child relationships)
-10. **Auto-generate field masks** when possible for better developer experience
-11. **Include proper error handling** in UI components
-12. **Follow AIP principles** for resource naming and method signatures
+1. **Always use interceptors** for cross-cutting concerns like authentication and logging
+2. **Handle errors consistently** using the `HandleConnectError` function
+3. **Use context for request-scoped data** like authentication tokens
+4. **Implement proper timeout handling** for all API calls
+5. **Support both full page and HTMX fragment requests** in handlers
+6. **Include form data in error responses** to preserve user input on validation failures
+7. **Use concurrent API calls** when appropriate to improve performance
+8. **Implement proper session management** with Redis for production environments
+9. **Use proper error handling** and context cancellation for streaming endpoints
 
-## Field Mask Best Practices
+## Testing
 
-When working with field masks for partial updates:
+### 1. Unit Testing Connect Clients
 
-1. **Map client-side fields to protobuf field names** correctly:
+```go
+func TestUserClient(t *testing.T) {
+	// Create a test server that returns mock data
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check the request path
+		if r.URL.Path == "/userv1.UserService/GetUser" {
+			// Check for auth header
+			authHeader := r.Header.Get("Authorization")
+			if authHeader != "Bearer test-token" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 
-   ```typescript
-   // Example mapping
-   if (formData.firstName !== userData.firstName) {
-     updateFields.firstName = formData.firstName;
-     updateMask.push("first_name"); // Use snake_case for protobuf field names
-   }
-   ```
+			// Write a valid Connect response
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"msg":{"user":{"name":"users/123","displayName":"Test User","email":"test@example.com"}}}`))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
 
-2. **Auto-generate field masks from changed fields**:
+	server := httptest.NewServer(handler)
+	defer server.Close()
 
-   ```typescript
-   // If updateMask is empty, automatically generate it from userData keys
-   if (updateMask.length === 0 && userData) {
-     updateMask = Object.keys(userData).filter((key) => key !== "name");
-   }
-   ```
+	// Create a client config
+	config := ClientConfig{
+		BaseURL: server.URL,
+		Timeout: 5 * time.Second,
+	}
 
-3. **Always include the resource identifier** in update requests:
+	// Create a client
+	client := NewUserClient(config)
 
-   ```typescript
-   const request = new UpdateResourceRequest({
-     resource: new Resource({
-       name: resourceId, // Always include the resource name
-       ...updateFields,
-     }),
-     updateMask: new FieldMask({ paths: updateMask }),
-   });
-   ```
+	// Create a context with auth token
+	ctx := auth.WithToken(context.Background(), "test-token")
 
-4. **Exclude identifier fields** from update masks:
-   ```typescript
-   // Filter out identifier fields that shouldn't be updated
-   updateMask = Object.keys(userData).filter((key) => key !== "name");
-   ```
+	// Make a request
+	req := connect.NewRequest(&userv1.GetUserRequest{
+		Name: "users/123",
+	})
 
-## UI Component Patterns
+	resp, err := client.GetUser(ctx, req)
 
-When building forms that interact with gRPC services:
-
-### State Management
-
-```typescript
-// Recommended state pattern for form components
-const [formData, setFormData] = useState({
-  // Initialize with existing resource data
-  field1: resource.field1,
-  field2: resource.field2,
-});
-const [submitting, setSubmitting] = useState(false);
-const [error, setError] = useState<string | null>(null);
-const [success, setSuccess] = useState(false);
+	// Verify the response
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, "users/123", resp.Msg.User.Name)
+	assert.Equal(t, "Test User", resp.Msg.User.DisplayName)
+	assert.Equal(t, "test@example.com", resp.Msg.User.Email)
+}
 ```
 
-### Change Tracking
+### 2. Testing Handlers
 
-```typescript
-// Track only changed fields for more efficient updates
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setSubmitting(true);
+```go
+func TestCompositionHandler(t *testing.T) {
+	// Create a mock client
+	mockClient := &MockCompositionClient{
+		GetCompositionFunc: func(ctx context.Context, req *connect.Request<compositionv1.GetCompositionRequest>) (*connect.Response<compositionv1.GetCompositionResponse>, error) {
+			// Check that the request is properly formed
+			assert.Equal(t, "compositions/123", req.Msg.Name)
 
-  try {
-    const updateFields = {};
-    const updateMask = [];
+			// Check that auth header is set
+			token, ok := auth.TokenFromContext(ctx)
+			assert.True(t, ok)
+			assert.Equal(t, "test-token", token)
 
-    // Only include fields that have changed
-    if (formData.field1 !== resource.field1) {
-      updateFields.field1 = formData.field1;
-      updateMask.push("field_1");
-    }
+			// Return mock data
+			return connect.NewResponse(&compositionv1.GetCompositionResponse{
+				Composition: &compositionv1.Composition{
+					Name:        "compositions/123",
+					Title:       "Test Composition",
+					Description: "A test composition",
+					Status:      compositionv1.ProcessingStatus_COMPLETED,
+				},
+			}), nil
+		},
+	}
 
-    // Only make API call if there are changes
-    if (updateMask.length > 0) {
-      const updatedResource = await updateResource(
-        {
-          name: resource.name, // Always include the resource name
-          ...updateFields,
-        },
-        updateMask
-      );
+	// Create a mock template renderer
+	mockTemplates := &MockTemplates{
+		ExecuteTemplateFunc: func(w http.ResponseWriter, name string, data interface{}) error {
+			// Verify the template name
+			assert.Equal(t, "composition.html", name)
 
-      // Update local state with the returned resource
-      onUpdate(updatedResource);
-      setSuccess(true);
-    }
-  } catch (err) {
-    setError(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
-  } finally {
-    setSubmitting(false);
-  }
-};
+			// Verify the template data
+			tmplData := data.(map[string]interface{})
+			composition := tmplData["Composition"].(*compositionv1.Composition)
+			assert.Equal(t, "compositions/123", composition.Name)
+			assert.Equal(t, "Test Composition", composition.Title)
+
+			return nil
+		},
+	}
+
+	// Create a mock session store
+	mockSessionStore := &MockSessionStore{
+		GetFunc: func(r *http.Request, name string) (*sessions.Session, error) {
+			// Return a mock session
+			session := &sessions.Session{
+				Values: map[interface{}]interface{}{
+					"access_token": "test-token",
+				},
+			}
+			return session, nil
+		},
+	}
+
+	// Create test handler
+	handler := &Handlers{
+		clients: &Clients{
+			CompositionClient: mockClient,
+		},
+		templates:    mockTemplates,
+		sessionStore: mockSessionStore,
+	}
+
+	// Create a test request
+	req := httptest.NewRequest("GET", "/compositions/123", nil)
+
+	// Create a recorder to capture the response
+	w := httptest.NewRecorder()
+
+	// Call the handler
+	handler.GetCompositionHandler(w, req)
+
+	// Verify the response
+	assert.Equal(t, http.StatusOK, w.Code)
+}
 ```
-
-By following these guidelines, you'll maintain a consistent, maintainable, and robust frontend-to-backend communication pattern throughout the application.

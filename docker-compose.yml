@@ -73,6 +73,31 @@ services:
       - api
     restart: unless-stopped
 
+  # Go+HTMX Frontend service
+  client:
+    build:
+      context: .
+      dockerfile: Infra/Dockerfiles/Dockerfile-frontend
+    ports:
+      - "8080:8080"
+    environment:
+      - FRONTEND_PORT=8080
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
+      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      - API_URL=${API_URL:-http://api:9090}
+    volumes:
+      - ./client:/app/client
+    depends_on:
+      - api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   # Envoy proxy for TLS termination and domain routing
   envoy:
     image: envoyproxy/envoy:v1.27-latest
@@ -86,6 +111,7 @@ services:
     depends_on:
       - api
       - frontend
+      - client
     restart: unless-stopped
     container_name: envoy
 

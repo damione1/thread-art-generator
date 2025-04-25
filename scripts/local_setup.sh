@@ -65,6 +65,24 @@ function setup_tools() {
         fi
     fi
     echo -e "✅ mkcert is installed"
+
+    # Check for Node.js and npm
+    if ! command_exists npm; then
+        echo -e "${YELLOW}npm is not installed. Would you like to install it? (y/n)${NC}"
+        read -r install_npm
+        if [[ "$install_npm" =~ ^[Yy]$ ]]; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                brew install node
+            else
+                echo -e "${RED}Please install Node.js and npm manually: https://nodejs.org/${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${RED}npm is required for client development.${NC}"
+            exit 1
+        fi
+    fi
+    echo -e "✅ npm is installed"
 }
 
 # Function to setup SSL certificates
@@ -77,16 +95,24 @@ function setup_ssl() {
     # Create certs directory if it doesn't exist
     mkdir -p "$PROJECT_ROOT/certs"
 
-    # Generate certificates for tag.local and storage.tag.local
-    echo "Generating certificates for tag.local and storage.tag.local..."
-    mkcert -cert-file "$PROJECT_ROOT/certs/tag.local.crt" -key-file "$PROJECT_ROOT/certs/tag.local.key" tag.local "*.tag.local" storage.tag.local
+    # Generate certificates for tag.local, front.tag.local and storage.tag.local
+    echo "Generating certificates for tag.local, front.tag.local and storage.tag.local..."
+    mkcert -cert-file "$PROJECT_ROOT/certs/tag.local.crt" -key-file "$PROJECT_ROOT/certs/tag.local.key" tag.local "*.tag.local" front.tag.local storage.tag.local
 
     # Add domains to /etc/hosts if not already present
     if ! grep -q "tag.local" /etc/hosts; then
         echo "Adding domains to /etc/hosts..."
         echo "You might be prompted for your password to modify /etc/hosts"
         sudo sh -c "echo '127.0.0.1 tag.local' >> /etc/hosts"
+        sudo sh -c "echo '127.0.0.1 front.tag.local' >> /etc/hosts"
         sudo sh -c "echo '127.0.0.1 storage.tag.local' >> /etc/hosts"
+    fi
+
+    # Check if front.tag.local is in hosts, add it if not
+    if ! grep -q "front.tag.local" /etc/hosts; then
+        echo "Adding front.tag.local to /etc/hosts..."
+        echo "You might be prompted for your password to modify /etc/hosts"
+        sudo sh -c "echo '127.0.0.1 front.tag.local' >> /etc/hosts"
     fi
 
     echo -e "✅ SSL certificates setup complete"
@@ -123,11 +149,59 @@ function build_cli() {
     echo -e "✅ CLI built successfully at build/cli"
 }
 
+# Setup client frontend
+function setup_frontend() {
+    echo -e "\n${YELLOW}Setting up Go+HTMX frontend...${NC}"
+
+    # Get Go path
+    GOPATH=$(go env GOPATH)
+    GOBIN=$GOPATH/bin
+
+    # Install templ
+    echo -e "Installing templ..."
+    go install github.com/a-h/templ/cmd/templ@latest
+    if ! command_exists $GOBIN/templ; then
+        echo -e "${RED}Failed to install templ${NC}"
+        exit 1
+    fi
+    echo -e "✅ templ installed successfully"
+
+    # Install npm dependencies in client directory
+    echo -e "Installing frontend dependencies..."
+    (cd "$PROJECT_ROOT/client" && npm install)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to install frontend dependencies${NC}"
+        exit 1
+    fi
+    echo -e "✅ Frontend dependencies installed successfully"
+
+    # Build Tailwind CSS
+    echo -e "Building Tailwind CSS..."
+    (cd "$PROJECT_ROOT/client" && npm run build)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to build Tailwind CSS${NC}"
+        exit 1
+    fi
+    echo -e "✅ Tailwind CSS built successfully"
+
+    # Generate templ files
+    echo -e "Generating templ templates..."
+    (cd "$PROJECT_ROOT/client" && $GOBIN/templ generate ./internal/templates)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to generate templ templates${NC}"
+        exit 1
+    fi
+    echo -e "✅ Templates generated successfully"
+
+    echo -e "✅ Go+HTMX frontend setup complete"
+}
+
 # Main setup logic
 setup_tools
 setup_ssl
 setup_env
 build_cli
+setup_frontend
 
 echo -e "\n${GREEN}Setup complete! You can now start the development environment with:${NC}"
 echo -e "${YELLOW}tilt up${NC}"

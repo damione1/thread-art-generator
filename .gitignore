@@ -50,3 +50,9 @@ build/
 certs/
 
 plan.md
+
+# templ generated files
+**/*_templ.go
+
+# Tailwind compiled CSS
+client/public/css/tailwind.css
