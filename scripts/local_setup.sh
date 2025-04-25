@@ -168,7 +168,7 @@ function setup_frontend() {
 
     # Install npm dependencies in client directory
     echo -e "Installing frontend dependencies..."
-    (cd "$PROJECT_ROOT/client" && npm install)
+    (cd "$PROJECT_ROOT/client" && rm -rf node_modules package-lock.json && npm install)
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to install frontend dependencies${NC}"
         exit 1
@@ -177,7 +177,7 @@ function setup_frontend() {
 
     # Build Tailwind CSS
     echo -e "Building Tailwind CSS..."
-    (cd "$PROJECT_ROOT/client" && npm run build)
+    (cd "$PROJECT_ROOT/client" && mkdir -p ./public/css && npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify)
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to build Tailwind CSS${NC}"
         exit 1

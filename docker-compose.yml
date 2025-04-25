@@ -75,9 +75,7 @@ services:
 
   # Go+HTMX Frontend service
   client:
-    build:
-      context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-frontend
+    image: frontend-image
     ports:
       - "8080:8080"
     environment:
@@ -87,7 +85,10 @@ services:
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
       - API_URL=${API_URL:-http://api:9090}
     volumes:
-      - ./client:/app/client
+      - ./client/internal:/app/client/internal
+      - ./client/public:/app/client/public
+      - ./client/cmd:/app/client/cmd
+      - ./build/frontend:/app/frontend
     depends_on:
       - api
     restart: unless-stopped
@@ -110,7 +111,6 @@ services:
       - ./certs:/certs
     depends_on:
       - api
-      - frontend
       - client
     restart: unless-stopped
     container_name: envoy
@@ -135,54 +135,6 @@ services:
     container_name: rabbitmq
     restart: unless-stopped
 
-  # Production frontend service
-  # frontend-prod:
-  #   build:
-  #     context: ./web
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - NODE_ENV=production
-  #     - NEXTAUTH_URL=https://tag.local
-  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-  #     - API_URL=https://tag.local/grpc-api
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test: ["CMD", "wget", "--spider", "http://localhost:3000"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 3
-  #   depends_on:
-  #     - api
-
-  frontend:
-    build:
-      context: ./web
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_NODE_ENV=development
-      - NEXT_PUBLIC_APP_BASE_URL=${FRONTEND_URL}
-      - NEXT_PUBLIC_AUTH0_DOMAIN=${AUTH0_DOMAIN}
-      - NEXT_PUBLIC_AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
-      - NEXT_PUBLIC_AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      - NEXT_PUBLIC_API_URL=${API_URL:-http://localhost:9090}
-    volumes:
-      - ./web:/app
-      - /app/node_modules
-      - /app/.next
-    depends_on:
-      - api
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
   db:
     image: postgres:latest
     ports:
@@ -201,15 +153,13 @@ services:
       retries: 5
 
   generate-models:
-    build:
-      context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-db-models
+    image: db-models-image
     depends_on:
       - db
-      - migrations
     command: sqlboiler psql --add-global-variants --wipe
     volumes:
       - ./:/app
+      - ./core/db/migrations:/migrations
     container_name: "generate-models"
     restart: "no"
     environment:
@@ -246,14 +196,13 @@ services:
       retries: 3
 
   proto-build:
-    build:
-      context: .
-      dockerfile: Infra/Dockerfiles/Dockerfile-proto-build
+    image: proto-build-image
     volumes:
       - ./proto:/app/proto
       - ./core/pb:/app/core/pb
       - ./web/src/lib/pb:/app/web/src/lib/pb
       - ./api/openapi:/app/api/openapi
+      - ./client/internal/pb:/app/client/internal/pb
     working_dir: /app/proto
     container_name: "proto-build"
     restart: "no"

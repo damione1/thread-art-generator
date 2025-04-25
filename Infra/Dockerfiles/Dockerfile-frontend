@@ -12,24 +12,35 @@ RUN go install github.com/a-h/templ/cmd/templ@latest
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source
-COPY . .
+# Copy the frontend source code
+COPY ./client ./client
 
 # Install npm dependencies and build tailwind
-RUN cd client && npm install && npm run build
+WORKDIR /app/client
+RUN mkdir -p /app/client/public/css && \
+    rm -rf node_modules package-lock.json && \
+    npm install && \
+    npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify
 
 # Generate templ files
-RUN cd client && $(go env GOPATH)/bin/templ generate ./internal/templates
+RUN $(go env GOPATH)/bin/templ generate ./internal/templates
+
+# Go back to root directory for the build
+WORKDIR /app
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/build/frontend ./client/cmd/frontend
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/frontend ./client/cmd/frontend
 
+# Use a lightweight runtime image
 FROM alpine:latest
 
 WORKDIR /app
 
+# Install runtime dependencies
+RUN apk --no-cache add ca-certificates
+
 # Copy the binary
-COPY --from=builder /app/build/frontend /app/frontend
+COPY --from=builder /app/frontend /app/frontend
 
 # Copy static files and templates
 COPY --from=builder /app/client/public /app/client/public
@@ -40,5 +51,9 @@ ENV FRONTEND_PORT=8080
 # Expose the port
 EXPOSE 8080
 
-# Run the binary
+# Create a non-root user
+RUN adduser -D -u 1000 appuser
+USER appuser
+
+# Run the binary with proper logging
 CMD ["/app/frontend"]
