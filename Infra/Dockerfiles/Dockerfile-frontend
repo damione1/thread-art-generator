@@ -1,0 +1,44 @@
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Install build tools and Node.js
+RUN apk add --no-cache git nodejs npm
+
+# Install templ
+RUN go install github.com/a-h/templ/cmd/templ@latest
+
+# Copy go.mod and go.sum
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Install npm dependencies and build tailwind
+RUN cd client && npm install && npm run build
+
+# Generate templ files
+RUN cd client && $(go env GOPATH)/bin/templ generate ./internal/templates
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/build/frontend ./client/cmd/frontend
+
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copy the binary
+COPY --from=builder /app/build/frontend /app/frontend
+
+# Copy static files and templates
+COPY --from=builder /app/client/public /app/client/public
+
+# Set environment variables
+ENV FRONTEND_PORT=8080
+
+# Expose the port
+EXPOSE 8080
+
+# Run the binary
+CMD ["/app/frontend"]

@@ -1,0 +1,13 @@
+{
+  "name": "thread-art-generator-frontend",
+  "version": "1.0.0",
+  "description": "Thread Art Generator Frontend",
+  "scripts": {
+    "dev": "npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --watch",
+    "build": "npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tailwindcss": "^4.1.0"
+  }
+}

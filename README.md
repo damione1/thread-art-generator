@@ -18,14 +18,15 @@ Thread Art Generator transforms your images into unique pieces of circular threa
   - Maximum thread lines control
   - Randomized starting positions
   - Brightness and contrast adjustments
+- **Command Line Interface**: Manage arts and generate thread designs directly from the terminal
 
 ## Architecture
 
 ```
 [Web UI] <--> [API Server] <--> [Queue] <--> [Worker Service]
-                  |                                |
-                  v                                v
-              [Database] <--------------> [Storage Bucket]
+              ^    |                                |
+              |    v                                v
+            [CLI]  [Database] <--------------> [Storage Bucket]
 ```
 
 - **API Server**: Handles user requests, manages art/composition metadata
@@ -34,6 +35,7 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 - **Database**: Stores metadata (PostgreSQL)
 - **Storage**: Stores images and generation results (Object Storage)
 - **Web UI**: Next.js frontend for user interaction
+- **CLI**: Command-line interface for managing arts and generating designs
 
 ## Getting Started
 
@@ -41,7 +43,6 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 
 - Docker and Docker Compose
 - Go 1.22+
-- Node.js 18+
 - Tilt (for local development)
 
 ### Quick Start
@@ -91,13 +92,66 @@ tilt up
 
 ### Working with the CLI
 
+The Thread Art Generator includes a CLI tool for managing arts and generating thread designs directly from the terminal.
+
+#### Running the CLI
+
 ```bash
-# The CLI wrapper automatically builds and configures the CLI
+# Using the wrapper script (recommended)
 ./scripts/cli <command>
 
-# Examples:
-./scripts/cli user list
-./scripts/cli art create --title "My Artwork"
+# Or build and run directly
+go run ./cmd/cli <command>
+```
+
+#### Available Commands
+
+- **Authentication**
+
+  ```bash
+  # Log in with Auth0
+  ./scripts/cli login
+
+  # Log out and clear credentials
+  ./scripts/cli logout
+
+  # Check connection status
+  ./scripts/cli status
+  ```
+
+- **Art Management**
+
+  ```bash
+  # List all your arts
+  ./scripts/cli arts list
+
+  # Get details for a specific art
+  ./scripts/cli arts get <art-id>
+
+  # Create a new art
+  ./scripts/cli arts create "My Artwork Title"
+
+  # Delete an art
+  ./scripts/cli arts delete <art-id>
+  ```
+
+- **Thread Art Generation**
+  ```bash
+  # Generate a thread art design from an existing art
+  ./scripts/cli generate <art-id>
+  ```
+
+#### Examples
+
+```bash
+# Create a new art
+./scripts/cli arts create "Sunset Portrait"
+
+# List your arts
+./scripts/cli arts list
+
+# Generate a thread art design
+./scripts/cli generate arts/1234567890
 ```
 
 ### Development Commands
@@ -178,6 +232,7 @@ The project includes configuration files for FluidNC, a high-performance Grbl CN
 - [x] API server with composition storage
 - [x] Worker service for async processing
 - [x] UI with real-time previews and visualization
+- [x] CLI tool for terminal-based interactions
 - [⏳] GCode generator for thread path creation (In Progress)
 - [⏳] Enhanced customization settings (In Progress)
 - [ ] Connect-RPC Migration
@@ -187,6 +242,10 @@ The project includes configuration files for FluidNC, a high-performance Grbl CN
   - [x] Update client implementations
   - [ ] Remove Envoy and gRPC Gateway dependencies
   - [ ] Update documentation
+- [ ] CLI Enhancements
+  - [ ] Support for composition management
+  - [ ] Interactive mode for settings configuration
+  - [ ] Offline thread generation capability
 - [ ] Testing implementation
   - [ ] Unit tests for core services
   - [ ] Integration tests for API endpoints
