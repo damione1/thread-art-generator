@@ -1,0 +1,112 @@
+/* Custom styles beyond Tailwind */
+
+/* Global custom styles */
+body {
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(to bottom, rgb(15, 23, 42), rgb(7, 11, 22));
+  background-attachment: fixed;
+}
+
+/* Component-specific styles */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #5a7fff, #3e5df7);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #5a7fff, #6d5dde);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+/* Utility classes */
+.shadow-primary {
+  box-shadow: 0 4px 14px rgba(58, 86, 245, 0.2);
+}
+
+/* Card hover effects */
+.hover-card-effect {
+  transition: all 0.3s ease;
+}
+
+.hover-card-effect:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Custom animations */
+@keyframes slow-pulse {
+  0%,
+  100% {
+    opacity: 0.1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.2;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-slow-pulse {
+  animation: slow-pulse 8s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
+}
+
+/* Custom gradient colors */
+.from-accent-purple {
+  --tw-gradient-from: #9333ea;
+}
+
+.to-accent-purple {
+  --tw-gradient-to: #9333ea;
+}
+
+/* Dark theme color variables */
+:root {
+  --color-dark-100: #111827;
+  --color-dark-200: #1f2937;
+  --color-dark-300: #374151;
+  --color-dark-400: #4b5563;
+  --color-dark-500: #6b7280;
+}
+
+/* Ensure transitions are smooth */
+.transition {
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
+    backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fix dropdown hover behavior */
+.group:hover .group-hover\:visible {
+  visibility: visible;
+  pointer-events: auto;
+  display: block;
+  transition-delay: 0s;
+}
+
+.group .invisible {
+  visibility: hidden;
+  pointer-events: none;
+  transition-delay: 0.1s;
+}
+
+/* Transparent element for hover gap */
+.transparent {
+  opacity: 0;
+  pointer-events: auto;
+}

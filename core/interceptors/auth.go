@@ -33,25 +33,29 @@ var whiteListedPaths = []string{
 func authorizeUserFromHeaders(ctx context.Context, headers http.Header, authenticator auth.Authenticator) (*auth.AuthClaims, string, error) {
 	authHeader := headers.Get(authorizationHeader)
 	if authHeader == "" {
+		log.Debug().Msg("No Authorization header found")
 		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("authorization token is not provided"))
 	}
 
 	fields := strings.Fields(authHeader)
 	if len(fields) < 2 {
+		log.Debug().Str("header", authHeader).Msg("Invalid Authorization header format")
 		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("invalid authorization header format"))
 	}
 
 	authType := strings.ToLower(fields[0])
 	if authType != strings.ToLower(authorizationBearer) {
+		log.Debug().Str("auth_type", authType).Msg("Unsupported authorization type")
 		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("unsupported authorization type"))
 	}
 
 	token := fields[1]
+
 	claims, err := authenticator.ValidateToken(ctx, token)
 	if err != nil {
+		log.Debug().Err(err).Msg("Token validation failed")
 		return nil, "", connect.NewError(connect.CodeUnauthenticated, errors.New("invalid token"))
 	}
-
 	return claims, token, nil
 }
 
@@ -74,8 +78,28 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string) (string, e
 
 	// User not found, get info from token and create new user
 	claims, ok := ctx.Value("claims").(*auth.AuthClaims)
-	if !ok {
-		// If claims aren't in context, just create with minimal info
+	if !ok || claims.Name == "" {
+		// If claims aren't in context or missing name, try to get more info from Auth0
+		token, tokenOk := ctx.Value("token").(string)
+		if tokenOk && token != "" {
+			// Get the auth service from context
+			authService, authOk := ctx.Value("auth_service").(auth.AuthService)
+			if authOk {
+				// Fetch additional user info from Auth0 API
+				userInfo, err := authService.GetUserInfoFromAPI(ctx, token)
+				if err == nil && userInfo != nil {
+					log.Info().
+						Str("auth0_id", auth0ID).
+						Str("name", userInfo.Name).
+						Msg("Retrieved additional user info from Auth0 API")
+
+					// Create user with complete info
+					return createUserFromUserInfo(ctx, db, auth0ID, userInfo)
+				}
+			}
+		}
+
+		// If we couldn't get additional info, create with minimal info
 		log.Warn().Str("auth0_id", auth0ID).Msg("Creating user with minimal info, no claims in context")
 		return createMinimalUser(ctx, db, auth0ID)
 	}
@@ -116,6 +140,42 @@ func getOrCreateUser(ctx context.Context, db *sql.DB, auth0ID string) (string, e
 	}
 
 	log.Info().Str("user_id", internalID).Str("auth0_id", auth0ID).Msg("Created new user from token claims")
+	return internalID, nil
+}
+
+// createUserFromUserInfo creates a new user from UserInfo
+func createUserFromUserInfo(ctx context.Context, db *sql.DB, auth0ID string, userInfo *auth.UserInfo) (string, error) {
+	internalID := uuid.New().String()
+
+	firstName := userInfo.FirstName
+	if firstName == "" {
+		firstName = "New User"
+	}
+
+	newUser := &models.User{
+		ID:        internalID,
+		Auth0ID:   auth0ID,
+		Email:     null.StringFrom(userInfo.Email),
+		FirstName: firstName,
+		LastName:  null.StringFrom(userInfo.LastName),
+		AvatarID:  null.StringFrom(userInfo.Picture),
+		Active:    true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Role:      models.RoleEnumUser,
+	}
+
+	err := newUser.Insert(ctx, db, boil.Infer())
+	if err != nil {
+		return "", err
+	}
+
+	log.Info().
+		Str("user_id", internalID).
+		Str("auth0_id", auth0ID).
+		Str("name", userInfo.Name).
+		Msg("Created new user from Auth0 userinfo API")
+
 	return internalID, nil
 }
 
@@ -179,20 +239,20 @@ func AuthMiddleware(authService auth.AuthService, db *sql.DB) connect.UnaryInter
 				return nil, err
 			}
 
-			// Store claims in context for user creation if needed
+			// Create a context chain with all necessary values
 			ctxWithClaims := context.WithValue(ctx, "claims", claims)
+			ctxWithAuth := context.WithValue(ctxWithClaims, "auth_service", authService)
+			ctxWithToken := context.WithValue(ctxWithAuth, "token", token)
 
 			// Get or create user in our database
-			internalID, err := getOrCreateUser(ctxWithClaims, db, claims.UserID)
+			internalID, err := getOrCreateUser(ctxWithToken, db, claims.UserID)
 			if err != nil {
 				log.Error().Err(err).Str("auth0_id", claims.UserID).Msg("Failed to get or create user")
 				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 			}
 
-			// Add internal user ID and raw token to context
-			newCtx := context.WithValue(ctxWithClaims, middleware.AuthKey, internalID)
-			// Store the raw token in context for later use
-			newCtx = context.WithValue(newCtx, "token", token)
+			// Add internal user ID to context
+			newCtx := context.WithValue(ctxWithToken, middleware.AuthKey, internalID)
 
 			return next(newCtx, req)
 		}

@@ -20,35 +20,35 @@ CODE_DIRS = [
 
 def watch_templ_changes():
   # Watch templ files for changes to trigger rebuild
-  watch_file('client/internal/templates')
-
-  # Rebuild templ files when they change
   local_resource(
     'templ-generate',
     cmd='cd client && GOBIN=$(go env GOPATH)/bin $(go env GOPATH)/bin/templ generate ./internal/templates',
     labels=["build"],
-    deps=['client/internal/templates/**/*.templ'],
-    ignore=['client/internal/templates/**/*.templ.go'],
+    deps=['client/internal/templates/**/*.templ'],  # Only watch .templ files
+    ignore=['client/internal/templates/**/*.templ.go'],  # Explicitly ignore generated files
+    trigger_mode=TRIGGER_MODE_AUTO,
   )
 
 def watch_tailwind_changes():
   # Watch and build Tailwind CSS initially
   local_resource(
     'tailwind-build',
-    cmd='cd client && mkdir -p public/css && rm -rf node_modules package-lock.json && npm install && npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify',
+    cmd='cd client && mkdir -p public/css && npm install && npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify',
     labels=["build"],
     deps=[
       'client/tailwind.config.js',
       'client/styles/input.css',
       'client/package.json',
     ],
+    trigger_mode=TRIGGER_MODE_AUTO,
   )
 
 # ================================================
 # BUILD CONFIGURATIONS
 # ================================================
 
-# Watch key generated files
+# Set up file watches for key directories
+# Use watch_file for entire directories to track all files within them
 watch_file('proto')
 watch_file('core/pb')
 watch_file('client/internal/pb')
@@ -81,12 +81,14 @@ local_resource(
   labels=["build"],
   deps=CODE_DIRS,
   ignore=[
-    'client/internal/templates/**/*.templ',  # Handled by templ-generate
-    'proto',                                # Handled by proto-build
-    'core/pb',                              # Generated files
-    'client/internal/pb',                   # Generated files
+    'client/internal/templates/**/*.templ',  # Ignore .templ files - only watch the compiled output
+    'client/internal/templates/**/*.templ.go',  # Also ignore the output during file detection
+    'proto/**',                             # Handled by proto-build
+    'core/pb/**',                           # Generated files
+    'client/internal/pb/**',                # Generated files
+    'build/**',                             # Output files
   ],
-  resource_deps=['templ-generate'],
+  trigger_mode=TRIGGER_MODE_AUTO,
 )
 
 # ================================================
@@ -138,15 +140,12 @@ docker_build(
   '.',
   dockerfile='Infra/Dockerfiles/Dockerfile-frontend',
   only=[
-    './client',
-    './go.mod',
-    './go.sum',
+    './build/frontend',
+    './client/public',
   ],
   live_update=[
-    # Sync frontend source code changes
-    sync('./client/internal', '/app/client/internal'),
+    # Sync public assets directly
     sync('./client/public', '/app/client/public'),
-    sync('./client/cmd', '/app/client/cmd'),
 
     # Copy the compiled binary
     sync('./build/frontend', '/app/frontend'),
@@ -193,10 +192,9 @@ local_resource(
   cmd='./scripts/dev/tilt-minio-setup.sh',
   labels=["storage"],
   resource_deps=['minio'],
-  auto_init=True
+  auto_init=True,
+  trigger_mode=TRIGGER_MODE_AUTO,
 )
-
-
 
 # ================================================
 # SERVICE CONFIGURATION
@@ -243,14 +241,14 @@ dc_resource(
 dc_resource(
   'worker',
   labels=['worker'],
-  resource_deps=['go-compile', 'db', 'rabbitmq'],
+  resource_deps=['go-compile'],
   auto_init=True,
 )
 
 dc_resource(
   'api',
   labels=['application'],
-  resource_deps=['go-compile', 'db', 'rabbitmq'],
+  resource_deps=['go-compile'],
   links=[
     link('http://localhost:9090', 'Connect API'),
     link('http://localhost:9090/health', 'API Health Check'),
@@ -260,6 +258,7 @@ dc_resource(
 dc_resource(
   'client',
   labels=['application'],
+  # Remove templ-generate as dependency to break the cycle
   resource_deps=['go-compile', 'tailwind-build'],
   links=[
     link('http://localhost:8080', 'Go+HTMX Frontend'),
@@ -270,7 +269,6 @@ dc_resource(
 dc_resource(
   'envoy',
   labels=['proxy'],
-  resource_deps=['api', 'client'],
   links=[
     link('https://front.tag.local', 'Go+HTMX Frontend (via Envoy)'),
     link('https://tag.local/health', 'API Health Check (via Envoy)'),
@@ -281,7 +279,6 @@ dc_resource(
 dc_resource(
   'minio',
   labels=['storage'],
-  resource_deps=['db'],
   links=[
     link('http://localhost:9001', 'MinIO Console'),
   ]

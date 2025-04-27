@@ -14,6 +14,14 @@ RUN go mod download
 COPY ./migrations/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o cmd/migrations/main .
 
+# Build stage for frontend
+FROM golang:1.24 AS builder3
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY ./client/ ./client/
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/frontend ./client/cmd/frontend
+
 # Proto generation stage
 FROM node:20-slim AS proto-gen
 WORKDIR /app
@@ -56,7 +64,11 @@ WORKDIR /app
 # Copy service binaries
 COPY --from=builder1 /app/api/cmd/api/main /app/cmd/api/main
 COPY --from=builder2 /app/migrations/cmd/migrations/main /app/cmd/migrations/main
+COPY --from=builder3 /app/frontend /app/frontend
 
 # Copy generated proto files
 COPY --from=proto-gen /app/core/pb /app/core/pb
 COPY --from=proto-gen /app/web/src/lib/pb /app/web/src/lib/pb
+
+# Include frontend static assets
+COPY ./client/public /app/client/public

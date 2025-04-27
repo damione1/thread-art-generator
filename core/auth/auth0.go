@@ -2,7 +2,9 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -48,14 +50,30 @@ type userInfoCacheEntry struct {
 
 // customClaims contains custom data we want from the Auth0 token
 type customClaims struct {
-	Auth0ID string `json:"sub"`
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	Picture string `json:"picture"`
+	Auth0ID   string `json:"sub"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	Picture   string `json:"picture"`
+	Nickname  string `json:"nickname"`   // Added for GitHub which might use nickname
+	GivenName string `json:"given_name"` // Some providers use given_name
+	// Raw data mapping for fallback
+	RawUserInfo map[string]interface{} `json:"-"`
 }
 
-// Validate does nothing but is required for the validator interface
-func (c customClaims) Validate(ctx context.Context) error {
+// Validate checks claims and populates missing fields from raw data
+func (c *customClaims) Validate(ctx context.Context) error {
+	// If name is empty but nickname exists, use nickname
+	if c.Name == "" && c.Nickname != "" {
+		c.Name = c.Nickname
+	}
+
+	// If name is still empty but given_name exists, use that
+	if c.Name == "" && c.GivenName != "" {
+		c.Name = c.GivenName
+	}
+
+	// Add more fallbacks as needed
+
 	return nil
 }
 
@@ -150,15 +168,21 @@ func (a *Auth0Service) ValidateToken(ctx context.Context, tokenString string) (*
 		provider = parts[0]
 	}
 
+	// For GitHub and other social providers, we might need special handling
+	name := customClaims.Name
+	if name == "" && provider == "github" {
+		// For GitHub, we might have a nickname but no name
+		name = customClaims.Nickname
+	}
+
 	// Create auth claims directly from token without extra fetching
 	authClaims := &AuthClaims{
 		UserID:   customClaims.Auth0ID,
 		Email:    customClaims.Email,
-		Name:     customClaims.Name,
+		Name:     name,
 		Picture:  customClaims.Picture,
 		Provider: provider,
 	}
-
 	return authClaims, nil
 }
 
@@ -303,4 +327,101 @@ func (a *Auth0Service) UpdateUserProfile(ctx context.Context, userID string, pro
 		Str("name", profile.Name).
 		Msg("UpdateUserProfile called but not implemented in SPA mode")
 	return nil
+}
+
+// GetUserInfoFromAPI retrieves user information directly from Auth0's userinfo endpoint
+func (a *Auth0Service) GetUserInfoFromAPI(ctx context.Context, token string) (*UserInfo, error) {
+	// Make request to Auth0 userinfo endpoint
+	userInfoURL := fmt.Sprintf("https://%s/userinfo", a.config.Domain)
+	req, err := http.NewRequest("GET", userInfoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	client := a.httpClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Warn().
+			Int("status_code", resp.StatusCode).
+			Str("response", string(bodyBytes)).
+			Msg("Failed to get user info from Auth0")
+		return nil, fmt.Errorf("failed to get user info: %s", resp.Status)
+	}
+
+	// Parse user info
+	var userInfo map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&userInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode user info: %v", err)
+	}
+
+	// Extract relevant fields
+	info := &UserInfo{
+		ID:        getStringMapValue(userInfo, "sub"),
+		Email:     getStringMapValue(userInfo, "email"),
+		Name:      getStringMapValue(userInfo, "name"),
+		FirstName: getStringMapValue(userInfo, "given_name"),
+		LastName:  getStringMapValue(userInfo, "family_name"),
+		Picture:   getStringMapValue(userInfo, "picture"),
+		Provider:  "auth0",
+	}
+
+	// For GitHub users, name may be missing but nickname might be available
+	if info.Name == "" {
+		if nickname := getStringMapValue(userInfo, "nickname"); nickname != "" {
+			info.Name = nickname
+			log.Debug().
+				Str("user_id", info.ID).
+				Str("nickname", nickname).
+				Msg("Using nickname as name for GitHub user")
+		}
+	}
+
+	// If no first/last name but we have a name, split it
+	if info.FirstName == "" && info.Name != "" {
+		parts := strings.SplitN(info.Name, " ", 2)
+		if len(parts) > 0 {
+			info.FirstName = parts[0]
+			if len(parts) > 1 {
+				info.LastName = parts[1]
+			}
+		}
+	}
+
+	// Extract provider from ID
+	if info.ID != "" {
+		parts := strings.Split(info.ID, "|")
+		if len(parts) > 1 {
+			info.Provider = parts[0]
+		}
+	}
+
+	// Set created/updated times
+	info.CreatedAt = time.Now().Format(time.RFC3339)
+	info.UpdatedAt = time.Now().Format(time.RFC3339)
+
+	log.Debug().
+		Str("user_id", info.ID).
+		Str("name", info.Name).
+		Str("email", info.Email).
+		Str("provider", info.Provider).
+		Msg("Retrieved user info from Auth0 API")
+
+	return info, nil
+}
+
+// Helper function to safely extract string values from a map
+func getStringMapValue(data map[string]interface{}, key string) string {
+	if value, ok := data[key].(string); ok {
+		return value
+	}
+	return ""
 }
