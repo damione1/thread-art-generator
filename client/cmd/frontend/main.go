@@ -120,7 +120,7 @@ func main() {
 	// Create router
 	r := chi.NewRouter()
 
-	// Middleware stack
+	// Global middleware
 	r.Use(middleware.WithAuthInfo(sessionManager))
 	r.Use(middleware.EnrichUser(userService))
 
@@ -144,6 +144,7 @@ func main() {
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
+		// Apply auth middleware for protected routes
 		r.Use(middleware.RequireAuth(sessionManager, "/auth/login"))
 
 		r.Get("/dashboard", pageHandler.DashboardPage)
