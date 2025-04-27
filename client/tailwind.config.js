@@ -5,6 +5,7 @@ module.exports = {
     "./internal/components/**/*.templ",
     "./internal/layouts/**/*.templ",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -22,16 +23,32 @@ module.exports = {
           950: "#1c2566",
         },
         accent: {
-          purple: "#6d5dde",
+          purple: "#9333ea",
         },
         dark: {
-          100: "#121826",
-          200: "#0f141f",
-          300: "#0b101a",
+          100: "#111827",
+          200: "#1f2937",
+          300: "#374151",
+          400: "#4b5563",
+          500: "#6b7280",
         },
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
+      animation: {
+        "slow-pulse": "slow-pulse 8s ease-in-out infinite",
+        "spin-slow": "spin-slow 12s linear infinite",
+      },
+      keyframes: {
+        "slow-pulse": {
+          "0%, 100%": { opacity: "0.1", transform: "scale(1)" },
+          "50%": { opacity: "0.2", transform: "scale(1.05)" },
+        },
+        "spin-slow": {
+          from: { transform: "rotate(0deg)" },
+          to: { transform: "rotate(360deg)" },
+        },
       },
     },
   },

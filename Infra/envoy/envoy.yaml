@@ -34,8 +34,8 @@ static_resources:
                           - prefix: "https://"
                           - prefix: "http://"
                         allow_methods: "GET, PUT, DELETE, POST, OPTIONS"
-                        allow_headers: "authorization,content-type,x-amz-date,x-amz-content-sha256,x-amz-security-token,x-forwarded-proto,x-forwarded-host,connect-protocol-version"
-                        expose_headers: "etag,connect-protocol-version"
+                        allow_headers: "authorization,content-type,x-amz-date,x-amz-content-sha256,x-amz-security-token,x-forwarded-proto,x-forwarded-host,connect-protocol-version,hx-request,hx-trigger,hx-target,hx-current-url"
+                        expose_headers: "etag,connect-protocol-version,hx-push,hx-redirect,hx-refresh,hx-trigger"
                         max_age: "86400"
                       routes:
                         # Connect API endpoint
@@ -52,21 +52,13 @@ static_resources:
                         - match:
                             prefix: "/health"
                           route:
-                            cluster: api_service
+                            cluster: client_service
                             timeout: 5s
-                        # Next.js webpack HMR
-                        - match:
-                            prefix: "/_next/webpack-hmr"
-                          route:
-                            cluster: frontend_service
-                            timeout: 0s
-                            upgrade_configs:
-                              - upgrade_type: "websocket"
-                        # Default route to frontend
+                        # Default route to client service
                         - match:
                             prefix: "/"
                           route:
-                            cluster: frontend_service
+                            cluster: client_service
                             timeout: 30s
                             retry_policy:
                               retry_on: "connect-failure,refused-stream,503,reset,5xx"

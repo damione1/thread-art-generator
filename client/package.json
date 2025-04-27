@@ -4,7 +4,8 @@
   "description": "Thread Art Generator Frontend",
   "scripts": {
     "dev": "npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --watch",
-    "build": "npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify"
+    "build": "npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify",
+    "build:css": "mkdir -p ./public/css && npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify"
   },
   "dependencies": {},
   "devDependencies": {

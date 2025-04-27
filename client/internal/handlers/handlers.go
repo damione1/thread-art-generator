@@ -17,7 +17,7 @@ func RegisterHandlers(mux *http.ServeMux) {
 
 // HomeHandler handles the home page request
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	templates.Home().Render(r.Context(), w)
+	templates.HomePage(nil).Render(r.Context(), w)
 }
 
 // HealthCheckHandler returns a simple 200 OK response for health checks

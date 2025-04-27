@@ -62,4 +62,7 @@ type AuthService interface {
 
 	// GetUserInfoFromToken retrieves user information using a token
 	GetUserInfoFromToken(ctx context.Context, token string) (*UserInfo, error)
+
+	// GetUserInfoFromAPI retrieves user information directly from Auth0's userinfo endpoint
+	GetUserInfoFromAPI(ctx context.Context, token string) (*UserInfo, error)
 }

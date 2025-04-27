@@ -82,8 +82,15 @@ services:
       - FRONTEND_PORT=8080
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
+      - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
       - API_URL=${API_URL:-http://api:9090}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - REDIS_ADDR=redis:6379
+      - COOKIE_HASH_KEY=${COOKIE_HASH_KEY:-ADefaultHashKeyFor32BytesSecureHashing}
+      - COOKIE_BLOCK_KEY=${COOKIE_BLOCK_KEY:-ADefaultBlockKeyShould32BytesLength}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
     volumes:
       - ./client/internal:/app/client/internal
       - ./client/public:/app/client/public
@@ -91,6 +98,7 @@ services:
       - ./build/frontend:/app/frontend
     depends_on:
       - api
+      - redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "http://localhost:8080/health"]
@@ -98,6 +106,22 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  # Redis for session storage
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./Infra/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Envoy proxy for TLS termination and domain routing
   envoy:
@@ -210,6 +234,7 @@ services:
 volumes:
   threadmachine:
   rabbitmq_data:
+  redis_data:
 
 networks:
   default:

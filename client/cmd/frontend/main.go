@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -9,18 +11,22 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Damione1/thread-art-generator/client/internal/auth"
+	"github.com/Damione1/thread-art-generator/client/internal/client"
 	"github.com/Damione1/thread-art-generator/client/internal/handlers"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
+	"github.com/Damione1/thread-art-generator/client/internal/services"
+	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
 	// Configure logging
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	// Get port from environment or use default
+	// Load configuration
 	port := os.Getenv("FRONTEND_PORT")
 	if port == "" {
 		port = "8080"
@@ -41,65 +47,166 @@ func main() {
 
 	log.Info().Str("staticDir", staticDir).Msg("Using static files directory")
 
-	// Create server
-	mux := http.NewServeMux()
+	// Load Auth0 configuration
+	auth0Config := auth.NewConfig()
 
-	// Setup specific static file routes
-	mux.HandleFunc("GET /static/css/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		http.StripPrefix("/static", http.FileServer(http.Dir(staticDir))).ServeHTTP(w, r)
-	})
+	// Get cookie encryption keys from environment or generate them
+	// These should be set in production for consistency across restarts and multiple instances
+	var hashKey, blockKey []byte
 
-	mux.HandleFunc("GET /static/js/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		http.StripPrefix("/static", http.FileServer(http.Dir(staticDir))).ServeHTTP(w, r)
-	})
-
-	mux.HandleFunc("GET /static/images/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		http.StripPrefix("/static", http.FileServer(http.Dir(staticDir))).ServeHTTP(w, r)
-	})
-
-	// Register handlers
-	handlers.RegisterHandlers(mux)
-
-	// Apply middleware
-	handler := middleware.ChainMiddleware(
-		mux,
-		middleware.LoggingMiddleware,
-		middleware.RecoveryMiddleware,
-	)
-
-	// Create server
-	server := &http.Server{
-		Addr:         ":" + port,
-		Handler:      handler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+	hashKeyStr := os.Getenv("COOKIE_HASH_KEY")
+	if hashKeyStr == "" {
+		log.Warn().Msg("COOKIE_HASH_KEY not set, generating random key. Sessions will be invalidated on restart.")
+		hashKey = generateRandomKey(32)
+	} else {
+		// Ensure hash key is exactly 32	 bytes
+		hashKey = []byte(hashKeyStr)
+		if len(hashKey) < 32 {
+			// Pad key if too short
+			paddedKey := make([]byte, 32)
+			copy(paddedKey, hashKey)
+			hashKey = paddedKey
+			log.Warn().Msg("COOKIE_HASH_KEY was shorter than 32 bytes, padded with zeros")
+		} else if len(hashKey) > 32 {
+			// Truncate key if too long
+			hashKey = hashKey[:32]
+			log.Warn().Msg("COOKIE_HASH_KEY was longer than 32 bytes, truncated to 32 bytes")
+		}
 	}
 
-	// Start server in a goroutine
+	blockKeyStr := os.Getenv("COOKIE_BLOCK_KEY")
+	if blockKeyStr == "" {
+		log.Warn().Msg("COOKIE_BLOCK_KEY not set, generating random key. Sessions will be invalidated on restart.")
+		blockKey = generateRandomKey(32)
+	} else {
+		// Ensure block key is exactly 32 bytes
+		blockKey = []byte(blockKeyStr)
+		if len(blockKey) < 32 {
+			// Pad key if too short
+			paddedKey := make([]byte, 32)
+			copy(paddedKey, blockKey)
+			blockKey = paddedKey
+			log.Warn().Msg("COOKIE_BLOCK_KEY was shorter than 32 bytes, padded with zeros")
+		} else if len(blockKey) > 32 {
+			// Truncate key if too long
+			blockKey = blockKey[:32]
+			log.Warn().Msg("COOKIE_BLOCK_KEY was longer than 32 bytes, truncated to 32 bytes")
+		}
+	}
+
+	// Create session manager
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "redis:6379"
+	}
+	sessionManager, err := auth.NewSessionManager(redisAddr, hashKey, blockKey)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create session manager")
+	}
+
+	// Create a client factory that implements auth.ClientFactory
+	clientFactory := client.NewFactory(auth0Config.APIBaseURL, sessionManager)
+
+	// Create Auth0 service
+	auth0Service := auth.NewAuth0Service(auth0Config, sessionManager, clientFactory)
+
+	// Create services
+	userService := services.NewUserService(clientFactory)
+
+	// Create handlers
+	authHandler := handlers.NewAuthHandler(auth0Service, clientFactory)
+	pageHandler := handlers.NewPageHandler(userService)
+
+	// Create router
+	r := chi.NewRouter()
+
+	// Middleware stack
+	r.Use(middleware.WithAuthInfo(sessionManager))
+	r.Use(middleware.EnrichUser(userService))
+
+	// Public routes
+	r.Group(func(r chi.Router) {
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("OK"))
+		})
+
+		// Auth routes
+		r.Route("/auth", func(r chi.Router) {
+			r.Get("/login", authHandler.Login)
+			r.Get("/callback", authHandler.Callback)
+			r.Get("/logout", authHandler.Logout)
+			r.Get("/status", authHandler.Status)
+		})
+
+		// Public home page
+		r.Get("/", pageHandler.HomePage)
+	})
+
+	// Protected routes
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAuth(sessionManager, "/auth/login"))
+
+		r.Get("/dashboard", pageHandler.DashboardPage)
+
+		// Protected API routes
+		r.Route("/api", func(r chi.Router) {
+			r.Get("/user", func(w http.ResponseWriter, r *http.Request) {
+				// Get user from context (added by middleware)
+				user, ok := middleware.UserFromContext(r.Context())
+
+				w.Header().Set("Content-Type", "application/json")
+				if !ok || user == nil {
+					w.WriteHeader(http.StatusUnauthorized)
+					w.Write([]byte(`{"error":"Unauthorized"}`))
+					return
+				}
+
+				// Return user info as JSON
+				w.Write([]byte(fmt.Sprintf(`{"id":"%s","name":"%s","email":"%s"}`,
+					user.ID, user.Name, user.Email)))
+			})
+		})
+	})
+
+	// Static files
+	fileServer := http.FileServer(http.Dir(staticDir))
+	r.Handle("/static/*", http.StripPrefix("/static", fileServer))
+
+	// Start server
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+	}
+
+	// Run the server in a goroutine
 	go func() {
-		log.Info().Msgf("Starting frontend server on port %s", port)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("Failed to start server")
+		log.Info().Str("port", port).Msg("Starting server")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("Server failed")
 		}
 	}()
 
-	// Wait for interrupt signal
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-	// Block until signal is received
-	<-stop
 	log.Info().Msg("Shutting down server...")
-
-	// Create a deadline for shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Shutdown server
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatal().Err(err).Msg("Server forced to shutdown")
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal().Err(err).Msg("Server shutdown failed")
 	}
 
 	log.Info().Msg("Server gracefully stopped")
+}
+
+// generateRandomKey creates a random key for session encryption
+func generateRandomKey(length int) []byte {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		log.Fatal().Err(err).Msg("Failed to generate random key")
+	}
+	return bytes
 }
