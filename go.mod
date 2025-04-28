@@ -31,7 +31,7 @@ require (
 	go.einride.tech/aip v0.67.1
 	gocloud.dev v0.37.0
 	golang.org/x/crypto v0.36.0
-	golang.org/x/oauth2 v0.27.0
+	golang.org/x/oauth2 v0.29.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/grpc v1.72.0
