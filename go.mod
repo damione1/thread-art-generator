@@ -8,6 +8,7 @@ require (
 	github.com/alecthomas/kong v1.9.0
 	github.com/auth0/go-jwt-middleware/v2 v2.3.0
 	github.com/aws/aws-sdk-go v1.55.6
+	github.com/axzilla/templui v0.60.0
 	github.com/bufbuild/connect-go v1.10.0
 	github.com/bufbuild/protovalidate-go v0.9.2
 	github.com/disintegration/imaging v1.6.2
@@ -50,6 +51,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/iam v1.1.8 // indirect
 	cloud.google.com/go/storage v1.40.0 // indirect
+	github.com/Oudwins/tailwind-merge-go v0.2.0 // indirect
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da // indirect
 	github.com/aead/chacha20poly1305 v0.0.0-20201124145622-1a5aba2a8b29 // indirect
 	github.com/aead/poly1305 v0.0.0-20180717145839-3fee0db0b635 // indirect

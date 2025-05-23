@@ -6,7 +6,7 @@ This document provides guidelines for implementing and using Connect-RPC clients
 
 Our system uses:
 
-1. Go+HTMX frontend connecting to a gRPC backend via Connect-RPC
+1. Go+HTMX frontend connecting to a Connect-RPC backend
 2. Server-side rendered templates with progressive enhancement
 3. Session-based authentication with Auth0
 4. Redis for distributed session storage
@@ -43,14 +43,14 @@ type ClientConfig struct {
 	RetryDelayMax   time.Duration
 }
 
-// NewArtGeneratorClient creates a new Connect client for the art generator service
+// NewArtGeneratorClient creates a new Connect-RPC client for the art generator service
 func NewArtGeneratorClient(config ClientConfig) artgeneratorv1connect.ArtGeneratorServiceClient {
 	// Create HTTP client with timeout
 	httpClient := &http.Client{
 		Timeout: config.Timeout,
 	}
 
-	// Create Connect client with interceptors
+	// Create Connect-RPC client with interceptors
 	client := artgeneratorv1connect.NewArtGeneratorServiceClient(
 		httpClient,
 		config.BaseURL,

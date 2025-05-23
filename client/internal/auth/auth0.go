@@ -20,15 +20,13 @@ import (
 type Auth0Service struct {
 	config         *Config
 	sessionManager *SessionManager
-	clientFactory  ClientFactory // Use interface instead of concrete type
 }
 
 // NewAuth0Service creates a new Auth0 service
-func NewAuth0Service(config *Config, sessionManager *SessionManager, clientFactory ClientFactory) *Auth0Service {
+func NewAuth0Service(config *Config, sessionManager *SessionManager) *Auth0Service {
 	return &Auth0Service{
 		config:         config,
 		sessionManager: sessionManager,
-		clientFactory:  clientFactory,
 	}
 }
 
@@ -159,10 +157,6 @@ func (a *Auth0Service) CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("Failed to create session")
 		return
 	}
-
-	// Create a context with the token we've just received
-	ctx := r.Context()
-	ctx = a.clientFactory.AddTokenToContext(ctx, tokenData.AccessToken)
 
 	// Redirect to dashboard
 	http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)

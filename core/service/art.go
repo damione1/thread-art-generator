@@ -155,12 +155,43 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		}
 	}
 
-	// Query the arts with pagination
-	arts, err := models.Arts(
+	// Determine order_by and order_direction
+	orderBy := req.GetOrderBy()
+	if orderBy == "" {
+		orderBy = "create_time"
+	}
+	orderDirection := req.GetOrderDirection()
+	if orderDirection == "" {
+		orderDirection = "desc"
+	}
+
+	// Map proto field to DB column
+	var orderColumn string
+	switch orderBy {
+	case "create_time":
+		orderColumn = models.ArtColumns.CreatedAt
+	case "update_time":
+		orderColumn = models.ArtColumns.UpdatedAt
+	default:
+		orderColumn = models.ArtColumns.CreatedAt
+	}
+
+	// Validate direction
+	dir := "DESC"
+	if orderDirection == "asc" {
+		dir = "ASC"
+	}
+
+	// Build query mods
+	queryMods := []qm.QueryMod{
 		models.ArtWhere.AuthorID.EQ(userID),
-		qm.Limit(pageSize+1), // Query one more than we need to check if there are more results
+		qm.OrderBy(fmt.Sprintf("%s %s", orderColumn, dir)),
+		qm.Limit(pageSize + 1),
 		qm.Offset(offset),
-	).All(ctx, server.config.DB)
+	}
+
+	// Query the arts with pagination and sorting
+	arts, err := models.Arts(queryMods...).All(ctx, server.config.DB)
 	if err != nil {
 		return nil, pbErrors.InternalError("failed to get arts", err)
 	}

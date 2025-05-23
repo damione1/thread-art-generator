@@ -1,0 +1,89 @@
+package templates
+
+import (
+	"github.com/Damione1/thread-art-generator/client/internal/auth"
+	"github.com/Damione1/thread-art-generator/client/internal/services"
+	"github.com/axzilla/templui/component/button"
+	"github.com/axzilla/templui/component/form"
+	"github.com/axzilla/templui/component/input"
+)
+
+// NewArtPage renders the page to create a new art
+templ NewArtPage(user *auth.UserInfo, formData *services.ArtFormData) {
+	@Layout("Create New Art - ThreadArt", user) {
+		<div class="max-w-4xl mx-auto px-4 py-8">
+			<h1 class="text-3xl font-bold text-slate-200 mb-6">Create New Art</h1>
+			<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
+				@NewArtForm(formData)
+			</div>
+		</div>
+	}
+}
+
+// NewArtForm renders the form for creating new art
+templ NewArtForm(formData *services.ArtFormData) {
+	<form
+		hx-post="/dashboard/arts/new"
+		hx-swap="outerHTML"
+		class="space-y-6 w-full"
+	>
+		if len(formData.Errors["_form"]) > 0 {
+			<div class="bg-red-500/10 border border-red-500/20 rounded-md p-4 mb-4">
+				<div class="flex">
+					<div class="flex-shrink-0">
+						<svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+							<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+						</svg>
+					</div>
+					<div class="ml-3">
+						<h3 class="text-sm font-medium text-red-400">
+							There were errors with your submission
+						</h3>
+						<div class="mt-2 text-sm text-red-300">
+							<ul class="list-disc pl-5 space-y-1">
+								for _, err := range formData.Errors["_form"] {
+									<li>{ err }</li>
+								}
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+		}
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "title",
+			}) {
+				Title
+			}
+			@input.Input(input.Props{
+				ID:          "title",
+				Type:        input.TypeText,
+				Name:        "title",
+				Placeholder: "Enter a title for your art",
+				Value:       formData.Title,
+				HasError:    len(formData.Errors["art.title"]) > 0,
+			})
+			@form.Description() {
+				Enter a descriptive title for your thread art project
+			}
+			if len(formData.Errors["art.title"]) > 0 {
+				for _, err := range formData.Errors["art.title"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		<div class="flex justify-end mt-6">
+			@button.Button(button.Props{
+				Type:    "submit",
+				Variant: button.VariantDefault,
+			}) {
+				Create Art
+			}
+		</div>
+	</form>
+}

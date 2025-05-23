@@ -11,13 +11,13 @@ import (
 
 // PageHandler handles rendering the main application pages
 type PageHandler struct {
-	userService *services.UserService
+	generatorService *services.GeneratorService
 }
 
 // NewPageHandler creates a new page handler
-func NewPageHandler(userService *services.UserService) *PageHandler {
+func NewPageHandler(generatorService *services.GeneratorService) *PageHandler {
 	return &PageHandler{
-		userService: userService,
+		generatorService: generatorService,
 	}
 }
 
@@ -39,8 +39,26 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 	// User will be in context due to RequireAuth middleware
 	user, _ := middleware.UserFromContext(r.Context())
 
-	// Render dashboard with user data
-	err := templates.Dashboard(user).Render(r.Context(), w)
+	// Read sort and dir from query params, default to create_time/desc
+	sort := r.URL.Query().Get("sort")
+	if sort == "" {
+		sort = "create_time"
+	}
+	dir := r.URL.Query().Get("dir")
+	if dir == "" {
+		dir = "desc"
+	}
+
+	// Fetch user's arts with sorting
+	arts, err := h.generatorService.ListArts(r.Context(), user, 10, "", sort, dir)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to fetch arts for dashboard")
+		http.Error(w, "Error fetching arts", http.StatusInternalServerError)
+		return
+	}
+
+	// Pass sort and dir to template for button state
+	err = templates.Dashboard(user, arts.GetArts(), sort, dir).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render dashboard")

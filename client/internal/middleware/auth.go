@@ -28,16 +28,23 @@ func WithUser(ctx context.Context, user *auth.UserInfo) context.Context {
 func RequireAuth(sessionManager *auth.SessionManager, loginPath string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Just check if session exists, don't replace context
-			_, err := sessionManager.GetSession(r)
+			// Get session and check if it exists
+			session, err := sessionManager.GetSession(r)
 			if err != nil {
 				log.Debug().Err(err).Str("path", r.URL.Path).Msg("No valid session, redirecting to login")
 				http.Redirect(w, r, loginPath, http.StatusTemporaryRedirect)
 				return
 			}
 
-			// Continue with existing context (which should already have user info from WithAuthInfo)
-			next.ServeHTTP(w, r)
+			// Add auth token to context for API calls
+			ctx := r.Context()
+			if session.AccessToken != "" {
+				ctx = auth.WithToken(ctx, session.AccessToken)
+				log.Debug().Str("path", r.URL.Path).Msg("Added auth token to context for protected route")
+			}
+
+			// Continue with context that includes the auth token
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
@@ -53,8 +60,15 @@ func WithAuthInfo(sessionManager *auth.SessionManager) func(next http.Handler) h
 					session.UserInfo.Name = "User" // Fallback name if empty
 				}
 
-				// Add info to context
+				// Add user info to context
 				ctx := WithUser(r.Context(), &session.UserInfo)
+
+				// Also add auth token to context if available
+				if session.AccessToken != "" {
+					ctx = auth.WithToken(ctx, session.AccessToken)
+					log.Debug().Str("path", r.URL.Path).Msg("Added auth token to context for authenticated user")
+				}
+
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -66,12 +80,12 @@ func WithAuthInfo(sessionManager *auth.SessionManager) func(next http.Handler) h
 }
 
 // EnrichUser middleware enriches user data from the API when authenticated
-func EnrichUser(userService *services.UserService) func(next http.Handler) http.Handler {
+func EnrichUser(generatorService *services.GeneratorService) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := UserFromContext(r.Context())
-			if ok && user != nil && userService != nil {
-				apiUser, err := userService.GetCurrentUser(r.Context(), r)
+			if ok && user != nil && generatorService != nil {
+				apiUser, err := generatorService.GetCurrentUser(r.Context(), r)
 				if err == nil && apiUser != nil {
 					// Create a full name, ensuring it's never empty
 					fullName := apiUser.FirstName + " " + apiUser.LastName
@@ -124,6 +138,38 @@ func EnrichUser(userService *services.UserService) func(next http.Handler) http.
 			}
 
 			// Continue with existing context
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// ProcessAuthToken middleware to handle CSRF token and add auth token to API calls
+func ProcessAuthToken(sessionManager *auth.SessionManager) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Check if this is an HTMX request with a CSRF token
+			csrfToken := r.Header.Get("X-CSRF-Token")
+
+			// If we have a CSRF token and the route requires authentication
+			if csrfToken != "" {
+				// Get the session to extract the auth token
+				session, err := sessionManager.GetSession(r)
+				if err == nil && session != nil && session.AccessToken != "" {
+					// Create a new request with the auth token
+					ctx := auth.WithToken(r.Context(), session.AccessToken)
+					// Continue with the request with auth token context
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				} else {
+					log.Debug().
+						Err(err).
+						Str("path", r.URL.Path).
+						Str("method", r.Method).
+						Msg("CSRF token provided but session not found or invalid")
+				}
+			}
+
+			// Proceed with the original request if no CSRF token or not authenticated
 			next.ServeHTTP(w, r)
 		})
 	}

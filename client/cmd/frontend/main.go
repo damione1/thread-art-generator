@@ -16,6 +16,7 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/handlers"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
+	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -104,25 +105,39 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create session manager")
 	}
 
-	// Create a client factory that implements auth.ClientFactory
-	clientFactory := client.NewFactory(auth0Config.APIBaseURL, sessionManager)
+	// Create HTTP client with auth transport
+	httpClient := &http.Client{
+		Transport: &client.AuthTransport{
+			SessionManager: sessionManager,
+			Base:           http.DefaultTransport,
+		},
+	}
+
+	// Create connect client directly
+	artGeneratorClient := pbconnect.NewArtGeneratorServiceClient(
+		httpClient,
+		auth0Config.APIBaseURL,
+	)
 
 	// Create Auth0 service
-	auth0Service := auth.NewAuth0Service(auth0Config, sessionManager, clientFactory)
+	auth0Service := auth.NewAuth0Service(auth0Config, sessionManager)
 
-	// Create services
-	userService := services.NewUserService(clientFactory)
+	// Create generator service
+	generatorService := services.NewGeneratorService(artGeneratorClient, sessionManager)
 
 	// Create handlers
-	authHandler := handlers.NewAuthHandler(auth0Service, clientFactory)
-	pageHandler := handlers.NewPageHandler(userService)
+	authHandler := handlers.NewAuthHandler(auth0Service)
+	pageHandler := handlers.NewPageHandler(generatorService)
+	artHandler := handlers.NewArtHandler(generatorService)
 
 	// Create router
 	r := chi.NewRouter()
 
 	// Global middleware
 	r.Use(middleware.WithAuthInfo(sessionManager))
-	r.Use(middleware.EnrichUser(userService))
+	r.Use(middleware.EnrichUser(generatorService))
+	// Process CSRF/Auth token from HTMX requests
+	r.Use(middleware.ProcessAuthToken(sessionManager))
 
 	// Public routes
 	r.Group(func(r chi.Router) {
@@ -147,7 +162,13 @@ func main() {
 		// Apply auth middleware for protected routes
 		r.Use(middleware.RequireAuth(sessionManager, "/auth/login"))
 
-		r.Get("/dashboard", pageHandler.DashboardPage)
+		r.Route("/dashboard", func(r chi.Router) {
+			r.Get("/", pageHandler.DashboardPage)
+			r.Route("/arts", func(r chi.Router) {
+				r.Get("/new", artHandler.NewArtPage)
+				r.Post("/new", artHandler.CreateArt)
+			})
+		})
 
 		// Protected API routes
 		r.Route("/api", func(r chi.Router) {

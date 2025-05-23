@@ -821,6 +821,20 @@ export class ListArtsRequest extends Message<ListArtsRequest> {
    */
   pageToken = "";
 
+  /**
+   * The order by which to sort the arts.
+   *
+   * @generated from field: string order_by = 4;
+   */
+  orderBy = "";
+
+  /**
+   * The order direction.
+   *
+   * @generated from field: string order_direction = 5;
+   */
+  orderDirection = "";
+
   constructor(data?: PartialMessage<ListArtsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -832,6 +846,8 @@ export class ListArtsRequest extends Message<ListArtsRequest> {
     { no: 1, name: "parent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "order_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "order_direction", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListArtsRequest {
