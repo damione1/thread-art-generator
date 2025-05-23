@@ -935,9 +935,13 @@ type ListArtsRequest struct {
 	// The maximum number of arts to return. The service may return fewer than this value.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// A page token, received from a previous `ListArts` call.
-	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// The order by which to sort the arts.
+	OrderBy string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// The order direction.
+	OrderDirection string `protobuf:"bytes,5,opt,name=order_direction,json=orderDirection,proto3" json:"order_direction,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListArtsRequest) Reset() {
@@ -987,6 +991,20 @@ func (x *ListArtsRequest) GetPageSize() int32 {
 func (x *ListArtsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListArtsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListArtsRequest) GetOrderDirection() string {
+	if x != nil {
+		return x.OrderDirection
 	}
 	return ""
 }
@@ -1335,14 +1353,16 @@ const file_art_proto_rawDesc = "" +
 	"\rGetArtRequest\x12\xd2\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\xbd\x01\xe0A\x02\xfaA\x15\n" +
 	"\x13art.example.com/Art\xbaH\x9e\x01\xba\x01\x9a\x01\n" +
-	"\x13get_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\x9e\x02\n" +
+	"\x13get_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\x95\x03\n" +
 	"\x0fListArtsRequest\x12\xc3\x01\n" +
 	"\x06parent\x18\x01 \x01(\tB\xaa\x01\xe0A\x02\xfaA\x16\n" +
 	"\x14art.example.com/User\xbaH\x8a\x01\xba\x01\x86\x01\n" +
 	"\x17list_arts.parent.format\x12=Parent resource name is required and must start with 'users/'\x1a,this.size() > 0 && this.startsWith('users/')R\x06parent\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d \x00R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"W\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12:\n" +
+	"\border_by\x18\x04 \x01(\tB\x1f\xbaH\x1cr\x1aR\vcreate_timeR\vupdate_timeR\aorderBy\x129\n" +
+	"\x0forder_direction\x18\x05 \x01(\tB\x10\xbaH\rr\vR\x03ascR\x04descR\x0eorderDirection\"W\n" +
 	"\x10ListArtsResponse\x12\x1b\n" +
 	"\x04arts\x18\x01 \x03(\v2\a.pb.ArtR\x04arts\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xea\x01\n" +

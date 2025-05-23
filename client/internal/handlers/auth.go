@@ -9,15 +9,13 @@ import (
 
 // AuthHandler handles authentication-related routes
 type AuthHandler struct {
-	auth0Service  *auth.Auth0Service
-	clientFactory auth.ClientFactory
+	auth0Service *auth.Auth0Service
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(auth0Service *auth.Auth0Service, clientFactory auth.ClientFactory) *AuthHandler {
+func NewAuthHandler(auth0Service *auth.Auth0Service) *AuthHandler {
 	return &AuthHandler{
-		auth0Service:  auth0Service,
-		clientFactory: clientFactory,
+		auth0Service: auth0Service,
 	}
 }
 

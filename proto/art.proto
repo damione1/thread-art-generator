@@ -351,6 +351,16 @@ message ListArtsRequest {
 
     // A page token, received from a previous `ListArts` call.
     string page_token = 3;
+
+    // The order by which to sort the arts.
+    string order_by = 4 [
+        (buf.validate.field).string = {in: ["create_time", "update_time"]}
+    ];
+
+    // The order direction.
+    string order_direction = 5 [
+        (buf.validate.field).string = {in: ["asc", "desc"]}
+    ];
 }
 
 message ListArtsResponse {

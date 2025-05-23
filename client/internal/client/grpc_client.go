@@ -12,17 +12,17 @@ import (
 	"github.com/bufbuild/connect-go"
 )
 
-// GRPCClient provides a wrapper for the API client with authentication
+// APIClient provides a wrapper for the API client with authentication
 // Implements auth.APIClient interface
-type GRPCClient struct {
+type APIClient struct {
 	baseURL        string
 	sessionManager *auth.SessionManager
 	httpClient     *http.Client
 	connectClient  pbconnect.ArtGeneratorServiceClient
 }
 
-// Ensure GRPCClient implements auth.APIClient interface
-var _ auth.APIClient = (*GRPCClient)(nil)
+// Ensure APIClient implements auth.APIClient interface
+var _ auth.APIClient = (*APIClient)(nil)
 
 // User represents the data returned from the API
 // This implements auth.APIUser for easier type conversion
@@ -46,7 +46,7 @@ func (u *User) ToAPIUser() *auth.APIUser {
 }
 
 // CheckSessionToken checks if a session has a valid Auth0 token
-func (c *GRPCClient) CheckSessionToken(r *http.Request) error {
+func (c *APIClient) CheckSessionToken(r *http.Request) error {
 	session, err := c.sessionManager.GetSession(r)
 	if err != nil {
 		return fmt.Errorf("not authenticated: %w", err)
@@ -66,8 +66,8 @@ func (c *GRPCClient) CheckSessionToken(r *http.Request) error {
 	return nil
 }
 
-// NewGRPCClient creates a new API client
-func NewGRPCClient(baseURL string, sessionManager *auth.SessionManager) *GRPCClient {
+// NewAPIClient creates a new API client using Connect-RPC
+func NewAPIClient(baseURL string, sessionManager *auth.SessionManager) *APIClient {
 	httpClient := &http.Client{
 		Transport: &authTransport{
 			sessionManager: sessionManager,
@@ -80,7 +80,7 @@ func NewGRPCClient(baseURL string, sessionManager *auth.SessionManager) *GRPCCli
 		baseURL,
 	)
 
-	return &GRPCClient{
+	return &APIClient{
 		baseURL:        baseURL,
 		sessionManager: sessionManager,
 		httpClient:     httpClient,
@@ -89,7 +89,7 @@ func NewGRPCClient(baseURL string, sessionManager *auth.SessionManager) *GRPCCli
 }
 
 // GetCurrentUser fetches the current user from the API using Connect-RPC
-func (c *GRPCClient) GetCurrentUser(ctx context.Context, req *http.Request) (*auth.APIUser, error) {
+func (c *APIClient) GetCurrentUser(ctx context.Context, req *http.Request) (*auth.APIUser, error) {
 	var ctxWithSession context.Context
 
 	// Check if we already have a session in the context
@@ -130,7 +130,7 @@ func (c *GRPCClient) GetCurrentUser(ctx context.Context, req *http.Request) (*au
 
 // GetInternalUser fetches the current user from the API and returns our internal User type
 // This is for internal use when we need our own User type
-func (c *GRPCClient) GetInternalUser(ctx context.Context, req *http.Request) (*User, error) {
+func (c *APIClient) GetInternalUser(ctx context.Context, req *http.Request) (*User, error) {
 	apiUser, err := c.GetCurrentUser(ctx, req)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (c *GRPCClient) GetInternalUser(ctx context.Context, req *http.Request) (*U
 }
 
 // For simplicity, we'll implement a mock version that just returns session data
-func (c *GRPCClient) GetCurrentUserMock(req *http.Request) (*User, error) {
+func (c *APIClient) GetCurrentUserMock(req *http.Request) (*User, error) {
 	session, err := c.sessionManager.GetSession(req)
 	if err != nil {
 		return nil, err
@@ -172,13 +172,18 @@ type authTransport struct {
 
 // RoundTrip implements http.RoundTripper
 func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Get session from request context if it exists
-	if req.Context().Value("session") != nil {
+	// First check for token directly in the context (added by middleware)
+	token, ok := auth.TokenFromContext(req.Context())
+	if ok && token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		fmt.Println("Auth transport: Using token from context")
+	} else if req.Context().Value("session") != nil {
+		// Fall back to session from context if available
 		session := req.Context().Value("session").(*auth.SessionData)
 		// Forward the raw Auth0 token directly - this ensures proper claims extraction on the API side
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", session.AccessToken))
 	} else {
-		fmt.Println("Auth transport: No session found in context")
+		fmt.Println("Auth transport: No token or session found in context")
 	}
 
 	// Add Origin header to prevent CORS errors

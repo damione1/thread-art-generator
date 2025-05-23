@@ -7,8 +7,8 @@ import (
 
 // ClientFactory is an interface for creating API clients
 type ClientFactory interface {
-	// NewGRPCClient creates a new gRPC client
-	NewGRPCClient() APIClient
+	// NewAPIClient creates a new API client
+	NewAPIClient() APIClient
 
 	// AddTokenToContext adds an access token to the context
 	AddTokenToContext(ctx context.Context, token string) context.Context

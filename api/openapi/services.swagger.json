@@ -705,6 +705,20 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "orderBy",
+            "description": "The order by which to sort the arts.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orderDirection",
+            "description": "The order direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
