@@ -1,0 +1,168 @@
+package pages
+
+import (
+	"github.com/Damione1/thread-art-generator/client/internal/auth"
+	"github.com/Damione1/thread-art-generator/client/internal/templates"
+	"github.com/Damione1/thread-art-generator/core/pb"
+)
+
+// DashboardPage renders the dashboard with sort controls
+// user: The authenticated user (required for this page)
+// arts: List of user's art projects
+// sort: Current sort field
+// dir: Current sort direction (asc/desc)
+templ DashboardPage(user *auth.UserInfo, arts []*pb.Art, sort, dir string) {
+	@templates.Layout("Dashboard - ThreadArt", user) {
+		<div class="space-y-8">
+			<div class="flex items-center justify-between">
+				<h1 class="text-3xl font-bold text-slate-100">Your Dashboard</h1>
+				<div class="flex space-x-2">
+					<button class="px-4 py-2 bg-dark-300 hover:bg-dark-200 rounded-lg text-sm font-medium text-slate-300 flex items-center gap-2 transition duration-300 border border-dark-400">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+						</svg>
+						Filter
+					</button>
+					if dir == "asc" {
+						<a href="/dashboard?sort=create_time&dir=desc" class="px-4 py-2 bg-dark-300 hover:bg-dark-200 rounded-lg text-sm font-medium flex items-center gap-2 transition duration-300 border border-dark-400 text-slate-300">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+							</svg>
+							Sort ▼
+						</a>
+					} else {
+						<a href="/dashboard?sort=create_time&dir=asc" class="px-4 py-2 bg-dark-300 hover:bg-dark-200 rounded-lg text-sm font-medium flex items-center gap-2 transition duration-300 border border-dark-400 text-slate-300">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+							</svg>
+							Sort ▲
+						</a>
+					}
+				</div>
+			</div>
+			if user != nil {
+				@WelcomeSection(user)
+				@ArtGrid(arts)
+			} else {
+				@UnauthenticatedMessage()
+			}
+		</div>
+	}
+}
+
+// WelcomeSection renders the welcome section for authenticated users
+templ WelcomeSection(user *auth.UserInfo) {
+	<div class="bg-gradient-to-r from-dark-300 to-dark-400 p-6 rounded-xl shadow-lg mb-8 border border-dark-300/80 backdrop-blur-sm">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+			<div>
+				<h2 class="text-xl font-semibold text-primary-400 mb-2">Welcome, { user.Name }!</h2>
+				<p class="text-slate-300">Manage your thread art projects and creations from this dashboard.</p>
+			</div>
+			<a href="/dashboard/arts/new" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-lg shadow-lg shadow-primary-900/20 transition duration-300 text-center text-sm font-medium flex items-center justify-center gap-2 whitespace-nowrap">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+				</svg>
+				New Project
+			</a>
+		</div>
+	</div>
+}
+
+// ArtGrid renders the grid of art projects
+templ ArtGrid(arts []*pb.Art) {
+	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		<!-- Create new art card -->
+		@NewArtCard()
+		<!-- Display user's arts -->
+		for _, art := range arts {
+			@ArtCard(art)
+		}
+		<!-- Show "No projects" message if the user has no arts -->
+		if len(arts) == 0 {
+			@NoProjectsCard()
+		}
+	</div>
+}
+
+// NewArtCard renders the "Create New Art" card
+templ NewArtCard() {
+	<div class="group bg-gradient-to-br from-dark-300 to-dark-400 p-6 rounded-xl shadow-lg flex flex-col items-center justify-center border border-dark-300/80 h-72 hover:border-primary-600/50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl relative overflow-hidden">
+		<!-- Background effect -->
+		<div class="absolute inset-0 bg-gradient-to-br from-primary-600/5 to-primary-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+		<div class="relative z-10 flex flex-col items-center">
+			<div class="w-16 h-16 rounded-full bg-dark-200 flex items-center justify-center mb-4 group-hover:bg-primary-900/30 transition-colors duration-300">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+				</svg>
+			</div>
+			<h3 class="text-xl font-medium text-slate-100 mb-2">Create New Art</h3>
+			<p class="text-slate-400 text-center mb-6">Upload an image to start a new thread art project</p>
+			<a href="/dashboard/arts/new" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300 shadow-lg shadow-primary-900/20">Get Started</a>
+		</div>
+	</div>
+}
+
+// ArtCard renders an individual art project card
+templ ArtCard(art *pb.Art) {
+	<div class="bg-gradient-to-br from-dark-300 to-dark-400 rounded-xl shadow-lg border border-dark-300/80 overflow-hidden group hover:border-primary-600/50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl h-72">
+		<div class="h-2/3 bg-dark-500 relative">
+			if art.GetImageUrl() != "" {
+				<img
+					src={ art.GetImageUrl() }
+					alt={ art.GetTitle() }
+					class="w-full h-full object-cover"
+				/>
+			} else {
+				<!-- Placeholder for project without image -->
+				<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-dark-400 to-dark-500">
+					<div class="w-36 h-36 rounded-full border border-primary-500/30 relative overflow-hidden">
+						<div
+							class="absolute inset-0"
+							style="background: repeating-radial-gradient(circle at center, transparent 20px, rgba(90, 127, 255, 0.1) 30px, transparent 40px)"
+						></div>
+					</div>
+				</div>
+			}
+			<div class="absolute top-2 right-2 bg-dark-200/80 text-primary-400 text-xs font-medium px-2 py-1 rounded">
+				{ string(art.GetStatus()) }
+			</div>
+		</div>
+		<div class="p-4">
+			<h3 class="font-medium text-slate-200 truncate">{ art.GetTitle() }</h3>
+			if art.GetCreateTime() != nil {
+				<p class="text-sm text-slate-400 mb-2">
+					Created { art.GetCreateTime().AsTime().Format("Jan 2, 2006") }
+				</p>
+			}
+		</div>
+	</div>
+}
+
+// NoProjectsCard renders a message when user has no projects
+templ NoProjectsCard() {
+	<div class="bg-gradient-to-br from-dark-300 to-dark-400 rounded-xl shadow-lg border border-dark-300/80 overflow-hidden group h-72 flex items-center justify-center">
+		<div class="text-center p-6">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+			</svg>
+			<h3 class="text-xl font-medium text-slate-300 mb-2">No projects yet</h3>
+			<p class="text-slate-400 mb-4">Create your first thread art project to get started</p>
+		</div>
+	</div>
+}
+
+// UnauthenticatedMessage renders a message for unauthenticated users
+templ UnauthenticatedMessage() {
+	<div class="bg-gradient-to-br from-dark-300 to-dark-400 p-8 rounded-xl shadow-lg border border-dark-300/80 flex flex-col items-center justify-center text-center">
+		<div class="w-16 h-16 rounded-full bg-dark-200 flex items-center justify-center mb-4">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-500/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+			</svg>
+		</div>
+		<h2 class="text-xl font-semibold text-slate-100 mb-4">Account Required</h2>
+		<p class="text-slate-400 mb-6">Please log in to access your dashboard and manage your thread art projects.</p>
+		<a href="/auth/login" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300 shadow-lg shadow-primary-900/20">
+			Log In
+		</a>
+	</div>
+}

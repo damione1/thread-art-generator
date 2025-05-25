@@ -5,7 +5,7 @@ import (
 
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
-	"github.com/Damione1/thread-art-generator/client/internal/templates"
+	"github.com/Damione1/thread-art-generator/client/internal/templates/pages"
 	"github.com/rs/zerolog/log"
 )
 
@@ -27,7 +27,7 @@ func (h *PageHandler) HomePage(w http.ResponseWriter, r *http.Request) {
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Render the home page template
-	err := templates.HomePage(user).Render(r.Context(), w)
+	err := pages.HomePage(user).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render home page")
@@ -58,7 +58,7 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Pass sort and dir to template for button state
-	err = templates.Dashboard(user, arts.GetArts(), sort, dir).Render(r.Context(), w)
+	err = pages.DashboardPage(user, arts.GetArts(), sort, dir).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render dashboard")
