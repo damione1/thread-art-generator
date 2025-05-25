@@ -6,8 +6,17 @@ import (
 	"time"
 )
 
+// CSS class constants for better maintainability
+const (
+	headerClasses = "sticky top-0 z-50 border-b border-dark-300/50 bg-dark-100/80 backdrop-blur-xl"
+	navLinkBase   = "transition duration-300 px-3 py-2 rounded-md hover:bg-dark-300/20"
+	navLinkActive = "text-primary-400 hover:text-primary-300"
+	navLinkNormal = "text-slate-300 hover:text-white"
+	primaryButton = "px-8 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition duration-300 text-lg font-medium shadow-lg hover:shadow-xl shadow-primary-900/30 transform hover:-translate-y-1"
+)
+
 templ Header(isLoggedIn bool, user *auth.UserInfo) {
-	<header class="sticky top-0 z-50 border-b border-dark-300/50 bg-dark-100/80 backdrop-blur-xl">
+	<header class={ headerClasses }>
 		<div class="w-full max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
 			<div class="flex items-center gap-3">
 				<a href="/" class="text-2xl font-bold tracking-tight text-slate-100 flex items-center">
@@ -28,21 +37,21 @@ templ Header(isLoggedIn bool, user *auth.UserInfo) {
 
 templ Navigation(isLoggedIn bool) {
 	<nav class="hidden space-x-6 md:flex">
-		<a href="/" class="text-primary-400 hover:text-primary-300 transition duration-300 px-3 py-2 rounded-md hover:bg-dark-300/20">
+		<a href="/" class={ navLinkBase + " " + navLinkActive }>
 			Home
 		</a>
-		<a href="/gallery" class="text-slate-300 hover:text-white transition duration-300 px-3 py-2 rounded-md hover:bg-dark-300/20">
+		<a href="/gallery" class={ navLinkBase + " " + navLinkNormal }>
 			Gallery
 		</a>
 		if isLoggedIn {
-			<a href="/dashboard/arts/new" class="text-slate-300 hover:text-white transition duration-300 px-3 py-2 rounded-md hover:bg-dark-300/20">
+			<a href="/dashboard/arts/new" class={ navLinkBase + " " + navLinkNormal }>
 				Create
 			</a>
-			<a href="/dashboard" class="text-slate-300 hover:text-white transition duration-300 px-3 py-2 rounded-md hover:bg-dark-300/20">
+			<a href="/dashboard" class={ navLinkBase + " " + navLinkNormal }>
 				Dashboard
 			</a>
 		} else {
-			<a href="/about" class="text-slate-300 hover:text-white transition duration-300 px-3 py-2 rounded-md hover:bg-dark-300/20">
+			<a href="/about" class={ navLinkBase + " " + navLinkNormal }>
 				About
 			</a>
 		}

@@ -3,7 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/Damione1/thread-art-generator/client/internal/templates"
+	"github.com/Damione1/thread-art-generator/client/internal/middleware"
+	"github.com/Damione1/thread-art-generator/client/internal/templates/pages"
 )
 
 // RegisterHandlers registers all HTTP handlers with the provided ServeMux
@@ -17,7 +18,14 @@ func RegisterHandlers(mux *http.ServeMux) {
 
 // HomeHandler handles the home page request
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	templates.HomePage(nil).Render(r.Context(), w)
+	// Get user from context if authenticated (optional for home page)
+	user, _ := middleware.UserFromContext(r.Context())
+
+	// Render the home page template
+	err := pages.HomePage(user).Render(r.Context(), w)
+	if err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	}
 }
 
 // HealthCheckHandler returns a simple 200 OK response for health checks

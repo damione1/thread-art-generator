@@ -3,13 +3,21 @@ package templates
 import "github.com/Damione1/thread-art-generator/client/internal/auth"
 
 // Layout provides the base page structure with auth-aware navigation
+// title: The page title to display in the browser tab
+// user: Optional user information for authenticated users (can be nil)
 templ Layout(title string, user *auth.UserInfo) {
 	<!DOCTYPE html>
 	<html lang="en" class="dark">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ title }</title>
+			<title>
+				if title != "" {
+					{ title }
+				} else {
+					ThreadArt - Create Beautiful Thread Art
+				}
+			</title>
 			<script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
 			<script>
 				// Configure HTMX to include auth headers with every request

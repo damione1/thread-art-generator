@@ -3,12 +3,15 @@ package templates
 import (
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
+	"github.com/axzilla/templui/component/alert"
 	"github.com/axzilla/templui/component/button"
 	"github.com/axzilla/templui/component/form"
 	"github.com/axzilla/templui/component/input"
 )
 
 // NewArtPage renders the page to create a new art
+// user: The authenticated user (required for this page)
+// formData: Form data with validation errors and previous input values
 templ NewArtPage(user *auth.UserInfo, formData *services.ArtFormData) {
 	@Layout("Create New Art - ThreadArt", user) {
 		<div class="max-w-4xl mx-auto px-4 py-8">
@@ -20,36 +23,81 @@ templ NewArtPage(user *auth.UserInfo, formData *services.ArtFormData) {
 	}
 }
 
+// ErrorAlert renders a reusable error alert component using templUI
+templ ErrorAlert(errors []string) {
+	if len(errors) > 0 {
+		<div class="w-full mb-4">
+			@alert.Alert(alert.Props{Variant: alert.VariantDestructive}) {
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+					<path d="M12 9v4"></path>
+					<path d="m12 17 .01 0"></path>
+				</svg>
+				@alert.Title() {
+					Error
+				}
+				@alert.Description() {
+					<ul class="list-disc pl-5 space-y-1">
+						for _, err := range errors {
+							<li>{ err }</li>
+						}
+					</ul>
+				}
+			}
+		</div>
+	}
+}
+
+// SuccessAlert renders a success alert component using templUI
+templ SuccessAlert(message string) {
+	if message != "" {
+		<div class="w-full mb-4">
+			@alert.Alert() {
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+					<polyline points="22,4 12,14.01 9,11.01"></polyline>
+				</svg>
+				@alert.Title() {
+					Success
+				}
+				@alert.Description() {
+					{ message }
+				}
+			}
+		</div>
+	}
+}
+
+// InfoAlert renders an info alert component using templUI
+templ InfoAlert(message string) {
+	if message != "" {
+		<div class="w-full mb-4">
+			@alert.Alert() {
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="10"></circle>
+					<path d="m9 12 2 2 4-4"></path>
+				</svg>
+				@alert.Title() {
+					Information
+				}
+				@alert.Description() {
+					{ message }
+				}
+			}
+		</div>
+	}
+}
+
 // NewArtForm renders the form for creating new art
+// formData: Form data containing values and validation errors
 templ NewArtForm(formData *services.ArtFormData) {
 	<form
 		hx-post="/dashboard/arts/new"
 		hx-swap="outerHTML"
+		hx-indicator="#submit-spinner"
 		class="space-y-6 w-full"
 	>
-		if len(formData.Errors["_form"]) > 0 {
-			<div class="bg-red-500/10 border border-red-500/20 rounded-md p-4 mb-4">
-				<div class="flex">
-					<div class="flex-shrink-0">
-						<svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-							<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-						</svg>
-					</div>
-					<div class="ml-3">
-						<h3 class="text-sm font-medium text-red-400">
-							There were errors with your submission
-						</h3>
-						<div class="mt-2 text-sm text-red-300">
-							<ul class="list-disc pl-5 space-y-1">
-								for _, err := range formData.Errors["_form"] {
-									<li>{ err }</li>
-								}
-							</ul>
-						</div>
-					</div>
-				</div>
-			</div>
-		}
+		@ErrorAlert(formData.Errors["_form"])
 		@form.Item() {
 			@form.Label(form.LabelProps{
 				For: "title",
@@ -63,6 +111,7 @@ templ NewArtForm(formData *services.ArtFormData) {
 				Placeholder: "Enter a title for your art",
 				Value:       formData.Title,
 				HasError:    len(formData.Errors["art.title"]) > 0,
+				Required:    true,
 			})
 			@form.Description() {
 				Enter a descriptive title for your thread art project
@@ -82,6 +131,12 @@ templ NewArtForm(formData *services.ArtFormData) {
 				Type:    "submit",
 				Variant: button.VariantDefault,
 			}) {
+				<span id="submit-spinner" class="htmx-indicator">
+					<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+					</svg>
+				</span>
 				Create Art
 			}
 		</div>
