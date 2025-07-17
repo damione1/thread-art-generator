@@ -5,10 +5,10 @@
 package pbconnect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
 	pb "github.com/Damione1/thread-art-generator/core/pb"
-	connect_go "github.com/bufbuild/connect-go"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
@@ -19,33 +19,94 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ArtGeneratorServiceName is the fully-qualified name of the ArtGeneratorService service.
 	ArtGeneratorServiceName = "pb.ArtGeneratorService"
 )
 
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+//
+// Note that these are different from the fully-qualified method names used by
+// google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
+// reflection-formatted method names, remove the leading slash and convert the remaining slash to a
+// period.
+const (
+	// ArtGeneratorServiceUpdateUserProcedure is the fully-qualified name of the ArtGeneratorService's
+	// UpdateUser RPC.
+	ArtGeneratorServiceUpdateUserProcedure = "/pb.ArtGeneratorService/UpdateUser"
+	// ArtGeneratorServiceGetUserProcedure is the fully-qualified name of the ArtGeneratorService's
+	// GetUser RPC.
+	ArtGeneratorServiceGetUserProcedure = "/pb.ArtGeneratorService/GetUser"
+	// ArtGeneratorServiceListUsersProcedure is the fully-qualified name of the ArtGeneratorService's
+	// ListUsers RPC.
+	ArtGeneratorServiceListUsersProcedure = "/pb.ArtGeneratorService/ListUsers"
+	// ArtGeneratorServiceDeleteUserProcedure is the fully-qualified name of the ArtGeneratorService's
+	// DeleteUser RPC.
+	ArtGeneratorServiceDeleteUserProcedure = "/pb.ArtGeneratorService/DeleteUser"
+	// ArtGeneratorServiceGetCurrentUserProcedure is the fully-qualified name of the
+	// ArtGeneratorService's GetCurrentUser RPC.
+	ArtGeneratorServiceGetCurrentUserProcedure = "/pb.ArtGeneratorService/GetCurrentUser"
+	// ArtGeneratorServiceCreateArtProcedure is the fully-qualified name of the ArtGeneratorService's
+	// CreateArt RPC.
+	ArtGeneratorServiceCreateArtProcedure = "/pb.ArtGeneratorService/CreateArt"
+	// ArtGeneratorServiceGetArtProcedure is the fully-qualified name of the ArtGeneratorService's
+	// GetArt RPC.
+	ArtGeneratorServiceGetArtProcedure = "/pb.ArtGeneratorService/GetArt"
+	// ArtGeneratorServiceUpdateArtProcedure is the fully-qualified name of the ArtGeneratorService's
+	// UpdateArt RPC.
+	ArtGeneratorServiceUpdateArtProcedure = "/pb.ArtGeneratorService/UpdateArt"
+	// ArtGeneratorServiceListArtsProcedure is the fully-qualified name of the ArtGeneratorService's
+	// ListArts RPC.
+	ArtGeneratorServiceListArtsProcedure = "/pb.ArtGeneratorService/ListArts"
+	// ArtGeneratorServiceDeleteArtProcedure is the fully-qualified name of the ArtGeneratorService's
+	// DeleteArt RPC.
+	ArtGeneratorServiceDeleteArtProcedure = "/pb.ArtGeneratorService/DeleteArt"
+	// ArtGeneratorServiceGetArtUploadUrlProcedure is the fully-qualified name of the
+	// ArtGeneratorService's GetArtUploadUrl RPC.
+	ArtGeneratorServiceGetArtUploadUrlProcedure = "/pb.ArtGeneratorService/GetArtUploadUrl"
+	// ArtGeneratorServiceConfirmArtImageUploadProcedure is the fully-qualified name of the
+	// ArtGeneratorService's ConfirmArtImageUpload RPC.
+	ArtGeneratorServiceConfirmArtImageUploadProcedure = "/pb.ArtGeneratorService/ConfirmArtImageUpload"
+	// ArtGeneratorServiceCreateCompositionProcedure is the fully-qualified name of the
+	// ArtGeneratorService's CreateComposition RPC.
+	ArtGeneratorServiceCreateCompositionProcedure = "/pb.ArtGeneratorService/CreateComposition"
+	// ArtGeneratorServiceGetCompositionProcedure is the fully-qualified name of the
+	// ArtGeneratorService's GetComposition RPC.
+	ArtGeneratorServiceGetCompositionProcedure = "/pb.ArtGeneratorService/GetComposition"
+	// ArtGeneratorServiceUpdateCompositionProcedure is the fully-qualified name of the
+	// ArtGeneratorService's UpdateComposition RPC.
+	ArtGeneratorServiceUpdateCompositionProcedure = "/pb.ArtGeneratorService/UpdateComposition"
+	// ArtGeneratorServiceListCompositionsProcedure is the fully-qualified name of the
+	// ArtGeneratorService's ListCompositions RPC.
+	ArtGeneratorServiceListCompositionsProcedure = "/pb.ArtGeneratorService/ListCompositions"
+	// ArtGeneratorServiceDeleteCompositionProcedure is the fully-qualified name of the
+	// ArtGeneratorService's DeleteComposition RPC.
+	ArtGeneratorServiceDeleteCompositionProcedure = "/pb.ArtGeneratorService/DeleteComposition"
+)
+
 // ArtGeneratorServiceClient is a client for the pb.ArtGeneratorService service.
 type ArtGeneratorServiceClient interface {
-	UpdateUser(context.Context, *connect_go.Request[pb.UpdateUserRequest]) (*connect_go.Response[pb.User], error)
-	GetUser(context.Context, *connect_go.Request[pb.GetUserRequest]) (*connect_go.Response[pb.User], error)
-	ListUsers(context.Context, *connect_go.Request[pb.ListUsersRequest]) (*connect_go.Response[pb.ListUsersResponse], error)
-	DeleteUser(context.Context, *connect_go.Request[pb.DeleteUserRequest]) (*connect_go.Response[emptypb.Empty], error)
-	GetCurrentUser(context.Context, *connect_go.Request[pb.GetCurrentUserRequest]) (*connect_go.Response[pb.User], error)
-	CreateArt(context.Context, *connect_go.Request[pb.CreateArtRequest]) (*connect_go.Response[pb.Art], error)
-	GetArt(context.Context, *connect_go.Request[pb.GetArtRequest]) (*connect_go.Response[pb.Art], error)
-	UpdateArt(context.Context, *connect_go.Request[pb.UpdateArtRequest]) (*connect_go.Response[pb.Art], error)
-	ListArts(context.Context, *connect_go.Request[pb.ListArtsRequest]) (*connect_go.Response[pb.ListArtsResponse], error)
-	DeleteArt(context.Context, *connect_go.Request[pb.DeleteArtRequest]) (*connect_go.Response[emptypb.Empty], error)
-	GetArtUploadUrl(context.Context, *connect_go.Request[pb.GetArtUploadUrlRequest]) (*connect_go.Response[pb.GetArtUploadUrlResponse], error)
-	ConfirmArtImageUpload(context.Context, *connect_go.Request[pb.ConfirmArtImageUploadRequest]) (*connect_go.Response[pb.Art], error)
+	UpdateUser(context.Context, *connect.Request[pb.UpdateUserRequest]) (*connect.Response[pb.User], error)
+	GetUser(context.Context, *connect.Request[pb.GetUserRequest]) (*connect.Response[pb.User], error)
+	ListUsers(context.Context, *connect.Request[pb.ListUsersRequest]) (*connect.Response[pb.ListUsersResponse], error)
+	DeleteUser(context.Context, *connect.Request[pb.DeleteUserRequest]) (*connect.Response[emptypb.Empty], error)
+	GetCurrentUser(context.Context, *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error)
+	CreateArt(context.Context, *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error)
+	GetArt(context.Context, *connect.Request[pb.GetArtRequest]) (*connect.Response[pb.Art], error)
+	UpdateArt(context.Context, *connect.Request[pb.UpdateArtRequest]) (*connect.Response[pb.Art], error)
+	ListArts(context.Context, *connect.Request[pb.ListArtsRequest]) (*connect.Response[pb.ListArtsResponse], error)
+	DeleteArt(context.Context, *connect.Request[pb.DeleteArtRequest]) (*connect.Response[emptypb.Empty], error)
+	GetArtUploadUrl(context.Context, *connect.Request[pb.GetArtUploadUrlRequest]) (*connect.Response[pb.GetArtUploadUrlResponse], error)
+	ConfirmArtImageUpload(context.Context, *connect.Request[pb.ConfirmArtImageUploadRequest]) (*connect.Response[pb.Art], error)
 	// Composition RPCs
-	CreateComposition(context.Context, *connect_go.Request[pb.CreateCompositionRequest]) (*connect_go.Response[pb.Composition], error)
-	GetComposition(context.Context, *connect_go.Request[pb.GetCompositionRequest]) (*connect_go.Response[pb.Composition], error)
-	UpdateComposition(context.Context, *connect_go.Request[pb.UpdateCompositionRequest]) (*connect_go.Response[pb.Composition], error)
-	ListCompositions(context.Context, *connect_go.Request[pb.ListCompositionsRequest]) (*connect_go.Response[pb.ListCompositionsResponse], error)
-	DeleteComposition(context.Context, *connect_go.Request[pb.DeleteCompositionRequest]) (*connect_go.Response[emptypb.Empty], error)
+	CreateComposition(context.Context, *connect.Request[pb.CreateCompositionRequest]) (*connect.Response[pb.Composition], error)
+	GetComposition(context.Context, *connect.Request[pb.GetCompositionRequest]) (*connect.Response[pb.Composition], error)
+	UpdateComposition(context.Context, *connect.Request[pb.UpdateCompositionRequest]) (*connect.Response[pb.Composition], error)
+	ListCompositions(context.Context, *connect.Request[pb.ListCompositionsRequest]) (*connect.Response[pb.ListCompositionsResponse], error)
+	DeleteComposition(context.Context, *connect.Request[pb.DeleteCompositionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewArtGeneratorServiceClient constructs a client for the pb.ArtGeneratorService service. By
@@ -55,223 +116,241 @@ type ArtGeneratorServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewArtGeneratorServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ArtGeneratorServiceClient {
+func NewArtGeneratorServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ArtGeneratorServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
+	artGeneratorServiceMethods := pb.File_services_proto.Services().ByName("ArtGeneratorService").Methods()
 	return &artGeneratorServiceClient{
-		updateUser: connect_go.NewClient[pb.UpdateUserRequest, pb.User](
+		updateUser: connect.NewClient[pb.UpdateUserRequest, pb.User](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/UpdateUser",
-			opts...,
+			baseURL+ArtGeneratorServiceUpdateUserProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("UpdateUser")),
+			connect.WithClientOptions(opts...),
 		),
-		getUser: connect_go.NewClient[pb.GetUserRequest, pb.User](
+		getUser: connect.NewClient[pb.GetUserRequest, pb.User](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/GetUser",
-			opts...,
+			baseURL+ArtGeneratorServiceGetUserProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("GetUser")),
+			connect.WithClientOptions(opts...),
 		),
-		listUsers: connect_go.NewClient[pb.ListUsersRequest, pb.ListUsersResponse](
+		listUsers: connect.NewClient[pb.ListUsersRequest, pb.ListUsersResponse](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/ListUsers",
-			opts...,
+			baseURL+ArtGeneratorServiceListUsersProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("ListUsers")),
+			connect.WithClientOptions(opts...),
 		),
-		deleteUser: connect_go.NewClient[pb.DeleteUserRequest, emptypb.Empty](
+		deleteUser: connect.NewClient[pb.DeleteUserRequest, emptypb.Empty](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/DeleteUser",
-			opts...,
+			baseURL+ArtGeneratorServiceDeleteUserProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("DeleteUser")),
+			connect.WithClientOptions(opts...),
 		),
-		getCurrentUser: connect_go.NewClient[pb.GetCurrentUserRequest, pb.User](
+		getCurrentUser: connect.NewClient[pb.GetCurrentUserRequest, pb.User](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/GetCurrentUser",
-			opts...,
+			baseURL+ArtGeneratorServiceGetCurrentUserProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("GetCurrentUser")),
+			connect.WithClientOptions(opts...),
 		),
-		createArt: connect_go.NewClient[pb.CreateArtRequest, pb.Art](
+		createArt: connect.NewClient[pb.CreateArtRequest, pb.Art](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/CreateArt",
-			opts...,
+			baseURL+ArtGeneratorServiceCreateArtProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("CreateArt")),
+			connect.WithClientOptions(opts...),
 		),
-		getArt: connect_go.NewClient[pb.GetArtRequest, pb.Art](
+		getArt: connect.NewClient[pb.GetArtRequest, pb.Art](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/GetArt",
-			opts...,
+			baseURL+ArtGeneratorServiceGetArtProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("GetArt")),
+			connect.WithClientOptions(opts...),
 		),
-		updateArt: connect_go.NewClient[pb.UpdateArtRequest, pb.Art](
+		updateArt: connect.NewClient[pb.UpdateArtRequest, pb.Art](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/UpdateArt",
-			opts...,
+			baseURL+ArtGeneratorServiceUpdateArtProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("UpdateArt")),
+			connect.WithClientOptions(opts...),
 		),
-		listArts: connect_go.NewClient[pb.ListArtsRequest, pb.ListArtsResponse](
+		listArts: connect.NewClient[pb.ListArtsRequest, pb.ListArtsResponse](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/ListArts",
-			opts...,
+			baseURL+ArtGeneratorServiceListArtsProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("ListArts")),
+			connect.WithClientOptions(opts...),
 		),
-		deleteArt: connect_go.NewClient[pb.DeleteArtRequest, emptypb.Empty](
+		deleteArt: connect.NewClient[pb.DeleteArtRequest, emptypb.Empty](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/DeleteArt",
-			opts...,
+			baseURL+ArtGeneratorServiceDeleteArtProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("DeleteArt")),
+			connect.WithClientOptions(opts...),
 		),
-		getArtUploadUrl: connect_go.NewClient[pb.GetArtUploadUrlRequest, pb.GetArtUploadUrlResponse](
+		getArtUploadUrl: connect.NewClient[pb.GetArtUploadUrlRequest, pb.GetArtUploadUrlResponse](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/GetArtUploadUrl",
-			opts...,
+			baseURL+ArtGeneratorServiceGetArtUploadUrlProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("GetArtUploadUrl")),
+			connect.WithClientOptions(opts...),
 		),
-		confirmArtImageUpload: connect_go.NewClient[pb.ConfirmArtImageUploadRequest, pb.Art](
+		confirmArtImageUpload: connect.NewClient[pb.ConfirmArtImageUploadRequest, pb.Art](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/ConfirmArtImageUpload",
-			opts...,
+			baseURL+ArtGeneratorServiceConfirmArtImageUploadProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("ConfirmArtImageUpload")),
+			connect.WithClientOptions(opts...),
 		),
-		createComposition: connect_go.NewClient[pb.CreateCompositionRequest, pb.Composition](
+		createComposition: connect.NewClient[pb.CreateCompositionRequest, pb.Composition](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/CreateComposition",
-			opts...,
+			baseURL+ArtGeneratorServiceCreateCompositionProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("CreateComposition")),
+			connect.WithClientOptions(opts...),
 		),
-		getComposition: connect_go.NewClient[pb.GetCompositionRequest, pb.Composition](
+		getComposition: connect.NewClient[pb.GetCompositionRequest, pb.Composition](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/GetComposition",
-			opts...,
+			baseURL+ArtGeneratorServiceGetCompositionProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("GetComposition")),
+			connect.WithClientOptions(opts...),
 		),
-		updateComposition: connect_go.NewClient[pb.UpdateCompositionRequest, pb.Composition](
+		updateComposition: connect.NewClient[pb.UpdateCompositionRequest, pb.Composition](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/UpdateComposition",
-			opts...,
+			baseURL+ArtGeneratorServiceUpdateCompositionProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("UpdateComposition")),
+			connect.WithClientOptions(opts...),
 		),
-		listCompositions: connect_go.NewClient[pb.ListCompositionsRequest, pb.ListCompositionsResponse](
+		listCompositions: connect.NewClient[pb.ListCompositionsRequest, pb.ListCompositionsResponse](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/ListCompositions",
-			opts...,
+			baseURL+ArtGeneratorServiceListCompositionsProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("ListCompositions")),
+			connect.WithClientOptions(opts...),
 		),
-		deleteComposition: connect_go.NewClient[pb.DeleteCompositionRequest, emptypb.Empty](
+		deleteComposition: connect.NewClient[pb.DeleteCompositionRequest, emptypb.Empty](
 			httpClient,
-			baseURL+"/pb.ArtGeneratorService/DeleteComposition",
-			opts...,
+			baseURL+ArtGeneratorServiceDeleteCompositionProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("DeleteComposition")),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
 // artGeneratorServiceClient implements ArtGeneratorServiceClient.
 type artGeneratorServiceClient struct {
-	updateUser            *connect_go.Client[pb.UpdateUserRequest, pb.User]
-	getUser               *connect_go.Client[pb.GetUserRequest, pb.User]
-	listUsers             *connect_go.Client[pb.ListUsersRequest, pb.ListUsersResponse]
-	deleteUser            *connect_go.Client[pb.DeleteUserRequest, emptypb.Empty]
-	getCurrentUser        *connect_go.Client[pb.GetCurrentUserRequest, pb.User]
-	createArt             *connect_go.Client[pb.CreateArtRequest, pb.Art]
-	getArt                *connect_go.Client[pb.GetArtRequest, pb.Art]
-	updateArt             *connect_go.Client[pb.UpdateArtRequest, pb.Art]
-	listArts              *connect_go.Client[pb.ListArtsRequest, pb.ListArtsResponse]
-	deleteArt             *connect_go.Client[pb.DeleteArtRequest, emptypb.Empty]
-	getArtUploadUrl       *connect_go.Client[pb.GetArtUploadUrlRequest, pb.GetArtUploadUrlResponse]
-	confirmArtImageUpload *connect_go.Client[pb.ConfirmArtImageUploadRequest, pb.Art]
-	createComposition     *connect_go.Client[pb.CreateCompositionRequest, pb.Composition]
-	getComposition        *connect_go.Client[pb.GetCompositionRequest, pb.Composition]
-	updateComposition     *connect_go.Client[pb.UpdateCompositionRequest, pb.Composition]
-	listCompositions      *connect_go.Client[pb.ListCompositionsRequest, pb.ListCompositionsResponse]
-	deleteComposition     *connect_go.Client[pb.DeleteCompositionRequest, emptypb.Empty]
+	updateUser            *connect.Client[pb.UpdateUserRequest, pb.User]
+	getUser               *connect.Client[pb.GetUserRequest, pb.User]
+	listUsers             *connect.Client[pb.ListUsersRequest, pb.ListUsersResponse]
+	deleteUser            *connect.Client[pb.DeleteUserRequest, emptypb.Empty]
+	getCurrentUser        *connect.Client[pb.GetCurrentUserRequest, pb.User]
+	createArt             *connect.Client[pb.CreateArtRequest, pb.Art]
+	getArt                *connect.Client[pb.GetArtRequest, pb.Art]
+	updateArt             *connect.Client[pb.UpdateArtRequest, pb.Art]
+	listArts              *connect.Client[pb.ListArtsRequest, pb.ListArtsResponse]
+	deleteArt             *connect.Client[pb.DeleteArtRequest, emptypb.Empty]
+	getArtUploadUrl       *connect.Client[pb.GetArtUploadUrlRequest, pb.GetArtUploadUrlResponse]
+	confirmArtImageUpload *connect.Client[pb.ConfirmArtImageUploadRequest, pb.Art]
+	createComposition     *connect.Client[pb.CreateCompositionRequest, pb.Composition]
+	getComposition        *connect.Client[pb.GetCompositionRequest, pb.Composition]
+	updateComposition     *connect.Client[pb.UpdateCompositionRequest, pb.Composition]
+	listCompositions      *connect.Client[pb.ListCompositionsRequest, pb.ListCompositionsResponse]
+	deleteComposition     *connect.Client[pb.DeleteCompositionRequest, emptypb.Empty]
 }
 
 // UpdateUser calls pb.ArtGeneratorService.UpdateUser.
-func (c *artGeneratorServiceClient) UpdateUser(ctx context.Context, req *connect_go.Request[pb.UpdateUserRequest]) (*connect_go.Response[pb.User], error) {
+func (c *artGeneratorServiceClient) UpdateUser(ctx context.Context, req *connect.Request[pb.UpdateUserRequest]) (*connect.Response[pb.User], error) {
 	return c.updateUser.CallUnary(ctx, req)
 }
 
 // GetUser calls pb.ArtGeneratorService.GetUser.
-func (c *artGeneratorServiceClient) GetUser(ctx context.Context, req *connect_go.Request[pb.GetUserRequest]) (*connect_go.Response[pb.User], error) {
+func (c *artGeneratorServiceClient) GetUser(ctx context.Context, req *connect.Request[pb.GetUserRequest]) (*connect.Response[pb.User], error) {
 	return c.getUser.CallUnary(ctx, req)
 }
 
 // ListUsers calls pb.ArtGeneratorService.ListUsers.
-func (c *artGeneratorServiceClient) ListUsers(ctx context.Context, req *connect_go.Request[pb.ListUsersRequest]) (*connect_go.Response[pb.ListUsersResponse], error) {
+func (c *artGeneratorServiceClient) ListUsers(ctx context.Context, req *connect.Request[pb.ListUsersRequest]) (*connect.Response[pb.ListUsersResponse], error) {
 	return c.listUsers.CallUnary(ctx, req)
 }
 
 // DeleteUser calls pb.ArtGeneratorService.DeleteUser.
-func (c *artGeneratorServiceClient) DeleteUser(ctx context.Context, req *connect_go.Request[pb.DeleteUserRequest]) (*connect_go.Response[emptypb.Empty], error) {
+func (c *artGeneratorServiceClient) DeleteUser(ctx context.Context, req *connect.Request[pb.DeleteUserRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteUser.CallUnary(ctx, req)
 }
 
 // GetCurrentUser calls pb.ArtGeneratorService.GetCurrentUser.
-func (c *artGeneratorServiceClient) GetCurrentUser(ctx context.Context, req *connect_go.Request[pb.GetCurrentUserRequest]) (*connect_go.Response[pb.User], error) {
+func (c *artGeneratorServiceClient) GetCurrentUser(ctx context.Context, req *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error) {
 	return c.getCurrentUser.CallUnary(ctx, req)
 }
 
 // CreateArt calls pb.ArtGeneratorService.CreateArt.
-func (c *artGeneratorServiceClient) CreateArt(ctx context.Context, req *connect_go.Request[pb.CreateArtRequest]) (*connect_go.Response[pb.Art], error) {
+func (c *artGeneratorServiceClient) CreateArt(ctx context.Context, req *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error) {
 	return c.createArt.CallUnary(ctx, req)
 }
 
 // GetArt calls pb.ArtGeneratorService.GetArt.
-func (c *artGeneratorServiceClient) GetArt(ctx context.Context, req *connect_go.Request[pb.GetArtRequest]) (*connect_go.Response[pb.Art], error) {
+func (c *artGeneratorServiceClient) GetArt(ctx context.Context, req *connect.Request[pb.GetArtRequest]) (*connect.Response[pb.Art], error) {
 	return c.getArt.CallUnary(ctx, req)
 }
 
 // UpdateArt calls pb.ArtGeneratorService.UpdateArt.
-func (c *artGeneratorServiceClient) UpdateArt(ctx context.Context, req *connect_go.Request[pb.UpdateArtRequest]) (*connect_go.Response[pb.Art], error) {
+func (c *artGeneratorServiceClient) UpdateArt(ctx context.Context, req *connect.Request[pb.UpdateArtRequest]) (*connect.Response[pb.Art], error) {
 	return c.updateArt.CallUnary(ctx, req)
 }
 
 // ListArts calls pb.ArtGeneratorService.ListArts.
-func (c *artGeneratorServiceClient) ListArts(ctx context.Context, req *connect_go.Request[pb.ListArtsRequest]) (*connect_go.Response[pb.ListArtsResponse], error) {
+func (c *artGeneratorServiceClient) ListArts(ctx context.Context, req *connect.Request[pb.ListArtsRequest]) (*connect.Response[pb.ListArtsResponse], error) {
 	return c.listArts.CallUnary(ctx, req)
 }
 
 // DeleteArt calls pb.ArtGeneratorService.DeleteArt.
-func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, req *connect_go.Request[pb.DeleteArtRequest]) (*connect_go.Response[emptypb.Empty], error) {
+func (c *artGeneratorServiceClient) DeleteArt(ctx context.Context, req *connect.Request[pb.DeleteArtRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteArt.CallUnary(ctx, req)
 }
 
 // GetArtUploadUrl calls pb.ArtGeneratorService.GetArtUploadUrl.
-func (c *artGeneratorServiceClient) GetArtUploadUrl(ctx context.Context, req *connect_go.Request[pb.GetArtUploadUrlRequest]) (*connect_go.Response[pb.GetArtUploadUrlResponse], error) {
+func (c *artGeneratorServiceClient) GetArtUploadUrl(ctx context.Context, req *connect.Request[pb.GetArtUploadUrlRequest]) (*connect.Response[pb.GetArtUploadUrlResponse], error) {
 	return c.getArtUploadUrl.CallUnary(ctx, req)
 }
 
 // ConfirmArtImageUpload calls pb.ArtGeneratorService.ConfirmArtImageUpload.
-func (c *artGeneratorServiceClient) ConfirmArtImageUpload(ctx context.Context, req *connect_go.Request[pb.ConfirmArtImageUploadRequest]) (*connect_go.Response[pb.Art], error) {
+func (c *artGeneratorServiceClient) ConfirmArtImageUpload(ctx context.Context, req *connect.Request[pb.ConfirmArtImageUploadRequest]) (*connect.Response[pb.Art], error) {
 	return c.confirmArtImageUpload.CallUnary(ctx, req)
 }
 
 // CreateComposition calls pb.ArtGeneratorService.CreateComposition.
-func (c *artGeneratorServiceClient) CreateComposition(ctx context.Context, req *connect_go.Request[pb.CreateCompositionRequest]) (*connect_go.Response[pb.Composition], error) {
+func (c *artGeneratorServiceClient) CreateComposition(ctx context.Context, req *connect.Request[pb.CreateCompositionRequest]) (*connect.Response[pb.Composition], error) {
 	return c.createComposition.CallUnary(ctx, req)
 }
 
 // GetComposition calls pb.ArtGeneratorService.GetComposition.
-func (c *artGeneratorServiceClient) GetComposition(ctx context.Context, req *connect_go.Request[pb.GetCompositionRequest]) (*connect_go.Response[pb.Composition], error) {
+func (c *artGeneratorServiceClient) GetComposition(ctx context.Context, req *connect.Request[pb.GetCompositionRequest]) (*connect.Response[pb.Composition], error) {
 	return c.getComposition.CallUnary(ctx, req)
 }
 
 // UpdateComposition calls pb.ArtGeneratorService.UpdateComposition.
-func (c *artGeneratorServiceClient) UpdateComposition(ctx context.Context, req *connect_go.Request[pb.UpdateCompositionRequest]) (*connect_go.Response[pb.Composition], error) {
+func (c *artGeneratorServiceClient) UpdateComposition(ctx context.Context, req *connect.Request[pb.UpdateCompositionRequest]) (*connect.Response[pb.Composition], error) {
 	return c.updateComposition.CallUnary(ctx, req)
 }
 
 // ListCompositions calls pb.ArtGeneratorService.ListCompositions.
-func (c *artGeneratorServiceClient) ListCompositions(ctx context.Context, req *connect_go.Request[pb.ListCompositionsRequest]) (*connect_go.Response[pb.ListCompositionsResponse], error) {
+func (c *artGeneratorServiceClient) ListCompositions(ctx context.Context, req *connect.Request[pb.ListCompositionsRequest]) (*connect.Response[pb.ListCompositionsResponse], error) {
 	return c.listCompositions.CallUnary(ctx, req)
 }
 
 // DeleteComposition calls pb.ArtGeneratorService.DeleteComposition.
-func (c *artGeneratorServiceClient) DeleteComposition(ctx context.Context, req *connect_go.Request[pb.DeleteCompositionRequest]) (*connect_go.Response[emptypb.Empty], error) {
+func (c *artGeneratorServiceClient) DeleteComposition(ctx context.Context, req *connect.Request[pb.DeleteCompositionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteComposition.CallUnary(ctx, req)
 }
 
 // ArtGeneratorServiceHandler is an implementation of the pb.ArtGeneratorService service.
 type ArtGeneratorServiceHandler interface {
-	UpdateUser(context.Context, *connect_go.Request[pb.UpdateUserRequest]) (*connect_go.Response[pb.User], error)
-	GetUser(context.Context, *connect_go.Request[pb.GetUserRequest]) (*connect_go.Response[pb.User], error)
-	ListUsers(context.Context, *connect_go.Request[pb.ListUsersRequest]) (*connect_go.Response[pb.ListUsersResponse], error)
-	DeleteUser(context.Context, *connect_go.Request[pb.DeleteUserRequest]) (*connect_go.Response[emptypb.Empty], error)
-	GetCurrentUser(context.Context, *connect_go.Request[pb.GetCurrentUserRequest]) (*connect_go.Response[pb.User], error)
-	CreateArt(context.Context, *connect_go.Request[pb.CreateArtRequest]) (*connect_go.Response[pb.Art], error)
-	GetArt(context.Context, *connect_go.Request[pb.GetArtRequest]) (*connect_go.Response[pb.Art], error)
-	UpdateArt(context.Context, *connect_go.Request[pb.UpdateArtRequest]) (*connect_go.Response[pb.Art], error)
-	ListArts(context.Context, *connect_go.Request[pb.ListArtsRequest]) (*connect_go.Response[pb.ListArtsResponse], error)
-	DeleteArt(context.Context, *connect_go.Request[pb.DeleteArtRequest]) (*connect_go.Response[emptypb.Empty], error)
-	GetArtUploadUrl(context.Context, *connect_go.Request[pb.GetArtUploadUrlRequest]) (*connect_go.Response[pb.GetArtUploadUrlResponse], error)
-	ConfirmArtImageUpload(context.Context, *connect_go.Request[pb.ConfirmArtImageUploadRequest]) (*connect_go.Response[pb.Art], error)
+	UpdateUser(context.Context, *connect.Request[pb.UpdateUserRequest]) (*connect.Response[pb.User], error)
+	GetUser(context.Context, *connect.Request[pb.GetUserRequest]) (*connect.Response[pb.User], error)
+	ListUsers(context.Context, *connect.Request[pb.ListUsersRequest]) (*connect.Response[pb.ListUsersResponse], error)
+	DeleteUser(context.Context, *connect.Request[pb.DeleteUserRequest]) (*connect.Response[emptypb.Empty], error)
+	GetCurrentUser(context.Context, *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error)
+	CreateArt(context.Context, *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error)
+	GetArt(context.Context, *connect.Request[pb.GetArtRequest]) (*connect.Response[pb.Art], error)
+	UpdateArt(context.Context, *connect.Request[pb.UpdateArtRequest]) (*connect.Response[pb.Art], error)
+	ListArts(context.Context, *connect.Request[pb.ListArtsRequest]) (*connect.Response[pb.ListArtsResponse], error)
+	DeleteArt(context.Context, *connect.Request[pb.DeleteArtRequest]) (*connect.Response[emptypb.Empty], error)
+	GetArtUploadUrl(context.Context, *connect.Request[pb.GetArtUploadUrlRequest]) (*connect.Response[pb.GetArtUploadUrlResponse], error)
+	ConfirmArtImageUpload(context.Context, *connect.Request[pb.ConfirmArtImageUploadRequest]) (*connect.Response[pb.Art], error)
 	// Composition RPCs
-	CreateComposition(context.Context, *connect_go.Request[pb.CreateCompositionRequest]) (*connect_go.Response[pb.Composition], error)
-	GetComposition(context.Context, *connect_go.Request[pb.GetCompositionRequest]) (*connect_go.Response[pb.Composition], error)
-	UpdateComposition(context.Context, *connect_go.Request[pb.UpdateCompositionRequest]) (*connect_go.Response[pb.Composition], error)
-	ListCompositions(context.Context, *connect_go.Request[pb.ListCompositionsRequest]) (*connect_go.Response[pb.ListCompositionsResponse], error)
-	DeleteComposition(context.Context, *connect_go.Request[pb.DeleteCompositionRequest]) (*connect_go.Response[emptypb.Empty], error)
+	CreateComposition(context.Context, *connect.Request[pb.CreateCompositionRequest]) (*connect.Response[pb.Composition], error)
+	GetComposition(context.Context, *connect.Request[pb.GetCompositionRequest]) (*connect.Response[pb.Composition], error)
+	UpdateComposition(context.Context, *connect.Request[pb.UpdateCompositionRequest]) (*connect.Response[pb.Composition], error)
+	ListCompositions(context.Context, *connect.Request[pb.ListCompositionsRequest]) (*connect.Response[pb.ListCompositionsResponse], error)
+	DeleteComposition(context.Context, *connect.Request[pb.DeleteCompositionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewArtGeneratorServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -279,163 +358,219 @@ type ArtGeneratorServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewArtGeneratorServiceHandler(svc ArtGeneratorServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle("/pb.ArtGeneratorService/UpdateUser", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/UpdateUser",
+func NewArtGeneratorServiceHandler(svc ArtGeneratorServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	artGeneratorServiceMethods := pb.File_services_proto.Services().ByName("ArtGeneratorService").Methods()
+	artGeneratorServiceUpdateUserHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceUpdateUserProcedure,
 		svc.UpdateUser,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/GetUser", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/GetUser",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("UpdateUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceGetUserHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceGetUserProcedure,
 		svc.GetUser,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/ListUsers", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/ListUsers",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("GetUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceListUsersHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceListUsersProcedure,
 		svc.ListUsers,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/DeleteUser", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/DeleteUser",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("ListUsers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceDeleteUserHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceDeleteUserProcedure,
 		svc.DeleteUser,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/GetCurrentUser", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/GetCurrentUser",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("DeleteUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceGetCurrentUserHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceGetCurrentUserProcedure,
 		svc.GetCurrentUser,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/CreateArt", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/CreateArt",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("GetCurrentUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceCreateArtHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceCreateArtProcedure,
 		svc.CreateArt,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/GetArt", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/GetArt",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("CreateArt")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceGetArtHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceGetArtProcedure,
 		svc.GetArt,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/UpdateArt", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/UpdateArt",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("GetArt")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceUpdateArtHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceUpdateArtProcedure,
 		svc.UpdateArt,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/ListArts", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/ListArts",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("UpdateArt")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceListArtsHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceListArtsProcedure,
 		svc.ListArts,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/DeleteArt", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/DeleteArt",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("ListArts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceDeleteArtHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceDeleteArtProcedure,
 		svc.DeleteArt,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/GetArtUploadUrl", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/GetArtUploadUrl",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("DeleteArt")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceGetArtUploadUrlHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceGetArtUploadUrlProcedure,
 		svc.GetArtUploadUrl,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/ConfirmArtImageUpload", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/ConfirmArtImageUpload",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("GetArtUploadUrl")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceConfirmArtImageUploadHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceConfirmArtImageUploadProcedure,
 		svc.ConfirmArtImageUpload,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/CreateComposition", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/CreateComposition",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("ConfirmArtImageUpload")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceCreateCompositionHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceCreateCompositionProcedure,
 		svc.CreateComposition,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/GetComposition", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/GetComposition",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("CreateComposition")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceGetCompositionHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceGetCompositionProcedure,
 		svc.GetComposition,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/UpdateComposition", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/UpdateComposition",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("GetComposition")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceUpdateCompositionHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceUpdateCompositionProcedure,
 		svc.UpdateComposition,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/ListCompositions", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/ListCompositions",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("UpdateComposition")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceListCompositionsHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceListCompositionsProcedure,
 		svc.ListCompositions,
-		opts...,
-	))
-	mux.Handle("/pb.ArtGeneratorService/DeleteComposition", connect_go.NewUnaryHandler(
-		"/pb.ArtGeneratorService/DeleteComposition",
+		connect.WithSchema(artGeneratorServiceMethods.ByName("ListCompositions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceDeleteCompositionHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceDeleteCompositionProcedure,
 		svc.DeleteComposition,
-		opts...,
-	))
-	return "/pb.ArtGeneratorService/", mux
+		connect.WithSchema(artGeneratorServiceMethods.ByName("DeleteComposition")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/pb.ArtGeneratorService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case ArtGeneratorServiceUpdateUserProcedure:
+			artGeneratorServiceUpdateUserHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceGetUserProcedure:
+			artGeneratorServiceGetUserHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceListUsersProcedure:
+			artGeneratorServiceListUsersHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceDeleteUserProcedure:
+			artGeneratorServiceDeleteUserHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceGetCurrentUserProcedure:
+			artGeneratorServiceGetCurrentUserHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceCreateArtProcedure:
+			artGeneratorServiceCreateArtHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceGetArtProcedure:
+			artGeneratorServiceGetArtHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceUpdateArtProcedure:
+			artGeneratorServiceUpdateArtHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceListArtsProcedure:
+			artGeneratorServiceListArtsHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceDeleteArtProcedure:
+			artGeneratorServiceDeleteArtHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceGetArtUploadUrlProcedure:
+			artGeneratorServiceGetArtUploadUrlHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceConfirmArtImageUploadProcedure:
+			artGeneratorServiceConfirmArtImageUploadHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceCreateCompositionProcedure:
+			artGeneratorServiceCreateCompositionHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceGetCompositionProcedure:
+			artGeneratorServiceGetCompositionHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceUpdateCompositionProcedure:
+			artGeneratorServiceUpdateCompositionHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceListCompositionsProcedure:
+			artGeneratorServiceListCompositionsHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceDeleteCompositionProcedure:
+			artGeneratorServiceDeleteCompositionHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedArtGeneratorServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedArtGeneratorServiceHandler struct{}
 
-func (UnimplementedArtGeneratorServiceHandler) UpdateUser(context.Context, *connect_go.Request[pb.UpdateUserRequest]) (*connect_go.Response[pb.User], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.UpdateUser is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) UpdateUser(context.Context, *connect.Request[pb.UpdateUserRequest]) (*connect.Response[pb.User], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.UpdateUser is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) GetUser(context.Context, *connect_go.Request[pb.GetUserRequest]) (*connect_go.Response[pb.User], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetUser is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) GetUser(context.Context, *connect.Request[pb.GetUserRequest]) (*connect.Response[pb.User], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetUser is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) ListUsers(context.Context, *connect_go.Request[pb.ListUsersRequest]) (*connect_go.Response[pb.ListUsersResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ListUsers is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) ListUsers(context.Context, *connect.Request[pb.ListUsersRequest]) (*connect.Response[pb.ListUsersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ListUsers is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) DeleteUser(context.Context, *connect_go.Request[pb.DeleteUserRequest]) (*connect_go.Response[emptypb.Empty], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.DeleteUser is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) DeleteUser(context.Context, *connect.Request[pb.DeleteUserRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.DeleteUser is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) GetCurrentUser(context.Context, *connect_go.Request[pb.GetCurrentUserRequest]) (*connect_go.Response[pb.User], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetCurrentUser is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) GetCurrentUser(context.Context, *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetCurrentUser is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) CreateArt(context.Context, *connect_go.Request[pb.CreateArtRequest]) (*connect_go.Response[pb.Art], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.CreateArt is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) CreateArt(context.Context, *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.CreateArt is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) GetArt(context.Context, *connect_go.Request[pb.GetArtRequest]) (*connect_go.Response[pb.Art], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetArt is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) GetArt(context.Context, *connect.Request[pb.GetArtRequest]) (*connect.Response[pb.Art], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetArt is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) UpdateArt(context.Context, *connect_go.Request[pb.UpdateArtRequest]) (*connect_go.Response[pb.Art], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.UpdateArt is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) UpdateArt(context.Context, *connect.Request[pb.UpdateArtRequest]) (*connect.Response[pb.Art], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.UpdateArt is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) ListArts(context.Context, *connect_go.Request[pb.ListArtsRequest]) (*connect_go.Response[pb.ListArtsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ListArts is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) ListArts(context.Context, *connect.Request[pb.ListArtsRequest]) (*connect.Response[pb.ListArtsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ListArts is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) DeleteArt(context.Context, *connect_go.Request[pb.DeleteArtRequest]) (*connect_go.Response[emptypb.Empty], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.DeleteArt is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) DeleteArt(context.Context, *connect.Request[pb.DeleteArtRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.DeleteArt is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) GetArtUploadUrl(context.Context, *connect_go.Request[pb.GetArtUploadUrlRequest]) (*connect_go.Response[pb.GetArtUploadUrlResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetArtUploadUrl is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) GetArtUploadUrl(context.Context, *connect.Request[pb.GetArtUploadUrlRequest]) (*connect.Response[pb.GetArtUploadUrlResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetArtUploadUrl is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) ConfirmArtImageUpload(context.Context, *connect_go.Request[pb.ConfirmArtImageUploadRequest]) (*connect_go.Response[pb.Art], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ConfirmArtImageUpload is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) ConfirmArtImageUpload(context.Context, *connect.Request[pb.ConfirmArtImageUploadRequest]) (*connect.Response[pb.Art], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ConfirmArtImageUpload is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) CreateComposition(context.Context, *connect_go.Request[pb.CreateCompositionRequest]) (*connect_go.Response[pb.Composition], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.CreateComposition is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) CreateComposition(context.Context, *connect.Request[pb.CreateCompositionRequest]) (*connect.Response[pb.Composition], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.CreateComposition is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) GetComposition(context.Context, *connect_go.Request[pb.GetCompositionRequest]) (*connect_go.Response[pb.Composition], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetComposition is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) GetComposition(context.Context, *connect.Request[pb.GetCompositionRequest]) (*connect.Response[pb.Composition], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetComposition is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) UpdateComposition(context.Context, *connect_go.Request[pb.UpdateCompositionRequest]) (*connect_go.Response[pb.Composition], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.UpdateComposition is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) UpdateComposition(context.Context, *connect.Request[pb.UpdateCompositionRequest]) (*connect.Response[pb.Composition], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.UpdateComposition is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) ListCompositions(context.Context, *connect_go.Request[pb.ListCompositionsRequest]) (*connect_go.Response[pb.ListCompositionsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ListCompositions is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) ListCompositions(context.Context, *connect.Request[pb.ListCompositionsRequest]) (*connect.Response[pb.ListCompositionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.ListCompositions is not implemented"))
 }
 
-func (UnimplementedArtGeneratorServiceHandler) DeleteComposition(context.Context, *connect_go.Request[pb.DeleteCompositionRequest]) (*connect_go.Response[emptypb.Empty], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("pb.ArtGeneratorService.DeleteComposition is not implemented"))
+func (UnimplementedArtGeneratorServiceHandler) DeleteComposition(context.Context, *connect.Request[pb.DeleteCompositionRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.DeleteComposition is not implemented"))
 }

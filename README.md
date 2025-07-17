@@ -169,9 +169,33 @@ make psql
 # Run manual database migrations
 tilt trigger migrations
 
-# Rebuild proto files after changes
-tilt trigger proto-rebuild
+# Generate protocol buffer files (recommended)
+make proto
+
+# Clean generated protocol buffer files
+make proto-clean
 ```
+
+### Protocol Buffer Generation
+
+The project uses [Connect-RPC](https://connectrpc.com/) for API communication. When you modify `.proto` files, you need to regenerate the Go and Connect-RPC code:
+
+```bash
+# Generate all protocol buffer files
+make proto
+```
+
+This command will:
+- Auto-install required tools (protoc-gen-go, protoc-gen-connect-go, protoc-gen-openapiv2)
+- Generate Go types in `core/pb/`
+- Generate Connect-RPC clients/servers in `core/pb/pbconnect/`
+- Generate OpenAPI documentation in `api/openapi/`
+
+**Requirements:**
+- [Buf CLI](https://buf.build/docs/installation) - Protocol buffer build tool
+- Go 1.22+ - For installing protoc generators
+
+The generation uses Connect-RPC v2 (`connectrpc.com/connect`) for modern, efficient RPC communication.
 
 ### Database Access
 

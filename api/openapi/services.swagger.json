@@ -204,7 +204,8 @@
               "required": [
                 "firstName",
                 "lastName",
-                "email"
+                "email",
+                "user"
               ]
             }
           }
@@ -308,7 +309,8 @@
               },
               "title": "The Art resource to update.",
               "required": [
-                "title"
+                "title",
+                "art"
               ]
             }
           }
@@ -444,7 +446,10 @@
                   "readOnly": true
                 }
               },
-              "title": "The Composition resource to update."
+              "title": "The Composition resource to update.",
+              "required": [
+                "composition"
+              ]
             }
           }
         ],

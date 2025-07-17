@@ -15,6 +15,33 @@ setup:
 	@echo "Running local development setup..."
 	@./scripts/local_setup.sh
 
+.PHONY: proto
+proto:
+	@echo "🔧 Generating protocol buffers..."
+	@echo "Checking for required tools..."
+	@test -f "$(shell go env GOPATH)/bin/protoc-gen-go" || (echo "❌ protoc-gen-go not found. Installing..." && go install google.golang.org/protobuf/cmd/protoc-gen-go@latest)
+	@test -f "$(shell go env GOPATH)/bin/protoc-gen-connect-go" || (echo "❌ protoc-gen-connect-go not found. Installing..." && go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest)
+	@test -f "$(shell go env GOPATH)/bin/protoc-gen-openapiv2" || (echo "❌ protoc-gen-openapiv2 not found. Installing..." && go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest)
+	@echo "✅ All tools available"
+	@echo "Creating output directories..."
+	@mkdir -p core/pb/pbconnect
+	@mkdir -p api/openapi
+	@echo "Generating Go and Connect-RPC files..."
+	@cd proto && PATH="$(shell go env GOPATH)/bin:$$PATH" buf generate --template buf.gen.make.yaml
+	@echo "✅ Protocol buffers generated successfully!"
+	@echo "📁 Generated files:"
+	@echo "   - Go types: core/pb/"
+	@echo "   - Connect-RPC: core/pb/pbconnect/"
+	@echo "   - OpenAPI: api/openapi/"
+
+.PHONY: proto-clean
+proto-clean:
+	@echo "🧹 Cleaning generated protocol buffer files..."
+	@rm -rf core/pb/*.pb.go
+	@rm -rf core/pb/pbconnect/
+	@rm -rf api/openapi/
+	@echo "✅ Protocol buffer files cleaned"
+
 .PHONY: psql
 psql:
 	@eval $$(grep -e "POSTGRES_USER\|POSTGRES_PASSWORD\|POSTGRES_DB" .env | sed 's/^/export /'); \

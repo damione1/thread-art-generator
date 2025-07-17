@@ -10,7 +10,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/rs/zerolog/log"
 )
 
