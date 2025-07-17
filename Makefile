@@ -65,6 +65,19 @@ migration:
 	echo "  - core/db/migrations/$$next_num"_"$$migration_name.up.sql"; \
 	echo "  - core/db/migrations/$$next_num"_"$$migration_name.down.sql"
 
+.PHONY: run-migrations
+run-migrations:
+	@echo "🔄 Running database migrations..."
+	@docker-compose run --rm migrations || { echo "❌ Migration failed"; exit 1; }
+	@echo "✅ Database migrations completed successfully"
+
+.PHONY: generate-models
+generate-models:
+	@echo "🔄 Generating database models using SQLBoiler..."
+	@docker-compose run --rm generate-models || { echo "❌ Model generation failed"; exit 1; }
+	@echo "✅ Database models generated successfully"
+	@echo "📁 Generated models in: core/db/models/"
+
 # This rule allows capturing arbitrary targets as arguments
 %:
 	@:

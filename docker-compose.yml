@@ -1,13 +1,4 @@
 services:
-  migrations:
-    image: migrations-image
-    depends_on:
-      - db
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
   api:
     image: api-image
     ports:
@@ -43,7 +34,6 @@ services:
       QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
     depends_on:
       - db
-      - migrations
       - rabbitmq
 
   # Worker service for processing compositions
@@ -176,22 +166,6 @@ services:
       timeout: 5s
       retries: 5
 
-  generate-models:
-    image: db-models-image
-    depends_on:
-      - db
-    command: sqlboiler psql --add-global-variants --wipe
-    volumes:
-      - ./:/app
-      - ./core/db/migrations:/migrations
-    container_name: "generate-models"
-    restart: "no"
-    environment:
-      PSQL_DBNAME: ${POSTGRES_DB}
-      PSQL_USER: ${POSTGRES_USER}
-      PSQL_PASSWORD: ${POSTGRES_PASSWORD}
-      PSQL_HOST: db
-
   minio:
     image: "bitnami/minio:latest"
     container_name: minio
@@ -218,18 +192,6 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-
-  proto-build:
-    image: proto-build-image
-    volumes:
-      - ./proto:/app/proto
-      - ./core/pb:/app/core/pb
-      - ./web/src/lib/pb:/app/web/src/lib/pb
-      - ./api/openapi:/app/api/openapi
-      - ./client/internal/pb:/app/client/internal/pb
-    working_dir: /app/proto
-    container_name: "proto-build"
-    restart: "no"
 
 volumes:
   threadmachine:
