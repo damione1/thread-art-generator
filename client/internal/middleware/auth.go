@@ -6,6 +6,7 @@ import (
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/rs/zerolog/log"
 )
 
@@ -87,6 +88,17 @@ func EnrichUser(generatorService *services.GeneratorService) func(next http.Hand
 			if ok && user != nil && generatorService != nil {
 				apiUser, err := generatorService.GetCurrentUser(r.Context(), r)
 				if err == nil && apiUser != nil {
+					// Extract user ID from resource name if it's in resource format
+					userID := apiUser.ID
+					if apiUser.ID != "" {
+						userResource, parseErr := resource.ParseResourceName(apiUser.ID)
+						if parseErr == nil {
+							if parsedUser, ok := userResource.(*resource.User); ok {
+								userID = parsedUser.ID
+							}
+						}
+					}
+
 					// Create a full name, ensuring it's never empty
 					fullName := apiUser.FirstName + " " + apiUser.LastName
 					if fullName == " " || fullName == "" {
@@ -95,16 +107,16 @@ func EnrichUser(generatorService *services.GeneratorService) func(next http.Hand
 							fullName = apiUser.Email
 						} else if user.Email != "" {
 							fullName = user.Email
-						} else if apiUser.ID != "" {
-							fullName = apiUser.ID
+						} else if userID != "" {
+							fullName = userID
 						} else {
 							fullName = "User" // Last resort fallback
 						}
 					}
 
-					// Update user info with API data
+					// Update user info with API data using extracted ID
 					enrichedUser := &auth.UserInfo{
-						ID:        apiUser.ID,
+						ID:        userID,
 						Name:      fullName,
 						Email:     apiUser.Email,
 						Picture:   apiUser.Avatar,

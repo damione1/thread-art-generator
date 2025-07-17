@@ -50,7 +50,7 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch user's arts with sorting
-	arts, err := h.generatorService.ListArts(r.Context(), user, 10, "", sort, dir)
+	arts, err := h.generatorService.ListArts(r.Context(), user.ID, 10, "", sort, dir)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to fetch arts for dashboard")
 		http.Error(w, "Error fetching arts", http.StatusInternalServerError)

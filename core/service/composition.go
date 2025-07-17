@@ -11,6 +11,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/friendsofgo/errors"
 	"github.com/google/uuid"
@@ -37,22 +38,29 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 	}
 
 	// Parse the art resource name to get the art ID
-	authorID, artID, err := pbx.ParseArtResourceName(req.GetParent())
+	artResource, err := resource.ParseResourceName(req.GetParent())
 	if err != nil {
 		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("parent", errors.New("invalid resource name")),
 		})
 	}
 
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("parent", errors.New("invalid art resource name")),
+		})
+	}
+
 	// Verify the user is authorized to create a composition for this art
-	if authorID != userID {
+	if art.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can create compositions for this art")
 	}
 
 	// Get the art
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artID),
-		models.ArtWhere.AuthorID.EQ(authorID),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(art.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -71,7 +79,7 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 	// Convert proto to database model
 	compositionDb := &models.Composition{
 		ID:                uuid.New().String(),
-		ArtID:             artID,
+		ArtID:             art.ArtID,
 		Status:            models.CompositionStatusEnumPENDING,
 		NailsQuantity:     int(req.GetComposition().GetNailsQuantity()),
 		ImgSize:           int(req.GetComposition().GetImgSize()),
@@ -114,22 +122,29 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 	}
 
 	// Parse the composition resource name
-	authorID, artID, compositionID, err := pbx.ParseCompositionResourceName(req.GetName())
+	compositionResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
 		})
 	}
 
+	composition, ok := compositionResource.(*resource.Composition)
+	if !ok {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid composition resource name")),
+		})
+	}
+
 	// Verify the user is authorized to get this composition
-	if authorID != userID {
+	if composition.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get this composition")
 	}
 
 	// Get the art
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artID),
-		models.ArtWhere.AuthorID.EQ(authorID),
+		models.ArtWhere.ID.EQ(composition.ArtID),
+		models.ArtWhere.AuthorID.EQ(composition.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -140,8 +155,8 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 
 	// Get the composition
 	compositionDb, err := models.Compositions(
-		models.CompositionWhere.ID.EQ(compositionID),
-		models.CompositionWhere.ArtID.EQ(artID),
+		models.CompositionWhere.ID.EQ(composition.CompositionID),
+		models.CompositionWhere.ArtID.EQ(composition.ArtID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -175,22 +190,29 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 	}
 
 	// Parse the art resource name
-	authorID, artID, err := pbx.ParseArtResourceName(req.GetParent())
+	artResource, err := resource.ParseResourceName(req.GetParent())
 	if err != nil {
 		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("parent", errors.New("invalid resource name")),
 		})
 	}
 
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("parent", errors.New("invalid art resource name")),
+		})
+	}
+
 	// Verify the user is authorized to list compositions for this art
-	if authorID != userID {
+	if art.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can list compositions for this art")
 	}
 
 	// Get the art
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artID),
-		models.ArtWhere.AuthorID.EQ(authorID),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(art.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -222,9 +244,9 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 
 	// Query compositions
 	queryMods := []qm.QueryMod{
-		models.CompositionWhere.ArtID.EQ(artID),
+		models.CompositionWhere.ArtID.EQ(art.ArtID),
 		qm.OrderBy(fmt.Sprintf("%s DESC", models.CompositionColumns.CreatedAt)), // Latest first
-		qm.Limit(pageSize + 1),                                                  // +1 to check if there are more
+		qm.Limit(pageSize + 1), // +1 to check if there are more
 		qm.Offset(offset),
 	}
 
@@ -273,22 +295,29 @@ func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompo
 	}
 
 	// Parse the composition resource name
-	authorID, artID, compositionID, err := pbx.ParseCompositionResourceName(req.GetName())
+	compositionResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
 		})
 	}
 
+	composition, ok := compositionResource.(*resource.Composition)
+	if !ok {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid composition resource name")),
+		})
+	}
+
 	// Verify the user is authorized to delete this composition
-	if authorID != userID {
+	if composition.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can delete this composition")
 	}
 
 	// Get the composition
 	compositionDb, err := models.Compositions(
-		models.CompositionWhere.ID.EQ(compositionID),
-		models.CompositionWhere.ArtID.EQ(artID),
+		models.CompositionWhere.ID.EQ(composition.CompositionID),
+		models.CompositionWhere.ArtID.EQ(composition.ArtID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

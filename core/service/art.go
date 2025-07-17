@@ -11,6 +11,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -82,7 +83,7 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetArt().GetName())
+	artResource, err := resource.ParseResourceName(req.GetArt().GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("art.name", errors.New("invalid resource name")),
@@ -90,14 +91,22 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("art.name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	if art.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can update the art")
 	}
 
 	// Check if the art exists
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(art.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -255,7 +264,7 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -263,13 +272,21 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	if art.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get the art")
 	}
 
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(art.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -292,7 +309,7 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -300,13 +317,21 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	if art.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can delete the art")
 	}
 
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(art.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -322,10 +347,7 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 
 	// Delete the image from the bucket
 	if artDb.ImageID.Valid {
-		imageKey := pbx.GetResourceName([]pbx.Resource{
-			{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
-			{Type: pbx.RessourceTypeArts, ID: artDb.ImageID.String},
-		})
+		imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
 		err = server.bucket.Delete(ctx, imageKey)
 		if err != nil {
 			log.Error().Err(err).Msg(fmt.Sprintf("Failed to delete image %s", artDb.ImageID.String))
@@ -348,7 +370,7 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -356,14 +378,22 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	if art.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get an upload URL for the art")
 	}
 
 	// Check if the art exists
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(art.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -386,11 +416,8 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		}
 	}
 
-	// Create the image key in the format "users/{userId}/arts/{imageId}"
-	imageKey := pbx.GetResourceName([]pbx.Resource{
-		{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
-		{Type: pbx.RessourceTypeArts, ID: imageID},
-	})
+	// Create the image key using resource builder
+	imageKey := resource.BuildArtResourceName(artDb.AuthorID, imageID)
 
 	// Generate a signed URL with 15 minutes expiration
 	// Important: We're using a minimal set of options to keep the signing simple
@@ -428,7 +455,7 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -436,14 +463,22 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	if art.UserID != userID {
 		return nil, pbErrors.PermissionDeniedError("only the author can confirm image upload")
 	}
 
 	// Get the art
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(art.UserID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -459,11 +494,8 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		})
 	}
 
-	// Verify the image exists in the bucket
-	imageKey := pbx.GetResourceName([]pbx.Resource{
-		{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
-		{Type: pbx.RessourceTypeArts, ID: artDb.ImageID.String},
-	})
+	// Verify the image exists in the bucket using resource builder
+	imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
 
 	exists, err := server.bucket.Exists(ctx, imageKey)
 	if err != nil {

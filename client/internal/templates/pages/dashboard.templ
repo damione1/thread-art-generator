@@ -4,7 +4,23 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/resource"
 )
+
+// extractArtID extracts the art ID from a resource name using the resource parser
+func extractArtID(resourceName string) string {
+	artResource, err := resource.ParseResourceName(resourceName)
+	if err != nil {
+		return ""
+	}
+
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		return ""
+	}
+
+	return art.ArtID
+}
 
 // DashboardPage renders the dashboard with sort controls
 // user: The authenticated user (required for this page)
@@ -104,7 +120,8 @@ templ NewArtCard() {
 
 // ArtCard renders an individual art project card
 templ ArtCard(art *pb.Art) {
-	<div class="bg-gradient-to-br from-dark-300 to-dark-400 rounded-xl shadow-lg border border-dark-300/80 overflow-hidden group hover:border-primary-600/50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl h-72">
+	{{ artID := extractArtID(art.GetName()) }}
+	<a href={ templ.URL("/dashboard/arts/" + artID) } class="block bg-gradient-to-br from-dark-300 to-dark-400 rounded-xl shadow-lg border border-dark-300/80 overflow-hidden group hover:border-primary-600/50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl h-72">
 		<div class="h-2/3 bg-dark-500 relative">
 			if art.GetImageUrl() != "" {
 				<img
@@ -135,7 +152,7 @@ templ ArtCard(art *pb.Art) {
 				</p>
 			}
 		</div>
-	</div>
+	</a>
 }
 
 // NoProjectsCard renders a message when user has no projects
