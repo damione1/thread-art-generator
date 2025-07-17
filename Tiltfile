@@ -7,12 +7,31 @@ load('ext://restart_process', 'docker_build_with_restart')
 # ================================================
 
 # Define directories to watch for changes
-CODE_DIRS = [
-  'cmd',
-  'core',
-  'client',
-  'threadGenerator'
-]
+CODE_DIRS = {
+  'api': ['cmd/api', 'core'],
+  'worker': ['cmd/worker', 'core', 'threadGenerator'],
+  'frontend': ['client', 'core'],
+  'cli': ['cmd/cli', 'core']
+}
+
+# Environment configuration helper
+def load_env_vars():
+    """Load environment variables from .env file"""
+    ENV_FILE = '.env'
+    if os.path.exists(ENV_FILE):
+        env_content = str(read_file(ENV_FILE)).strip()
+        if env_content:
+            env_lines = env_content.split('\n')
+            env_dict = {}
+            for line in env_lines:
+                if line.strip() and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    env_dict[key.strip()] = value.strip()
+            return env_dict
+    return {}
+
+# Load environment variables
+ENV_VARS = load_env_vars()
 
 # ================================================
 # HELPER FUNCTIONS
@@ -66,24 +85,64 @@ local_resource(
   trigger_mode=TRIGGER_MODE_AUTO,
 )
 
-# Compile Go binaries for all services in one build
+# Separate build resources for each service
 local_resource(
-  'go-compile',
-  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go && ' +
-      'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/migrations cmd/migrations/main.go && ' +
-      'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/worker cmd/worker/main.go && ' +
-      'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/frontend client/cmd/frontend/main.go && ' +
-      'go build -o build/cli cmd/cli/main.go',
+  'api-build',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api cmd/api/main.go',
   labels=["build"],
-  deps=CODE_DIRS,
-  resource_deps=['proto-generate'],  # Wait for proto generation to complete
+  deps=CODE_DIRS['api'],
+  resource_deps=['proto-generate'],
   ignore=[
-    'client/internal/templates/**/*.templ',  # Ignore .templ files - only watch the compiled output
-    'client/internal/templates/**/*.templ.go',  # Also ignore the output during file detection
-    'proto/**',                             # Handled by proto-generate
-    'core/pb/**',                           # Generated files
-    'client/internal/pb/**',                # Generated files
-    'build/**',                             # Output files
+    'proto/**',
+    'core/pb/**',
+    'build/**',
+  ],
+  trigger_mode=TRIGGER_MODE_AUTO,
+)
+
+local_resource(
+  'worker-build',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/worker cmd/worker/main.go',
+  labels=["build"],
+  deps=CODE_DIRS['worker'],
+  resource_deps=['proto-generate'],
+  ignore=[
+    'proto/**',
+    'core/pb/**',
+    'build/**',
+  ],
+  trigger_mode=TRIGGER_MODE_AUTO,
+)
+
+local_resource(
+  'frontend-build',
+  cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/frontend client/cmd/frontend/main.go',
+  labels=["build"],
+  deps=CODE_DIRS['frontend'],
+  resource_deps=['proto-generate', 'templ-generate'],
+  ignore=[
+    'client/internal/templates/**/*.templ',
+    'client/internal/templates/**/*.templ.go',
+    'proto/**',
+    'core/pb/**',
+    'client/internal/pb/**',
+    'build/**',
+  ],
+  trigger_mode=TRIGGER_MODE_AUTO,
+)
+
+# Note: migrations-build removed - migrations now use Make targets directly
+
+local_resource(
+  'cli-build',
+  cmd='go build -o build/cli cmd/cli/main.go',
+  labels=["build"],
+  deps=CODE_DIRS['cli'],
+  resource_deps=['proto-generate'],
+  ignore=[
+    'proto/**',
+    'core/pb/**',
+    'build/**',
   ],
   trigger_mode=TRIGGER_MODE_AUTO,
 )
@@ -92,7 +151,7 @@ local_resource(
 # DOCKER IMAGE BUILDS
 # ================================================
 
-# API image build
+# API image build with optimized live updates
 docker_build(
   'api-image',
   '.',
@@ -100,26 +159,14 @@ docker_build(
   only=['./build/api'],
   live_update=[
     sync('./build/api', '/app/build/api'),
+    run('killall -TERM api || true', trigger=['./build/api']),
     restart_container()
   ]
 )
 
-# Migrations image build
-docker_build(
-  'migrations-image',
-  '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-migrations',
-  only=[
-    './build/migrations',
-    './core/db/migrations',
-  ],
-  live_update=[
-    sync('./build/migrations', '/app/build/migrations'),
-    sync('./core/db/migrations', '/migrations'),
-  ]
-)
+# Note: migrations now handled via Make targets instead of Docker services
 
-# Worker image build
+# Worker image build with optimized live updates
 docker_build(
   'worker-image',
   '.',
@@ -127,11 +174,12 @@ docker_build(
   only=['./build/worker'],
   live_update=[
     sync('./build/worker', '/app/build/worker'),
+    run('killall -TERM worker || true', trigger=['./build/worker']),
     restart_container()
   ]
 )
 
-# Client (Go+HTMX Frontend) image build with improved live updates
+# Client (Go+HTMX Frontend) image build with optimized live updates
 docker_build(
   'frontend-image',
   '.',
@@ -141,27 +189,17 @@ docker_build(
     './client/public',
   ],
   live_update=[
-    # Sync public assets directly
+    # Sync public assets without restart
     sync('./client/public', '/app/client/public'),
 
-    # Copy the compiled binary
+    # Sync binary and restart only when binary changes
     sync('./build/frontend', '/app/frontend'),
-
-    # Restart container when binary changes
+    run('killall -TERM frontend || true', trigger=['./build/frontend']),
     restart_container()
   ]
 )
 
-# DB Models image build
-docker_build(
-  'db-models-image',
-  '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-db-models',
-  only=[
-    './go.mod',
-    './go.sum',
-  ]
-)
+# Note: database models now handled via Make targets instead of Docker services
 
 # ================================================
 # DOCKER COMPOSE CONFIGURATION
@@ -183,6 +221,16 @@ local_resource(
   auto_init=False
 )
 
+# Build status indicator
+local_resource(
+  'build-status',
+  cmd='echo \"All services built successfully at $(date)\"',
+  labels=["build"],
+  resource_deps=['api-build', 'worker-build', 'frontend-build', 'cli-build'],
+  auto_init=False,
+  trigger_mode=TRIGGER_MODE_AUTO,
+)
+
 # Minio setup
 local_resource(
   'setup-minio',
@@ -197,17 +245,22 @@ local_resource(
 # SERVICE CONFIGURATION
 # ================================================
 
-# Add missing services
-dc_resource(
-  'migrations',
+# Database operations using Make targets
+local_resource(
+  'run-migrations',
+  cmd='make run-migrations',
   labels=['database'],
-  auto_init=True,
+  resource_deps=['db'],
+  auto_init=False,
   trigger_mode=TRIGGER_MODE_MANUAL,
 )
 
-dc_resource(
-  'generate-models',
-  labels=['build'],
+local_resource(
+  'generate-db-models',
+  cmd='make generate-models',
+  labels=['database'],
+  deps=['core/db/migrations'],
+  resource_deps=['db'],
   auto_init=False,
   trigger_mode=TRIGGER_MODE_MANUAL,
 )
@@ -232,14 +285,15 @@ dc_resource(
 dc_resource(
   'worker',
   labels=['worker'],
-  resource_deps=['go-compile'],
+  resource_deps=['worker-build', 'rabbitmq', 'minio'],
   auto_init=True,
 )
 
 dc_resource(
   'api',
   labels=['application'],
-  resource_deps=['go-compile'],
+  resource_deps=['api-build', 'db', 'rabbitmq', 'minio'],
+  auto_init=True,
   links=[
     link('http://localhost:9090', 'Connect API'),
     link('http://localhost:9090/health', 'API Health Check'),
@@ -249,8 +303,8 @@ dc_resource(
 dc_resource(
   'client',
   labels=['application'],
-  # Remove templ-generate as dependency to break the cycle
-  resource_deps=['go-compile', 'tailwind-build'],
+  resource_deps=['frontend-build', 'tailwind-build', 'api'],
+  auto_init=True,
   links=[
     link('http://localhost:8080', 'Go+HTMX Frontend'),
     link('http://localhost:8080/health', 'Frontend Health Check'),
@@ -260,6 +314,8 @@ dc_resource(
 dc_resource(
   'envoy',
   labels=['proxy'],
+  resource_deps=['api', 'client'],
+  auto_init=True,
   links=[
     link('https://front.tag.local', 'Go+HTMX Frontend (via Envoy)'),
     link('https://tag.local/health', 'API Health Check (via Envoy)'),
@@ -273,4 +329,10 @@ dc_resource(
   links=[
     link('http://localhost:9001', 'MinIO Console'),
   ]
+)
+
+dc_resource(
+  'redis',
+  labels=['cache'],
+  auto_init=True,
 )
