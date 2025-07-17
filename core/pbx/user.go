@@ -3,6 +3,7 @@ package pbx
 import (
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/volatiletech/null/v8"
 )
@@ -34,9 +35,7 @@ func DbUserToProto(user *models.User) *pb.User {
 		userPb.LastName = user.LastName.String
 	}
 
-	userPb.Name = GetResourceName([]Resource{
-		{Type: RessourceTypeUsers, ID: user.ID},
-	})
+	userPb.Name = resource.BuildUserResourceName(user.ID)
 
 	return userPb
 }
@@ -54,11 +53,14 @@ func ProtoUserToDb(user *pb.User) *models.User {
 	}
 
 	if user.GetName() != "" {
-		userId, err := GetResourceIDByType(user.GetName(), RessourceTypeUsers)
+		userResource, err := resource.ParseResourceName(user.GetName())
 		if err != nil {
 			return nil
 		}
-		userDb.ID = userId
+
+		if parsedUser, ok := userResource.(*resource.User); ok {
+			userDb.ID = parsedUser.ID
+		}
 	}
 
 	if user.GetLastName() != "" {

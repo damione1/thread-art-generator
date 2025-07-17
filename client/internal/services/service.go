@@ -9,6 +9,7 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/client"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/connect-go"
 	"github.com/rs/zerolog/log"
 )
@@ -122,25 +123,65 @@ func (s *GeneratorService) CreateArt(ctx context.Context, createArtRequest *pb.C
 	return resp.Msg, nil, nil
 }
 
+// GetArt gets a specific art by its resource name
+func (s *GeneratorService) GetArt(ctx context.Context, userID, artID string) (*pb.Art, error) {
+	artName := resource.BuildArtResourceName(userID, artID)
+
+	req := connect.NewRequest(&pb.GetArtRequest{
+		Name: artName,
+	})
+
+	resp, err := s.client.GetArt(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Str("art_name", artName).Msg("Failed to get art")
+		return nil, err
+	}
+
+	return resp.Msg, nil
+}
+
+// GetArtUploadUrl gets a signed URL for uploading an image to an art
+func (s *GeneratorService) GetArtUploadUrl(ctx context.Context, userID, artID string) (*pb.GetArtUploadUrlResponse, error) {
+	artName := resource.BuildArtResourceName(userID, artID)
+
+	req := connect.NewRequest(&pb.GetArtUploadUrlRequest{
+		Name: artName,
+	})
+
+	resp, err := s.client.GetArtUploadUrl(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Str("art_name", artName).Msg("Failed to get art upload URL")
+		return nil, err
+	}
+
+	return resp.Msg, nil
+}
+
+// ConfirmArtImageUpload confirms that an image has been uploaded for an art
+func (s *GeneratorService) ConfirmArtImageUpload(ctx context.Context, artName string) (*pb.Art, error) {
+	req := connect.NewRequest(&pb.ConfirmArtImageUploadRequest{
+		Name: artName,
+	})
+
+	resp, err := s.client.ConfirmArtImageUpload(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Str("art_name", artName).Msg("Failed to confirm art image upload")
+		return nil, err
+	}
+
+	return resp.Msg, nil
+}
+
 // ListArts gets a list of arts for the authenticated user
-func (s *GeneratorService) ListArts(ctx context.Context, user *auth.UserInfo, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
+func (s *GeneratorService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
 	// Create the request payload with parent field
 	req := connect.NewRequest(&pb.ListArtsRequest{
-		Parent:         user.ID, // User ID already includes the "users/" prefix
+		Parent:         resource.BuildUserResourceName(userID),
 		PageSize:       int32(pageSize),
 		PageToken:      pageToken,
 		OrderBy:        orderBy,
 		OrderDirection: orderDirection,
 	})
-
-	// Log request details for debugging
-	log.Debug().
-		Str("parent", user.ID).
-		Int32("pageSize", int32(pageSize)).
-		Str("pageToken", pageToken).
-		Str("orderBy", orderBy).
-		Str("orderDirection", orderDirection).
-		Msg("Sending ListArts request")
 
 	// Make the API call through the authenticated client
 	// The context already contains authentication info added by middleware

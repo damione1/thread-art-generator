@@ -167,6 +167,7 @@ func main() {
 			r.Route("/arts", func(r chi.Router) {
 				r.Get("/new", artHandler.NewArtPage)
 				r.Post("/new", artHandler.CreateArt)
+				r.Get("/{artId}", artHandler.ViewArtPage)
 			})
 		})
 
@@ -187,6 +188,10 @@ func main() {
 				w.Write([]byte(fmt.Sprintf(`{"id":"%s","name":"%s","email":"%s"}`,
 					user.ID, user.Name, user.Email)))
 			})
+
+			// Art upload API routes
+			r.Get("/get-upload-url/{artId}", artHandler.GetArtUploadUrl)
+			r.Post("/confirm-upload/{artId}", artHandler.ConfirmArtImageUpload)
 		})
 	})
 

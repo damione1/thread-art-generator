@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
@@ -12,6 +11,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -35,9 +35,20 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 
 	pbUser := req.GetUser()
 
-	userId, err := pbx.GetResourceIDByType(pbUser.GetName(), pbx.RessourceTypeUsers)
+	userResource, err := resource.ParseResourceName(pbUser.GetName())
 	if err != nil {
-		return nil, fmt.Errorf("%s: %s: %w", pbErrors.ErrValidationPrefix, pbErrors.ErrInvalidResourceName, err)
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("user.name", errors.New("invalid resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	user, ok := userResource.(*resource.User)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("user.name", errors.New("invalid user resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
 	// Get user ID from context using the same key used in auth interceptor
@@ -46,11 +57,11 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	if userId != userIdFromContext {
+	if user.ID != userIdFromContext {
 		return nil, pbErrors.PermissionDeniedError("cannot update other user's info")
 	}
 
-	user, err := models.Users(models.UserWhere.ID.EQ(userId)).One(ctx, server.config.DB)
+	userDb, err := models.Users(models.UserWhere.ID.EQ(user.ID)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, pbErrors.NotFoundError("user not found")
@@ -59,29 +70,29 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	}
 
 	if pbUser.GetFirstName() != "" {
-		user.FirstName = pbUser.GetFirstName()
+		userDb.FirstName = pbUser.GetFirstName()
 	}
 
-	user.LastName.Valid = false
-	user.LastName.String = pbUser.GetLastName()
+	userDb.LastName.Valid = false
+	userDb.LastName.String = pbUser.GetLastName()
 	if pbUser.GetLastName() != "" {
-		user.LastName.Valid = true
+		userDb.LastName.Valid = true
 	}
 
 	if pbUser.GetEmail() != "" {
-		user.Email.Valid = true
-		user.Email.String = pbUser.GetEmail()
+		userDb.Email.Valid = true
+		userDb.Email.String = pbUser.GetEmail()
 	}
 
 	// If avatar is provided in the request, update it
 	// This allows clients to set a custom avatar if needed
-	if pbUser.GetAvatar() != "" && pbUser.GetAvatar() != user.AvatarID.String {
-		user.AvatarID.Valid = true
-		user.AvatarID.String = pbUser.GetAvatar()
+	if pbUser.GetAvatar() != "" && pbUser.GetAvatar() != userDb.AvatarID.String {
+		userDb.AvatarID.Valid = true
+		userDb.AvatarID.String = pbUser.GetAvatar()
 	}
 	// Note: We don't reset AvatarID if it's not provided to preserve the Auth0 avatar
 
-	if _, err = user.Update(ctx, server.config.DB, boil.Infer()); err != nil {
+	if _, err = userDb.Update(ctx, server.config.DB, boil.Infer()); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			violations := []*errdetails.BadRequest_FieldViolation{
 				pbErrors.FieldViolation("email", errors.New(pbErrors.ErrEmailAlreadyExists)),
@@ -91,14 +102,22 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, pbErrors.InternalError("failed to update user", err)
 	}
 
-	return pbx.DbUserToProto(user), nil
+	return pbx.DbUserToProto(userDb), nil
 }
 
 func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
-	requestedUserId, err := pbx.GetResourceIDByType(req.GetName(), pbx.RessourceTypeUsers)
+	userResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
-			pbErrors.FieldViolation("name", errors.New(pbErrors.ErrInvalidResourceName)),
+			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	user, ok := userResource.(*resource.User)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid user resource name")),
 		}
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
@@ -111,12 +130,12 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 
 	// The userIdFromContext is our internal ID, not the Auth0 ID
 	// First, ensure the current user has permission to access the requested user
-	if requestedUserId != userIdFromContext {
+	if user.ID != userIdFromContext {
 		return nil, pbErrors.PermissionDeniedError("cannot get other user's info")
 	}
 
 	// Query by internal ID since that's what's in the context
-	user, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
+	userDb, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, pbErrors.NotFoundError("user not found")
@@ -124,7 +143,7 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
-	return pbx.DbUserToProto(user), nil
+	return pbx.DbUserToProto(userDb), nil
 }
 
 // GetCurrentUser retrieves the current authenticated user based on the context
@@ -136,7 +155,7 @@ func (server *Server) GetCurrentUser(ctx context.Context, req *pb.GetCurrentUser
 	}
 
 	// Query by internal ID since that's what's in the context
-	user, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
+	userDb, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, pbErrors.NotFoundError("user not found")
@@ -144,5 +163,5 @@ func (server *Server) GetCurrentUser(ctx context.Context, req *pb.GetCurrentUser
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
-	return pbx.DbUserToProto(user), nil
+	return pbx.DbUserToProto(userDb), nil
 }
