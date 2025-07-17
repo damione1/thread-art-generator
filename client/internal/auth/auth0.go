@@ -68,7 +68,9 @@ func (a *Auth0Service) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	params.Set("redirect_uri", a.config.CallbackURL)
 	params.Set("scope", "openid profile email offline_access")
 	params.Set("state", state)
-	params.Set("audience", a.config.Audience)
+	if a.config.Audience != "" {
+		params.Set("audience", a.config.Audience)
+	}
 
 	redirectURL := authURL + "?" + params.Encode()
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
