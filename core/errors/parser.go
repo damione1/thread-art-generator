@@ -4,6 +4,7 @@ import (
 	"fmt"
 	
 	"github.com/bufbuild/protovalidate-go"
+	"connectrpc.com/connect"
 )
 
 // ErrorParser provides utilities for parsing and converting different error types
@@ -40,6 +41,50 @@ func (p *ErrorParser) ParseProtoValidationError(err error) *StandardError {
 	}
 
 	return builder.Build()
+}
+
+// ParseConnectError converts Connect-RPC errors to StandardError
+func (p *ErrorParser) ParseConnectError(err error) *StandardError {
+	if err == nil {
+		return nil
+	}
+
+	connectErr, ok := err.(*connect.Error)
+	if !ok {
+		return NewGlobalError(ErrorTypeInternal, err.Error())
+	}
+
+	// Map Connect error codes to our error types
+	var errorType ErrorType
+	switch connectErr.Code() {
+	case connect.CodeInvalidArgument:
+		errorType = ErrorTypeValidation
+	case connect.CodeNotFound:
+		errorType = ErrorTypeNotFound
+	case connect.CodePermissionDenied:
+		errorType = ErrorTypeForbidden
+	case connect.CodeAlreadyExists:
+		errorType = ErrorTypeConflict
+	case connect.CodeUnauthenticated:
+		errorType = ErrorTypeUnauthorized
+	default:
+		errorType = ErrorTypeInternal
+	}
+
+	builder := NewValidationErrorBuilder(connectErr.Message())
+
+	// For now, we'll use a simple approach since Connect error details parsing is complex
+	// This can be enhanced later to parse specific error details
+
+	standardErr := builder.Build()
+	standardErr.Type = errorType
+	
+	// If no field errors were found, make it a global error
+	if len(standardErr.Fields) == 0 {
+		standardErr.GlobalError = connectErr.Message()
+	}
+
+	return standardErr
 }
 
 // extractFieldName extracts the field name from a violation in a format suitable for frontend

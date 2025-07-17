@@ -164,7 +164,7 @@ func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
 		Art: &pb.Art{
 			Title: title,
 		},
-		Parent: user.ID,
+		Parent: resource.BuildUserResourceName(user.ID),
 	}
 
 	// Call service to create art with the request object for auth headers

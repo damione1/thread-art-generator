@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/client"
+	coreErrors "github.com/Damione1/thread-art-generator/core/errors"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"connectrpc.com/connect"
 	"github.com/rs/zerolog/log"
 )
 
@@ -26,6 +27,37 @@ func NewGeneratorService(client pbconnect.ArtGeneratorServiceClient, sessionMana
 		client:         client,
 		sessionManager: sessionManager,
 	}
+}
+
+// parseErrorToFieldErrors converts Connect errors to form field errors
+func (s *GeneratorService) parseErrorToFieldErrors(err error) map[string][]string {
+	parser := coreErrors.NewErrorParser()
+	standardErr := parser.ParseConnectError(err)
+	
+	fieldErrors := make(map[string][]string)
+	
+	// Convert field-level errors to form format
+	for field, messages := range standardErr.Fields {
+		fieldErrors[field] = messages
+	}
+	
+	// Add global error if present
+	if standardErr.GlobalError != "" {
+		fieldErrors["_form"] = []string{standardErr.GlobalError}
+	}
+	
+	// If no specific errors were parsed, use the raw error message
+	if len(fieldErrors) == 0 {
+		fieldErrors["_form"] = []string{standardErr.Message}
+	}
+
+	return fieldErrors
+}
+
+// parseErrorForLogging converts Connect errors to structured error for logging
+func (s *GeneratorService) parseErrorForLogging(err error) *coreErrors.StandardError {
+	parser := coreErrors.NewErrorParser()
+	return parser.ParseConnectError(err)
 }
 
 // ArtFormData represents the form data for creating art
@@ -62,7 +94,13 @@ func (s *GeneratorService) GetCurrentUser(ctx context.Context, r *http.Request) 
 	// Make the API call directly using s.client
 	resp, err := s.client.GetCurrentUser(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current user: %w", err)
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Msg("Failed to get current user")
+		return nil, fmt.Errorf("failed to get current user: %s", standardErr.Message)
 	}
 
 	// Convert the response to our User type
@@ -77,47 +115,12 @@ func (s *GeneratorService) GetCurrentUser(ctx context.Context, r *http.Request) 
 
 // CreateArt creates a new art resource
 func (s *GeneratorService) CreateArt(ctx context.Context, createArtRequest *pb.CreateArtRequest) (*pb.Art, map[string][]string, error) {
-	// Create the request payload
 	req := connect.NewRequest(createArtRequest)
 
-	// Make the API call through the authenticated client
-	// The context already contains authentication info added by middleware
 	resp, err := s.client.CreateArt(ctx, req)
 	if err != nil {
-		// Check if it's a connect error and extract field violations
-		if connectErr, ok := err.(*connect.Error); ok {
-			fieldErrors := make(map[string][]string)
-
-			// Convert error details to field errors
-			for _, detail := range connectErr.Details() {
-				// Log raw detail for debugging
-				log.Debug().Interface("detail", detail).Msg("Error detail")
-
-				// Check if we have field violations in the error message
-				if connectErr.Code() == connect.CodeInvalidArgument {
-					// For field validation errors, map them to form fields
-					if createArtRequest.Art.Title == "" {
-						fieldErrors["art.title"] = []string{"Title is required"}
-					} else {
-						fieldErrors["art.title"] = []string{connectErr.Message()}
-					}
-				}
-			}
-
-			if len(fieldErrors) == 0 {
-				// Fallback if no specific field errors were found
-				fieldErrors["_form"] = []string{connectErr.Message()}
-			}
-
-			log.Debug().
-				Interface("fieldErrors", fieldErrors).
-				Msg("Processed field errors")
-
-			return nil, fieldErrors, err
-		}
-
-		log.Error().Err(err).Msg("Failed to create art")
-		return nil, nil, err
+		fieldErrors := s.parseErrorToFieldErrors(err)
+		return nil, fieldErrors, err
 	}
 
 	return resp.Msg, nil, nil
@@ -133,8 +136,14 @@ func (s *GeneratorService) GetArt(ctx context.Context, userID, artID string) (*p
 
 	resp, err := s.client.GetArt(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Str("art_name", artName).Msg("Failed to get art")
-		return nil, err
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("art_name", artName).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Msg("Failed to get art")
+		return nil, fmt.Errorf("failed to get art: %s", standardErr.Message)
 	}
 
 	return resp.Msg, nil
@@ -150,8 +159,14 @@ func (s *GeneratorService) GetArtUploadUrl(ctx context.Context, userID, artID st
 
 	resp, err := s.client.GetArtUploadUrl(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Str("art_name", artName).Msg("Failed to get art upload URL")
-		return nil, err
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("art_name", artName).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Msg("Failed to get art upload URL")
+		return nil, fmt.Errorf("failed to get art upload URL: %s", standardErr.Message)
 	}
 
 	return resp.Msg, nil
@@ -165,8 +180,14 @@ func (s *GeneratorService) ConfirmArtImageUpload(ctx context.Context, artName st
 
 	resp, err := s.client.ConfirmArtImageUpload(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Str("art_name", artName).Msg("Failed to confirm art image upload")
-		return nil, err
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("art_name", artName).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Msg("Failed to confirm art image upload")
+		return nil, fmt.Errorf("failed to confirm art image upload: %s", standardErr.Message)
 	}
 
 	return resp.Msg, nil
@@ -184,38 +205,16 @@ func (s *GeneratorService) ListArts(ctx context.Context, userID string, pageSize
 	})
 
 	// Make the API call through the authenticated client
-	// The context already contains authentication info added by middleware
 	resp, err := s.client.ListArts(ctx, req)
 	if err != nil {
-		// Check if it's a connect error and extract field violations
-		if connectErr, ok := err.(*connect.Error); ok {
-			fieldErrors := make(map[string][]string)
-
-			// Convert error details to field errors
-			for _, detail := range connectErr.Details() {
-				// Log raw detail for debugging
-				log.Debug().Interface("detail", detail).Msg("Error detail")
-
-				// Check if we have field violations in the error message
-				if connectErr.Code() == connect.CodeInvalidArgument {
-					// For field validation errors, map them to form fields
-				}
-			}
-
-			if len(fieldErrors) == 0 {
-				// Fallback if no specific field errors were found
-				fieldErrors["_form"] = []string{connectErr.Message()}
-			}
-
-			log.Debug().
-				Interface("fieldErrors", fieldErrors).
-				Msg("Processed field errors")
-
-			return nil, err
-		}
-
-		log.Error().Err(err).Msg("Failed to list arts")
-		return nil, err
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("userID", userID).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Msg("Failed to list arts")
+		return nil, fmt.Errorf("failed to list arts: %s", standardErr.Message)
 	}
 
 	return resp.Msg, nil
@@ -230,8 +229,13 @@ func (s *GeneratorService) ListCompositions(ctx context.Context, pageSize int, p
 
 	resp, err := s.client.ListCompositions(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to list compositions")
-		return nil, err
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Msg("Failed to list compositions")
+		return nil, fmt.Errorf("failed to list compositions: %s", standardErr.Message)
 	}
 
 	return resp.Msg, nil
@@ -243,23 +247,8 @@ func (s *GeneratorService) CreateComposition(ctx context.Context, createRequest 
 
 	resp, err := s.client.CreateComposition(ctx, req)
 	if err != nil {
-		if connectErr, ok := err.(*connect.Error); ok {
-			fieldErrors := make(map[string][]string)
-
-			// Handle field violations similar to CreateArt
-			if connectErr.Code() == connect.CodeInvalidArgument {
-				fieldErrors["_form"] = []string{connectErr.Message()}
-			}
-
-			log.Debug().
-				Interface("fieldErrors", fieldErrors).
-				Msg("Processed composition field errors")
-
-			return nil, fieldErrors, err
-		}
-
-		log.Error().Err(err).Msg("Failed to create composition")
-		return nil, nil, err
+		fieldErrors := s.parseErrorToFieldErrors(err)
+		return nil, fieldErrors, err
 	}
 
 	return resp.Msg, nil, nil
