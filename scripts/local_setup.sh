@@ -161,14 +161,6 @@ function setup_env() {
     fi
 }
 
-# Build the CLI
-function build_cli() {
-    echo -e "\n${YELLOW}Building CLI tool...${NC}"
-    mkdir -p "$PROJECT_ROOT/build"
-    (cd "$PROJECT_ROOT" && go build -o build/cli cmd/cli/main.go)
-    chmod +x "$PROJECT_ROOT/build/cli"
-    echo -e "✅ CLI built successfully at build/cli"
-}
 
 # Setup client frontend
 function setup_frontend() {
@@ -262,7 +254,6 @@ setup_tools
 setup_ssl
 setup_env
 setup_proto_tools
-build_cli
 setup_frontend
 
 echo -e "\n${GREEN}Setup complete! You can now start the development environment with:${NC}"

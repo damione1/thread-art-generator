@@ -10,8 +10,7 @@ load('ext://restart_process', 'docker_build_with_restart')
 CODE_DIRS = {
   'api': ['cmd/api', 'core'],
   'worker': ['cmd/worker', 'core', 'threadGenerator'],
-  'frontend': ['client', 'core'],
-  'cli': ['cmd/cli', 'core']
+  'frontend': ['client', 'core']
 }
 
 # Environment configuration helper
@@ -133,19 +132,6 @@ local_resource(
 
 # Note: migrations-build removed - migrations now use Make targets directly
 
-local_resource(
-  'cli-build',
-  cmd='go build -o build/cli cmd/cli/main.go',
-  labels=["build"],
-  deps=CODE_DIRS['cli'],
-  resource_deps=['proto-generate'],
-  ignore=[
-    'proto/**',
-    'core/pb/**',
-    'build/**',
-  ],
-  trigger_mode=TRIGGER_MODE_AUTO,
-)
 
 # ================================================
 # DOCKER IMAGE BUILDS
@@ -226,7 +212,7 @@ local_resource(
   'build-status',
   cmd='echo \"All services built successfully at $(date)\"',
   labels=["build"],
-  resource_deps=['api-build', 'worker-build', 'frontend-build', 'cli-build'],
+  resource_deps=['api-build', 'worker-build', 'frontend-build'],
   auto_init=False,
   trigger_mode=TRIGGER_MODE_AUTO,
 )

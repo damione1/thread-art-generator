@@ -20,6 +20,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3
+	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/o1egl/paseto v1.0.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
