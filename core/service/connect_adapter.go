@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Damione1/thread-art-generator/core/pb"
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

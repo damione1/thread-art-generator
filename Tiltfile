@@ -57,17 +57,13 @@ watch_file('client/internal/pb')
 watch_templ_changes()
 watch_tailwind_changes()
 
-# Build and run proto when files change
-docker_build(
-  'proto-build-image',
-  '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-proto-build',
-  only=[
-    './proto',
-  ],
-  live_update=[
-    sync('./proto', '/app/proto'),
-  ]
+# Protocol buffer generation using make
+local_resource(
+  'proto-generate',
+  cmd='make proto',
+  labels=["build"],
+  deps=['proto/**/*.proto'],
+  trigger_mode=TRIGGER_MODE_AUTO,
 )
 
 # Compile Go binaries for all services in one build
@@ -80,10 +76,11 @@ local_resource(
       'go build -o build/cli cmd/cli/main.go',
   labels=["build"],
   deps=CODE_DIRS,
+  resource_deps=['proto-generate'],  # Wait for proto generation to complete
   ignore=[
     'client/internal/templates/**/*.templ',  # Ignore .templ files - only watch the compiled output
     'client/internal/templates/**/*.templ.go',  # Also ignore the output during file detection
-    'proto/**',                             # Handled by proto-build
+    'proto/**',                             # Handled by proto-generate
     'core/pb/**',                           # Generated files
     'client/internal/pb/**',                # Generated files
     'build/**',                             # Output files
@@ -215,12 +212,6 @@ dc_resource(
   trigger_mode=TRIGGER_MODE_MANUAL,
 )
 
-dc_resource(
-  'proto-build',
-  labels=['build'],
-  auto_init=False,
-  trigger_mode=TRIGGER_MODE_MANUAL,
-)
 
 # Configure resources with consistent format
 dc_resource(

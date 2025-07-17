@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 
 	"github.com/Damione1/thread-art-generator/cmd/cli/internal/client"
 	"github.com/Damione1/thread-art-generator/core/pb"
