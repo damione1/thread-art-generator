@@ -49,6 +49,9 @@ const (
 	// ArtGeneratorServiceGetCurrentUserProcedure is the fully-qualified name of the
 	// ArtGeneratorService's GetCurrentUser RPC.
 	ArtGeneratorServiceGetCurrentUserProcedure = "/pb.ArtGeneratorService/GetCurrentUser"
+	// ArtGeneratorServiceSyncUserFromFirebaseProcedure is the fully-qualified name of the
+	// ArtGeneratorService's SyncUserFromFirebase RPC.
+	ArtGeneratorServiceSyncUserFromFirebaseProcedure = "/pb.ArtGeneratorService/SyncUserFromFirebase"
 	// ArtGeneratorServiceCreateArtProcedure is the fully-qualified name of the ArtGeneratorService's
 	// CreateArt RPC.
 	ArtGeneratorServiceCreateArtProcedure = "/pb.ArtGeneratorService/CreateArt"
@@ -94,6 +97,7 @@ type ArtGeneratorServiceClient interface {
 	ListUsers(context.Context, *connect.Request[pb.ListUsersRequest]) (*connect.Response[pb.ListUsersResponse], error)
 	DeleteUser(context.Context, *connect.Request[pb.DeleteUserRequest]) (*connect.Response[emptypb.Empty], error)
 	GetCurrentUser(context.Context, *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error)
+	SyncUserFromFirebase(context.Context, *connect.Request[pb.SyncUserFromFirebaseRequest]) (*connect.Response[pb.User], error)
 	CreateArt(context.Context, *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error)
 	GetArt(context.Context, *connect.Request[pb.GetArtRequest]) (*connect.Response[pb.Art], error)
 	UpdateArt(context.Context, *connect.Request[pb.UpdateArtRequest]) (*connect.Response[pb.Art], error)
@@ -148,6 +152,12 @@ func NewArtGeneratorServiceClient(httpClient connect.HTTPClient, baseURL string,
 			httpClient,
 			baseURL+ArtGeneratorServiceGetCurrentUserProcedure,
 			connect.WithSchema(artGeneratorServiceMethods.ByName("GetCurrentUser")),
+			connect.WithClientOptions(opts...),
+		),
+		syncUserFromFirebase: connect.NewClient[pb.SyncUserFromFirebaseRequest, pb.User](
+			httpClient,
+			baseURL+ArtGeneratorServiceSyncUserFromFirebaseProcedure,
+			connect.WithSchema(artGeneratorServiceMethods.ByName("SyncUserFromFirebase")),
 			connect.WithClientOptions(opts...),
 		),
 		createArt: connect.NewClient[pb.CreateArtRequest, pb.Art](
@@ -232,6 +242,7 @@ type artGeneratorServiceClient struct {
 	listUsers             *connect.Client[pb.ListUsersRequest, pb.ListUsersResponse]
 	deleteUser            *connect.Client[pb.DeleteUserRequest, emptypb.Empty]
 	getCurrentUser        *connect.Client[pb.GetCurrentUserRequest, pb.User]
+	syncUserFromFirebase  *connect.Client[pb.SyncUserFromFirebaseRequest, pb.User]
 	createArt             *connect.Client[pb.CreateArtRequest, pb.Art]
 	getArt                *connect.Client[pb.GetArtRequest, pb.Art]
 	updateArt             *connect.Client[pb.UpdateArtRequest, pb.Art]
@@ -269,6 +280,11 @@ func (c *artGeneratorServiceClient) DeleteUser(ctx context.Context, req *connect
 // GetCurrentUser calls pb.ArtGeneratorService.GetCurrentUser.
 func (c *artGeneratorServiceClient) GetCurrentUser(ctx context.Context, req *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error) {
 	return c.getCurrentUser.CallUnary(ctx, req)
+}
+
+// SyncUserFromFirebase calls pb.ArtGeneratorService.SyncUserFromFirebase.
+func (c *artGeneratorServiceClient) SyncUserFromFirebase(ctx context.Context, req *connect.Request[pb.SyncUserFromFirebaseRequest]) (*connect.Response[pb.User], error) {
+	return c.syncUserFromFirebase.CallUnary(ctx, req)
 }
 
 // CreateArt calls pb.ArtGeneratorService.CreateArt.
@@ -338,6 +354,7 @@ type ArtGeneratorServiceHandler interface {
 	ListUsers(context.Context, *connect.Request[pb.ListUsersRequest]) (*connect.Response[pb.ListUsersResponse], error)
 	DeleteUser(context.Context, *connect.Request[pb.DeleteUserRequest]) (*connect.Response[emptypb.Empty], error)
 	GetCurrentUser(context.Context, *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error)
+	SyncUserFromFirebase(context.Context, *connect.Request[pb.SyncUserFromFirebaseRequest]) (*connect.Response[pb.User], error)
 	CreateArt(context.Context, *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error)
 	GetArt(context.Context, *connect.Request[pb.GetArtRequest]) (*connect.Response[pb.Art], error)
 	UpdateArt(context.Context, *connect.Request[pb.UpdateArtRequest]) (*connect.Response[pb.Art], error)
@@ -388,6 +405,12 @@ func NewArtGeneratorServiceHandler(svc ArtGeneratorServiceHandler, opts ...conne
 		ArtGeneratorServiceGetCurrentUserProcedure,
 		svc.GetCurrentUser,
 		connect.WithSchema(artGeneratorServiceMethods.ByName("GetCurrentUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artGeneratorServiceSyncUserFromFirebaseHandler := connect.NewUnaryHandler(
+		ArtGeneratorServiceSyncUserFromFirebaseProcedure,
+		svc.SyncUserFromFirebase,
+		connect.WithSchema(artGeneratorServiceMethods.ByName("SyncUserFromFirebase")),
 		connect.WithHandlerOptions(opts...),
 	)
 	artGeneratorServiceCreateArtHandler := connect.NewUnaryHandler(
@@ -474,6 +497,8 @@ func NewArtGeneratorServiceHandler(svc ArtGeneratorServiceHandler, opts ...conne
 			artGeneratorServiceDeleteUserHandler.ServeHTTP(w, r)
 		case ArtGeneratorServiceGetCurrentUserProcedure:
 			artGeneratorServiceGetCurrentUserHandler.ServeHTTP(w, r)
+		case ArtGeneratorServiceSyncUserFromFirebaseProcedure:
+			artGeneratorServiceSyncUserFromFirebaseHandler.ServeHTTP(w, r)
 		case ArtGeneratorServiceCreateArtProcedure:
 			artGeneratorServiceCreateArtHandler.ServeHTTP(w, r)
 		case ArtGeneratorServiceGetArtProcedure:
@@ -525,6 +550,10 @@ func (UnimplementedArtGeneratorServiceHandler) DeleteUser(context.Context, *conn
 
 func (UnimplementedArtGeneratorServiceHandler) GetCurrentUser(context.Context, *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.GetCurrentUser is not implemented"))
+}
+
+func (UnimplementedArtGeneratorServiceHandler) SyncUserFromFirebase(context.Context, *connect.Request[pb.SyncUserFromFirebaseRequest]) (*connect.Response[pb.User], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pb.ArtGeneratorService.SyncUserFromFirebase is not implemented"))
 }
 
 func (UnimplementedArtGeneratorServiceHandler) CreateArt(context.Context, *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error) {

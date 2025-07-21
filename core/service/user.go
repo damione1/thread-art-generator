@@ -13,6 +13,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/protovalidate-go"
+	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
@@ -122,25 +123,22 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userIdFromContext, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	// The userIdFromContext is our internal ID, not the Auth0 ID
-	// First, ensure the current user has permission to access the requested user
-	if user.ID != userIdFromContext {
-		return nil, pbErrors.PermissionDeniedError("cannot get other user's info")
+	// Get user from database - user should already exist from auth sync
+	userDb, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetUser failed to get user - user should have been created during auth sync")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
-	// Query by internal ID since that's what's in the context
-	userDb, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("user not found")
-		}
-		return nil, pbErrors.InternalError("failed to get user", err)
+	// Ensure the current user has permission to access the requested user
+	if user.ID != userDb.ID {
+		return nil, pbErrors.PermissionDeniedError("cannot get other user's info")
 	}
 
 	return pbx.DbUserToProto(userDb), nil
@@ -148,20 +146,76 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 
 // GetCurrentUser retrieves the current authenticated user based on the context
 func (server *Server) GetCurrentUser(ctx context.Context, req *pb.GetCurrentUserRequest) (*pb.User, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userIdFromContext, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.UnauthenticatedError("user not authenticated")
 	}
 
-	// Query by internal ID since that's what's in the context
-	userDb, err := models.Users(models.UserWhere.ID.EQ(userIdFromContext)).One(ctx, server.config.DB)
+	// Get user from database - user should already exist from auth sync
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("user not found")
-		}
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetCurrentUser failed to get user - user should have been created during auth sync")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
-	return pbx.DbUserToProto(userDb), nil
+	return pbx.DbUserToProto(user), nil
+}
+
+// SyncUserFromFirebase creates or updates a user from Firebase Authentication data
+// This endpoint is called by Firebase Cloud Functions when a user is created/updated
+func (server *Server) SyncUserFromFirebase(ctx context.Context, req *pb.SyncUserFromFirebaseRequest) (*pb.User, error) {
+	// Note: Internal API key validation is now handled by the Connect adapter
+
+	// Validate the request
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
+	}
+
+	log.Info().
+		Str("firebase_uid", req.FirebaseUid).
+		Str("email", req.Email).
+		Str("display_name", req.DisplayName).
+		Msg("SyncUserFromFirebase: Syncing user from Firebase")
+
+	// Check if user already exists (idempotency)
+	existingUser, err := server.getUserFromFirebaseUID(ctx, req.FirebaseUid)
+	if err == nil && existingUser != nil {
+		log.Info().
+			Str("firebase_uid", req.FirebaseUid).
+			Str("user_id", existingUser.ID).
+			Msg("SyncUserFromFirebase: User already exists, returning existing user")
+		return pbx.DbUserToProto(existingUser), nil
+	}
+
+	// Parse display name into first and last names
+	firstName, lastName := server.parseDisplayName(req.DisplayName)
+
+	// Create new user in PostgreSQL
+	user, err := server.createUserFromFirebaseClaims(
+		ctx,
+		req.FirebaseUid,
+		req.Email,
+		firstName+" "+lastName, // Full name for compatibility
+		req.PhotoUrl,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			violations := []*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("firebase_uid", errors.New("user with this Firebase UID already exists")),
+			}
+			return nil, pbErrors.InvalidArgumentError(violations)
+		}
+		log.Error().Err(err).
+			Str("firebase_uid", req.FirebaseUid).
+			Msg("SyncUserFromFirebase: Failed to create user")
+		return nil, pbErrors.InternalError("failed to create user", err)
+	}
+
+	log.Info().
+		Str("firebase_uid", req.FirebaseUid).
+		Str("user_id", user.ID).
+		Msg("SyncUserFromFirebase: Successfully created new user")
+
+	return pbx.DbUserToProto(user), nil
 }

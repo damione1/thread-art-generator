@@ -160,23 +160,23 @@ func ExtractUserID(resourceName string) string {
 			return r.UserID
 		}
 	}
-	
+
 	// Fallback: extract using resourcename scanning
 	var userID string
 	if err := resourcename.Sscan(resourceName, UserResource, &userID); err == nil {
 		return userID
 	}
-	
+
 	var artID string
 	if err := resourcename.Sscan(resourceName, ArtResource, &userID, &artID); err == nil {
 		return userID
 	}
-	
+
 	var compositionID string
 	if err := resourcename.Sscan(resourceName, CompositionResource, &userID, &artID, &compositionID); err == nil {
 		return userID
 	}
-	
+
 	// Return as-is if not a valid pattern (for backward compatibility)
 	return resourceName
 }

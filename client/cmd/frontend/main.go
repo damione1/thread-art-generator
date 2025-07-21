@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,8 +16,11 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/handlers"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
+	coreauth "github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
+	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -28,9 +31,9 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	// Load configuration
-	port := os.Getenv("FRONTEND_PORT")
-	if port == "" {
-		port = "8080"
+	config, err := util.LoadConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
 	// Get the current working directory to determine static file path
@@ -48,66 +51,29 @@ func main() {
 
 	log.Info().Str("staticDir", staticDir).Msg("Using static files directory")
 
-	// Load Auth0 configuration
-	auth0Config := auth.NewConfig()
+	// Connect to PostgreSQL database for sessions
+	dbDSN := config.GetPostgresDSN()
 
-	// Get cookie encryption keys from environment or generate them
-	// These should be set in production for consistency across restarts and multiple instances
-	var hashKey, blockKey []byte
-
-	hashKeyStr := os.Getenv("COOKIE_HASH_KEY")
-	if hashKeyStr == "" {
-		log.Warn().Msg("COOKIE_HASH_KEY not set, generating random key. Sessions will be invalidated on restart.")
-		hashKey = generateRandomKey(32)
-	} else {
-		// Ensure hash key is exactly 32	 bytes
-		hashKey = []byte(hashKeyStr)
-		if len(hashKey) < 32 {
-			// Pad key if too short
-			paddedKey := make([]byte, 32)
-			copy(paddedKey, hashKey)
-			hashKey = paddedKey
-			log.Warn().Msg("COOKIE_HASH_KEY was shorter than 32 bytes, padded with zeros")
-		} else if len(hashKey) > 32 {
-			// Truncate key if too long
-			hashKey = hashKey[:32]
-			log.Warn().Msg("COOKIE_HASH_KEY was longer than 32 bytes, truncated to 32 bytes")
-		}
-	}
-
-	blockKeyStr := os.Getenv("COOKIE_BLOCK_KEY")
-	if blockKeyStr == "" {
-		log.Warn().Msg("COOKIE_BLOCK_KEY not set, generating random key. Sessions will be invalidated on restart.")
-		blockKey = generateRandomKey(32)
-	} else {
-		// Ensure block key is exactly 32 bytes
-		blockKey = []byte(blockKeyStr)
-		if len(blockKey) < 32 {
-			// Pad key if too short
-			paddedKey := make([]byte, 32)
-			copy(paddedKey, blockKey)
-			blockKey = paddedKey
-			log.Warn().Msg("COOKIE_BLOCK_KEY was shorter than 32 bytes, padded with zeros")
-		} else if len(blockKey) > 32 {
-			// Truncate key if too long
-			blockKey = blockKey[:32]
-			log.Warn().Msg("COOKIE_BLOCK_KEY was longer than 32 bytes, truncated to 32 bytes")
-		}
-	}
-
-	// Create session manager
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "redis:6379"
-	}
-	sessionManager, err := auth.NewSessionManager(redisAddr, hashKey, blockKey)
+	db, err := sql.Open("postgres", dbDSN)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create session manager")
+		log.Fatal().Err(err).Msg("Failed to connect to database")
+	}
+	defer db.Close()
+
+	// Test database connection
+	if err := db.Ping(); err != nil {
+		log.Fatal().Err(err).Msg("Failed to ping database")
 	}
 
-	// Create HTTP client with auth transport
+	// Create SCS session manager with PostgreSQL store
+	sessionManager, err := auth.NewSCSSessionManager(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create SCS session manager")
+	}
+
+	// Create HTTP client with auth transport (updated for SCS session manager)
 	httpClient := &http.Client{
-		Transport: &client.AuthTransport{
+		Transport: &client.FirebaseAuthTransport{
 			SessionManager: sessionManager,
 			Base:           http.DefaultTransport,
 		},
@@ -116,28 +82,41 @@ func main() {
 	// Create connect client directly
 	artGeneratorClient := pbconnect.NewArtGeneratorServiceClient(
 		httpClient,
-		auth0Config.APIBaseURL,
+		config.ApiURL,
 	)
 
-	// Create Auth0 service
-	auth0Service := auth.NewAuth0Service(auth0Config, sessionManager)
+	// Initialize Firebase auth service
+	isEmulator := config.Firebase.EmulatorHost != "" || config.Environment == "development"
+
+	firebaseConfig := coreauth.FirebaseConfiguration{
+		ProjectID: config.Firebase.ProjectID,
+	}
+
+	if isEmulator {
+		firebaseConfig.EmulatorHost = "host.docker.internal:9099"
+	}
+
+	firebaseAuth, err := coreauth.NewFirebaseAuthService(firebaseConfig)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize Firebase auth service")
+	}
 
 	// Create generator service
 	generatorService := services.NewGeneratorService(artGeneratorClient, sessionManager)
 
-	// Create handlers
-	authHandler := handlers.NewAuthHandler(auth0Service)
-	pageHandler := handlers.NewPageHandler(generatorService)
+	// Create Firebase auth handler with all services
+	authHandler := handlers.NewFirebaseAuthHandlerWithServices(firebaseAuth, sessionManager, generatorService, db)
+	pageHandler := handlers.NewPageHandler(generatorService, &config)
 	artHandler := handlers.NewArtHandler(generatorService)
 
 	// Create router
 	r := chi.NewRouter()
 
-	// Global middleware
-	r.Use(middleware.WithAuthInfo(sessionManager))
-	r.Use(middleware.EnrichUser(generatorService))
-	// Process CSRF/Auth token from HTMX requests
-	r.Use(middleware.ProcessAuthToken(sessionManager))
+	// Global middleware - updated for Firebase and SCS sessions
+	r.Use(sessionManager.GetSessionManager().LoadAndSave)
+	r.Use(middleware.FirebaseAuthMiddleware(sessionManager))
+	r.Use(middleware.FirebaseConfigMiddleware(&config)) // Add Firebase config to context for authenticated users
+	r.Use(middleware.APIAuthMiddleware(sessionManager))
 
 	// Public routes
 	r.Group(func(r chi.Router) {
@@ -145,22 +124,25 @@ func main() {
 			w.Write([]byte("OK"))
 		})
 
-		// Auth routes
+		// Firebase Auth routes
 		r.Route("/auth", func(r chi.Router) {
-			r.Get("/login", authHandler.Login)
-			r.Get("/callback", authHandler.Callback)
-			r.Get("/logout", authHandler.Logout)
+			r.Post("/sync", authHandler.AuthSync)
+			r.Post("/logout", authHandler.Logout)
+			r.Get("/logout", authHandler.Logout) // Support GET for logout links
 			r.Get("/status", authHandler.Status)
 		})
 
 		// Public home page
 		r.Get("/", pageHandler.HomePage)
+
+		// Auth pages
+		r.Get("/login", pageHandler.LoginPage)
+		r.Get("/signup", pageHandler.SignupPage)
 	})
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
-		// Apply auth middleware for protected routes
-		r.Use(middleware.RequireAuth(sessionManager, "/auth/login"))
+		// Firebase auth is handled by the global middleware - all routes here require authentication
 
 		r.Route("/dashboard", func(r chi.Router) {
 			r.Get("/", pageHandler.DashboardPage)
@@ -185,8 +167,8 @@ func main() {
 				}
 
 				// Return user info as JSON
-				w.Write([]byte(fmt.Sprintf(`{"id":"%s","name":"%s","email":"%s"}`,
-					user.ID, user.Name, user.Email)))
+				fmt.Fprintf(w, `{"id":"%s","name":"%s","email":"%s"}`,
+					user.ID, user.Name, user.Email)
 			})
 
 			// Art upload API routes
@@ -201,13 +183,13 @@ func main() {
 
 	// Start server
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + config.FrontendPort,
 		Handler: r,
 	}
 
 	// Run the server in a goroutine
 	go func() {
-		log.Info().Str("port", port).Msg("Starting server")
+		log.Info().Str("port", config.FrontendPort).Msg("Starting server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("Server failed")
 		}
@@ -227,13 +209,4 @@ func main() {
 	}
 
 	log.Info().Msg("Server gracefully stopped")
-}
-
-// generateRandomKey creates a random key for session encryption
-func generateRandomKey(length int) []byte {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		log.Fatal().Err(err).Msg("Failed to generate random key")
-	}
-	return bytes
 }

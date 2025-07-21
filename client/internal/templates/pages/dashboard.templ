@@ -23,12 +23,9 @@ func extractArtID(resourceName string) string {
 }
 
 // DashboardPage renders the dashboard with sort controls
-// user: The authenticated user (required for this page)
-// arts: List of user's art projects
-// sort: Current sort field
-// dir: Current sort direction (asc/desc)
-templ DashboardPage(user *auth.UserInfo, arts []*pb.Art, sort, dir string) {
-	@templates.Layout("Dashboard - ThreadArt", user) {
+// Uses the PageData view model pattern for consistent data handling
+templ DashboardPage(data *templates.PageData) {
+	@templates.Layout(data) {
 		<div class="space-y-8">
 			<div class="flex items-center justify-between">
 				<h1 class="text-3xl font-bold text-slate-100">Your Dashboard</h1>
@@ -39,7 +36,7 @@ templ DashboardPage(user *auth.UserInfo, arts []*pb.Art, sort, dir string) {
 						</svg>
 						Filter
 					</button>
-					if dir == "asc" {
+					if data.GetDashboardData().Dir == "asc" {
 						<a href="/dashboard?sort=create_time&dir=desc" class="px-4 py-2 bg-dark-300 hover:bg-dark-200 rounded-lg text-sm font-medium flex items-center gap-2 transition duration-300 border border-dark-400 text-slate-300">
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
@@ -56,9 +53,9 @@ templ DashboardPage(user *auth.UserInfo, arts []*pb.Art, sort, dir string) {
 					}
 				</div>
 			</div>
-			if user != nil {
-				@WelcomeSection(user)
-				@ArtGrid(arts)
+			if data.IsLoggedIn {
+				@WelcomeSection(data.User)
+				@ArtGrid(data.GetDashboardData().GetArts())
 			} else {
 				@UnauthenticatedMessage()
 			}
@@ -71,7 +68,7 @@ templ WelcomeSection(user *auth.UserInfo) {
 	<div class="bg-gradient-to-r from-dark-300 to-dark-400 p-6 rounded-xl shadow-lg mb-8 border border-dark-300/80 backdrop-blur-sm">
 		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 			<div>
-				<h2 class="text-xl font-semibold text-primary-400 mb-2">Welcome, { user.Name }!</h2>
+				<h2 class="text-xl font-semibold text-primary-400 mb-2">Welcome, { templates.SafeUserDisplayName(user) }!</h2>
 				<p class="text-slate-300">Manage your thread art projects and creations from this dashboard.</p>
 			</div>
 			<a href="/dashboard/arts/new" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-lg shadow-lg shadow-primary-900/20 transition duration-300 text-center text-sm font-medium flex items-center justify-center gap-2 whitespace-nowrap">

@@ -12,17 +12,13 @@ import (
 	"connectrpc.com/connect"
 )
 
-// APIClient provides a wrapper for the API client with authentication
-// Implements auth.APIClient interface
+// APIClient provides a wrapper for the API client with Firebase authentication
 type APIClient struct {
 	baseURL        string
-	sessionManager *auth.SessionManager
+	sessionManager *auth.SCSSessionManager
 	httpClient     *http.Client
 	connectClient  pbconnect.ArtGeneratorServiceClient
 }
-
-// Ensure APIClient implements auth.APIClient interface
-var _ auth.APIClient = (*APIClient)(nil)
 
 // User represents the data returned from the API
 // This implements auth.APIUser for easier type conversion
@@ -45,33 +41,27 @@ func (u *User) ToAPIUser() *auth.APIUser {
 	}
 }
 
-// CheckSessionToken checks if a session has a valid Auth0 token
+// CheckSessionToken checks if a session has a valid Firebase ID token
 func (c *APIClient) CheckSessionToken(r *http.Request) error {
-	session, err := c.sessionManager.GetSession(r)
-	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
-	}
-
-	// Check if the token exists and has a reasonable format
-	if session.AccessToken == "" {
-		return fmt.Errorf("session has no access token")
+	idToken := c.sessionManager.GetIDToken(r)
+	if idToken == "" {
+		return fmt.Errorf("session has no Firebase ID token")
 	}
 
 	// Log token info for debugging
-	fmt.Printf("Session for user %s contains token: %s...%s\n",
-		session.UserID,
-		session.AccessToken[:10],
-		session.AccessToken[len(session.AccessToken)-10:])
+	fmt.Printf("Session contains Firebase ID token: %s...%s\n",
+		idToken[:10],
+		idToken[len(idToken)-10:])
 
 	return nil
 }
 
-// NewAPIClient creates a new API client using Connect-RPC
-func NewAPIClient(baseURL string, sessionManager *auth.SessionManager) *APIClient {
+// NewAPIClient creates a new API client using Connect-RPC with Firebase authentication
+func NewAPIClient(baseURL string, sessionManager *auth.SCSSessionManager) *APIClient {
 	httpClient := &http.Client{
-		Transport: &authTransport{
-			sessionManager: sessionManager,
-			base:           http.DefaultTransport,
+		Transport: &FirebaseAuthTransport{
+			SessionManager: sessionManager,
+			Base:           http.DefaultTransport,
 		},
 	}
 
@@ -96,13 +86,13 @@ func (c *APIClient) GetCurrentUser(ctx context.Context, req *http.Request) (*aut
 	if ctx.Value("session") != nil {
 		ctxWithSession = ctx // Use the context as is
 	} else if req != nil {
-		// Get session from request if provided
-		session, err := c.sessionManager.GetSession(req)
-		if err != nil {
-			return nil, fmt.Errorf("not authenticated: %w", err)
+		// Get Firebase ID token from SCS session
+		idToken := c.sessionManager.GetIDToken(req)
+		if idToken == "" {
+			return nil, fmt.Errorf("not authenticated: no Firebase ID token")
 		}
-		// Create a context with the session for the authTransport
-		ctxWithSession = context.WithValue(ctx, "session", session)
+		// Create a context with the token for the FirebaseAuthTransport
+		ctxWithSession = context.WithValue(ctx, "firebase_token", idToken)
 	} else {
 		return nil, fmt.Errorf("neither context contains session nor request provided")
 	}
@@ -149,12 +139,12 @@ func (c *APIClient) GetInternalUser(ctx context.Context, req *http.Request) (*Us
 func (c *APIClient) GetCurrentUserMock(req *http.Request) (*User, error) {
 	session, err := c.sessionManager.GetSession(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("no session found: %w", err)
 	}
 
-	// Create a user from session data
+	// Create a user from Firebase session data
 	user := &User{
-		ID:        session.UserID,
+		ID:        session.UserInfo.ID,
 		FirstName: session.UserInfo.FirstName,
 		LastName:  session.UserInfo.LastName,
 		Email:     session.UserInfo.Email,
@@ -162,32 +152,4 @@ func (c *APIClient) GetCurrentUserMock(req *http.Request) (*User, error) {
 	}
 
 	return user, nil
-}
-
-// authTransport is an http.RoundTripper that adds auth headers from the session
-type authTransport struct {
-	sessionManager *auth.SessionManager
-	base           http.RoundTripper
-}
-
-// RoundTrip implements http.RoundTripper
-func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// First check for token directly in the context (added by middleware)
-	token, ok := auth.TokenFromContext(req.Context())
-	if ok && token != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-		fmt.Println("Auth transport: Using token from context")
-	} else if req.Context().Value("session") != nil {
-		// Fall back to session from context if available
-		session := req.Context().Value("session").(*auth.SessionData)
-		// Forward the raw Auth0 token directly - this ensures proper claims extraction on the API side
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", session.AccessToken))
-	} else {
-		fmt.Println("Auth transport: No token or session found in context")
-	}
-
-	// Add Origin header to prevent CORS errors
-	req.Header.Set("Origin", "http://localhost:8080") // Set to your client's origin
-
-	return t.base.RoundTrip(req)
 }

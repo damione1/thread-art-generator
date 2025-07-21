@@ -1,23 +1,14 @@
 package templates
 
-import "github.com/Damione1/thread-art-generator/client/internal/auth"
-
 // Layout provides the base page structure with auth-aware navigation
-// title: The page title to display in the browser tab
-// user: Optional user information for authenticated users (can be nil)
-templ Layout(title string, user *auth.UserInfo) {
+// Uses the PageData view model pattern for consistent data handling
+templ Layout(data *PageData) {
 	<!DOCTYPE html>
 	<html lang="en" class="dark">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>
-				if title != "" {
-					{ title }
-				} else {
-					ThreadArt - Create Beautiful Thread Art
-				}
-			</title>
+			<title>{ data.GetPageTitle() }</title>
 			<script src="https://unpkg.com/htmx.org@2.0" crossorigin="anonymous"></script>
 			<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 			<script>
@@ -49,13 +40,18 @@ templ Layout(title string, user *auth.UserInfo) {
 				});
 			</script>
 			<!-- Include a CSRF token for authenticated users -->
-			if user != nil {
+			if data.IsLoggedIn {
 				<meta name="csrf-token" id="csrf-token" content="auth-token-exists"/>
 			} else {
 				<meta name="csrf-token" id="csrf-token" content=""/>
 			}
 			<link rel="stylesheet" href="/static/css/tailwind.css"/>
 			<link rel="stylesheet" href="/static/css/main.css"/>
+			<!-- Include Firebase Auth and config for authenticated users -->
+			if data.IsLoggedIn && data.FirebaseConfig != nil {
+				@templ.JSONScript("firebase-config", data.FirebaseConfig)
+				<script type="module" src="/static/js/firebase-auth.js"></script>
+			}
 		</head>
 		<body class="flex flex-col min-h-screen bg-gradient-to-br from-dark-200 via-dark-100 to-dark-200 text-slate-200 relative overflow-x-hidden">
 			<!-- Background animation -->
@@ -63,7 +59,7 @@ templ Layout(title string, user *auth.UserInfo) {
 				<div class="absolute inset-0 bg-gradient-to-b from-primary-900/5 to-primary-950/10 animate-slow-pulse"></div>
 			</div>
 			<div class="flex-grow flex flex-col relative z-10 bg-gradient-to-b from-dark-100/50 via-dark-200/50 to-primary-950/30">
-				@Header(user != nil, user)
+				@Header(data.IsLoggedIn, data.User)
 				<main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 					{ children... }
 				</main>

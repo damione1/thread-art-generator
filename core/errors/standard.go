@@ -13,15 +13,15 @@ type ErrorType string
 const (
 	// Field-level errors that should be mapped to specific form fields
 	ErrorTypeValidation ErrorType = "VALIDATION_ERROR"
-	
+
 	// Global errors that should be shown as toasts or general messages
-	ErrorTypeNotFound      ErrorType = "NOT_FOUND"
-	ErrorTypeUnauthorized  ErrorType = "UNAUTHORIZED"
-	ErrorTypeForbidden     ErrorType = "FORBIDDEN"
-	ErrorTypeConflict      ErrorType = "CONFLICT"
-	ErrorTypeInternal      ErrorType = "INTERNAL_ERROR"
-	ErrorTypeRateLimit     ErrorType = "RATE_LIMIT"
-	ErrorTypeUnavailable   ErrorType = "UNAVAILABLE"
+	ErrorTypeNotFound     ErrorType = "NOT_FOUND"
+	ErrorTypeUnauthorized ErrorType = "UNAUTHORIZED"
+	ErrorTypeForbidden    ErrorType = "FORBIDDEN"
+	ErrorTypeConflict     ErrorType = "CONFLICT"
+	ErrorTypeInternal     ErrorType = "INTERNAL_ERROR"
+	ErrorTypeRateLimit    ErrorType = "RATE_LIMIT"
+	ErrorTypeUnavailable  ErrorType = "UNAVAILABLE"
 )
 
 // StandardError represents a standardized error structure
@@ -83,7 +83,7 @@ func (e *StandardError) HasGlobalError() bool {
 // ToConnectError converts StandardError to a Connect-RPC error
 func (e *StandardError) ToConnectError() error {
 	var code connect.Code
-	
+
 	switch e.Type {
 	case ErrorTypeValidation:
 		code = connect.CodeInvalidArgument
@@ -103,7 +103,7 @@ func (e *StandardError) ToConnectError() error {
 		code = connect.CodeInternal
 	}
 
-	connectErr := connect.NewError(code, fmt.Errorf(e.Message))
+	connectErr := connect.NewError(code, fmt.Errorf("%s", e.Message))
 
 	// Add field violations if present
 	if e.HasFieldErrors() {
@@ -116,7 +116,7 @@ func (e *StandardError) ToConnectError() error {
 				})
 			}
 		}
-		
+
 		badRequest := &errdetails.BadRequest{FieldViolations: violations}
 		if detail, err := connect.NewErrorDetail(badRequest); err == nil {
 			connectErr.AddDetail(detail)

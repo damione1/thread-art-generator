@@ -27,32 +27,30 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
-	// Get user ID from context using the same key used in auth interceptor
+	// Get Firebase UID from context
 	log.Info().Msgf("CreateArt: %s", req)
 
-	userID, ok := middleware.UserIDFromContext(ctx)
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
-	log.Info().Msgf("CreateArt userID: %s", userID)
+	log.Info().Msgf("CreateArt Firebase UID: %s", firebaseUID)
+
 	if err := protovalidate.Validate(req); err != nil {
 		log.Info().Msgf("CreateArt protovalidate: %s", err)
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 	log.Info().Msgf("CreateArt protovalidate: %s", req)
-	user, err := models.Users(
-		models.UserWhere.ID.EQ(userID),
-	).One(ctx, server.config.DB)
+
+	// Get user from database - user should already exist from auth sync
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			log.Info().Msgf("CreateArt user not found")
-			return nil, pbErrors.NotFoundError("user not found")
-		}
-		log.Info().Msgf("CreateArt failed to get user: %s", err)
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("CreateArt failed to get user - user should have been created during auth sync")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
-	log.Info().Str("user_id", user.ID).Str("email", user.Email.String).Msg("CreateArt found user")
+	log.Info().Str("user_id", user.ID).Str("firebase_uid", firebaseUID).Str("email", user.Email.String).Msg("CreateArt found/created user")
 	if user.Role != models.RoleEnumUser {
 		log.Info().Msgf("CreateArt user is not a user")
 		return nil, pbErrors.PermissionDeniedError("only users can create art")
@@ -128,10 +126,17 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 }
 
 func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get user from database - user should already exist from auth sync
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ListArts failed to get user - user should have been created during auth sync")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
@@ -191,9 +196,9 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		dir = "ASC"
 	}
 
-	// Build query mods
+	// Build query mods using internal user ID
 	queryMods := []qm.QueryMod{
-		models.ArtWhere.AuthorID.EQ(userID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 		qm.OrderBy(fmt.Sprintf("%s %s", orderColumn, dir)),
 		qm.Limit(pageSize + 1),
 		qm.Offset(offset),
@@ -258,10 +263,17 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetArt: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	artResource, err := resource.ParseResourceName(req.GetName())
@@ -280,13 +292,14 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if art.UserID != userID {
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get the art")
 	}
 
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(art.UserID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

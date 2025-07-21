@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/Damione1/thread-art-generator/core/pb"
 	"connectrpc.com/connect"
+	"github.com/Damione1/thread-art-generator/core/pb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -54,6 +55,20 @@ func (a *ConnectAdapter) DeleteUser(ctx context.Context, req *connect.Request[pb
 // GetCurrentUser implements the Connect handler interface
 func (a *ConnectAdapter) GetCurrentUser(ctx context.Context, req *connect.Request[pb.GetCurrentUserRequest]) (*connect.Response[pb.User], error) {
 	user, err := a.server.GetCurrentUser(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(user), nil
+}
+
+// SyncUserFromFirebase implements the Connect handler interface
+func (a *ConnectAdapter) SyncUserFromFirebase(ctx context.Context, req *connect.Request[pb.SyncUserFromFirebaseRequest]) (*connect.Response[pb.User], error) {
+	// Validate internal API key from Connect-RPC headers
+	if !a.server.validateInternalAPIKeyFromHeaders(req.Header()) {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid internal API key"))
+	}
+	
+	user, err := a.server.SyncUserFromFirebase(ctx, req.Msg)
 	if err != nil {
 		return nil, err
 	}

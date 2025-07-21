@@ -3,13 +3,9 @@ wipe     = true
 no-tests = true
 add-enum-types = true
 
+# Configuration will be provided via environment variables at runtime
 [psql]
-  host   = "db"
-  dbname = "threadmachine"
-  user   = "postgres"
-  pass   = "postgres"
   schema = "public"
-  sslmode  = "disable"
   blacklist = ["migrations", "other"]
 
 [aliases.tables.medias]

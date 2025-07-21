@@ -1,14 +1,13 @@
 package pages
 
 import (
-	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 )
 
 // HomePage renders the public home page
-// user: Optional user information for authenticated users (can be nil)
-templ HomePage(user *auth.UserInfo) {
-	@templates.Layout("ThreadArt - Create Beautiful Thread Art", user) {
+// Uses the PageData view model pattern for consistent data handling
+templ HomePage(data *templates.PageData) {
+	@templates.Layout(data) {
 		<!-- Hero Section -->
 		<section class="relative overflow-hidden py-20">
 			<!-- Removed the background pulse animation from here since it's now global -->
@@ -27,7 +26,7 @@ templ HomePage(user *auth.UserInfo) {
 							single thread.
 						</p>
 						<div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-							if user != nil {
+							if data.IsLoggedIn {
 								<a
 									href="/dashboard"
 									class="px-8 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition duration-300 text-lg font-medium shadow-lg hover:shadow-xl shadow-primary-900/30 transform hover:-translate-y-1"
@@ -36,7 +35,7 @@ templ HomePage(user *auth.UserInfo) {
 								</a>
 							} else {
 								<a
-									href="/auth/login"
+									href="/login"
 									class="px-8 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-500 transition duration-300 text-lg font-medium shadow-lg hover:shadow-xl shadow-primary-900/30 transform hover:-translate-y-1"
 								>
 									Get Started

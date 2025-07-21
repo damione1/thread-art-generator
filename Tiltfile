@@ -40,7 +40,7 @@ def watch_templ_changes():
   # Watch templ files for changes to trigger rebuild
   local_resource(
     'templ-generate',
-    cmd='cd client && GOBIN=$(go env GOPATH)/bin $(go env GOPATH)/bin/templ generate ./internal/templates',
+    cmd='make generate-templ',
     labels=["build"],
     deps=['client/internal/templates/**/*.templ'],  # Only watch .templ files
     ignore=['client/internal/templates/**/*.templ.go'],  # Explicitly ignore generated files
@@ -130,8 +130,6 @@ local_resource(
   trigger_mode=TRIGGER_MODE_AUTO,
 )
 
-# Note: migrations-build removed - migrations now use Make targets directly
-
 
 # ================================================
 # DOCKER IMAGE BUILDS
@@ -150,7 +148,7 @@ docker_build(
   ]
 )
 
-# Note: migrations now handled via Make targets instead of Docker services
+# Migration and model generation now handled via local tools
 
 # Worker image build with optimized live updates
 docker_build(
@@ -228,6 +226,40 @@ local_resource(
 )
 
 # ================================================
+# FIREBASE EMULATOR CONFIGURATION
+# ================================================
+
+# Build Firebase Functions using make target
+local_resource(
+  'firebase-functions-build',
+  cmd='make firebase-build',
+  labels=['firebase'],
+  deps=['functions/src/**/*.ts', 'functions/package.json', 'functions/tsconfig.json', '.env'],
+  trigger_mode=TRIGGER_MODE_AUTO,
+)
+
+# Firebase Emulator Suite (Auth + Functions + UI) for local development
+local_resource(
+  'firebase-emulator',
+  serve_cmd='make firebase-start',
+  serve_dir='.',
+  labels=['firebase'],
+  resource_deps=['firebase-functions-build'],
+  auto_init=True,
+  readiness_probe=probe(
+    http_get=http_get_action(port=9099, path='/'),
+    initial_delay_secs=10,
+    timeout_secs=5,
+    period_secs=5,
+  ),
+  links=[
+    link('http://localhost:4000', 'Firebase Emulator UI'),
+    link('http://localhost:9099', 'Firebase Auth Emulator'),
+    link('http://localhost:5001', 'Firebase Functions Emulator'),
+  ]
+)
+
+# ================================================
 # SERVICE CONFIGURATION
 # ================================================
 
@@ -297,17 +329,8 @@ dc_resource(
   ]
 )
 
-dc_resource(
-  'envoy',
-  labels=['proxy'],
-  resource_deps=['api', 'client'],
-  auto_init=True,
-  links=[
-    link('https://front.tag.local', 'Go+HTMX Frontend (via Envoy)'),
-    link('https://tag.local/health', 'API Health Check (via Envoy)'),
-    link('http://localhost:9901', 'Envoy Admin'),
-  ]
-)
+# Envoy proxy removed - direct service communication
+# Frontend now handles HTTPS directly
 
 dc_resource(
   'minio',

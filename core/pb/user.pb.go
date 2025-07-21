@@ -385,6 +385,80 @@ func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
 	return file_user_proto_rawDescGZIP(), []int{6}
 }
 
+// SyncUserFromFirebaseRequest is used by Firebase Cloud Functions to sync user data
+// from Firebase Authentication to the internal PostgreSQL database.
+type SyncUserFromFirebaseRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Firebase UID from Firebase Authentication
+	FirebaseUid string `protobuf:"bytes,1,opt,name=firebase_uid,json=firebaseUid,proto3" json:"firebase_uid,omitempty"`
+	// Email address from Firebase user record
+	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	// Display name from Firebase user record
+	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Photo URL from Firebase user record
+	PhotoUrl      string `protobuf:"bytes,4,opt,name=photo_url,json=photoUrl,proto3" json:"photo_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncUserFromFirebaseRequest) Reset() {
+	*x = SyncUserFromFirebaseRequest{}
+	mi := &file_user_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncUserFromFirebaseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncUserFromFirebaseRequest) ProtoMessage() {}
+
+func (x *SyncUserFromFirebaseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncUserFromFirebaseRequest.ProtoReflect.Descriptor instead.
+func (*SyncUserFromFirebaseRequest) Descriptor() ([]byte, []int) {
+	return file_user_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SyncUserFromFirebaseRequest) GetFirebaseUid() string {
+	if x != nil {
+		return x.FirebaseUid
+	}
+	return ""
+}
+
+func (x *SyncUserFromFirebaseRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *SyncUserFromFirebaseRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *SyncUserFromFirebaseRequest) GetPhotoUrl() string {
+	if x != nil {
+		return x.PhotoUrl
+	}
+	return ""
+}
+
 var File_user_proto protoreflect.FileDescriptor
 
 const file_user_proto_rawDesc = "" +
@@ -423,7 +497,13 @@ const file_user_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tB\xa8\x01\xe0A\x02\xfaA\x16\n" +
 	"\x14art.example.com/User\xbaH\x88\x01\xba\x01\x84\x01\n" +
 	"\x17delete_user.name.format\x12;User resource name is required and must start with 'users/'\x1a,this.size() > 0 && this.startsWith('users/')R\x04name\"\x17\n" +
-	"\x15GetCurrentUserRequestB2Z0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
+	"\x15GetCurrentUserRequest\"\xed\x01\n" +
+	"\x1bSyncUserFromFirebaseRequest\x12x\n" +
+	"\ffirebase_uid\x18\x01 \x01(\tBU\xe0A\x02\xbaHO\xba\x01L\n" +
+	"\x1fsync_user.firebase_uid.required\x12\x18Firebase UID is required\x1a\x0fthis.size() > 0R\vfirebaseUid\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1b\n" +
+	"\tphoto_url\x18\x04 \x01(\tR\bphotoUrlB2Z0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
 
 var (
 	file_user_proto_rawDescOnce sync.Once
@@ -437,15 +517,16 @@ func file_user_proto_rawDescGZIP() []byte {
 	return file_user_proto_rawDescData
 }
 
-var file_user_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_user_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_user_proto_goTypes = []any{
-	(*User)(nil),                  // 0: pb.User
-	(*GetUserRequest)(nil),        // 1: pb.GetUserRequest
-	(*UpdateUserRequest)(nil),     // 2: pb.UpdateUserRequest
-	(*ListUsersRequest)(nil),      // 3: pb.ListUsersRequest
-	(*ListUsersResponse)(nil),     // 4: pb.ListUsersResponse
-	(*DeleteUserRequest)(nil),     // 5: pb.DeleteUserRequest
-	(*GetCurrentUserRequest)(nil), // 6: pb.GetCurrentUserRequest
+	(*User)(nil),                        // 0: pb.User
+	(*GetUserRequest)(nil),              // 1: pb.GetUserRequest
+	(*UpdateUserRequest)(nil),           // 2: pb.UpdateUserRequest
+	(*ListUsersRequest)(nil),            // 3: pb.ListUsersRequest
+	(*ListUsersResponse)(nil),           // 4: pb.ListUsersResponse
+	(*DeleteUserRequest)(nil),           // 5: pb.DeleteUserRequest
+	(*GetCurrentUserRequest)(nil),       // 6: pb.GetCurrentUserRequest
+	(*SyncUserFromFirebaseRequest)(nil), // 7: pb.SyncUserFromFirebaseRequest
 }
 var file_user_proto_depIdxs = []int32{
 	0, // 0: pb.UpdateUserRequest.user:type_name -> pb.User
@@ -468,7 +549,7 @@ func file_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_proto_rawDesc), len(file_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

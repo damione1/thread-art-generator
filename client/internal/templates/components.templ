@@ -60,13 +60,13 @@ templ Navigation(isLoggedIn bool) {
 
 templ AuthLinks() {
 	<a
-		href="/auth/login"
+		href="/login"
 		class="px-4 py-2 rounded-md text-slate-200 hover:text-primary-300 transition duration-300"
 	>
 		Log in
 	</a>
 	<a
-		href="/auth/signup"
+		href="/signup"
 		class="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-500 transition duration-300 shadow-lg hover:shadow-xl shadow-primary-900/20 transform hover:-translate-y-0.5"
 	>
 		Sign up
@@ -77,9 +77,9 @@ templ UserMenu(user *auth.UserInfo) {
 	<div class="relative group">
 		<!-- User button with dropdown trigger -->
 		<button class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-300/50 hover:bg-dark-200/60 border border-dark-400/30 transition duration-300">
-			<span class="text-sm font-medium text-slate-300">{ user.Name }</span>
+			<span class="text-sm font-medium text-slate-300">{ SafeUserDisplayName(user) }</span>
 			<div class="w-8 h-8 rounded-full bg-dark-500 border border-primary-600/30 flex items-center justify-center text-primary-400">
-				{ string([]rune(user.Name)[0]) }
+				{ SafeUserInitials(user) }
 			</div>
 			<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -100,7 +100,7 @@ templ UserMenu(user *auth.UserInfo) {
 					Settings
 				</a>
 				<div class="border-t border-dark-400/50 my-1"></div>
-				<a href="/auth/logout" class="block px-4 py-2 text-sm text-red-400 hover:bg-dark-300/50 hover:text-red-300">
+				<a href="#" onclick="logout(); return false;" class="block px-4 py-2 text-sm text-red-400 hover:bg-dark-300/50 hover:text-red-300">
 					Sign out
 				</a>
 			</div>
