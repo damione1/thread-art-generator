@@ -48,10 +48,8 @@ templ Layout(data *PageData) {
 			<link rel="stylesheet" href="/static/css/tailwind.css"/>
 			<link rel="stylesheet" href="/static/css/main.css"/>
 			<!-- Include Firebase Auth and config for authenticated users -->
-			if data.IsLoggedIn {
-				if data.FirebaseConfig != nil {
-					@templ.JSONScript("firebase-config", data.FirebaseConfig)
-				}
+			if data.IsLoggedIn && data.FirebaseConfig != nil {
+				@templ.JSONScript("firebase-config", data.FirebaseConfig)
 				<script type="module" src="/static/js/firebase-auth.js"></script>
 			}
 		</head>

@@ -36,6 +36,12 @@ func (h *PageHandler) HomePage(w http.ResponseWriter, r *http.Request) {
 	pageData := templates.NewPageData("ThreadArt - Create Beautiful Thread Art", "home").
 		WithUser(user)
 
+	// Add Firebase config for logged-in users (needed for topbar logout functionality)
+	if user != nil {
+		firebaseConfig := h.getFirebaseConfig()
+		pageData = pageData.WithFirebaseConfig(firebaseConfig)
+	}
+
 	// Render the home page template
 	err := pages.HomePage(pageData).Render(r.Context(), w)
 	if err != nil {
