@@ -18,11 +18,11 @@ import (
 // GeneratorService handles all service interactions with the API
 type GeneratorService struct {
 	client         pbconnect.ArtGeneratorServiceClient
-	sessionManager *auth.SessionManager
+	sessionManager *auth.SCSSessionManager
 }
 
 // NewGeneratorService creates a new generator service
-func NewGeneratorService(client pbconnect.ArtGeneratorServiceClient, sessionManager *auth.SessionManager) *GeneratorService {
+func NewGeneratorService(client pbconnect.ArtGeneratorServiceClient, sessionManager *auth.SCSSessionManager) *GeneratorService {
 	return &GeneratorService{
 		client:         client,
 		sessionManager: sessionManager,

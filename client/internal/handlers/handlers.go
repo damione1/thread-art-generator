@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
+	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	"github.com/Damione1/thread-art-generator/client/internal/templates/pages"
 )
 
@@ -21,8 +22,12 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	// Get user from context if authenticated (optional for home page)
 	user, _ := middleware.UserFromContext(r.Context())
 
+	// Create page data
+	pageData := templates.NewPageData("ThreadArt - Create Beautiful Thread Art", "home").
+		WithUser(user)
+
 	// Render the home page template
-	err := pages.HomePage(user).Render(r.Context(), w)
+	err := pages.HomePage(pageData).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 	}

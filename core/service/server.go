@@ -2,13 +2,19 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"strings"
 
+	"github.com/Damione1/thread-art-generator/core/db/models"
+	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/token"
 	"github.com/Damione1/thread-art-generator/core/util"
+	"github.com/volatiletech/null/v8"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 type Server struct {
@@ -131,4 +137,61 @@ func (s *Server) Close() error {
 	}
 
 	return err
+}
+
+// getUserFromFirebaseUID is a helper method to get the internal user from Firebase UID
+func (s *Server) getUserFromFirebaseUID(ctx context.Context, firebaseUID string) (*models.User, error) {
+	user, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, s.config.DB)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
+		return nil, pbErrors.InternalError("failed to get user", err)
+	}
+	return user, nil
+}
+
+// createUserFromFirebaseClaims creates a new user record from Firebase auth claims
+func (s *Server) createUserFromFirebaseClaims(ctx context.Context, firebaseUID, email, name, picture string) (*models.User, error) {
+	// Parse name into first/last name components
+	firstName := "User"
+	var lastName null.String
+	
+	if name != "" {
+		nameParts := strings.SplitN(name, " ", 2)
+		if len(nameParts) > 0 {
+			firstName = nameParts[0]
+		}
+		if len(nameParts) > 1 {
+			lastName = null.StringFrom(nameParts[1])
+		}
+	}
+
+	// Create new user model
+	userDb := &models.User{
+		ID:          firebaseUID, // Use Firebase UID as primary key for consistency
+		FirebaseUID: null.StringFrom(firebaseUID),
+		Active:      true,
+		Role:        models.RoleEnumUser,
+		FirstName:   firstName,
+		LastName:    lastName,
+	}
+
+	// Set optional fields
+	if email != "" {
+		userDb.Email = null.StringFrom(email)
+	}
+
+	if picture != "" {
+		userDb.AvatarID = null.StringFrom(picture)
+	}
+
+	// Insert user into database
+	if err := userDb.Insert(ctx, s.config.DB, boil.Infer()); err != nil {
+		return nil, fmt.Errorf("failed to create user: %v", err)
+	}
+
+	return userDb, nil
 }

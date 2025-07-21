@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
 	"github.com/Damione1/thread-art-generator/core/middleware"
@@ -27,32 +28,55 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// Context keys for Firebase claims (should match interceptors/auth.go)
+type contextKey string
+
+const (
+	contextKeyClaims contextKey = "firebase_claims"
+)
+
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
-	// Get user ID from context using the same key used in auth interceptor
+	// Get Firebase UID from context
 	log.Info().Msgf("CreateArt: %s", req)
 
-	userID, ok := middleware.UserIDFromContext(ctx)
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
-	log.Info().Msgf("CreateArt userID: %s", userID)
+	log.Info().Msgf("CreateArt Firebase UID: %s", firebaseUID)
+	
 	if err := protovalidate.Validate(req); err != nil {
 		log.Info().Msgf("CreateArt protovalidate: %s", err)
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 	log.Info().Msgf("CreateArt protovalidate: %s", req)
-	user, err := models.Users(
-		models.UserWhere.ID.EQ(userID),
-	).One(ctx, server.config.DB)
+	
+	// JIT User Provisioning: Try to get user by Firebase UID, create if not exists
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			log.Info().Msgf("CreateArt user not found")
-			return nil, pbErrors.NotFoundError("user not found")
+		// Check if it's a "not found" error by looking at the error message
+		if err.Error() == "user not found" || errors.Is(err, sql.ErrNoRows) {
+			log.Info().Msgf("CreateArt: User not found, creating new user for Firebase UID: %s", firebaseUID)
+			
+			// Get Firebase claims from context for user creation
+			if claims, ok := ctx.Value(contextKeyClaims).(*auth.AuthClaims); ok {
+				// Create new user with Firebase claims
+				user, err = server.createUserFromFirebaseClaims(ctx, firebaseUID, claims.Email, claims.Name, claims.Picture)
+				if err != nil {
+					log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("Failed to create user from Firebase claims")
+					return nil, pbErrors.InternalError("failed to create user", err)
+				}
+				log.Info().Str("user_id", user.ID).Str("firebase_uid", firebaseUID).Msg("Created new user from Firebase claims")
+			} else {
+				log.Error().Str("firebase_uid", firebaseUID).Msg("Firebase claims not found in context")
+				return nil, pbErrors.InternalError("firebase claims not available", errors.New("firebase claims missing"))
+			}
+		} else {
+			log.Info().Msgf("CreateArt failed to get user: %s", err)
+			return nil, pbErrors.InternalError("failed to get user", err)
 		}
-		log.Info().Msgf("CreateArt failed to get user: %s", err)
-		return nil, pbErrors.InternalError("failed to get user", err)
 	}
-	log.Info().Str("user_id", user.ID).Str("email", user.Email.String).Msg("CreateArt found user")
+	log.Info().Str("user_id", user.ID).Str("firebase_uid", firebaseUID).Str("email", user.Email.String).Msg("CreateArt found/created user")
 	if user.Role != models.RoleEnumUser {
 		log.Info().Msgf("CreateArt user is not a user")
 		return nil, pbErrors.PermissionDeniedError("only users can create art")
@@ -128,10 +152,16 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 }
 
 func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Look up the internal user using the Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
@@ -191,9 +221,9 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		dir = "ASC"
 	}
 
-	// Build query mods
+	// Build query mods using internal user ID
 	queryMods := []qm.QueryMod{
-		models.ArtWhere.AuthorID.EQ(userID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 		qm.OrderBy(fmt.Sprintf("%s %s", orderColumn, dir)),
 		qm.Limit(pageSize + 1),
 		qm.Offset(offset),

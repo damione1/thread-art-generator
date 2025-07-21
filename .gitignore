@@ -10,11 +10,8 @@ web/.yarn/install-state.gz
 # testing
 web/coverage
 
-# next.js
-web/.next/
-web/out/
-.next/
-out/
+# web
+public/
 
 # production
 web/build
@@ -56,3 +53,6 @@ plan.md
 
 # Tailwind compiled CSS
 client/public/css/tailwind.css
+
+
+firebase-debug.log

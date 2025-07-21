@@ -130,8 +130,6 @@ local_resource(
   trigger_mode=TRIGGER_MODE_AUTO,
 )
 
-# Note: migrations-build removed - migrations now use Make targets directly
-
 
 # ================================================
 # DOCKER IMAGE BUILDS
@@ -150,7 +148,7 @@ docker_build(
   ]
 )
 
-# Note: migrations now handled via Make targets instead of Docker services
+# Migration and model generation now handled via local tools
 
 # Worker image build with optimized live updates
 docker_build(
@@ -228,6 +226,29 @@ local_resource(
 )
 
 # ================================================
+# FIREBASE EMULATOR CONFIGURATION
+# ================================================
+
+# Firebase Auth Emulator for local development
+local_resource(
+  'firebase-emulator',
+  serve_cmd='firebase emulators:start --only auth --project demo-thread-art-generator',
+  serve_dir='.',
+  labels=['firebase'],
+  auto_init=True,
+  readiness_probe=probe(
+    http_get=http_get_action(port=9099, path='/'),
+    initial_delay_secs=5,
+    timeout_secs=3,
+    period_secs=5,
+  ),
+  links=[
+    link('http://localhost:4000', 'Firebase Emulator UI'),
+    link('http://localhost:9099', 'Firebase Auth Emulator'),
+  ]
+)
+
+# ================================================
 # SERVICE CONFIGURATION
 # ================================================
 
@@ -297,17 +318,8 @@ dc_resource(
   ]
 )
 
-dc_resource(
-  'envoy',
-  labels=['proxy'],
-  resource_deps=['api', 'client'],
-  auto_init=True,
-  links=[
-    link('https://front.tag.local', 'Go+HTMX Frontend (via Envoy)'),
-    link('https://tag.local/health', 'API Health Check (via Envoy)'),
-    link('http://localhost:9901', 'Envoy Admin'),
-  ]
-)
+# Envoy proxy removed - direct service communication
+# Frontend now handles HTTPS directly
 
 dc_resource(
   'minio',

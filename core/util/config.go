@@ -7,14 +7,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Auth0Config stores Auth0-specific configuration
-type Auth0Config struct {
-	Domain                    string `mapstructure:"AUTH0_DOMAIN"`
-	Audience                  string `mapstructure:"AUTH0_AUDIENCE"`
-	ClientID                  string `mapstructure:"AUTH0_CLIENT_ID"`
-	ClientSecret              string `mapstructure:"AUTH0_CLIENT_SECRET"`
-	ManagementApiClientID     string `mapstructure:"AUTH0_MANAGEMENT_API_CLIENT_ID"`
-	ManagementApiClientSecret string `mapstructure:"AUTH0_MANAGEMENT_API_CLIENT_SECRET"`
+// FirebaseConfig stores Firebase-specific configuration
+type FirebaseConfig struct {
+	ProjectID    string `mapstructure:"FIREBASE_PROJECT_ID"`
+	EmulatorHost string `mapstructure:"FIREBASE_AUTH_EMULATOR_HOST"`
+	WebAPIKey    string `mapstructure:"FIREBASE_WEB_API_KEY"`
+	AuthDomain   string `mapstructure:"FIREBASE_AUTH_DOMAIN"`
 }
 
 // StorageConfig stores storage provider-specific configuration
@@ -57,7 +55,7 @@ type Config struct {
 	GCSBucketName       string        `mapstructure:"GCS_BUCKET_NAME"`
 	SendInBlueAPIKey    string        `mapstructure:"SENDINBLUE_API_KEY"`
 	FrontendUrl         string        `mapstructure:"FRONTEND_URL"`
-	Auth0               Auth0Config   `mapstructure:",squash"`
+	Firebase            FirebaseConfig `mapstructure:",squash"`
 	Storage             StorageConfig `mapstructure:",squash"`
 	Queue               QueueConfig   `mapstructure:",squash"`
 }
@@ -81,12 +79,11 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("GCS_BUCKET_NAME")
 	viper.BindEnv("SENDINBLUE_API_KEY")
 	viper.BindEnv("FRONTEND_URL")
-	viper.BindEnv("AUTH0_DOMAIN")
-	viper.BindEnv("AUTH0_AUDIENCE")
-	viper.BindEnv("AUTH0_CLIENT_ID")
-	viper.BindEnv("AUTH0_CLIENT_SECRET")
-	viper.BindEnv("AUTH0_MANAGEMENT_API_CLIENT_ID")
-	viper.BindEnv("AUTH0_MANAGEMENT_API_CLIENT_SECRET")
+	// Firebase configuration
+	viper.BindEnv("FIREBASE_PROJECT_ID")
+	viper.BindEnv("FIREBASE_AUTH_EMULATOR_HOST")
+	viper.BindEnv("FIREBASE_WEB_API_KEY")
+	viper.BindEnv("FIREBASE_AUTH_DOMAIN")
 
 	// Storage configuration
 	viper.BindEnv("STORAGE_PROVIDER")

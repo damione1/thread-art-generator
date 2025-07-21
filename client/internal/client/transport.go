@@ -7,37 +7,31 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 )
 
-// AuthTransport is an http.RoundTripper that adds auth headers from the session
-type AuthTransport struct {
-	SessionManager *auth.SessionManager
+// FirebaseAuthTransport is an http.RoundTripper that adds Firebase ID tokens from SCS sessions
+type FirebaseAuthTransport struct {
+	SessionManager *auth.SCSSessionManager
 	Base           http.RoundTripper
 }
 
-// NewAuthTransport creates a new HTTP transport that adds auth headers
-func NewAuthTransport(sessionManager *auth.SessionManager) http.RoundTripper {
-	return &AuthTransport{
+// NewFirebaseAuthTransport creates a new HTTP transport that adds Firebase auth headers
+func NewFirebaseAuthTransport(sessionManager *auth.SCSSessionManager) http.RoundTripper {
+	return &FirebaseAuthTransport{
 		SessionManager: sessionManager,
 		Base:           http.DefaultTransport,
 	}
 }
 
-// RoundTrip implements http.RoundTripper
-func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// First check for token directly in the context via TokenFromContext
-	token, ok := auth.TokenFromContext(req.Context())
-	if ok && token != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	} else if req.Context().Value("session") != nil {
-		// Fall back to session from context if available
-		session := req.Context().Value("session").(*auth.SessionData)
-		if session.AccessToken != "" {
-			// Add authorization header with token
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", session.AccessToken))
-		}
+// RoundTrip implements http.RoundTripper for Firebase authentication
+func (t *FirebaseAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Get Firebase ID token from SCS session
+	idToken := t.SessionManager.GetIDToken(req)
+	if idToken != "" {
+		// Add authorization header with Firebase ID token
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", idToken))
 	}
 
 	// Add Origin header to prevent CORS errors
-	req.Header.Set("Origin", "http://localhost:8080") // Set to your client's origin
+	req.Header.Set("Origin", "http://localhost:8080")
 
 	return t.Base.RoundTrip(req)
 }

@@ -41,8 +41,6 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 	}
 	artID := pathParts[2]
 
-	fmt.Println("artID", artID)
-
 	// Get the art
 	art, err := h.generatorService.GetArt(r.Context(), user.ID, artID)
 	if err != nil {
@@ -51,7 +49,9 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render the art page
-	err = templates.ArtPage(user, art).Render(r.Context(), w)
+	pageData := templates.NewPageData(fmt.Sprintf("Art: %s - ThreadArt", art.GetTitle()), "art").
+		WithUser(user)
+	err = templates.ArtPage(pageData, art).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render art page")
@@ -130,7 +130,9 @@ func (h *ArtHandler) NewArtPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render the art creation form
-	err := templates.NewArtPage(user, formData).Render(r.Context(), w)
+	pageData := templates.NewPageData("Create New Art - ThreadArt", "new-art").
+		WithUser(user)
+	err := templates.NewArtPage(pageData, formData).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render new art page")

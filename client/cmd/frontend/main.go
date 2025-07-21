@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,10 +16,12 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/handlers"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
+	coreauth "github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -48,96 +50,99 @@ func main() {
 
 	log.Info().Str("staticDir", staticDir).Msg("Using static files directory")
 
-	// Load Auth0 configuration
-	auth0Config := auth.NewConfig()
-
-	// Get cookie encryption keys from environment or generate them
-	// These should be set in production for consistency across restarts and multiple instances
-	var hashKey, blockKey []byte
-
-	hashKeyStr := os.Getenv("COOKIE_HASH_KEY")
-	if hashKeyStr == "" {
-		log.Warn().Msg("COOKIE_HASH_KEY not set, generating random key. Sessions will be invalidated on restart.")
-		hashKey = generateRandomKey(32)
-	} else {
-		// Ensure hash key is exactly 32	 bytes
-		hashKey = []byte(hashKeyStr)
-		if len(hashKey) < 32 {
-			// Pad key if too short
-			paddedKey := make([]byte, 32)
-			copy(paddedKey, hashKey)
-			hashKey = paddedKey
-			log.Warn().Msg("COOKIE_HASH_KEY was shorter than 32 bytes, padded with zeros")
-		} else if len(hashKey) > 32 {
-			// Truncate key if too long
-			hashKey = hashKey[:32]
-			log.Warn().Msg("COOKIE_HASH_KEY was longer than 32 bytes, truncated to 32 bytes")
-		}
+	// Connect to PostgreSQL database for sessions
+	dbHost := os.Getenv("POSTGRES_HOST")
+	if dbHost == "" {
+		dbHost = "db"
+	}
+	dbUser := os.Getenv("POSTGRES_USER")
+	if dbUser == "" {
+		dbUser = "postgres"
+	}
+	dbPassword := os.Getenv("POSTGRES_PASSWORD")
+	if dbPassword == "" {
+		dbPassword = "postgres"
+	}
+	dbName := os.Getenv("POSTGRES_DB")
+	if dbName == "" {
+		dbName = "threadmachine"
 	}
 
-	blockKeyStr := os.Getenv("COOKIE_BLOCK_KEY")
-	if blockKeyStr == "" {
-		log.Warn().Msg("COOKIE_BLOCK_KEY not set, generating random key. Sessions will be invalidated on restart.")
-		blockKey = generateRandomKey(32)
-	} else {
-		// Ensure block key is exactly 32 bytes
-		blockKey = []byte(blockKeyStr)
-		if len(blockKey) < 32 {
-			// Pad key if too short
-			paddedKey := make([]byte, 32)
-			copy(paddedKey, blockKey)
-			blockKey = paddedKey
-			log.Warn().Msg("COOKIE_BLOCK_KEY was shorter than 32 bytes, padded with zeros")
-		} else if len(blockKey) > 32 {
-			// Truncate key if too long
-			blockKey = blockKey[:32]
-			log.Warn().Msg("COOKIE_BLOCK_KEY was longer than 32 bytes, truncated to 32 bytes")
-		}
-	}
-
-	// Create session manager
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "redis:6379"
-	}
-	sessionManager, err := auth.NewSessionManager(redisAddr, hashKey, blockKey)
+	dbDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", 
+		dbHost, dbUser, dbPassword, dbName)
+	
+	db, err := sql.Open("postgres", dbDSN)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create session manager")
+		log.Fatal().Err(err).Msg("Failed to connect to database")
+	}
+	defer db.Close()
+
+	// Test database connection
+	if err := db.Ping(); err != nil {
+		log.Fatal().Err(err).Msg("Failed to ping database")
 	}
 
-	// Create HTTP client with auth transport
+	// Create SCS session manager with PostgreSQL store
+	sessionManager, err := auth.NewSCSSessionManager(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create SCS session manager")
+	}
+
+	// Create HTTP client with auth transport (updated for SCS session manager)
 	httpClient := &http.Client{
-		Transport: &client.AuthTransport{
+		Transport: &client.FirebaseAuthTransport{
 			SessionManager: sessionManager,
 			Base:           http.DefaultTransport,
 		},
 	}
 
+	// Get API URL from environment
+	apiURL := os.Getenv("API_URL")
+	if apiURL == "" {
+		apiURL = "http://api:9090"
+	}
+
 	// Create connect client directly
 	artGeneratorClient := pbconnect.NewArtGeneratorServiceClient(
 		httpClient,
-		auth0Config.APIBaseURL,
+		apiURL,
 	)
 
-	// Create Auth0 service
-	auth0Service := auth.NewAuth0Service(auth0Config, sessionManager)
+	// Initialize Firebase auth service
+	emulatorHost := os.Getenv("FIREBASE_AUTH_EMULATOR_HOST")
+	environment := os.Getenv("ENVIRONMENT")
+	isEmulator := emulatorHost != "" || environment == "development"
+	
+	firebaseConfig := coreauth.FirebaseConfiguration{
+		ProjectID: "demo-thread-art-generator", // Default for emulator
+	}
+	
+	if isEmulator {
+		firebaseConfig.EmulatorHost = "host.docker.internal:9099"
+	} else {
+		firebaseConfig.ProjectID = os.Getenv("FIREBASE_PROJECT_ID")
+	}
+	
+	firebaseAuth, err := coreauth.NewFirebaseAuthService(firebaseConfig)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize Firebase auth service")
+	}
 
 	// Create generator service
 	generatorService := services.NewGeneratorService(artGeneratorClient, sessionManager)
 
-	// Create handlers
-	authHandler := handlers.NewAuthHandler(auth0Service)
+	// Create Firebase auth handler with all services
+	authHandler := handlers.NewFirebaseAuthHandlerWithServices(firebaseAuth, sessionManager, generatorService, db)
 	pageHandler := handlers.NewPageHandler(generatorService)
 	artHandler := handlers.NewArtHandler(generatorService)
 
 	// Create router
 	r := chi.NewRouter()
 
-	// Global middleware
-	r.Use(middleware.WithAuthInfo(sessionManager))
-	r.Use(middleware.EnrichUser(generatorService))
-	// Process CSRF/Auth token from HTMX requests
-	r.Use(middleware.ProcessAuthToken(sessionManager))
+	// Global middleware - updated for Firebase and SCS sessions
+	r.Use(sessionManager.GetSessionManager().LoadAndSave)
+	r.Use(middleware.FirebaseAuthMiddleware(sessionManager))
+	r.Use(middleware.APIAuthMiddleware(sessionManager))
 
 	// Public routes
 	r.Group(func(r chi.Router) {
@@ -145,22 +150,25 @@ func main() {
 			w.Write([]byte("OK"))
 		})
 
-		// Auth routes
+		// Firebase Auth routes
 		r.Route("/auth", func(r chi.Router) {
-			r.Get("/login", authHandler.Login)
-			r.Get("/callback", authHandler.Callback)
-			r.Get("/logout", authHandler.Logout)
+			r.Post("/sync", authHandler.AuthSync)
+			r.Post("/logout", authHandler.Logout)
+			r.Get("/logout", authHandler.Logout) // Support GET for logout links
 			r.Get("/status", authHandler.Status)
 		})
 
 		// Public home page
 		r.Get("/", pageHandler.HomePage)
+		
+		// Auth pages
+		r.Get("/login", pageHandler.LoginPage)
+		r.Get("/signup", pageHandler.SignupPage)
 	})
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
-		// Apply auth middleware for protected routes
-		r.Use(middleware.RequireAuth(sessionManager, "/auth/login"))
+		// Firebase auth is handled by the global middleware - all routes here require authentication
 
 		r.Route("/dashboard", func(r chi.Router) {
 			r.Get("/", pageHandler.DashboardPage)
@@ -227,13 +235,4 @@ func main() {
 	}
 
 	log.Info().Msg("Server gracefully stopped")
-}
-
-// generateRandomKey creates a random key for session encryption
-func generateRandomKey(length int) []byte {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		log.Fatal().Err(err).Msg("Failed to generate random key")
-	}
-	return bytes
 }

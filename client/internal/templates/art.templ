@@ -1,7 +1,6 @@
 package templates
 
 import (
-	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
@@ -27,10 +26,10 @@ func extractArtID(resourceName string) string {
 }
 
 // ArtPage renders the art details page with upload functionality
-// user: The authenticated user (required for this page)
+// data: PageData containing user info and other template data
 // art: The art resource to display
-templ ArtPage(user *auth.UserInfo, art *pb.Art) {
-	@Layout("Art: "+art.GetTitle()+" - ThreadArt", user) {
+templ ArtPage(data *PageData, art *pb.Art) {
+	@Layout(data) {
 		<div class="max-w-4xl mx-auto px-4 py-8">
 			<div class="mb-6">
 				<a href="/dashboard" class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
@@ -299,10 +298,10 @@ templ ImageUploadDropzone(artId string) {
 }
 
 // NewArtPage renders the page to create a new art
-// user: The authenticated user (required for this page)
+// data: PageData containing user info and other template data
 // formData: Form data with validation errors and previous input values
-templ NewArtPage(user *auth.UserInfo, formData *services.ArtFormData) {
-	@Layout("Create New Art - ThreadArt", user) {
+templ NewArtPage(data *PageData, formData *services.ArtFormData) {
+	@Layout(data) {
 		<div class="max-w-4xl mx-auto px-4 py-8">
 			<h1 class="text-3xl font-bold text-slate-200 mb-6">Create New Art</h1>
 			<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">

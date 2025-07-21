@@ -68,15 +68,34 @@ migration:
 .PHONY: run-migrations
 run-migrations:
 	@echo "🔄 Running database migrations..."
-	@docker-compose run --rm migrations || { echo "❌ Migration failed"; exit 1; }
+	@echo "Installing golang-migrate if needed..."
+	@test -f "$(shell go env GOPATH)/bin/migrate" || go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+	@echo "Running migrations..."
+	@eval $$(grep -E "POSTGRES_(USER|PASSWORD|DB)" .env | sed 's/^/export /'); \
+	$(shell go env GOPATH)/bin/migrate -path core/db/migrations -database "postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB?sslmode=disable" up || { echo "❌ Migration failed"; exit 1; }
 	@echo "✅ Database migrations completed successfully"
 
 .PHONY: generate-models
 generate-models:
 	@echo "🔄 Generating database models using SQLBoiler..."
-	@docker-compose run --rm generate-models || { echo "❌ Model generation failed"; exit 1; }
+	@echo "Installing SQLBoiler if needed..."
+	@test -f "$(shell go env GOPATH)/bin/sqlboiler" || go install github.com/volatiletech/sqlboiler/v4@v4.16.2
+	@test -f "$(shell go env GOPATH)/bin/sqlboiler-psql" || go install github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql@v4.16.2
+	@echo "Generating models..."
+	@eval $$(grep -E "POSTGRES_(USER|PASSWORD|DB)" .env | sed 's/^/export /'); \
+	PSQL_HOST=localhost PSQL_PORT=5432 PSQL_DBNAME=$$POSTGRES_DB PSQL_USER=$$POSTGRES_USER PSQL_PASS=$$POSTGRES_PASSWORD PSQL_SSLMODE=disable \
+	PATH="$(shell go env GOPATH)/bin:$$PATH" $(shell go env GOPATH)/bin/sqlboiler psql || { echo "❌ Model generation failed"; exit 1; }
 	@echo "✅ Database models generated successfully"
 	@echo "📁 Generated models in: core/db/models/"
+
+.PHONY: generate-templ
+generate-templ:
+	@echo "🔄 Generating Templ templates..."
+	@echo "Installing Templ if needed..."
+	@test -f "$(shell go env GOPATH)/bin/templ" || go install github.com/a-h/templ/cmd/templ@latest
+	@echo "Generating templates..."
+	@PATH="$(shell go env GOPATH)/bin:$$PATH" $(shell go env GOPATH)/bin/templ generate || { echo "❌ Template generation failed"; exit 1; }
+	@echo "✅ Templ templates generated successfully"
 
 # This rule allows capturing arbitrary targets as arguments
 %:
