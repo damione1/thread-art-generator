@@ -224,12 +224,16 @@ templ ImageUploadDropzone(artId string) {
 					this.uploadProgress = 0;
 
 					try {
-						// Get upload URL
+						// Get upload URL with file validation parameters
 						const uploadUrlResponse = await fetch(`/api/get-upload-url/${encodeURIComponent(artId)}`, {
-							method: 'GET',
+							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json',
 							},
+							body: JSON.stringify({
+								content_type: file.type,
+								file_size: file.size
+							})
 						});
 
 						if (!uploadUrlResponse.ok) {
@@ -238,10 +242,13 @@ templ ImageUploadDropzone(artId string) {
 
 						const uploadData = await uploadUrlResponse.json();
 
-						// Upload file to signed URL
+						// Upload file to signed URL with matching content type
 						const uploadResponse = await fetch(uploadData.upload_url, {
 							method: 'PUT',
 							body: file,
+							headers: {
+								'Content-Type': file.type,
+							},
 						});
 
 						if (!uploadResponse.ok) {

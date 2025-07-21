@@ -398,6 +398,25 @@ message GetArtUploadUrlRequest {
             expression: "this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')"
         }
     ];
+
+    // The content type of the image to upload
+    string content_type = 2 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).cel = {
+            id: "get_art_upload_url.content_type.valid",
+            message: "Content type must be a valid image type",
+            expression: "this in ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']"
+        }
+    ];
+
+    // The size of the file to upload in bytes
+    int64 file_size = 3 [
+        (google.api.field_behavior) = REQUIRED,
+        (buf.validate.field).int64 = {
+            gte: 1,
+            lte: 5242880  // 5MB in bytes
+        }
+    ];
 }
 
 message GetArtUploadUrlResponse {

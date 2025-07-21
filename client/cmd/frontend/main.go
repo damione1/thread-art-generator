@@ -172,7 +172,7 @@ func main() {
 			})
 
 			// Art upload API routes
-			r.Get("/get-upload-url/{artId}", artHandler.GetArtUploadUrl)
+			r.Post("/get-upload-url/{artId}", artHandler.GetArtUploadUrl)
 			r.Post("/confirm-upload/{artId}", artHandler.ConfirmArtImageUpload)
 		})
 	})

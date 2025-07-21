@@ -456,12 +456,11 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	// Create the image key using resource builder
 	imageKey := resource.BuildArtResourceName(artDb.AuthorID, imageID)
 
-	// Generate a signed URL with 15 minutes expiration
-	// Important: We're using a minimal set of options to keep the signing simple
+	// Generate a secure signed URL with 1-minute expiration and content validation
 	opts := &blob.SignedURLOptions{
-		Expiry: 15 * time.Minute,
-		Method: "PUT",
-		// We intentionally DO NOT set ContentType to avoid signature issues
+		Expiry:      time.Minute, // 1-minute expiration for security
+		Method:      "PUT",
+		ContentType: req.GetContentType(), // Include content type for validation
 	}
 
 	signedURL, err := server.bucket.SignedURL(ctx, imageKey, opts)
@@ -470,7 +469,7 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	}
 
 	// Calculate expiration time
-	expirationTime := time.Now().Add(15 * time.Minute)
+	expirationTime := time.Now().Add(time.Minute)
 
 	log.Info().Msgf("Signed URL: %s", signedURL)
 

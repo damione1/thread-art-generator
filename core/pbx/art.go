@@ -3,11 +3,13 @@ package pbx
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
+	"gocloud.dev/blob"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -41,10 +43,19 @@ func ArtDbToProto(ctx context.Context, bucket *storage.BlobStorage, art *models.
 	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) {
 		imageKey := resource.BuildArtResourceName(art.AuthorID, art.ImageID.String)
 
-		// Use public URL instead of signed URL
-		publicURL := bucket.GetPublicURL(imageKey)
-		fmt.Printf("DEBUG: Generated public URL for key '%s': '%s'\n", imageKey, publicURL)
-		artPb.ImageUrl = publicURL
+		// Generate signed URL for secure image access
+		opts := &blob.SignedURLOptions{
+			Expiry: 15 * time.Minute, // 15-minute expiration for image viewing
+			Method: "GET",
+		}
+		
+		signedURL, err := bucket.SignedURL(ctx, imageKey, opts)
+		if err != nil {
+			// Fallback to empty string if signing fails
+			artPb.ImageUrl = ""
+		} else {
+			artPb.ImageUrl = signedURL
+		}
 	}
 
 	return artPb

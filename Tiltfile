@@ -215,15 +215,6 @@ local_resource(
   trigger_mode=TRIGGER_MODE_AUTO,
 )
 
-# Minio setup
-local_resource(
-  'setup-minio',
-  cmd='./scripts/dev/tilt-minio-setup.sh',
-  labels=["storage"],
-  resource_deps=['minio'],
-  auto_init=True,
-  trigger_mode=TRIGGER_MODE_AUTO,
-)
 
 # ================================================
 # FIREBASE EMULATOR CONFIGURATION

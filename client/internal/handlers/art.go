@@ -76,6 +76,12 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UploadRequest represents the upload request body
+type UploadRequest struct {
+	ContentType string `json:"content_type"`
+	FileSize    int64  `json:"file_size"`
+}
+
 // GetArtUploadUrl handles getting a signed upload URL for an art
 func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
 	// Get user from context (contains Firebase UID)
@@ -85,6 +91,13 @@ func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
 	artID := chi.URLParam(r, "artId")
 	if artID == "" {
 		http.Error(w, "Invalid art ID", http.StatusBadRequest)
+		return
+	}
+
+	// Parse request body for content type and file size
+	var uploadReq UploadRequest
+	if err := json.NewDecoder(r.Body).Decode(&uploadReq); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -106,8 +119,8 @@ func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
 	
 	internalUserID := userResource.(*resource.User).ID
 
-	// Get upload URL using internal user ID
-	uploadResponse, err := h.generatorService.GetArtUploadUrl(r.Context(), internalUserID, artID)
+	// Get upload URL using internal user ID with validation parameters
+	uploadResponse, err := h.generatorService.GetArtUploadUrl(r.Context(), internalUserID, artID, uploadReq.ContentType, uploadReq.FileSize)
 	if err != nil {
 		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get upload URL")
 		http.Error(w, "Failed to get upload URL", http.StatusInternalServerError)

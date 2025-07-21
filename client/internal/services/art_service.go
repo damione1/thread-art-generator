@@ -59,11 +59,13 @@ func (s *ArtService) GetArt(ctx context.Context, userID, artID string) (*pb.Art,
 }
 
 // GetArtUploadUrl gets a signed URL for uploading an image to an art
-func (s *ArtService) GetArtUploadUrl(ctx context.Context, userID, artID string) (*pb.GetArtUploadUrlResponse, error) {
+func (s *ArtService) GetArtUploadUrl(ctx context.Context, userID, artID, contentType string, fileSize int64) (*pb.GetArtUploadUrlResponse, error) {
 	artName := resource.BuildArtResourceName(userID, artID)
 
 	req := connect.NewRequest(&pb.GetArtUploadUrlRequest{
-		Name: artName,
+		Name:        artName,
+		ContentType: contentType,
+		FileSize:    fileSize,
 	})
 
 	resp, err := s.client.GetArtUploadUrl(ctx, req)
@@ -72,6 +74,8 @@ func (s *ArtService) GetArtUploadUrl(ctx context.Context, userID, artID string) 
 		log.Error().
 			Err(err).
 			Str("art_name", artName).
+			Str("content_type", contentType).
+			Int64("file_size", fileSize).
 			Str("errorType", string(standardErr.Type)).
 			Str("message", standardErr.Message).
 			Msg("Failed to get art upload URL")

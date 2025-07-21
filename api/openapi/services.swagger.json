@@ -696,6 +696,21 @@
             "required": true,
             "type": "string",
             "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "contentType",
+            "description": "The content type of the image to upload",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "fileSize",
+            "description": "The size of the file to upload in bytes",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
