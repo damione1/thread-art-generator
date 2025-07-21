@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
@@ -13,6 +14,8 @@ import (
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/token"
 	"github.com/Damione1/thread-art-generator/core/util"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
@@ -169,9 +172,9 @@ func (s *Server) createUserFromFirebaseClaims(ctx context.Context, firebaseUID, 
 		}
 	}
 
-	// Create new user model
+	// Create new user model with UUID primary key
 	userDb := &models.User{
-		ID:          firebaseUID, // Use Firebase UID as primary key for consistency
+		ID:          uuid.New().String(), // Use UUID for primary key
 		FirebaseUID: null.StringFrom(firebaseUID),
 		Active:      true,
 		Role:        models.RoleEnumUser,
@@ -194,4 +197,54 @@ func (s *Server) createUserFromFirebaseClaims(ctx context.Context, firebaseUID, 
 	}
 
 	return userDb, nil
+}
+
+// validateInternalAPIKeyFromHeaders validates the internal API key from Connect-RPC HTTP headers
+func (s *Server) validateInternalAPIKeyFromHeaders(headers http.Header) bool {
+	// Get authorization header
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		log.Debug().Msg("No Authorization header found for internal API key validation")
+		return false
+	}
+
+	// Extract Bearer token
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		log.Debug().Str("auth_header", authHeader).Msg("Authorization header doesn't start with 'Bearer '")
+		return false
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	expectedToken := s.config.InternalAPIKey
+
+	// Validate token (must be non-empty and match)
+	isValid := token != "" && expectedToken != "" && token == expectedToken
+	
+	if !isValid {
+		log.Warn().Msg("Internal API key validation failed")
+	} else {
+		log.Debug().Msg("Internal API key validation successful")
+	}
+	
+	return isValid
+}
+
+// parseDisplayName parses a display name into first and last names
+func (s *Server) parseDisplayName(displayName string) (firstName, lastName string) {
+	if displayName == "" {
+		return "User", ""
+	}
+
+	parts := strings.SplitN(strings.TrimSpace(displayName), " ", 2)
+	firstName = parts[0]
+	if len(parts) > 1 {
+		lastName = parts[1]
+	}
+
+	// Ensure first name is not empty
+	if firstName == "" {
+		firstName = "User"
+	}
+
+	return firstName, lastName
 }

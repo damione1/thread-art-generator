@@ -8,6 +8,7 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	pages "github.com/Damione1/thread-art-generator/client/internal/templates/pages"
 	"github.com/Damione1/thread-art-generator/client/internal/types"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/rs/zerolog/log"
 )
@@ -45,8 +46,60 @@ func (h *PageHandler) HomePage(w http.ResponseWriter, r *http.Request) {
 
 // DashboardPage renders the dashboard page (protected)
 func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
-	// User will be in context due to RequireAuth middleware
+	// User will be in context due to RequireAuth middleware (contains Firebase UID)
 	user, _ := middleware.UserFromContext(r.Context())
+
+	// Get internal user ID by calling GetCurrentUser API
+	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for DashboardPage")
+		
+		// Create error page data using middleware-provided context
+		pageData := templates.NewPageDataFromRequest(r, "Dashboard - Error", "dashboard").
+			WithError("Error loading user information. Please try again.")
+		
+		// Create empty dashboard data for error case
+		dashboardData := &templates.DashboardPageData{
+			Arts: nil,
+			Sort: "create_time", 
+			Dir:  "desc",
+		}
+		pageData = pageData.WithData(dashboardData)
+		
+		err = pages.DashboardPage(pageData).Render(r.Context(), w)
+		if err != nil {
+			http.Error(w, "Error rendering template", http.StatusInternalServerError)
+			log.Error().Err(err).Msg("Failed to render dashboard error")
+		}
+		return
+	}
+
+	// Parse the user resource name to extract internal user ID
+	userResource, err := resource.ParseResourceName(currentUser.ID)
+	if err != nil {
+		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
+		
+		// Create error page data using middleware-provided context
+		pageData := templates.NewPageDataFromRequest(r, "Dashboard - Error", "dashboard").
+			WithError("Error parsing user information. Please try again.")
+		
+		// Create empty dashboard data for error case
+		dashboardData := &templates.DashboardPageData{
+			Arts: nil,
+			Sort: "create_time", 
+			Dir:  "desc",
+		}
+		pageData = pageData.WithData(dashboardData)
+		
+		err = pages.DashboardPage(pageData).Render(r.Context(), w)
+		if err != nil {
+			http.Error(w, "Error rendering template", http.StatusInternalServerError)
+			log.Error().Err(err).Msg("Failed to render dashboard error")
+		}
+		return
+	}
+	
+	internalUserID := userResource.(*resource.User).ID
 
 	// Read sort and dir from query params, default to create_time/desc
 	sort := r.URL.Query().Get("sort")
@@ -58,10 +111,10 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 		dir = "desc"
 	}
 
-	// Fetch user's arts with sorting
-	arts, err := h.generatorService.ListArts(r.Context(), user.ID, 10, "", sort, dir)
+	// Fetch user's arts with sorting using internal user ID
+	arts, err := h.generatorService.ListArts(r.Context(), internalUserID, 10, "", sort, dir)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to fetch arts for dashboard")
+		log.Error().Err(err).Str("internal_user_id", internalUserID).Msg("Failed to fetch arts for dashboard")
 
 		// Create error page data using middleware-provided context
 		pageData := templates.NewPageDataFromRequest(r, "Dashboard - Error", "dashboard").

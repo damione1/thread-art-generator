@@ -46,6 +46,7 @@ type Config struct {
 	FrontendPort        string         `mapstructure:"FRONTEND_PORT"`
 	ApiURL              string         `mapstructure:"API_URL"`
 	TokenSymmetricKey   string         `mapstructure:"TOKEN_SYMMETRIC_KEY"`
+	InternalAPIKey      string         `mapstructure:"INTERNAL_API_KEY"`
 	EmailSenderName     string         `mapstructure:"EMAIL_SENDER_NAME"`
 	EmailSenderAddress  string         `mapstructure:"EMAIL_SENDER_ADDRESS"`
 	EmailSenderPassword string         `mapstructure:"EMAIL_SENDER_PASSWORD"`
@@ -74,6 +75,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("FRONTEND_PORT")
 	viper.BindEnv("API_URL")
 	viper.BindEnv("TOKEN_SYMMETRIC_KEY")
+	viper.BindEnv("INTERNAL_API_KEY")
 	viper.BindEnv("EMAIL_SENDER_NAME")
 	viper.BindEnv("EMAIL_SENDER_ADDRESS")
 	viper.BindEnv("EMAIL_SENDER_PASSWORD")

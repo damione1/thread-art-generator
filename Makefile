@@ -100,6 +100,17 @@ generate-templ:
 	@PATH="$(shell go env GOPATH)/bin:$$PATH" $(shell go env GOPATH)/bin/templ generate || { echo "❌ Template generation failed"; exit 1; }
 	@echo "✅ Templ templates generated successfully"
 
+.PHONY: firebase-build
+firebase-build:
+	@echo "🔧 Building Firebase Functions..."
+	@cd functions && npm install && npm run build
+	@echo "✅ Firebase Functions built successfully"
+
+.PHONY: firebase-start
+firebase-start: firebase-build
+	@echo "🚀 Starting Firebase Emulator Suite..."
+	@firebase emulators:start --only auth,functions,ui --project demo-thread-art-generator
+
 # This rule allows capturing arbitrary targets as arguments
 %:
 	@:

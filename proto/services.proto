@@ -114,6 +114,18 @@ service ArtGeneratorService {
     };
   }
 
+  rpc SyncUserFromFirebase (SyncUserFromFirebaseRequest) returns (User) {
+    option (google.api.http) = {
+      post: "/v1/internal/users/sync"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Sync user from Firebase (Internal)"
+      description: "Internal endpoint to sync user data from Firebase Authentication to PostgreSQL database. Used by Cloud Functions."
+      tags: "Users";
+    };
+  }
+
   rpc CreateArt (CreateArtRequest) returns (Art) {
     option (google.api.http) = {
       post: "/v1/{parent=users/*}/arts"

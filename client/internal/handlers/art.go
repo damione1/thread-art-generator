@@ -29,7 +29,7 @@ func NewArtHandler(generatorService *services.GeneratorService) *ArtHandler {
 
 // ViewArtPage renders the art details page
 func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
-	// Get user from context
+	// Get user from context (contains Firebase UID)
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Extract art ID from URL path
@@ -41,9 +41,28 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 	}
 	artID := pathParts[2]
 
-	// Get the art
-	art, err := h.generatorService.GetArt(r.Context(), user.ID, artID)
+	// Get internal user ID by calling GetCurrentUser API
+	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for ViewArtPage")
+		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse the user resource name to extract internal user ID
+	userResource, err := resource.ParseResourceName(currentUser.ID)
+	if err != nil {
+		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
+		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
+		return
+	}
+	
+	internalUserID := userResource.(*resource.User).ID
+
+	// Get the art using internal user ID
+	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
+	if err != nil {
+		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art")
 		http.Error(w, "Art not found", http.StatusNotFound)
 		return
 	}
@@ -59,7 +78,7 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 
 // GetArtUploadUrl handles getting a signed upload URL for an art
 func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
-	// Get user from context
+	// Get user from context (contains Firebase UID)
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Extract art ID from URL parameter
@@ -69,10 +88,28 @@ func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get upload URL
-	uploadResponse, err := h.generatorService.GetArtUploadUrl(r.Context(), user.ID, artID)
+	// Get internal user ID by calling GetCurrentUser API
+	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("art_id", artID).Msg("Failed to get upload URL")
+		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for GetArtUploadUrl")
+		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse the user resource name to extract internal user ID
+	userResource, err := resource.ParseResourceName(currentUser.ID)
+	if err != nil {
+		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
+		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
+		return
+	}
+	
+	internalUserID := userResource.(*resource.User).ID
+
+	// Get upload URL using internal user ID
+	uploadResponse, err := h.generatorService.GetArtUploadUrl(r.Context(), internalUserID, artID)
+	if err != nil {
+		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get upload URL")
 		http.Error(w, "Failed to get upload URL", http.StatusInternalServerError)
 		return
 	}
@@ -87,7 +124,7 @@ func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
 
 // ConfirmArtImageUpload handles confirming that an image has been uploaded
 func (h *ArtHandler) ConfirmArtImageUpload(w http.ResponseWriter, r *http.Request) {
-	// Get user from context
+	// Get user from context (contains Firebase UID)
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Extract art ID from URL parameter
@@ -97,9 +134,27 @@ func (h *ArtHandler) ConfirmArtImageUpload(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Get internal user ID by calling GetCurrentUser API
+	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for ConfirmArtImageUpload")
+		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse the user resource name to extract internal user ID
+	userResource, err := resource.ParseResourceName(currentUser.ID)
+	if err != nil {
+		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
+		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
+		return
+	}
+	
+	internalUserID := userResource.(*resource.User).ID
+
 	// Confirm upload - construct the full resource name as expected by the service
-	// Following Google AIP resource naming: users/{user_id}/arts/{art_id}
-	resourceName := resource.BuildArtResourceName(user.ID, artID)
+	// Following Google AIP resource naming: users/{internal_user_id}/arts/{art_id}
+	resourceName := resource.BuildArtResourceName(internalUserID, artID)
 
 	art, err := h.generatorService.ConfirmArtImageUpload(r.Context(), resourceName)
 	if err != nil {
@@ -136,7 +191,7 @@ func (h *ArtHandler) NewArtPage(w http.ResponseWriter, r *http.Request) {
 
 // CreateArt handles the art creation form submission
 func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
-	// Get user from context
+	// Get user from context (contains Firebase UID)
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Parse form
@@ -157,11 +212,19 @@ func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
 		Success: false,
 	}
 
+	// Get internal user ID by calling GetCurrentUser API
+	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for CreateArt")
+		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
+		return
+	}
+
 	createArtRequest := &pb.CreateArtRequest{
 		Art: &pb.Art{
 			Title: title,
 		},
-		Parent: resource.BuildUserResourceName(user.ID),
+		Parent: currentUser.ID, // currentUser.ID contains the resource name with internal user ID
 	}
 
 	// Call service to create art with the request object for auth headers

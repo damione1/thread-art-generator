@@ -229,22 +229,33 @@ local_resource(
 # FIREBASE EMULATOR CONFIGURATION
 # ================================================
 
-# Firebase Auth Emulator for local development
+# Build Firebase Functions using make target
+local_resource(
+  'firebase-functions-build',
+  cmd='make firebase-build',
+  labels=['firebase'],
+  deps=['functions/src/**/*.ts', 'functions/package.json', 'functions/tsconfig.json', '.env'],
+  trigger_mode=TRIGGER_MODE_AUTO,
+)
+
+# Firebase Emulator Suite (Auth + Functions + UI) for local development
 local_resource(
   'firebase-emulator',
-  serve_cmd='firebase emulators:start --only auth --project demo-thread-art-generator',
+  serve_cmd='make firebase-start',
   serve_dir='.',
   labels=['firebase'],
+  resource_deps=['firebase-functions-build'],
   auto_init=True,
   readiness_probe=probe(
     http_get=http_get_action(port=9099, path='/'),
-    initial_delay_secs=5,
-    timeout_secs=3,
+    initial_delay_secs=10,
+    timeout_secs=5,
     period_secs=5,
   ),
   links=[
     link('http://localhost:4000', 'Firebase Emulator UI'),
     link('http://localhost:9099', 'Firebase Auth Emulator'),
+    link('http://localhost:5001', 'Firebase Functions Emulator'),
   ]
 )
 

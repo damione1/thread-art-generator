@@ -29,7 +29,7 @@ const (
 var whiteListedPaths = []string{
 	"/pb.ArtGeneratorService/GetMediaUploadUrl",
 	"/pb.ArtGeneratorService/GetMediaDownloadUrl",
-	"/pb.ArtGeneratorService/CreateUser",
+	"/pb.ArtGeneratorService/SyncUserFromFirebase",
 }
 
 // Helper function to extract and validate token from HTTP headers

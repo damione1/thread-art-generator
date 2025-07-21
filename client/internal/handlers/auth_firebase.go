@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+
 	"time"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	coreauth "github.com/Damione1/thread-art-generator/core/auth"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -93,9 +95,15 @@ func (h *FirebaseAuthHandler) AuthSync(w http.ResponseWriter, r *http.Request) {
 		Str("name", userInfo.Name).
 		Msg("Firebase token validated successfully")
 
-	// For now, we'll use the Firebase UID as the internal user ID
-	// The API interceptor will handle user auto-creation when API calls are made
+	// Use Firebase UID directly as session user ID
+	// User creation is handled asynchronously by Firebase Cloud Function
 	internalUserID := userInfo.ID
+
+	log.Info().
+		Str("firebase_uid", userInfo.ID).
+		Str("email", userInfo.Email).
+		Str("name", userInfo.Name).
+		Msg("Firebase token validated successfully - user creation handled by Cloud Function")
 
 	// Create session data
 	sessionUserInfo := auth.SessionUserInfo{
