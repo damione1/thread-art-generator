@@ -43,6 +43,7 @@ func ArtDbToProto(ctx context.Context, bucket *storage.BlobStorage, art *models.
 
 		// Use public URL instead of signed URL
 		publicURL := bucket.GetPublicURL(imageKey)
+		fmt.Printf("DEBUG: Generated public URL for key '%s': '%s'\n", imageKey, publicURL)
 		artPb.ImageUrl = publicURL
 	}
 

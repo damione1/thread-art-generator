@@ -242,9 +242,6 @@ templ ImageUploadDropzone(artId string) {
 						const uploadResponse = await fetch(uploadData.upload_url, {
 							method: 'PUT',
 							body: file,
-							headers: {
-								'Content-Type': file.type,
-							},
 						});
 
 						if (!uploadResponse.ok) {

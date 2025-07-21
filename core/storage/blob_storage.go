@@ -199,6 +199,7 @@ func (b *BlobStorage) SignedURL(ctx context.Context, key string, opts *blob.Sign
 }
 
 // s3SignedURL generates a pre-signed URL specifically for S3/MinIO
+// that's compatible with GCP bucket signed URL standards
 func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
 	// Default to PUT if method not specified
 	method := opts.Method
@@ -206,6 +207,7 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		method = "PUT"
 	}
 
+	// Create a clean request without extra headers that could cause signing issues
 	var req *request.Request
 	switch method {
 	case "GET":
@@ -214,20 +216,14 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 			Key:    aws.String(key),
 		}
 		req, _ = b.s3Client.GetObjectRequest(input)
-		// Add X-Forwarded-Proto for GET requests as well
-		req.HTTPRequest.Header.Set("X-Forwarded-Proto", "http")
 	case "PUT":
 		input := &s3.PutObjectInput{
 			Bucket: aws.String(b.bucketName),
 			Key:    aws.String(key),
 		}
-		// Add content type in input only if specified
-		if opts.ContentType != "" {
-			input.ContentType = aws.String(opts.ContentType)
-		}
+		// Don't set ContentType in the input to avoid signature complications
+		// Let the client handle content type detection
 		req, _ = b.s3Client.PutObjectRequest(input)
-		// For PUT requests, we need X-Forwarded-Proto for MinIO
-		req.HTTPRequest.Header.Set("X-Forwarded-Proto", req.HTTPRequest.URL.Scheme)
 	case "DELETE":
 		req, _ = b.s3Client.DeleteObjectRequest(&s3.DeleteObjectInput{
 			Bucket: aws.String(b.bucketName),
@@ -253,7 +249,11 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		req.HTTPRequest.URL.Scheme = "http"
 	}
 
-	// Important: Remove any extra headers that shouldn't be part of the signed URL
+	// Clear all headers to create a clean signature like GCP buckets
+	// This ensures only the essential signing headers are included
+	req.HTTPRequest.Header = make(map[string][]string)
+	
+	// Generate the signed URL with minimal headers for maximum compatibility
 	url, err := req.Presign(opts.Expiry)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign request: %v", err)
@@ -305,6 +305,7 @@ func (b *BlobStorage) GetPublicURL(key string) string {
 		return ""
 	}
 
+	// For MinIO and S3, the public URL format is: {protocol}://{endpoint}/{bucket}/{key}
 	return fmt.Sprintf("%s://%s/%s/%s", protocol, b.publicURL, b.bucketName, key)
 }
 

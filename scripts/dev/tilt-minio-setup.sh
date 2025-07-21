@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Starting MinIO setup..."
+echo "Starting simplified MinIO setup..."
 
 # Retry logic for connecting to MinIO
 MAX_RETRIES=10
@@ -57,8 +57,9 @@ if ! mc ls local 2>/dev/null | grep -q "$STORAGE_BUCKET"; then
   mc mb local/$STORAGE_BUCKET > /dev/null
 fi
 
-# Set anonymous policy for bucket
-echo "Setting download policy for bucket: $STORAGE_BUCKET"
-mc anonymous set download local/$STORAGE_BUCKET > /dev/null
+# Set public read policy for the bucket to allow direct image access
+echo "Setting up bucket policy for public read access..."
+mc anonymous set public local/$STORAGE_BUCKET > /dev/null 2>&1 || echo "Note: Could not set public policy, trying download policy"
+mc anonymous set download local/$STORAGE_BUCKET > /dev/null 2>&1 || echo "Note: Could not set download policy either"
 
-echo "✅ MinIO setup complete!"
+echo "✅ Simplified MinIO setup complete!"
