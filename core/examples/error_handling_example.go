@@ -22,7 +22,7 @@ func ExampleValidationWithStandardErrors(ctx context.Context, req *pb.CreateArtR
 
 	// 2. Business logic validation with field-specific errors
 	validationBuilder := pbErrors.NewValidationErrorBuilder("validation failed")
-	
+
 	// Check title length
 	if req.Art.Title == "" {
 		validationBuilder.AddField("art.title", "Title is required")
@@ -69,7 +69,7 @@ func ExampleClientErrorHandling(err error) {
 
 	// Parse the error using standardized error handling
 	standardErr := pbErrors.FromConnectError(err)
-	
+
 	if standardErr.HasFieldErrors() {
 		fmt.Println("Field validation errors:")
 		for field, messages := range standardErr.Fields {
@@ -86,7 +86,7 @@ func ExampleClientErrorHandling(err error) {
 	// Or convert to form error response for frontend
 	parser := pbErrors.NewErrorParser()
 	formResponse := parser.ToFormErrorResponse(standardErr)
-	
+
 	if !formResponse.Success {
 		fmt.Printf("Form error response: %+v\n", formResponse)
 	}
@@ -127,18 +127,18 @@ func ExampleSharedValidation() {
 	// These validation functions can be used on both client and server
 	titleErrors := parser.ValidateLength("Hi", "Title", 3, 100)
 	emailErrors := parser.ValidateEmail("invalid-email", "Email")
-	
+
 	if len(titleErrors) > 0 || len(emailErrors) > 0 {
 		builder := pbErrors.NewValidationErrorBuilder("validation failed")
-		
+
 		for _, err := range titleErrors {
 			builder.AddField("title", err)
 		}
-		
+
 		for _, err := range emailErrors {
 			builder.AddField("email", err)
 		}
-		
+
 		validationErr := builder.Build()
 		fmt.Printf("Validation errors: %+v\n", validationErr.Fields)
 	}

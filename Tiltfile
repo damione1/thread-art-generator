@@ -40,7 +40,7 @@ def watch_templ_changes():
   # Watch templ files for changes to trigger rebuild
   local_resource(
     'templ-generate',
-    cmd='cd client && GOBIN=$(go env GOPATH)/bin $(go env GOPATH)/bin/templ generate ./internal/templates',
+    cmd='make generate-templ',
     labels=["build"],
     deps=['client/internal/templates/**/*.templ'],  # Only watch .templ files
     ignore=['client/internal/templates/**/*.templ.go'],  # Explicitly ignore generated files

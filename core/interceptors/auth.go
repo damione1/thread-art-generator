@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/middleware"
-	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -20,7 +20,6 @@ const (
 	contextKeyClaims contextKey = "firebase_claims"
 	contextKeyToken  contextKey = "firebase_token"
 )
-
 
 const (
 	authorizationHeader = "Authorization"
@@ -63,7 +62,6 @@ func authorizeUserFromHeaders(ctx context.Context, headers http.Header, authenti
 	return claims, token, nil
 }
 
-
 // AuthMiddleware creates a simplified Connect middleware for Firebase authentication
 // Uses Firebase UID directly without database user management complexity
 func AuthMiddleware(authService auth.AuthService) connect.UnaryInterceptorFunc {
@@ -103,7 +101,7 @@ func AuthMiddleware(authService auth.AuthService) connect.UnaryInterceptorFunc {
 			// Create context with Firebase claims and token for downstream use
 			ctxWithClaims := context.WithValue(ctx, contextKeyClaims, claims)
 			ctxWithToken := context.WithValue(ctxWithClaims, contextKeyToken, token)
-			
+
 			// Use Firebase UID directly as the user identifier
 			ctxWithUser := context.WithValue(ctxWithToken, middleware.AuthKey, claims.UserID)
 
@@ -111,7 +109,6 @@ func AuthMiddleware(authService auth.AuthService) connect.UnaryInterceptorFunc {
 		}
 	}
 }
-
 
 func isWhiteListedPath(path string) bool {
 	return slices.Contains(whiteListedPaths, path)

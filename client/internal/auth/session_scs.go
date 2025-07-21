@@ -66,17 +66,17 @@ func (s *SCSSessionManager) GetSessionManager() *scs.SessionManager {
 func (s *SCSSessionManager) CreateSession(w http.ResponseWriter, r *http.Request, userID string, userInfo SessionUserInfo, idToken string, tokenExpiry time.Time) error {
 	// Store user ID
 	s.sessionManager.Put(r.Context(), sessionKeyUserID, userID)
-	
+
 	// Store user info as JSON
 	userInfoJSON, err := json.Marshal(userInfo)
 	if err != nil {
 		return fmt.Errorf("failed to marshal user info: %v", err)
 	}
 	s.sessionManager.Put(r.Context(), sessionKeyUserInfo, string(userInfoJSON))
-	
+
 	// Store Firebase ID token (for API calls)
 	s.sessionManager.Put(r.Context(), sessionKeyIDToken, idToken)
-	
+
 	// Store token expiry
 	s.sessionManager.Put(r.Context(), sessionKeyExpiry, tokenExpiry.Unix())
 
@@ -135,7 +135,7 @@ func (s *SCSSessionManager) GetSession(r *http.Request) (*SessionData, error) {
 		ExpiresAt: tokenExpiry,
 		// Note: We're not exposing the actual tokens for security
 		AccessToken:  "", // Not used with Firebase
-		RefreshToken: "", // Not used with Firebase  
+		RefreshToken: "", // Not used with Firebase
 	}
 
 	return sessionData, nil
@@ -159,7 +159,7 @@ func (s *SCSSessionManager) UpdateSession(w http.ResponseWriter, r *http.Request
 		return fmt.Errorf("failed to marshal user info: %v", err)
 	}
 	s.sessionManager.Put(r.Context(), sessionKeyUserInfo, string(userInfoJSON))
-	
+
 	// Update token data
 	s.sessionManager.Put(r.Context(), sessionKeyIDToken, idToken)
 	s.sessionManager.Put(r.Context(), sessionKeyExpiry, tokenExpiry.Unix())
@@ -173,7 +173,7 @@ func (s *SCSSessionManager) UpdateSession(w http.ResponseWriter, r *http.Request
 // DestroySession removes the user's session
 func (s *SCSSessionManager) DestroySession(w http.ResponseWriter, r *http.Request) error {
 	userID := s.sessionManager.GetString(r.Context(), sessionKeyUserID)
-	
+
 	// Destroy the session
 	err := s.sessionManager.Destroy(r.Context())
 	if err != nil {

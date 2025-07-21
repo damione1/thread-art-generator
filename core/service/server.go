@@ -158,7 +158,7 @@ func (s *Server) createUserFromFirebaseClaims(ctx context.Context, firebaseUID, 
 	// Parse name into first/last name components
 	firstName := "User"
 	var lastName null.String
-	
+
 	if name != "" {
 		nameParts := strings.SplitN(name, " ", 2)
 		if len(nameParts) > 0 {

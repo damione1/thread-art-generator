@@ -1,7 +1,10 @@
 package templates
 
 import (
+	"net/http"
+
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
+	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/types"
 	"github.com/Damione1/thread-art-generator/core/pb"
 )
@@ -12,26 +15,26 @@ type PageData struct {
 	// Core page information
 	Title    string
 	PageType string
-	
+
 	// User information (can be nil for public pages)
 	User *auth.UserInfo
-	
+
 	// Authentication state
 	IsLoggedIn bool
-	
+
 	// Optional Firebase configuration for auth pages
 	FirebaseConfig *types.FirebaseConfig
-	
+
 	// Meta information and SEO
 	Meta map[string]string
-	
+
 	// Page-specific data (can hold any data specific to the page)
 	Data interface{}
-	
+
 	// HTMX-related data
 	HTMXRequest bool
 	HTMXTarget  string
-	
+
 	// Error handling
 	ErrorMessage string
 	FieldErrors  map[string][]string
@@ -47,6 +50,29 @@ func NewPageData(title, pageType string) *PageData {
 		Meta:        make(map[string]string),
 		FieldErrors: make(map[string][]string),
 	}
+}
+
+// NewPageDataFromRequest creates a new PageData with basic information and Firebase config from request context
+func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
+	pageData := &PageData{
+		Title:       title,
+		PageType:    pageType,
+		User:        nil,
+		IsLoggedIn:  false,
+		Meta:        make(map[string]string),
+		FieldErrors: make(map[string][]string),
+	}
+
+	// Get user from context (set by middleware)
+	user, _ := middleware.UserFromContext(r.Context())
+	pageData.WithUser(user)
+
+	// Get Firebase config from context (set by middleware)
+	if firebaseConfig, ok := middleware.FirebaseConfigFromContext(r.Context()); ok {
+		pageData.WithFirebaseConfig(firebaseConfig)
+	}
+
+	return pageData
 }
 
 // WithUser adds user information to the page data
@@ -197,15 +223,15 @@ func (d *DashboardPageData) GetArts() []*pb.Art {
 
 // ArtPageData contains data specific to art-related pages
 type ArtPageData struct {
-	Art        interface{} // Will be the actual art type from pb
-	UploadURL  string
-	IsEditing  bool
+	Art       interface{} // Will be the actual art type from pb
+	UploadURL string
+	IsEditing bool
 }
 
 // AuthPageData contains data specific to authentication pages
 type AuthPageData struct {
-	ReturnURL      string
-	HasError       bool
-	ErrorMessage   string
-	FieldErrors    map[string][]string
+	ReturnURL    string
+	HasError     bool
+	ErrorMessage string
+	FieldErrors  map[string][]string
 }

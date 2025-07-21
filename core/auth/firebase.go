@@ -27,9 +27,9 @@ type userInfoCacheEntry struct {
 
 // FirebaseAuthService implements both Authenticator and UserProvider interfaces
 type FirebaseAuthService struct {
-	config      FirebaseConfiguration
-	authClient  *auth.Client
-	httpClient  *http.Client
+	config     FirebaseConfiguration
+	authClient *auth.Client
+	httpClient *http.Client
 
 	// User info cache
 	userInfoCache      map[string]*userInfoCacheEntry
@@ -163,7 +163,7 @@ func (f *FirebaseAuthService) GetUserInfo(ctx context.Context, userID string) (*
 	userRecord, err := f.authClient.GetUser(ctx, userID)
 	if err != nil {
 		log.Warn().Err(err).Str("user_id", userID).Msg("Failed to get user info from Firebase")
-		
+
 		// Return minimal info when we can't fetch from Firebase
 		result := &UserInfo{
 			ID:        userID,

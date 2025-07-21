@@ -106,7 +106,7 @@ func isEmulatorMode() bool {
 	// Check if environment is explicitly set to development with demo project
 	projectID := os.Getenv("FIREBASE_PROJECT_ID")
 	environment := os.Getenv("ENVIRONMENT")
-	
+
 	return projectID == "demo-thread-art-generator" && environment == "development"
 }
 
@@ -132,16 +132,16 @@ func getProjectID() string {
 func buildServiceAccountFromEnv() (*ServiceAccountConfig, error) {
 	// Check if all required environment variables are set
 	requiredVars := map[string]string{
-		"FIREBASE_ADMIN_TYPE":                     "type",
-		"FIREBASE_ADMIN_PROJECT_ID":               "project_id",
-		"FIREBASE_ADMIN_PRIVATE_KEY_ID":           "private_key_id",
-		"FIREBASE_ADMIN_PRIVATE_KEY":              "private_key",
-		"FIREBASE_ADMIN_CLIENT_EMAIL":             "client_email",
-		"FIREBASE_ADMIN_CLIENT_ID":                "client_id",
-		"FIREBASE_ADMIN_AUTH_URI":                 "auth_uri",
-		"FIREBASE_ADMIN_TOKEN_URI":                "token_uri",
+		"FIREBASE_ADMIN_TYPE":                        "type",
+		"FIREBASE_ADMIN_PROJECT_ID":                  "project_id",
+		"FIREBASE_ADMIN_PRIVATE_KEY_ID":              "private_key_id",
+		"FIREBASE_ADMIN_PRIVATE_KEY":                 "private_key",
+		"FIREBASE_ADMIN_CLIENT_EMAIL":                "client_email",
+		"FIREBASE_ADMIN_CLIENT_ID":                   "client_id",
+		"FIREBASE_ADMIN_AUTH_URI":                    "auth_uri",
+		"FIREBASE_ADMIN_TOKEN_URI":                   "token_uri",
 		"FIREBASE_ADMIN_AUTH_PROVIDER_X509_CERT_URL": "auth_provider_x509_cert_url",
-		"FIREBASE_ADMIN_CLIENT_X509_CERT_URL":     "client_x509_cert_url",
+		"FIREBASE_ADMIN_CLIENT_X509_CERT_URL":        "client_x509_cert_url",
 	}
 
 	config := &ServiceAccountConfig{}

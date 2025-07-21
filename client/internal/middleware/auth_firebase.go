@@ -16,7 +16,7 @@ func FirebaseAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Ha
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Check if this path should skip authentication requirement
 			isPublicPath := shouldSkipAuthRequirement(r.URL.Path)
-			
+
 			// Get request ID for logging
 			reqID := middleware.GetReqID(r.Context())
 
@@ -32,12 +32,12 @@ func FirebaseAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Ha
 					next.ServeHTTP(w, r)
 					return
 				}
-				
+
 				log.Debug().
 					Str("request_id", reqID).
 					Str("path", r.URL.Path).
 					Msg("No active session - redirecting to login")
-				
+
 				// Protected path with no session - redirect to login
 				http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 				return
@@ -58,13 +58,13 @@ func FirebaseAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Ha
 					next.ServeHTTP(w, r)
 					return
 				}
-				
+
 				log.Warn().
 					Err(err).
 					Str("request_id", reqID).
 					Str("user_id", userID).
 					Msg("Failed to get session data - redirecting to login")
-				
+
 				// Protected path with invalid session - clear and redirect
 				sessionManager.DestroySession(w, r)
 				http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
@@ -73,7 +73,7 @@ func FirebaseAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Ha
 
 			// Add user info to request context using existing pattern
 			ctx := context.WithValue(r.Context(), userContextKey{}, &sessionData.UserInfo)
-			
+
 			log.Debug().
 				Str("request_id", reqID).
 				Str("user_id", userID).
@@ -92,9 +92,9 @@ func FirebaseAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Ha
 func shouldSkipAuthRequirement(path string) bool {
 	// Public paths that don't require authentication
 	publicPaths := []string{
-		"/",           // Home page should be public but show user menu if logged in
+		"/", // Home page should be public but show user menu if logged in
 		"/login",
-		"/signup",     // Signup page should also be public
+		"/signup", // Signup page should also be public
 		"/auth/",
 		"/health",
 		"/favicon.ico",
@@ -102,8 +102,8 @@ func shouldSkipAuthRequirement(path string) bool {
 		"/js/",
 		"/images/",
 		"/static/",
-		"/gallery",    // Gallery should be publicly accessible
-		"/about",      // About page should be publicly accessible
+		"/gallery", // Gallery should be publicly accessible
+		"/about",   // About page should be publicly accessible
 	}
 
 	for _, publicPath := range publicPaths {
@@ -135,7 +135,7 @@ func APIAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Handler
 			if idToken != "" {
 				// Add Authorization header for API calls
 				r.Header.Set("Authorization", "Bearer "+idToken)
-				
+
 				log.Debug().
 					Str("user_id", sessionManager.GetUserID(r)).
 					Str("path", r.URL.Path).

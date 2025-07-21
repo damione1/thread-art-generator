@@ -48,9 +48,8 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Render the art page
-	pageData := templates.NewPageData(fmt.Sprintf("Art: %s - ThreadArt", art.GetTitle()), "art").
-		WithUser(user)
+	// Render the art page using middleware-provided context
+	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("Art: %s - ThreadArt", art.GetTitle()), "art")
 	err = templates.ArtPage(pageData, art).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
@@ -119,9 +118,6 @@ func (h *ArtHandler) ConfirmArtImageUpload(w http.ResponseWriter, r *http.Reques
 
 // NewArtPage renders the art creation form
 func (h *ArtHandler) NewArtPage(w http.ResponseWriter, r *http.Request) {
-	// Get user from context if authenticated
-	user, _ := middleware.UserFromContext(r.Context())
-
 	// Initial form data with empty values
 	formData := &services.ArtFormData{
 		Title:   "",
@@ -129,9 +125,8 @@ func (h *ArtHandler) NewArtPage(w http.ResponseWriter, r *http.Request) {
 		Success: false,
 	}
 
-	// Render the art creation form
-	pageData := templates.NewPageData("Create New Art - ThreadArt", "new-art").
-		WithUser(user)
+	// Render the art creation form using middleware-provided context
+	pageData := templates.NewPageDataFromRequest(r, "Create New Art - ThreadArt", "new-art")
 	err := templates.NewArtPage(pageData, formData).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
@@ -213,3 +208,5 @@ func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 }
+
+// Firebase config is now handled by middleware - no need for manual injection

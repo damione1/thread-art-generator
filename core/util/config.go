@@ -40,24 +40,27 @@ type QueueConfig struct {
 // Config stores all configuration of the application.
 // The values are read by viper from a config file or environment variable.
 type Config struct {
-	Environment         string        `mapstructure:"ENVIRONMENT"`
-	GRPCServerPort      string        `mapstructure:"GRPC_SERVER_PORT"`
-	HTTPServerPort      string        `mapstructure:"HTTP_SERVER_PORT"`
-	TokenSymmetricKey   string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
-	EmailSenderName     string        `mapstructure:"EMAIL_SENDER_NAME"`
-	EmailSenderAddress  string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
-	EmailSenderPassword string        `mapstructure:"EMAIL_SENDER_PASSWORD"`
-	PostgresUser        string        `mapstructure:"POSTGRES_USER"`
-	PostgresPassword    string        `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDb          string        `mapstructure:"POSTGRES_DB"`
-	DB                  *sql.DB       `mapstructure:"-"`
-	AdminEmail          string        `mapstructure:"ADMIN_EMAIL"`
-	GCSBucketName       string        `mapstructure:"GCS_BUCKET_NAME"`
-	SendInBlueAPIKey    string        `mapstructure:"SENDINBLUE_API_KEY"`
-	FrontendUrl         string        `mapstructure:"FRONTEND_URL"`
+	Environment         string         `mapstructure:"ENVIRONMENT"`
+	GRPCServerPort      string         `mapstructure:"GRPC_SERVER_PORT"`
+	HTTPServerPort      string         `mapstructure:"HTTP_SERVER_PORT"`
+	FrontendPort        string         `mapstructure:"FRONTEND_PORT"`
+	ApiURL              string         `mapstructure:"API_URL"`
+	TokenSymmetricKey   string         `mapstructure:"TOKEN_SYMMETRIC_KEY"`
+	EmailSenderName     string         `mapstructure:"EMAIL_SENDER_NAME"`
+	EmailSenderAddress  string         `mapstructure:"EMAIL_SENDER_ADDRESS"`
+	EmailSenderPassword string         `mapstructure:"EMAIL_SENDER_PASSWORD"`
+	PostgresHost        string         `mapstructure:"POSTGRES_HOST"`
+	PostgresUser        string         `mapstructure:"POSTGRES_USER"`
+	PostgresPassword    string         `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDb          string         `mapstructure:"POSTGRES_DB"`
+	DB                  *sql.DB        `mapstructure:"-"`
+	AdminEmail          string         `mapstructure:"ADMIN_EMAIL"`
+	GCSBucketName       string         `mapstructure:"GCS_BUCKET_NAME"`
+	SendInBlueAPIKey    string         `mapstructure:"SENDINBLUE_API_KEY"`
+	FrontendUrl         string         `mapstructure:"FRONTEND_URL"`
 	Firebase            FirebaseConfig `mapstructure:",squash"`
-	Storage             StorageConfig `mapstructure:",squash"`
-	Queue               QueueConfig   `mapstructure:",squash"`
+	Storage             StorageConfig  `mapstructure:",squash"`
+	Queue               QueueConfig    `mapstructure:",squash"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -68,10 +71,13 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("MIGRATION_PATH")
 	viper.BindEnv("GRPC_SERVER_PORT")
 	viper.BindEnv("HTTP_SERVER_PORT")
+	viper.BindEnv("FRONTEND_PORT")
+	viper.BindEnv("API_URL")
 	viper.BindEnv("TOKEN_SYMMETRIC_KEY")
 	viper.BindEnv("EMAIL_SENDER_NAME")
 	viper.BindEnv("EMAIL_SENDER_ADDRESS")
 	viper.BindEnv("EMAIL_SENDER_PASSWORD")
+	viper.BindEnv("POSTGRES_HOST")
 	viper.BindEnv("POSTGRES_USER")
 	viper.BindEnv("POSTGRES_PASSWORD")
 	viper.BindEnv("POSTGRES_DB")
@@ -106,5 +112,78 @@ func LoadConfig() (config Config, err error) {
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+
+	// Apply defaults for missing values
+	config.applyDefaults()
+
 	return config, nil
+}
+
+// applyDefaults sets default values for configuration fields that are empty
+func (c *Config) applyDefaults() {
+	if c.FrontendPort == "" {
+		c.FrontendPort = "8080"
+	}
+	if c.PostgresHost == "" {
+		c.PostgresHost = "db"
+	}
+	if c.PostgresUser == "" {
+		c.PostgresUser = "postgres"
+	}
+	if c.PostgresPassword == "" {
+		c.PostgresPassword = "postgres"
+	}
+	if c.PostgresDb == "" {
+		c.PostgresDb = "threadmachine"
+	}
+	if c.ApiURL == "" {
+		c.ApiURL = "http://api:9090"
+	}
+	if c.Firebase.ProjectID == "" {
+		c.Firebase.ProjectID = "demo-thread-art-generator"
+	}
+}
+
+// GetPostgresDSN builds the PostgreSQL connection string from configuration
+func (c *Config) GetPostgresDSN() string {
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+		c.PostgresHost, c.PostgresUser, c.PostgresPassword, c.PostgresDb)
+}
+
+// GetFirebaseConfigForFrontend converts the core Firebase config to frontend-compatible format
+func (c *Config) GetFirebaseConfigForFrontend() *FirebaseClientConfig {
+	// Check if we're in emulator mode
+	isEmulator := c.Firebase.EmulatorHost != "" || c.Environment == "development"
+
+	config := &FirebaseClientConfig{
+		ProjectID:  c.Firebase.ProjectID,
+		APIKey:     c.Firebase.WebAPIKey,
+		AuthDomain: c.Firebase.AuthDomain,
+		IsEmulator: isEmulator,
+	}
+
+	if isEmulator {
+		// For emulator, always use localhost for browser access
+		config.EmulatorHost = "localhost:9099"
+		config.EmulatorUI = "localhost:4000"
+		config.APIKey = "demo-api-key" // Emulator doesn't need real API key
+		config.ProjectID = "demo-thread-art-generator"
+	}
+
+	// Generate authDomain from projectID if not provided
+	if config.AuthDomain == "" && config.ProjectID != "" {
+		config.AuthDomain = fmt.Sprintf("%s.firebaseapp.com", config.ProjectID)
+	}
+
+	return config
+}
+
+// FirebaseClientConfig represents Firebase configuration for frontend clients
+type FirebaseClientConfig struct {
+	ProjectID    string `json:"projectId"`
+	APIKey       string `json:"apiKey"`
+	AuthDomain   string `json:"authDomain"`
+	EmulatorHost string `json:"emulatorHost,omitempty"`
+	EmulatorUI   string `json:"emulatorUI,omitempty"`
+	IsEmulator   bool   `json:"isEmulator"`
 }

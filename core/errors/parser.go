@@ -2,9 +2,9 @@ package pbErrors
 
 import (
 	"fmt"
-	
-	"github.com/bufbuild/protovalidate-go"
+
 	"connectrpc.com/connect"
+	"github.com/bufbuild/protovalidate-go"
 )
 
 // ErrorParser provides utilities for parsing and converting different error types
@@ -31,12 +31,12 @@ func (p *ErrorParser) ParseProtoValidationError(err error) *StandardError {
 	for _, violation := range validationErr.Violations {
 		fieldPath := p.extractFieldName(violation)
 		message := violation.Proto.GetMessage()
-		
+
 		// If no specific field, treat as global validation error
 		if fieldPath == "" {
 			return NewGlobalError(ErrorTypeValidation, message)
 		}
-		
+
 		builder.AddField(fieldPath, message)
 	}
 
@@ -78,7 +78,7 @@ func (p *ErrorParser) ParseConnectError(err error) *StandardError {
 
 	standardErr := builder.Build()
 	standardErr.Type = errorType
-	
+
 	// If no field errors were found, make it a global error
 	if len(standardErr.Fields) == 0 {
 		standardErr.GlobalError = connectErr.Message()
@@ -95,7 +95,7 @@ func (p *ErrorParser) extractFieldName(violation *protovalidate.Violation) strin
 
 	// Get the field name from the descriptor
 	fieldName := string(violation.FieldDescriptor.Name())
-	
+
 	// Convert from snake_case to the format expected by your frontend
 	// You can customize this logic based on your form field naming conventions
 	return p.normalizeFieldName(fieldName)
@@ -117,7 +117,7 @@ func (p *ErrorParser) ParseBusinessLogicError(errorType ErrorType, message strin
 		builder.AddField(field, message)
 		return builder.Build()
 	}
-	
+
 	// Global business logic error
 	return NewGlobalError(errorType, message)
 }
@@ -189,7 +189,7 @@ func (p *ErrorParser) ValidateEmail(email string, fieldName string) []string {
 	if email == "" {
 		return nil // Use ValidateRequired for required check
 	}
-	
+
 	// Basic email validation - you can enhance this
 	if len(email) < 3 || !contains(email, "@") || !contains(email, ".") {
 		return []string{"Please enter a valid email address"}
@@ -200,36 +200,36 @@ func (p *ErrorParser) ValidateEmail(email string, fieldName string) []string {
 // ValidateLength checks string length constraints
 func (p *ErrorParser) ValidateLength(value string, fieldName string, min, max int) []string {
 	var errors []string
-	
+
 	if min > 0 && len(value) < min {
 		errors = append(errors, fmt.Sprintf("%s must be at least %d characters", fieldName, min))
 	}
-	
+
 	if max > 0 && len(value) > max {
 		errors = append(errors, fmt.Sprintf("%s must be no more than %d characters", fieldName, max))
 	}
-	
+
 	return errors
 }
 
 // ValidateRange checks numeric range constraints
 func (p *ErrorParser) ValidateRange(value int, fieldName string, min, max int) []string {
 	var errors []string
-	
+
 	if value < min {
 		errors = append(errors, fmt.Sprintf("%s must be at least %d", fieldName, min))
 	}
-	
+
 	if value > max {
 		errors = append(errors, fmt.Sprintf("%s must be no more than %d", fieldName, max))
 	}
-	
+
 	return errors
 }
 
 // Helper function for string contains check
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && 
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
 		(hasSubstring(s, substr)))
 }
 

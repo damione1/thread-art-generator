@@ -90,6 +90,9 @@ generate-models:
 
 .PHONY: generate-templ
 generate-templ:
+	@echo "🔄 Building npm packages..."
+	@cd client && npm install && npm run build
+	@echo "✅ Npm packages built successfully"
 	@echo "🔄 Generating Templ templates..."
 	@echo "Installing Templ if needed..."
 	@test -f "$(shell go env GOPATH)/bin/templ" || go install github.com/a-h/templ/cmd/templ@latest

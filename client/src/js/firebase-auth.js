@@ -103,8 +103,12 @@ class FirebaseAuthManager {
                     // Send token to backend for session creation
                     await this.syncWithBackend(idToken);
                     
-                    // Only redirect if this was a fresh sign-in or we're not on auth pages
-                    if (this.justSignedIn || !['/login', '/signup'].includes(currentPath)) {
+                    // Only redirect if this was a fresh sign-in and we're not already on dashboard
+                    // or if we're on auth pages (login/signup) and user is authenticated
+                    if (this.justSignedIn && currentPath !== '/dashboard') {
+                        window.location.href = '/dashboard';
+                    } else if (['/login', '/signup'].includes(currentPath)) {
+                        // User is authenticated but on auth page - redirect to dashboard
                         window.location.href = '/dashboard';
                     }
                     

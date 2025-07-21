@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/Damione1/thread-art-generator/core/pb"
 	"connectrpc.com/connect"
+	"github.com/Damione1/thread-art-generator/core/pb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

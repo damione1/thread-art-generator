@@ -1,27 +1,28 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	pages "github.com/Damione1/thread-art-generator/client/internal/templates/pages"
 	"github.com/Damione1/thread-art-generator/client/internal/types"
+	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/rs/zerolog/log"
 )
 
 // PageHandler handles rendering the main application pages
 type PageHandler struct {
 	generatorService *services.GeneratorService
+	config           *util.Config
 }
 
 // NewPageHandler creates a new page handler
-func NewPageHandler(generatorService *services.GeneratorService) *PageHandler {
+func NewPageHandler(generatorService *services.GeneratorService, config *util.Config) *PageHandler {
 	return &PageHandler{
 		generatorService: generatorService,
+		config:           config,
 	}
 }
 
@@ -61,12 +62,11 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 	arts, err := h.generatorService.ListArts(r.Context(), user.ID, 10, "", sort, dir)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to fetch arts for dashboard")
-		
-		// Create error page data
-		pageData := templates.NewPageData("Dashboard - Error", "dashboard").
-			WithUser(user).
+
+		// Create error page data using middleware-provided context
+		pageData := templates.NewPageDataFromRequest(r, "Dashboard - Error", "dashboard").
 			WithError("Error fetching arts. Please try again.")
-		
+
 		err = pages.DashboardPage(pageData).Render(r.Context(), w)
 		if err != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
@@ -81,9 +81,8 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 		Dir:  dir,
 	}
 
-	// Create page data with dashboard-specific data
-	pageData := templates.NewPageData("Dashboard", "dashboard").
-		WithUser(user).
+	// Create page data using middleware-provided context
+	pageData := templates.NewPageDataFromRequest(r, "Dashboard", "dashboard").
 		WithData(dashboardData)
 
 	// Render the dashboard page
@@ -98,7 +97,7 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 func (h *PageHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	// Get user from context if authenticated (to redirect if already logged in)
 	user, _ := middleware.UserFromContext(r.Context())
-	
+
 	// If user is already authenticated, redirect to dashboard
 	if user != nil {
 		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
@@ -125,7 +124,7 @@ func (h *PageHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 func (h *PageHandler) SignupPage(w http.ResponseWriter, r *http.Request) {
 	// Get user from context if authenticated (to redirect if already logged in)
 	user, _ := middleware.UserFromContext(r.Context())
-	
+
 	// If user is already authenticated, redirect to dashboard
 	if user != nil {
 		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
@@ -150,40 +149,16 @@ func (h *PageHandler) SignupPage(w http.ResponseWriter, r *http.Request) {
 
 // getFirebaseConfig returns Firebase configuration based on environment
 func (h *PageHandler) getFirebaseConfig() *types.FirebaseConfig {
-	// Check if we're in emulator mode by checking environment variables
-	emulatorHost := os.Getenv("FIREBASE_AUTH_EMULATOR_HOST")
-	environment := os.Getenv("ENVIRONMENT")
-	
-	// Use emulator if explicitly set or in development environment
-	isEmulator := emulatorHost != "" || environment == "development"
-	
-	if isEmulator {
-		// For emulator, always use localhost for browser access
-		// The browser needs to connect directly to localhost, not through Docker networking
-		return &types.FirebaseConfig{
-			ProjectID:    "demo-thread-art-generator",
-			APIKey:       "demo-api-key", // Emulator doesn't need real API key
-			AuthDomain:   "demo-thread-art-generator.firebaseapp.com",
-			EmulatorHost: "localhost:9099", // Always use localhost for browser
-			EmulatorUI:   "localhost:4000",
-			IsEmulator:   true,
-		}
-	}
-	
-	// Production configuration with fallbacks and validation
-	projectID := os.Getenv("FIREBASE_PROJECT_ID")
-	webAPIKey := os.Getenv("FIREBASE_WEB_API_KEY") 
-	authDomain := os.Getenv("FIREBASE_AUTH_DOMAIN")
-	
-	// Generate authDomain from projectID if not provided
-	if authDomain == "" && projectID != "" {
-		authDomain = fmt.Sprintf("%s.firebaseapp.com", projectID)
-	}
-	
+	// Use the centralized configuration method
+	coreConfig := h.config.GetFirebaseConfigForFrontend()
+
+	// Convert from core config to client types
 	return &types.FirebaseConfig{
-		ProjectID:  projectID,
-		APIKey:     webAPIKey,
-		AuthDomain: authDomain,
-		IsEmulator: false,
+		ProjectID:    coreConfig.ProjectID,
+		APIKey:       coreConfig.APIKey,
+		AuthDomain:   coreConfig.AuthDomain,
+		EmulatorHost: coreConfig.EmulatorHost,
+		EmulatorUI:   coreConfig.EmulatorUI,
+		IsEmulator:   coreConfig.IsEmulator,
 	}
 }

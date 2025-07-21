@@ -18,10 +18,11 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	coreauth "github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
+	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -30,9 +31,9 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	// Load configuration
-	port := os.Getenv("FRONTEND_PORT")
-	if port == "" {
-		port = "8080"
+	config, err := util.LoadConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
 	// Get the current working directory to determine static file path
@@ -51,26 +52,8 @@ func main() {
 	log.Info().Str("staticDir", staticDir).Msg("Using static files directory")
 
 	// Connect to PostgreSQL database for sessions
-	dbHost := os.Getenv("POSTGRES_HOST")
-	if dbHost == "" {
-		dbHost = "db"
-	}
-	dbUser := os.Getenv("POSTGRES_USER")
-	if dbUser == "" {
-		dbUser = "postgres"
-	}
-	dbPassword := os.Getenv("POSTGRES_PASSWORD")
-	if dbPassword == "" {
-		dbPassword = "postgres"
-	}
-	dbName := os.Getenv("POSTGRES_DB")
-	if dbName == "" {
-		dbName = "threadmachine"
-	}
+	dbDSN := config.GetPostgresDSN()
 
-	dbDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", 
-		dbHost, dbUser, dbPassword, dbName)
-	
 	db, err := sql.Open("postgres", dbDSN)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to database")
@@ -96,33 +79,23 @@ func main() {
 		},
 	}
 
-	// Get API URL from environment
-	apiURL := os.Getenv("API_URL")
-	if apiURL == "" {
-		apiURL = "http://api:9090"
-	}
-
 	// Create connect client directly
 	artGeneratorClient := pbconnect.NewArtGeneratorServiceClient(
 		httpClient,
-		apiURL,
+		config.ApiURL,
 	)
 
 	// Initialize Firebase auth service
-	emulatorHost := os.Getenv("FIREBASE_AUTH_EMULATOR_HOST")
-	environment := os.Getenv("ENVIRONMENT")
-	isEmulator := emulatorHost != "" || environment == "development"
-	
+	isEmulator := config.Firebase.EmulatorHost != "" || config.Environment == "development"
+
 	firebaseConfig := coreauth.FirebaseConfiguration{
-		ProjectID: "demo-thread-art-generator", // Default for emulator
+		ProjectID: config.Firebase.ProjectID,
 	}
-	
+
 	if isEmulator {
 		firebaseConfig.EmulatorHost = "host.docker.internal:9099"
-	} else {
-		firebaseConfig.ProjectID = os.Getenv("FIREBASE_PROJECT_ID")
 	}
-	
+
 	firebaseAuth, err := coreauth.NewFirebaseAuthService(firebaseConfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize Firebase auth service")
@@ -133,7 +106,7 @@ func main() {
 
 	// Create Firebase auth handler with all services
 	authHandler := handlers.NewFirebaseAuthHandlerWithServices(firebaseAuth, sessionManager, generatorService, db)
-	pageHandler := handlers.NewPageHandler(generatorService)
+	pageHandler := handlers.NewPageHandler(generatorService, &config)
 	artHandler := handlers.NewArtHandler(generatorService)
 
 	// Create router
@@ -142,6 +115,7 @@ func main() {
 	// Global middleware - updated for Firebase and SCS sessions
 	r.Use(sessionManager.GetSessionManager().LoadAndSave)
 	r.Use(middleware.FirebaseAuthMiddleware(sessionManager))
+	r.Use(middleware.FirebaseConfigMiddleware(&config)) // Add Firebase config to context for authenticated users
 	r.Use(middleware.APIAuthMiddleware(sessionManager))
 
 	// Public routes
@@ -160,7 +134,7 @@ func main() {
 
 		// Public home page
 		r.Get("/", pageHandler.HomePage)
-		
+
 		// Auth pages
 		r.Get("/login", pageHandler.LoginPage)
 		r.Get("/signup", pageHandler.SignupPage)
@@ -193,8 +167,8 @@ func main() {
 				}
 
 				// Return user info as JSON
-				w.Write([]byte(fmt.Sprintf(`{"id":"%s","name":"%s","email":"%s"}`,
-					user.ID, user.Name, user.Email)))
+				fmt.Fprintf(w, `{"id":"%s","name":"%s","email":"%s"}`,
+					user.ID, user.Name, user.Email)
 			})
 
 			// Art upload API routes
@@ -209,13 +183,13 @@ func main() {
 
 	// Start server
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + config.FrontendPort,
 		Handler: r,
 	}
 
 	// Run the server in a goroutine
 	go func() {
-		log.Info().Str("port", port).Msg("Starting server")
+		log.Info().Str("port", config.FrontendPort).Msg("Starting server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("Server failed")
 		}

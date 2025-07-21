@@ -13,16 +13,12 @@ import (
 )
 
 // APIClient provides a wrapper for the API client with Firebase authentication
-// Implements auth.APIClient interface
 type APIClient struct {
 	baseURL        string
 	sessionManager *auth.SCSSessionManager
 	httpClient     *http.Client
 	connectClient  pbconnect.ArtGeneratorServiceClient
 }
-
-// Ensure APIClient implements auth.APIClient interface
-var _ auth.APIClient = (*APIClient)(nil)
 
 // User represents the data returned from the API
 // This implements auth.APIUser for easier type conversion
@@ -157,4 +153,3 @@ func (c *APIClient) GetCurrentUserMock(req *http.Request) (*User, error) {
 
 	return user, nil
 }
-

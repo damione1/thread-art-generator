@@ -44,20 +44,20 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 	log.Info().Msgf("CreateArt Firebase UID: %s", firebaseUID)
-	
+
 	if err := protovalidate.Validate(req); err != nil {
 		log.Info().Msgf("CreateArt protovalidate: %s", err)
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 	log.Info().Msgf("CreateArt protovalidate: %s", req)
-	
+
 	// JIT User Provisioning: Try to get user by Firebase UID, create if not exists
 	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
 	if err != nil {
 		// Check if it's a "not found" error by looking at the error message
 		if err.Error() == "user not found" || errors.Is(err, sql.ErrNoRows) {
 			log.Info().Msgf("CreateArt: User not found, creating new user for Firebase UID: %s", firebaseUID)
-			
+
 			// Get Firebase claims from context for user creation
 			if claims, ok := ctx.Value(contextKeyClaims).(*auth.AuthClaims); ok {
 				// Create new user with Firebase claims
