@@ -26,10 +26,17 @@ import (
 
 // CreateComposition creates a new composition for an art
 func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompositionRequest) (*pb.Composition, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("CreateComposition: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	// Validate the request
@@ -53,18 +60,18 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 	}
 
 	// Verify the user is authorized to create a composition for this art
-	if art.UserID != userID {
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can create compositions for this art")
 	}
 
-	// Get the art
+	// Get the art and verify ownership in one query
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(art.UserID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("art not found")
+			return nil, pbErrors.NotFoundError("art not found or you don't have permission to create compositions for it")
 		}
 		return nil, pbErrors.InternalError("failed to get art", err)
 	}
@@ -110,10 +117,17 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 
 // GetComposition retrieves a composition by ID
 func (server *Server) GetComposition(ctx context.Context, req *pb.GetCompositionRequest) (*pb.Composition, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetComposition: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	// Validate the request
@@ -137,33 +151,26 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 	}
 
 	// Verify the user is authorized to get this composition
-	if composition.UserID != userID {
+	if composition.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get this composition")
 	}
 
-	// Get the art
-	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(composition.ArtID),
-		models.ArtWhere.AuthorID.EQ(composition.UserID),
-	).One(ctx, server.config.DB)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("art not found")
-		}
-		return nil, pbErrors.InternalError("failed to get art", err)
-	}
-
-	// Get the composition
+	// Get the composition with art using join to verify ownership
 	compositionDb, err := models.Compositions(
 		models.CompositionWhere.ID.EQ(composition.CompositionID),
 		models.CompositionWhere.ArtID.EQ(composition.ArtID),
+		qm.InnerJoin("arts ON arts.id = compositions.art_id AND arts.author_id = ?", user.ID),
+		qm.Load(models.CompositionRels.Art),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("composition not found")
+			return nil, pbErrors.NotFoundError("composition not found or you don't have permission to view it")
 		}
 		return nil, pbErrors.InternalError("failed to get composition", err)
 	}
+
+	// Get the related art from the loaded relationship
+	artDb := compositionDb.R.Art
 
 	// Return the composition
 	return pbx.CompositionDbToProto(ctx, server.bucket, artDb, compositionDb), nil
@@ -178,10 +185,17 @@ func (server *Server) UpdateComposition(ctx context.Context, req *pb.UpdateCompo
 
 // ListCompositions lists all compositions for an art
 func (server *Server) ListCompositions(ctx context.Context, req *pb.ListCompositionsRequest) (*pb.ListCompositionsResponse, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ListCompositions: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	// Validate the request
@@ -205,14 +219,14 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 	}
 
 	// Verify the user is authorized to list compositions for this art
-	if art.UserID != userID {
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can list compositions for this art")
 	}
 
 	// Get the art
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(art.UserID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -283,10 +297,17 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 
 // DeleteComposition deletes a composition
 func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompositionRequest) (*emptypb.Empty, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("DeleteComposition: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	// Validate the request
@@ -310,18 +331,19 @@ func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompo
 	}
 
 	// Verify the user is authorized to delete this composition
-	if composition.UserID != userID {
+	if composition.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can delete this composition")
 	}
 
-	// Get the composition
+	// Get the composition with join to verify ownership
 	compositionDb, err := models.Compositions(
 		models.CompositionWhere.ID.EQ(composition.CompositionID),
 		models.CompositionWhere.ArtID.EQ(composition.ArtID),
+		qm.InnerJoin("arts ON arts.id = compositions.art_id AND arts.author_id = ?", user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("composition not found")
+			return nil, pbErrors.NotFoundError("composition not found or you don't have permission to delete it")
 		}
 		return nil, pbErrors.InternalError("failed to get composition", err)
 	}

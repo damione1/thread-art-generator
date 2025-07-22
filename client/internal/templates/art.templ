@@ -105,8 +105,30 @@ templ ArtPage(data *PageData, art *pb.Art) {
 							</div>
 						}
 					</div>
+					// Show "Create Composition" button when art is complete
+					if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE {
+						<div class="mt-6">
+							@button.Button(button.Props{
+								Class: "w-full",
+							}) {
+								<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new") } class="block w-full">
+									Create Composition
+								</a>
+							}
+						</div>
+					}
 				</div>
 			</div>
+			
+			<!-- Auto-refresh while image URL is empty -->
+			if art.GetImageUrl() == "" {
+				<div 
+					hx-get={ "/dashboard/arts/" + extractArtID(art.GetName()) }
+					hx-trigger="every 3s"
+					hx-swap="outerHTML"
+					hx-target="closest body"
+				></div>
+			}
 		</div>
 	}
 }

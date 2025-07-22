@@ -81,3 +81,7 @@ func (s *GeneratorService) ListCompositions(ctx context.Context, pageSize int, p
 func (s *GeneratorService) CreateComposition(ctx context.Context, createRequest *pb.CreateCompositionRequest) (*pb.Composition, map[string][]string, error) {
 	return s.CompositionService.CreateComposition(ctx, createRequest)
 }
+
+func (s *GeneratorService) GetComposition(ctx context.Context, userID, artID, compositionID string) (*pb.Composition, error) {
+	return s.CompositionService.GetComposition(ctx, userID, artID, compositionID)
+}

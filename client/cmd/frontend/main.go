@@ -108,6 +108,7 @@ func main() {
 	authHandler := handlers.NewFirebaseAuthHandlerWithServices(firebaseAuth, sessionManager, generatorService, db)
 	pageHandler := handlers.NewPageHandler(generatorService, &config)
 	artHandler := handlers.NewArtHandler(generatorService)
+	compositionHandler := handlers.NewCompositionHandler(generatorService)
 
 	// Create router
 	r := chi.NewRouter()
@@ -150,6 +151,14 @@ func main() {
 				r.Get("/new", artHandler.NewArtPage)
 				r.Post("/new", artHandler.CreateArt)
 				r.Get("/{artId}", artHandler.ViewArtPage)
+				
+				// Composition routes
+				r.Route("/{artId}/composition", func(r chi.Router) {
+					r.Get("/new", compositionHandler.NewCompositionForm)
+					r.Post("/new", compositionHandler.CreateComposition)
+					r.Get("/{compositionId}", compositionHandler.ViewComposition)
+					r.Get("/{compositionId}/status", compositionHandler.GetCompositionStatus)
+				})
 			})
 		})
 

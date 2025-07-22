@@ -1,0 +1,365 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/axzilla/templui/component/button"
+	"github.com/axzilla/templui/component/form"
+	"github.com/axzilla/templui/component/slider"
+)
+
+// CompositionFormData represents the form data for creating compositions
+type CompositionFormData struct {
+	NailsQuantity     int32               // Default: 300
+	ImgSize           int32               // Default: 800
+	MaxPaths          int32               // Default: 10000
+	StartingNail      int32               // Default: 0
+	MinimumDifference int32               // Default: 10
+	BrightnessFactor  int32               // Default: 50
+	ImageContrast     float32             // Default: 40.0
+	PhysicalRadius    float32             // Default: 609.6
+	Errors            map[string][]string
+	Success           bool
+}
+
+// NewCompositionPage renders the composition creation form
+templ NewCompositionPage(data *PageData, art *pb.Art, formData *CompositionFormData) {
+	@Layout(data) {
+		@slider.Script()
+		<div class="max-w-7xl mx-auto px-4 py-8">
+			<div class="mb-6">
+				<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+					</svg>
+					Back to Art
+				</a>
+				<h1 class="text-3xl font-bold text-slate-200">Create Composition</h1>
+				<p class="text-slate-400 mt-2">Configure thread art parameters for "{ art.GetTitle() }"</p>
+			</div>
+			
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<!-- Art Preview -->
+				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
+					<h2 class="text-xl font-semibold text-slate-200 mb-4">Current Art</h2>
+					<img
+						src={ art.GetImageUrl() }
+						alt={ art.GetTitle() }
+						class="w-full rounded-lg shadow-lg"
+					/>
+					<div class="mt-4">
+						<h3 class="text-lg font-medium text-slate-200">{ art.GetTitle() }</h3>
+						<p class="text-sm text-slate-400 mt-1">This image will be used to generate your thread art composition</p>
+					</div>
+				</div>
+				
+				<!-- Composition Form -->
+				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
+					<h2 class="text-xl font-semibold text-slate-200 mb-6">Composition Parameters</h2>
+					@CompositionForm(art, formData)
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// CompositionForm renders the composition creation form
+templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
+	<form
+		hx-post={ "/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new" }
+		hx-indicator="#submit-spinner"
+		class="space-y-6"
+	>
+		@ErrorAlert(formData.Errors["_form"])
+		
+		<!-- Nails Quantity -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "nails_quantity",
+			}) {
+				Number of Nails
+			}
+			<input
+				id="nails_quantity"
+				type="number"
+				name="nails_quantity"
+				value={ fmt.Sprint(formData.NailsQuantity) }
+				min="1"
+				max="1000"
+				required
+				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+			/>
+			@form.Description() {
+				Number of nails placed evenly around the circle perimeter. More nails create finer detail but increase processing time. Typical range: 200-500 for good balance.
+			}
+			if len(formData.Errors["composition.nails_quantity"]) > 0 {
+				for _, err := range formData.Errors["composition.nails_quantity"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Image Size -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "img_size",
+			}) {
+				Image Size (pixels)
+			}
+			<input
+				id="img_size"
+				type="number"
+				name="img_size"
+				value={ fmt.Sprint(formData.ImgSize) }
+				min="1"
+				max="5000"
+				required
+				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+			/>
+			@form.Description() {
+				Internal processing resolution. Higher values capture more detail but dramatically increase processing time. 800px is optimal for most images.
+			}
+			if len(formData.Errors["composition.img_size"]) > 0 {
+				for _, err := range formData.Errors["composition.img_size"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Max Paths -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "max_paths",
+			}) {
+				Maximum Paths
+			}
+			<input
+				id="max_paths"
+				type="number"
+				name="max_paths"
+				value={ fmt.Sprint(formData.MaxPaths) }
+				min="1"
+				max="20000"
+				required
+				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+			/>
+			@form.Description() {
+				Maximum thread connections to draw. The algorithm stops when no improvement is found or this limit is reached. More paths = darker, more detailed result.
+			}
+			if len(formData.Errors["composition.max_paths"]) > 0 {
+				for _, err := range formData.Errors["composition.max_paths"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Starting Nail -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "starting_nail",
+			}) {
+				Starting Nail Position
+			}
+			<input
+				id="starting_nail"
+				type="number"
+				name="starting_nail"
+				value={ fmt.Sprint(formData.StartingNail) }
+				min="0"
+				required
+				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+			/>
+			@form.Description() {
+				Starting nail position (0 = top of circle, increases clockwise). Different starting points can affect the final pattern slightly.
+			}
+			if len(formData.Errors["composition.starting_nail"]) > 0 {
+				for _, err := range formData.Errors["composition.starting_nail"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Minimum Difference -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "minimum_difference",
+			}) {
+				Minimum Nail Difference
+			}
+			@slider.Slider() {
+				<div class="flex justify-between items-center mb-2">
+					<span class="text-sm text-slate-400">Thread separation</span>
+					<div class="flex items-center">
+						@slider.Value(slider.ValueProps{
+							For:   "minimum_difference",
+							Class: "text-sm font-medium text-slate-200",
+						})
+						<span class="text-sm text-slate-400 ml-1">nails</span>
+					</div>
+				</div>
+				@slider.Input(slider.Props{
+					ID:    "minimum_difference",
+					Name:  "minimum_difference",
+					Value: int(formData.MinimumDifference),
+					Min:   1,
+					Max:   200,
+					Step:  1,
+				})
+			}
+			@form.Description() {
+				Prevents threads from connecting to nearby nails, avoiding tangled threads. Higher values create longer, cleaner lines but may miss fine details.
+			}
+			if len(formData.Errors["composition.minimum_difference"]) > 0 {
+				for _, err := range formData.Errors["composition.minimum_difference"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Brightness Factor -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "brightness_factor",
+			}) {
+				Brightness Factor
+			}
+			@slider.Slider() {
+				<div class="flex justify-between items-center mb-2">
+					<span class="text-sm text-slate-400">Thread brightness</span>
+					@slider.Value(slider.ValueProps{
+						For:   "brightness_factor",
+						Class: "text-sm font-medium text-slate-200",
+					})
+				</div>
+				@slider.Input(slider.Props{
+					ID:    "brightness_factor",
+					Name:  "brightness_factor",
+					Value: int(formData.BrightnessFactor),
+					Min:   1,
+					Max:   255,
+					Step:  1,
+				})
+			}
+			@form.Description() {
+				Controls how much each thread darkens the image during processing. Higher values create bolder, more visible threads but may oversaturate dark areas.
+			}
+			if len(formData.Errors["composition.brightness_factor"]) > 0 {
+				for _, err := range formData.Errors["composition.brightness_factor"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Image Contrast -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "image_contrast",
+			}) {
+				Image Contrast
+			}
+			@slider.Slider() {
+				<div class="flex justify-between items-center mb-2">
+					<span class="text-sm text-slate-400">Contrast adjustment</span>
+					<div class="flex items-center">
+						@slider.Value(slider.ValueProps{
+							For:   "image_contrast",
+							Class: "text-sm font-medium text-slate-200",
+						})
+						<span class="text-sm text-slate-400 ml-1">x</span>
+					</div>
+				</div>
+				@slider.Input(slider.Props{
+					ID:    "image_contrast",
+					Name:  "image_contrast",
+					Value: int(formData.ImageContrast * 10), // Scale for slider
+					Min:   1,
+					Max:   100,
+					Step:  1,
+				})
+			}
+			@form.Description() {
+				Enhances image contrast before processing. Higher values emphasize edges and details but may lose subtle gradations. 40 works well for most photos.
+			}
+			if len(formData.Errors["composition.image_contrast"]) > 0 {
+				for _, err := range formData.Errors["composition.image_contrast"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Physical Radius -->
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "physical_radius",
+			}) {
+				Physical Radius (mm)
+			}
+			<input
+				id="physical_radius"
+				type="number"
+				name="physical_radius"
+				value={ fmt.Sprintf("%.1f", formData.PhysicalRadius) }
+				min="0.1"
+				step="0.1"
+				required
+				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+			/>
+			@form.Description() {
+				Actual size of your physical frame in millimeters. Used to calculate G-code coordinates and thread length. Default 609.6mm = 24 inches.
+			}
+			if len(formData.Errors["composition.physical_radius"]) > 0 {
+				for _, err := range formData.Errors["composition.physical_radius"] {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ err }
+					}
+				}
+			}
+		}
+		
+		<!-- Submit Button -->
+		<div class="flex justify-end mt-6">
+			@button.Button(button.Props{
+				Type:    "submit",
+				Variant: button.VariantDefault,
+			}) {
+				<span id="submit-spinner" class="htmx-indicator">
+					<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+					</svg>
+				</span>
+				Create Composition
+			}
+		</div>
+	</form>
+}
