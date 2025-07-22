@@ -156,12 +156,12 @@ services:
       MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
       MINIO_DEFAULT_BUCKETS: ${STORAGE_BUCKET}
-      # Allow direct access without forcing SSL
+      # Secure configuration - no public access
       MINIO_SERVER_URL: http://localhost:9000
       MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
-      # Allow anonymous access for GET operations
       MINIO_BROWSER_LOGIN_ANIMATION: off
-      MINIO_ANONYMOUS_POLICY: download
+      # Disable all anonymous access - signed URLs only
+      MINIO_ANONYMOUS_POLICY: none
     volumes:
       - ./infra/minio/data:/data
       - ./infra/minio/config:/root/.minio

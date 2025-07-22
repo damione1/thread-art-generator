@@ -1114,7 +1114,11 @@ type GetArtUploadUrlRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The name of the Art resource to upload an image for.
 	// For example: "users/123/arts/456"
-	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// The content type of the image to upload
+	ContentType string `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// The size of the file to upload in bytes
+	FileSize      int64 `protobuf:"varint,3,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1154,6 +1158,20 @@ func (x *GetArtUploadUrlRequest) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+func (x *GetArtUploadUrlRequest) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *GetArtUploadUrlRequest) GetFileSize() int64 {
+	if x != nil {
+		return x.FileSize
+	}
+	return 0
 }
 
 type GetArtUploadUrlResponse struct {
@@ -1369,11 +1387,14 @@ const file_art_proto_rawDesc = "" +
 	"\x10DeleteArtRequest\x12\xd5\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\xc0\x01\xe0A\x02\xfaA\x15\n" +
 	"\x13art.example.com/Art\xbaH\xa1\x01\xba\x01\x9d\x01\n" +
-	"\x16delete_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\xf8\x01\n" +
+	"\x16delete_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\xf5\x03\n" +
 	"\x16GetArtUploadUrlRequest\x12\xdd\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\xc8\x01\xe0A\x02\xfaA\x15\n" +
 	"\x13art.example.com/Art\xbaH\xa9\x01\xba\x01\xa5\x01\n" +
-	"\x1eget_art_upload_url.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"}\n" +
+	"\x1eget_art_upload_url.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\x12\xcc\x01\n" +
+	"\fcontent_type\x18\x02 \x01(\tB\xa8\x01\xe0A\x02\xbaH\xa1\x01\xba\x01\x9d\x01\n" +
+	"%get_art_upload_url.content_type.valid\x12'Content type must be a valid image type\x1aKthis in ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']R\vcontentType\x12,\n" +
+	"\tfile_size\x18\x03 \x01(\x03B\x0f\xe0A\x02\xbaH\t\"\a\x18\x80\x80\xc0\x02(\x01R\bfileSize\"}\n" +
 	"\x17GetArtUploadUrlResponse\x12\x1d\n" +
 	"\n" +
 	"upload_url\x18\x01 \x01(\tR\tuploadUrl\x12C\n" +

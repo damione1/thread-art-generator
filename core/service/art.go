@@ -71,10 +71,17 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 }
 
 func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("UpdateArt: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
@@ -97,14 +104,15 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if art.UserID != userID {
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can update the art")
 	}
 
 	// Check if the art exists
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(art.UserID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -316,10 +324,17 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("DeleteArt: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	artResource, err := resource.ParseResourceName(req.GetName())
@@ -338,13 +353,14 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if art.UserID != userID {
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can delete the art")
 	}
 
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(art.UserID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -377,10 +393,17 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetArtUploadUrl: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	artResource, err := resource.ParseResourceName(req.GetName())
@@ -399,14 +422,15 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if art.UserID != userID {
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get an upload URL for the art")
 	}
 
 	// Check if the art exists
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(art.UserID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -432,12 +456,11 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	// Create the image key using resource builder
 	imageKey := resource.BuildArtResourceName(artDb.AuthorID, imageID)
 
-	// Generate a signed URL with 15 minutes expiration
-	// Important: We're using a minimal set of options to keep the signing simple
+	// Generate a secure signed URL with 1-minute expiration and content validation
 	opts := &blob.SignedURLOptions{
-		Expiry: 15 * time.Minute,
-		Method: "PUT",
-		// We intentionally DO NOT set ContentType to avoid signature issues
+		Expiry:      time.Minute, // 1-minute expiration for security
+		Method:      "PUT",
+		ContentType: req.GetContentType(), // Include content type for validation
 	}
 
 	signedURL, err := server.bucket.SignedURL(ctx, imageKey, opts)
@@ -446,7 +469,7 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	}
 
 	// Calculate expiration time
-	expirationTime := time.Now().Add(15 * time.Minute)
+	expirationTime := time.Now().Add(time.Minute)
 
 	log.Info().Msgf("Signed URL: %s", signedURL)
 
@@ -458,10 +481,17 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 
 // ConfirmArtImageUpload marks an art as complete after successful image upload
 func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.ConfirmArtImageUploadRequest) (*pb.Art, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ConfirmArtImageUpload: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
@@ -484,14 +514,15 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if art.UserID != userID {
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can confirm image upload")
 	}
 
 	// Get the art
 	artDb, err := models.Arts(
 		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(art.UserID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
