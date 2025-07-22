@@ -1,0 +1,12 @@
+version: v1
+plugins:
+  # Go outputs
+  - name: go
+    out: ../core/pb
+    opt: paths=source_relative
+  - name: connect-go
+    out: ../core/pb
+    opt: paths=source_relative
+  # OpenAPI generation
+  - name: openapiv2
+    out: ../api/openapi

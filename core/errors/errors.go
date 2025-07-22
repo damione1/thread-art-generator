@@ -132,17 +132,17 @@ func NewFieldValidationError(field, message string) error {
 
 // NewNotFoundError creates a new not found error with the standard gRPC status
 func NewNotFoundError(message string) error {
-	return status.Errorf(codes.NotFound, message)
+	return status.Errorf(codes.NotFound, "%s", message)
 }
 
 // NewInternalError creates a new internal error with the standard gRPC status
 func NewInternalError(message string, err error) error {
-	return status.Errorf(codes.Internal, "%s: %s", message, err)
+	return status.Errorf(codes.Internal, "%s: %v", message, err)
 }
 
 // NewUnauthenticatedError creates a new unauthenticated error with the standard gRPC status
 func NewUnauthenticatedError(message string) error {
-	return status.Errorf(codes.Unauthenticated, message)
+	return status.Errorf(codes.Unauthenticated, "%s", message)
 }
 
 // IsValidationError checks if an error is a validation error

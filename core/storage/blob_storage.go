@@ -199,6 +199,7 @@ func (b *BlobStorage) SignedURL(ctx context.Context, key string, opts *blob.Sign
 }
 
 // s3SignedURL generates a pre-signed URL specifically for S3/MinIO
+// with security constraints for image uploads
 func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
 	// Default to PUT if method not specified
 	method := opts.Method
@@ -206,6 +207,41 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		method = "PUT"
 	}
 
+	// Validate and enforce security constraints for uploads
+	if method == "PUT" {
+		// Ensure content type is specified and is an image
+		if opts.ContentType == "" {
+			return "", fmt.Errorf("content type is required for uploads")
+		}
+		
+		// Validate image content types
+		validImageTypes := map[string]bool{
+			"image/jpeg": true,
+			"image/jpg":  true,
+			"image/png":  true,
+			"image/gif":  true,
+			"image/webp": true,
+		}
+		
+		if !validImageTypes[opts.ContentType] {
+			return "", fmt.Errorf("invalid content type: %s. Only image files are allowed", opts.ContentType)
+		}
+		
+		// Enforce 1-minute expiration for security
+		if opts.Expiry > time.Minute {
+			opts.Expiry = time.Minute
+		}
+		if opts.Expiry == 0 {
+			opts.Expiry = time.Minute
+		}
+	}
+
+	// For GET requests, use longer expiration for viewing
+	if method == "GET" && opts.Expiry == 0 {
+		opts.Expiry = 15 * time.Minute
+	}
+
+	// Create a secure request with proper content type validation
 	var req *request.Request
 	switch method {
 	case "GET":
@@ -214,20 +250,14 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 			Key:    aws.String(key),
 		}
 		req, _ = b.s3Client.GetObjectRequest(input)
-		// Add X-Forwarded-Proto for GET requests as well
-		req.HTTPRequest.Header.Set("X-Forwarded-Proto", "http")
 	case "PUT":
 		input := &s3.PutObjectInput{
 			Bucket: aws.String(b.bucketName),
 			Key:    aws.String(key),
 		}
-		// Add content type in input only if specified
-		if opts.ContentType != "" {
-			input.ContentType = aws.String(opts.ContentType)
-		}
+		// Don't include ContentType or ContentLength in the input to avoid signing complications
+		// The validation is done at the API layer, and the client will send the content-type header
 		req, _ = b.s3Client.PutObjectRequest(input)
-		// For PUT requests, we need X-Forwarded-Proto for MinIO
-		req.HTTPRequest.Header.Set("X-Forwarded-Proto", req.HTTPRequest.URL.Scheme)
 	case "DELETE":
 		req, _ = b.s3Client.DeleteObjectRequest(&s3.DeleteObjectInput{
 			Bucket: aws.String(b.bucketName),
@@ -253,7 +283,10 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		req.HTTPRequest.URL.Scheme = "http"
 	}
 
-	// Important: Remove any extra headers that shouldn't be part of the signed URL
+	// Don't set headers before signing to avoid signature mismatches
+	// The client will send the Content-Type header which won't be part of the signature
+	
+	// Generate the signed URL with security constraints
 	url, err := req.Presign(opts.Expiry)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign request: %v", err)
@@ -305,6 +338,7 @@ func (b *BlobStorage) GetPublicURL(key string) string {
 		return ""
 	}
 
+	// For MinIO and S3, the public URL format is: {protocol}://{endpoint}/{bucket}/{key}
 	return fmt.Sprintf("%s://%s/%s/%s", protocol, b.publicURL, b.bucketName, key)
 }
 

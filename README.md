@@ -2,7 +2,7 @@
 
 ![Thread Art Generator](https://github.com/Damione1/thread-art-generator/assets/14912510/6b6ef9e1-9bad-4dd7-8579-17fe55ae9c13)
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/damione1/thread-art-generator)](https://goreportcard.com/report/github.com/yourusername/thread-art-generator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Damione1/thread-art-generator)](https://goreportcard.com/report/github.com/Damione1/thread-art-generator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Thread Art Generator transforms your images into unique pieces of circular thread art. Upload images, customize settings, create compositions, and generate physical thread art with visualization and machine instructions (GCode).
@@ -23,9 +23,9 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 
 ```
 [Web UI] <--> [API Server] <--> [Queue] <--> [Worker Service]
-                  |                                |
-                  v                                v
-              [Database] <--------------> [Storage Bucket]
+                   |                                |
+                   v                                v
+               [Database] <--------------> [Storage Bucket]
 ```
 
 - **API Server**: Handles user requests, manages art/composition metadata
@@ -33,7 +33,7 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 - **Worker Service**: Processes compositions using thread_generator
 - **Database**: Stores metadata (PostgreSQL)
 - **Storage**: Stores images and generation results (Object Storage)
-- **Web UI**: Next.js frontend for user interaction
+- **Web UI**: Go+HTMX frontend for user interaction
 
 ## Getting Started
 
@@ -41,7 +41,6 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 
 - Docker and Docker Compose
 - Go 1.22+
-- Node.js 18+
 - Tilt (for local development)
 
 ### Quick Start
@@ -59,7 +58,6 @@ This will:
 - Set up SSL certificates
 - Create an `.env` file with generated keys
 - Configure local hostnames
-- Build the CLI tool
 
 2. **Start Development Environment**
 
@@ -84,21 +82,11 @@ tilt up
 - `/cmd` - Application entry points
 - `/core` - Core business logic
 - `/proto` - Protocol buffer definitions
-- `/web` - Next.js frontend
+- `/client` - Go+HTMX frontend
 - `/threadGenerator` - Thread art generation algorithm
 - `/infra` - Infrastructure configuration
 - `/scripts` - Utility scripts
 
-### Working with the CLI
-
-```bash
-# The CLI wrapper automatically builds and configures the CLI
-./scripts/cli <command>
-
-# Examples:
-./scripts/cli user list
-./scripts/cli art create --title "My Artwork"
-```
 
 ### Development Commands
 
@@ -115,9 +103,33 @@ make psql
 # Run manual database migrations
 tilt trigger migrations
 
-# Rebuild proto files after changes
-tilt trigger proto-rebuild
+# Generate protocol buffer files (recommended)
+make proto
+
+# Clean generated protocol buffer files
+make proto-clean
 ```
+
+### Protocol Buffer Generation
+
+The project uses [Connect-RPC](https://connectrpc.com/) for API communication. When you modify `.proto` files, you need to regenerate the Go and Connect-RPC code:
+
+```bash
+# Generate all protocol buffer files
+make proto
+```
+
+This command will:
+- Auto-install required tools (protoc-gen-go, protoc-gen-connect-go, protoc-gen-openapiv2)
+- Generate Go types in `core/pb/`
+- Generate Connect-RPC clients/servers in `core/pb/pbconnect/`
+- Generate OpenAPI documentation in `api/openapi/`
+
+**Requirements:**
+- [Buf CLI](https://buf.build/docs/installation) - Protocol buffer build tool
+- Go 1.22+ - For installing protoc generators
+
+The generation uses Connect-RPC v2 (`connectrpc.com/connect`) for modern, efficient RPC communication.
 
 ### Database Access
 

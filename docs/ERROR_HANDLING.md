@@ -129,36 +129,123 @@ Our backend returns errors in several standardized formats:
 
 ## Frontend Error Handling
 
-The frontend parses these error messages using the `parseValidationErrors` function in `web/src/utils/errorUtils.ts`:
+The Go frontend parses these error messages using the `ParseValidationErrors` function in `pkg/errors/validation.go`:
 
-```typescript
-export function parseValidationErrors(errorMessage: string): {
-  [key: string]: string;
-} {
-  const errors: { [key: string]: string } = {};
+```go
+// FieldErrors maps field names to error messages
+type FieldErrors map[string]string
 
-  // Check if it's a validation error
-  if (!errorMessage || !errorMessage.includes("failed to validate request")) {
-    return errors;
-  }
+// ParseValidationErrors parses a gRPC error message into field errors
+func ParseValidationErrors(err error) FieldErrors {
+	fieldErrors := make(FieldErrors)
 
-  // ... parsing logic ...
+	// Handle Connect-RPC errors
+	if connectErr, ok := err.(*connect.Error); ok {
+		// Check if it's a validation error (InvalidArgument code)
+		if connectErr.Code() == connect.CodeInvalidArgument {
+			// Extract details from error
+			for _, detail := range connectErr.Details() {
+				// Parse bad request details
+				if br, ok := detail.Value.(*errdetails.BadRequest); ok {
+					for _, violation := range br.GetFieldViolations() {
+						fieldName := mapFieldName(violation.GetField())
+						fieldErrors[fieldName] = violation.GetDescription()
+					}
+				}
+			}
 
-  return errors;
+			// If no structured details, parse the error message
+			if len(fieldErrors) == 0 {
+				errMsg := connectErr.Message()
+				parseErrorMessage(errMsg, fieldErrors)
+			}
+		}
+	} else if err != nil {
+		// Handle plain errors by parsing the message
+		parseErrorMessage(err.Error(), fieldErrors)
+	}
+
+	return fieldErrors
+}
+
+// parseErrorMessage parses error messages in our standard format
+func parseErrorMessage(errorMessage string, fieldErrors FieldErrors) {
+	// Check if it's a validation error
+	if !strings.Contains(errorMessage, "failed to validate request") {
+		// Not a validation error, add a general error
+		fieldErrors["general"] = errorMessage
+		return
+	}
+
+	// Parse field errors in the format "(field: message; field2: message2)"
+	fieldErrorsRegex := regexp.MustCompile(`\(([^)]+)\)`)
+	matches := fieldErrorsRegex.FindStringSubmatch(errorMessage)
+
+	if len(matches) > 1 {
+		// Process field errors
+		fields := strings.Split(matches[1], ";")
+		for _, field := range fields {
+			parts := strings.SplitN(strings.TrimSpace(field), ":", 2)
+			if len(parts) == 2 {
+				fieldName := mapFieldName(strings.TrimSpace(parts[0]))
+				fieldErrors[fieldName] = strings.TrimSpace(parts[1])
+			}
+		}
+	} else {
+		// Handle simple validation errors without field information
+		simpleMsgRegex := regexp.MustCompile(`failed to validate request: (.+)`)
+		simpleMatches := simpleMsgRegex.FindStringSubmatch(errorMessage)
+		if len(simpleMatches) > 1 {
+			fieldErrors["general"] = simpleMatches[1]
+		} else {
+			fieldErrors["general"] = errorMessage
+		}
+	}
+}
+
+// mapFieldName maps backend field names to frontend field names
+func mapFieldName(fieldName string) string {
+	fieldMapping := map[string]string{
+		"first_name": "firstName",
+		"last_name":  "lastName",
+		// Add more mappings as needed
+	}
+
+	if mapped, ok := fieldMapping[fieldName]; ok {
+		return mapped
+	}
+	return fieldName
 }
 ```
 
-### Field Name Mapping
+### Using Error Handling in Templates
 
-The frontend maps backend field names to frontend field names:
+In your HTML templates, use the parsed errors to show field-level validation messages:
 
-```typescript
-const fieldMapping: { [key: string]: string } = {
-  first_name: "firstName",
-  last_name: "lastName",
-  validation_number: "validationNumber",
-  refresh_token: "refreshToken",
-};
+```html
+{{ define "form-field" }}
+<div class="form-group {{ if index .Errors .Name }}has-error{{ end }}">
+  <label for="{{ .Name }}">{{ .Label }}</label>
+  <input
+    type="{{ .Type }}"
+    id="{{ .Name }}"
+    name="{{ .Name }}"
+    value="{{ .Value }}"
+    class="form-control"
+  />
+  {{ if index .Errors .Name }}
+  <div class="error-message">{{ index .Errors .Name }}</div>
+  {{ end }}
+</div>
+{{ end }}
+```
+
+And for general errors:
+
+```html
+{{ if index .Errors "general" }}
+<div class="alert alert-danger">{{ index .Errors "general" }}</div>
+{{ end }}
 ```
 
 ## Best Practices
@@ -172,4 +259,4 @@ const fieldMapping: { [key: string]: string } = {
 
 ## Testing
 
-Ensure all error formats are covered in the tests for `parseValidationErrors` in `web/src/utils/errorUtils.test.ts`.
+Ensure all error formats are covered in the tests for `ParseValidationErrors` in `pkg/errors/validation_test.go`.

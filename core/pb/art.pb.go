@@ -935,9 +935,13 @@ type ListArtsRequest struct {
 	// The maximum number of arts to return. The service may return fewer than this value.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// A page token, received from a previous `ListArts` call.
-	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// The order by which to sort the arts.
+	OrderBy string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// The order direction.
+	OrderDirection string `protobuf:"bytes,5,opt,name=order_direction,json=orderDirection,proto3" json:"order_direction,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListArtsRequest) Reset() {
@@ -987,6 +991,20 @@ func (x *ListArtsRequest) GetPageSize() int32 {
 func (x *ListArtsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListArtsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListArtsRequest) GetOrderDirection() string {
+	if x != nil {
+		return x.OrderDirection
 	}
 	return ""
 }
@@ -1096,7 +1114,11 @@ type GetArtUploadUrlRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The name of the Art resource to upload an image for.
 	// For example: "users/123/arts/456"
-	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// The content type of the image to upload
+	ContentType string `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// The size of the file to upload in bytes
+	FileSize      int64 `protobuf:"varint,3,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1136,6 +1158,20 @@ func (x *GetArtUploadUrlRequest) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+func (x *GetArtUploadUrlRequest) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *GetArtUploadUrlRequest) GetFileSize() int64 {
+	if x != nil {
+		return x.FileSize
+	}
+	return 0
 }
 
 type GetArtUploadUrlResponse struct {
@@ -1335,25 +1371,30 @@ const file_art_proto_rawDesc = "" +
 	"\rGetArtRequest\x12\xd2\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\xbd\x01\xe0A\x02\xfaA\x15\n" +
 	"\x13art.example.com/Art\xbaH\x9e\x01\xba\x01\x9a\x01\n" +
-	"\x13get_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\x9e\x02\n" +
+	"\x13get_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\x95\x03\n" +
 	"\x0fListArtsRequest\x12\xc3\x01\n" +
 	"\x06parent\x18\x01 \x01(\tB\xaa\x01\xe0A\x02\xfaA\x16\n" +
 	"\x14art.example.com/User\xbaH\x8a\x01\xba\x01\x86\x01\n" +
 	"\x17list_arts.parent.format\x12=Parent resource name is required and must start with 'users/'\x1a,this.size() > 0 && this.startsWith('users/')R\x06parent\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d \x00R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"W\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12:\n" +
+	"\border_by\x18\x04 \x01(\tB\x1f\xbaH\x1cr\x1aR\vcreate_timeR\vupdate_timeR\aorderBy\x129\n" +
+	"\x0forder_direction\x18\x05 \x01(\tB\x10\xbaH\rr\vR\x03ascR\x04descR\x0eorderDirection\"W\n" +
 	"\x10ListArtsResponse\x12\x1b\n" +
 	"\x04arts\x18\x01 \x03(\v2\a.pb.ArtR\x04arts\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xea\x01\n" +
 	"\x10DeleteArtRequest\x12\xd5\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\xc0\x01\xe0A\x02\xfaA\x15\n" +
 	"\x13art.example.com/Art\xbaH\xa1\x01\xba\x01\x9d\x01\n" +
-	"\x16delete_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\xf8\x01\n" +
+	"\x16delete_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\xf5\x03\n" +
 	"\x16GetArtUploadUrlRequest\x12\xdd\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\xc8\x01\xe0A\x02\xfaA\x15\n" +
 	"\x13art.example.com/Art\xbaH\xa9\x01\xba\x01\xa5\x01\n" +
-	"\x1eget_art_upload_url.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"}\n" +
+	"\x1eget_art_upload_url.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\x12\xcc\x01\n" +
+	"\fcontent_type\x18\x02 \x01(\tB\xa8\x01\xe0A\x02\xbaH\xa1\x01\xba\x01\x9d\x01\n" +
+	"%get_art_upload_url.content_type.valid\x12'Content type must be a valid image type\x1aKthis in ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']R\vcontentType\x12,\n" +
+	"\tfile_size\x18\x03 \x01(\x03B\x0f\xe0A\x02\xbaH\t\"\a\x18\x80\x80\xc0\x02(\x01R\bfileSize\"}\n" +
 	"\x17GetArtUploadUrlResponse\x12\x1d\n" +
 	"\n" +
 	"upload_url\x18\x01 \x01(\tR\tuploadUrl\x12C\n" +

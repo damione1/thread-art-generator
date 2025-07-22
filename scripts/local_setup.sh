@@ -65,6 +65,45 @@ function setup_tools() {
         fi
     fi
     echo -e "✅ mkcert is installed"
+
+    # Check for Node.js and npm (needed for Tailwind CSS)
+    if ! command_exists npm; then
+        echo -e "${YELLOW}npm is not installed. Installing for Tailwind CSS...${NC}"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            brew install node
+        else
+            echo -e "${RED}Please install Node.js and npm manually: https://nodejs.org/${NC}"
+            exit 1
+        fi
+    fi
+    echo -e "✅ npm is installed"
+
+    # Check for buf CLI
+    if ! command_exists buf; then
+        echo -e "${YELLOW}buf CLI is not installed. Installing...${NC}"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            brew install bufbuild/buf/buf
+        else
+            echo -e "${RED}Please install buf CLI manually: https://buf.build/docs/installation${NC}"
+            exit 1
+        fi
+    fi
+    echo -e "✅ buf CLI is installed"
+
+    # Check for Go
+    if ! command_exists go; then
+        echo -e "${RED}Go is not installed. Please install Go 1.22+: https://golang.org/dl/${NC}"
+        exit 1
+    fi
+    echo -e "✅ Go is installed"
+
+    # Check Go version
+    GO_VERSION=$(go version | grep -o 'go[0-9]\+\.[0-9]\+' | sed 's/go//')
+    if [ "$(printf '%s\n' "1.22" "$GO_VERSION" | sort -V | head -n1)" != "1.22" ]; then
+        echo -e "${RED}Go version 1.22+ is required. Current version: $GO_VERSION${NC}"
+        exit 1
+    fi
+    echo -e "✅ Go version $GO_VERSION is compatible"
 }
 
 # Function to setup SSL certificates
@@ -77,16 +116,24 @@ function setup_ssl() {
     # Create certs directory if it doesn't exist
     mkdir -p "$PROJECT_ROOT/certs"
 
-    # Generate certificates for tag.local and storage.tag.local
-    echo "Generating certificates for tag.local and storage.tag.local..."
-    mkcert -cert-file "$PROJECT_ROOT/certs/tag.local.crt" -key-file "$PROJECT_ROOT/certs/tag.local.key" tag.local "*.tag.local" storage.tag.local
+    # Generate certificates for tag.local, front.tag.local and storage.tag.local
+    echo "Generating certificates for tag.local, front.tag.local and storage.tag.local..."
+    mkcert -cert-file "$PROJECT_ROOT/certs/tag.local.crt" -key-file "$PROJECT_ROOT/certs/tag.local.key" tag.local "*.tag.local" front.tag.local storage.tag.local
 
     # Add domains to /etc/hosts if not already present
     if ! grep -q "tag.local" /etc/hosts; then
         echo "Adding domains to /etc/hosts..."
         echo "You might be prompted for your password to modify /etc/hosts"
         sudo sh -c "echo '127.0.0.1 tag.local' >> /etc/hosts"
+        sudo sh -c "echo '127.0.0.1 front.tag.local' >> /etc/hosts"
         sudo sh -c "echo '127.0.0.1 storage.tag.local' >> /etc/hosts"
+    fi
+
+    # Check if front.tag.local is in hosts, add it if not
+    if ! grep -q "front.tag.local" /etc/hosts; then
+        echo "Adding front.tag.local to /etc/hosts..."
+        echo "You might be prompted for your password to modify /etc/hosts"
+        sudo sh -c "echo '127.0.0.1 front.tag.local' >> /etc/hosts"
     fi
 
     echo -e "✅ SSL certificates setup complete"
@@ -114,23 +161,105 @@ function setup_env() {
     fi
 }
 
-# Build the CLI
-function build_cli() {
-    echo -e "\n${YELLOW}Building CLI tool...${NC}"
-    mkdir -p "$PROJECT_ROOT/build"
-    (cd "$PROJECT_ROOT" && go build -o build/cli cmd/cli/main.go)
-    chmod +x "$PROJECT_ROOT/build/cli"
-    echo -e "✅ CLI built successfully at build/cli"
+
+# Setup client frontend
+function setup_frontend() {
+    echo -e "\n${YELLOW}Setting up Go+HTMX frontend...${NC}"
+
+    # Get Go path
+    GOPATH=$(go env GOPATH)
+    GOBIN=$GOPATH/bin
+
+    # Install templ
+    echo -e "Installing templ..."
+    go install github.com/a-h/templ/cmd/templ@latest
+    if ! command_exists $GOBIN/templ; then
+        echo -e "${RED}Failed to install templ${NC}"
+        exit 1
+    fi
+    echo -e "✅ templ installed successfully"
+
+    # Install Tailwind CSS dependencies
+    echo -e "Installing Tailwind CSS dependencies..."
+    (cd "$PROJECT_ROOT/client" && npm install)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to install Tailwind CSS dependencies${NC}"
+        exit 1
+    fi
+    echo -e "✅ Tailwind CSS dependencies installed successfully"
+
+    # Build Tailwind CSS
+    echo -e "Building Tailwind CSS..."
+    (cd "$PROJECT_ROOT/client" && mkdir -p ./public/css && npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to build Tailwind CSS${NC}"
+        exit 1
+    fi
+    echo -e "✅ Tailwind CSS built successfully"
+
+    # Generate templ files
+    echo -e "Generating templ templates..."
+    (cd "$PROJECT_ROOT/client" && $GOBIN/templ generate ./internal/templates)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to generate templ templates${NC}"
+        exit 1
+    fi
+    echo -e "✅ Templates generated successfully"
+
+    echo -e "✅ Go+HTMX frontend setup complete"
+}
+
+# Setup protocol buffer tools
+function setup_proto_tools() {
+    echo -e "\n${YELLOW}Setting up protocol buffer tools...${NC}"
+
+    # Get Go path
+    GOPATH=$(go env GOPATH)
+    GOBIN=$GOPATH/bin
+
+    # Install protoc-gen-go
+    echo -e "Installing protoc-gen-go..."
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+    if [ ! -f "$GOBIN/protoc-gen-go" ]; then
+        echo -e "${RED}Failed to install protoc-gen-go${NC}"
+        exit 1
+    fi
+    echo -e "✅ protoc-gen-go installed successfully"
+
+    # Install protoc-gen-connect-go
+    echo -e "Installing protoc-gen-connect-go..."
+    go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
+    if [ ! -f "$GOBIN/protoc-gen-connect-go" ]; then
+        echo -e "${RED}Failed to install protoc-gen-connect-go${NC}"
+        exit 1
+    fi
+    echo -e "✅ protoc-gen-connect-go installed successfully"
+
+    # Install protoc-gen-openapiv2
+    echo -e "Installing protoc-gen-openapiv2..."
+    go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+    if [ ! -f "$GOBIN/protoc-gen-openapiv2" ]; then
+        echo -e "${RED}Failed to install protoc-gen-openapiv2${NC}"
+        exit 1
+    fi
+    echo -e "✅ protoc-gen-openapiv2 installed successfully"
+
+    echo -e "✅ Protocol buffer tools setup complete"
+    echo -e "${YELLOW}Note: Protocol buffer tools are installed in $GOBIN${NC}"
+    echo -e "${YELLOW}Make sure $GOBIN is in your PATH for direct CLI access${NC}"
 }
 
 # Main setup logic
 setup_tools
 setup_ssl
 setup_env
-build_cli
+setup_proto_tools
+setup_frontend
 
 echo -e "\n${GREEN}Setup complete! You can now start the development environment with:${NC}"
 echo -e "${YELLOW}tilt up${NC}"
 echo -e "\n${GREEN}To reset the environment:${NC}"
 echo -e "${YELLOW}tilt down && tilt up${NC}"
+echo -e "\n${GREEN}To regenerate protocol buffers (if needed):${NC}"
+echo -e "${YELLOW}make proto${NC}"
 echo -e "\n${GREEN}Happy coding!${NC}"

@@ -6,23 +6,10 @@ import (
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-// Define the composition resource name constant
-const (
-	RessourceNameCompositions = "compositions"
-)
-
-// Add composition to valid resource types
-func init() {
-	validResourceTypesList = append(validResourceTypesList, RessourceNameCompositions)
-	RessourceTypeCompositions = &ResourceType{Type: RessourceNameCompositions, Parent: RessourceTypeArts}
-}
-
-// RessourceTypeCompositions is the resource type for compositions
-var RessourceTypeCompositions *ResourceType
 
 // CompositionDbToProto converts a database composition model to a proto composition
 func CompositionDbToProto(ctx context.Context, bucket *storage.BlobStorage, artDb *models.Art, composition *models.Composition) *pb.Composition {
@@ -56,12 +43,8 @@ func CompositionDbToProto(ctx context.Context, bucket *storage.BlobStorage, artD
 		UpdateTime:        timestamppb.New(composition.UpdatedAt),
 	}
 
-	// Set the resource name
-	compositionPb.Name = GetResourceName([]Resource{
-		{Type: RessourceTypeUsers, ID: artDb.AuthorID},
-		{Type: RessourceTypeArts, ID: artDb.ID},
-		{Type: RessourceTypeCompositions, ID: composition.ID},
-	})
+	// Set the resource name using the new builder
+	compositionPb.Name = resource.BuildCompositionResourceName(artDb.AuthorID, artDb.ID, composition.ID)
 
 	// Set optional result fields if they exist
 	if composition.PreviewURL.Valid && bucket != nil {
@@ -106,10 +89,10 @@ func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 
 	// Extract resource IDs from the name if it exists
 	if comp.GetName() != "" {
-		resources, err := GetResourcesFromResourceName(comp.GetName())
+		compositionResource, err := resource.ParseResourceName(comp.GetName())
 		if err == nil {
-			if compositionID, ok := resources[RessourceNameCompositions]; ok {
-				compositionDb.ID = compositionID
+			if composition, ok := compositionResource.(*resource.Composition); ok {
+				compositionDb.ID = composition.CompositionID
 			}
 		}
 	}
@@ -118,26 +101,17 @@ func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 }
 
 // ParseCompositionResourceName parses a composition resource name into user ID, art ID, and composition ID
+// Deprecated: Use resource.ParseResourceName instead
 func ParseCompositionResourceName(resourceName string) (string, string, string, error) {
-	resources, err := GetResourcesFromResourceName(resourceName)
+	compositionResource, err := resource.ParseResourceName(resourceName)
 	if err != nil {
 		return "", "", "", err
 	}
 
-	userID, ok := resources[RessourceNameUsers]
+	composition, ok := compositionResource.(*resource.Composition)
 	if !ok {
-		return "", "", "", fmt.Errorf("user ID not found in resource name")
+		return "", "", "", fmt.Errorf("invalid composition resource name")
 	}
 
-	artID, ok := resources[RessourceNameArts]
-	if !ok {
-		return "", "", "", fmt.Errorf("art ID not found in resource name")
-	}
-
-	compositionID, ok := resources[RessourceNameCompositions]
-	if !ok {
-		return "", "", "", fmt.Errorf("composition ID not found in resource name")
-	}
-
-	return userID, artID, compositionID, nil
+	return composition.UserID, composition.ArtID, composition.CompositionID, nil
 }

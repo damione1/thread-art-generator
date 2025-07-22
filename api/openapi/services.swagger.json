@@ -41,6 +41,41 @@
     "application/json"
   ],
   "paths": {
+    "/v1/internal/users/sync": {
+      "post": {
+        "summary": "Sync user from Firebase (Internal)",
+        "description": "Internal endpoint to sync user data from Firebase Authentication to PostgreSQL database. Used by Cloud Functions.",
+        "operationId": "ArtGeneratorService_SyncUserFromFirebase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "SyncUserFromFirebaseRequest is used by Firebase Cloud Functions to sync user data\nfrom Firebase Authentication to the internal PostgreSQL database.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbSyncUserFromFirebaseRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/v1/users": {
       "get": {
         "summary": "List all users",
@@ -204,7 +239,8 @@
               "required": [
                 "firstName",
                 "lastName",
-                "email"
+                "email",
+                "user"
               ]
             }
           }
@@ -308,7 +344,8 @@
               },
               "title": "The Art resource to update.",
               "required": [
-                "title"
+                "title",
+                "art"
               ]
             }
           }
@@ -444,7 +481,10 @@
                   "readOnly": true
                 }
               },
-              "title": "The Composition resource to update."
+              "title": "The Composition resource to update.",
+              "required": [
+                "composition"
+              ]
             }
           }
         ],
@@ -656,6 +696,21 @@
             "required": true,
             "type": "string",
             "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "contentType",
+            "description": "The content type of the image to upload",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "fileSize",
+            "description": "The size of the file to upload in bytes",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -702,6 +757,20 @@
           {
             "name": "pageToken",
             "description": "A page token, received from a previous `ListArts` call.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orderBy",
+            "description": "The order by which to sort the arts.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orderDirection",
+            "description": "The order direction.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1089,6 +1158,31 @@
           "description": "NextPageToken is the token to retrieve the next page of results."
         }
       }
+    },
+    "pbSyncUserFromFirebaseRequest": {
+      "type": "object",
+      "properties": {
+        "firebaseUid": {
+          "type": "string",
+          "title": "Firebase UID from Firebase Authentication"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email address from Firebase user record"
+        },
+        "displayName": {
+          "type": "string",
+          "title": "Display name from Firebase user record"
+        },
+        "photoUrl": {
+          "type": "string",
+          "title": "Photo URL from Firebase user record"
+        }
+      },
+      "description": "SyncUserFromFirebaseRequest is used by Firebase Cloud Functions to sync user data\nfrom Firebase Authentication to the internal PostgreSQL database.",
+      "required": [
+        "firebaseUid"
+      ]
     },
     "pbUser": {
       "type": "object",

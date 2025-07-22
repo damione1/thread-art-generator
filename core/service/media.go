@@ -147,12 +147,7 @@ func HandleBinaryFileUpload(server *Server) http.HandlerFunc {
 
 // Add a case for 'anotherResource' in the factory function
 func newUploadedResource(ctx context.Context, db *sql.DB, resourceName string) (Resource, error) {
-	rp, err := resource.NewResourceParser(resourceName)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := rp.Parse()
+	res, err := resource.ParseResourceName(resourceName)
 	if err != nil {
 		return nil, err
 	}

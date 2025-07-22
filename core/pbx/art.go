@@ -3,10 +3,13 @@ package pbx
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
+	"gocloud.dev/blob"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -30,25 +33,29 @@ func ArtDbToProto(ctx context.Context, bucket *storage.BlobStorage, art *models.
 
 	artPb := &pb.Art{
 		Title:      art.Title,
-		Author:     fmt.Sprintf("users/%s", art.AuthorID),
+		Author:     resource.BuildUserResourceName(art.AuthorID),
 		CreateTime: timestamppb.New(art.CreatedAt),
 		UpdateTime: timestamppb.New(art.UpdatedAt),
 		Status:     status,
 	}
-	artPb.Name = GetResourceName([]Resource{
-		{Type: RessourceTypeUsers, ID: art.AuthorID},
-		{Type: RessourceTypeArts, ID: art.ID},
-	})
+	artPb.Name = resource.BuildArtResourceName(art.AuthorID, art.ID)
 
 	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) {
-		imageKey := GetResourceName([]Resource{
-			{Type: RessourceTypeUsers, ID: art.AuthorID},
-			{Type: RessourceTypeArts, ID: art.ImageID.String},
-		})
+		imageKey := resource.BuildArtResourceName(art.AuthorID, art.ImageID.String)
 
-		// Use public URL instead of signed URL
-		publicURL := bucket.GetPublicURL(imageKey)
-		artPb.ImageUrl = publicURL
+		// Generate signed URL for secure image access
+		opts := &blob.SignedURLOptions{
+			Expiry: 15 * time.Minute, // 15-minute expiration for image viewing
+			Method: "GET",
+		}
+		
+		signedURL, err := bucket.SignedURL(ctx, imageKey, opts)
+		if err != nil {
+			// Fallback to empty string if signing fails
+			artPb.ImageUrl = ""
+		} else {
+			artPb.ImageUrl = signedURL
+		}
 	}
 
 	return artPb
@@ -60,17 +67,14 @@ func ProtoArtToDb(post *pb.Art) *models.Art {
 	}
 
 	if post.GetName() != "" {
-		ressources, err := GetResourcesFromResourceName(post.GetName())
+		artResource, err := resource.ParseResourceName(post.GetName())
 		if err != nil {
 			return nil
 		}
 
-		if artId, ok := ressources[RessourceNameArts]; ok {
-			artDb.ID = artId
-		}
-
-		if authorId, ok := ressources[RessourceNameUsers]; ok {
-			artDb.AuthorID = authorId
+		if art, ok := artResource.(*resource.Art); ok {
+			artDb.ID = art.ArtID
+			artDb.AuthorID = art.UserID
 		}
 	}
 
@@ -83,21 +87,18 @@ func ProtoArtToDb(post *pb.Art) *models.Art {
 	return artDb
 }
 
+// ParseArtResourceName parses an art resource name and returns user ID and art ID
+// Deprecated: Use resource.ParseResourceName instead
 func ParseArtResourceName(resourceName string) (string, string, error) {
-	resources, err := GetResourcesFromResourceName(resourceName)
+	artResource, err := resource.ParseResourceName(resourceName)
 	if err != nil {
 		return "", "", err
 	}
 
-	authorId, ok := resources[RessourceNameUsers]
+	art, ok := artResource.(*resource.Art)
 	if !ok {
-		return "", "", fmt.Errorf("author ID not found in resource name")
+		return "", "", fmt.Errorf("invalid art resource name")
 	}
 
-	artId, ok := resources[RessourceNameArts]
-	if !ok {
-		return "", "", fmt.Errorf("art ID not found in resource name")
-	}
-
-	return authorId, artId, nil
+	return art.UserID, art.ArtID, nil
 }

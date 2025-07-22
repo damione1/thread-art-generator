@@ -302,7 +302,7 @@ func (tg *ThreadGenerator) computePathsListFromImage(sourceImage image.Image, na
 			go func(nailIdx, nextnailIdx int) {
 				defer wg.Done()
 				weight := 0
-				line := []image.Point{}
+				var line []image.Point
 				difference := int(math.Abs(float64(nextnailIdx) - float64(nailIdx)))
 
 				if difference < tg.minimumDifference || difference > (len(nailsList)-tg.minimumDifference) {

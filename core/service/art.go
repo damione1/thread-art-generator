@@ -11,6 +11,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -26,32 +27,30 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
-	// Get user ID from context using the same key used in auth interceptor
+	// Get Firebase UID from context
 	log.Info().Msgf("CreateArt: %s", req)
 
-	userID, ok := middleware.UserIDFromContext(ctx)
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
-	log.Info().Msgf("CreateArt userID: %s", userID)
+	log.Info().Msgf("CreateArt Firebase UID: %s", firebaseUID)
+
 	if err := protovalidate.Validate(req); err != nil {
 		log.Info().Msgf("CreateArt protovalidate: %s", err)
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 	log.Info().Msgf("CreateArt protovalidate: %s", req)
-	user, err := models.Users(
-		models.UserWhere.ID.EQ(userID),
-	).One(ctx, server.config.DB)
+
+	// Get user from database - user should already exist from auth sync
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			log.Info().Msgf("CreateArt user not found")
-			return nil, pbErrors.NotFoundError("user not found")
-		}
-		log.Info().Msgf("CreateArt failed to get user: %s", err)
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("CreateArt failed to get user - user should have been created during auth sync")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
-	log.Info().Str("user_id", user.ID).Str("email", user.Email.String).Msg("CreateArt found user")
+	log.Info().Str("user_id", user.ID).Str("firebase_uid", firebaseUID).Str("email", user.Email.String).Msg("CreateArt found/created user")
 	if user.Role != models.RoleEnumUser {
 		log.Info().Msgf("CreateArt user is not a user")
 		return nil, pbErrors.PermissionDeniedError("only users can create art")
@@ -72,17 +71,24 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 }
 
 func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("UpdateArt: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetArt().GetName())
+	artResource, err := resource.ParseResourceName(req.GetArt().GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("art.name", errors.New("invalid resource name")),
@@ -90,14 +96,23 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("art.name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can update the art")
 	}
 
 	// Check if the art exists
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -119,10 +134,17 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 }
 
 func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get user from database - user should already exist from auth sync
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ListArts failed to get user - user should have been created during auth sync")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
@@ -155,12 +177,43 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		}
 	}
 
-	// Query the arts with pagination
-	arts, err := models.Arts(
-		models.ArtWhere.AuthorID.EQ(userID),
-		qm.Limit(pageSize+1), // Query one more than we need to check if there are more results
+	// Determine order_by and order_direction
+	orderBy := req.GetOrderBy()
+	if orderBy == "" {
+		orderBy = "create_time"
+	}
+	orderDirection := req.GetOrderDirection()
+	if orderDirection == "" {
+		orderDirection = "desc"
+	}
+
+	// Map proto field to DB column
+	var orderColumn string
+	switch orderBy {
+	case "create_time":
+		orderColumn = models.ArtColumns.CreatedAt
+	case "update_time":
+		orderColumn = models.ArtColumns.UpdatedAt
+	default:
+		orderColumn = models.ArtColumns.CreatedAt
+	}
+
+	// Validate direction
+	dir := "DESC"
+	if orderDirection == "asc" {
+		dir = "ASC"
+	}
+
+	// Build query mods using internal user ID
+	queryMods := []qm.QueryMod{
+		models.ArtWhere.AuthorID.EQ(user.ID),
+		qm.OrderBy(fmt.Sprintf("%s %s", orderColumn, dir)),
+		qm.Limit(pageSize + 1),
 		qm.Offset(offset),
-	).All(ctx, server.config.DB)
+	}
+
+	// Query the arts with pagination and sorting
+	arts, err := models.Arts(queryMods...).All(ctx, server.config.DB)
 	if err != nil {
 		return nil, pbErrors.InternalError("failed to get arts", err)
 	}
@@ -218,13 +271,20 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetArt: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
+	}
+
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -232,13 +292,22 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get the art")
 	}
 
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -255,13 +324,20 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("DeleteArt: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
+	}
+
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -269,13 +345,22 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can delete the art")
 	}
 
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -291,10 +376,7 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 
 	// Delete the image from the bucket
 	if artDb.ImageID.Valid {
-		imageKey := pbx.GetResourceName([]pbx.Resource{
-			{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
-			{Type: pbx.RessourceTypeArts, ID: artDb.ImageID.String},
-		})
+		imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
 		err = server.bucket.Delete(ctx, imageKey)
 		if err != nil {
 			log.Error().Err(err).Msg(fmt.Sprintf("Failed to delete image %s", artDb.ImageID.String))
@@ -311,13 +393,20 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetArtUploadUrl: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
+	}
+
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -325,14 +414,23 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get an upload URL for the art")
 	}
 
 	// Check if the art exists
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -355,18 +453,14 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		}
 	}
 
-	// Create the image key in the format "users/{userId}/arts/{imageId}"
-	imageKey := pbx.GetResourceName([]pbx.Resource{
-		{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
-		{Type: pbx.RessourceTypeArts, ID: imageID},
-	})
+	// Create the image key using resource builder
+	imageKey := resource.BuildArtResourceName(artDb.AuthorID, imageID)
 
-	// Generate a signed URL with 15 minutes expiration
-	// Important: We're using a minimal set of options to keep the signing simple
+	// Generate a secure signed URL with 1-minute expiration and content validation
 	opts := &blob.SignedURLOptions{
-		Expiry: 15 * time.Minute,
-		Method: "PUT",
-		// We intentionally DO NOT set ContentType to avoid signature issues
+		Expiry:      time.Minute, // 1-minute expiration for security
+		Method:      "PUT",
+		ContentType: req.GetContentType(), // Include content type for validation
 	}
 
 	signedURL, err := server.bucket.SignedURL(ctx, imageKey, opts)
@@ -375,7 +469,7 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	}
 
 	// Calculate expiration time
-	expirationTime := time.Now().Add(15 * time.Minute)
+	expirationTime := time.Now().Add(time.Minute)
 
 	log.Info().Msgf("Signed URL: %s", signedURL)
 
@@ -387,17 +481,24 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 
 // ConfirmArtImageUpload marks an art as complete after successful image upload
 func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.ConfirmArtImageUploadRequest) (*pb.Art, error) {
-	// Get user ID from context using the same key used in auth interceptor
-	userID, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+
+	// Get internal user from Firebase UID
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ConfirmArtImageUpload: Failed to get user from Firebase UID")
+		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	authorId, artId, err := pbx.ParseArtResourceName(req.GetName())
+	artResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
@@ -405,14 +506,23 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	if authorId != userID {
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		violations := []*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		}
+		return nil, pbErrors.InvalidArgumentError(violations)
+	}
+
+	// Compare internal user ID with art's user ID from resource name
+	if art.UserID != user.ID {
 		return nil, pbErrors.PermissionDeniedError("only the author can confirm image upload")
 	}
 
 	// Get the art
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(artId),
-		models.ArtWhere.AuthorID.EQ(authorId),
+		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -428,11 +538,8 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		})
 	}
 
-	// Verify the image exists in the bucket
-	imageKey := pbx.GetResourceName([]pbx.Resource{
-		{Type: pbx.RessourceTypeUsers, ID: artDb.AuthorID},
-		{Type: pbx.RessourceTypeArts, ID: artDb.ImageID.String},
-	})
+	// Verify the image exists in the bucket using resource builder
+	imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
 
 	exists, err := server.bucket.Exists(ctx, imageKey)
 	if err != nil {

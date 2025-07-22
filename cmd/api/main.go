@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog/log"
 
@@ -49,7 +49,7 @@ func runConnectServer(config util.Config) {
 	// Define our Connect interceptors
 	interceptorChain := connect.WithInterceptors(
 		interceptors.ConnectLogger(),
-		interceptors.AuthMiddleware(authService, config.DB),
+		interceptors.AuthMiddleware(authService), // Simplified Firebase-first auth
 	)
 
 	// Create Connect adapter
@@ -86,6 +86,8 @@ func runConnectServer(config util.Config) {
 		Debug:            config.Environment == "development", // Enable debug for development
 	})
 
+	// TODO Do that
+
 	// Create a mux for routing
 	mux := http.NewServeMux()
 
@@ -114,14 +116,10 @@ func runConnectServer(config util.Config) {
 }
 
 func createAuthService(config util.Config) (auth.AuthService, error) {
-	auth0Config := auth.Auth0Configuration{
-		Domain:                    config.Auth0.Domain,
-		Audience:                  config.Auth0.Audience,
-		ClientID:                  config.Auth0.ClientID,
-		ClientSecret:              config.Auth0.ClientSecret,
-		ManagementApiClientID:     config.Auth0.ManagementApiClientID,
-		ManagementApiClientSecret: config.Auth0.ManagementApiClientSecret,
+	firebaseConfig := auth.FirebaseConfiguration{
+		ProjectID:    config.Firebase.ProjectID,
+		EmulatorHost: config.Firebase.EmulatorHost,
 	}
 
-	return auth.NewAuth0Service(auth0Config)
+	return auth.NewFirebaseAuthService(firebaseConfig)
 }
