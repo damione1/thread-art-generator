@@ -25,10 +25,13 @@ func FirebaseAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Ha
 			if userID == "" {
 				if isPublicPath {
 					// Public path with no session - continue without user context
-					log.Debug().
-						Str("request_id", reqID).
-						Str("path", r.URL.Path).
-						Msg("Public path accessed without session")
+					// Skip logging for health endpoint to reduce noise
+					if r.URL.Path != "/health" {
+						log.Debug().
+							Str("request_id", reqID).
+							Str("path", r.URL.Path).
+							Msg("Public path accessed without session")
+					}
 					next.ServeHTTP(w, r)
 					return
 				}
