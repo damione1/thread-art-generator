@@ -54,3 +54,27 @@ func (s *CompositionService) CreateComposition(ctx context.Context, createReques
 
 	return resp.Msg, nil, nil
 }
+
+// GetComposition retrieves a specific composition
+func (s *CompositionService) GetComposition(ctx context.Context, userID, artID, compositionID string) (*pb.Composition, error) {
+	// Build the composition resource name
+	compositionName := fmt.Sprintf("users/%s/arts/%s/compositions/%s", userID, artID, compositionID)
+	
+	req := connect.NewRequest(&pb.GetCompositionRequest{
+		Name: compositionName,
+	})
+
+	resp, err := s.client.GetComposition(ctx, req)
+	if err != nil {
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Str("compositionName", compositionName).
+			Msg("Failed to get composition")
+		return nil, fmt.Errorf("failed to get composition: %s", standardErr.Message)
+	}
+
+	return resp.Msg, nil
+}

@@ -1,0 +1,268 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/core/resource"
+	"github.com/axzilla/templui/component/alert"
+	"github.com/axzilla/templui/component/button"
+	"github.com/axzilla/templui/component/spinner"
+)
+
+// CompositionDetailPage renders the composition detail page
+templ CompositionDetailPage(data *PageData, art *pb.Art, composition *pb.Composition) {
+	@Layout(data) {
+		<div class="max-w-7xl mx-auto px-4 py-8">
+			<div class="mb-6">
+				<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+					</svg>
+					Back to Art
+				</a>
+				<h1 class="text-3xl font-bold text-slate-200">Composition Details</h1>
+				<p class="text-slate-400 mt-2">For "{ art.GetTitle() }"</p>
+			</div>
+			
+			<!-- Status Alert -->
+			<div class="mb-6">
+				@CompositionStatusAlert(composition)
+			</div>
+			
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<!-- Composition Parameters -->
+				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
+					<h2 class="text-xl font-semibold text-slate-200 mb-4">Parameters</h2>
+					@CompositionParameters(composition)
+				</div>
+				
+				<!-- Results/Preview -->
+				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
+					<h2 class="text-xl font-semibold text-slate-200 mb-4">Results</h2>
+					@CompositionResults(composition)
+				</div>
+			</div>
+			
+			<!-- Auto-refresh for pending/processing status -->
+			if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PENDING || 
+			   composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING {
+				<div 
+					hx-get={ "/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/" + extractCompositionID(composition.GetName()) + "/status" }
+					hx-trigger="every 2s"
+					hx-swap="outerHTML"
+					hx-target="closest body"
+				></div>
+			}
+		</div>
+	}
+}
+
+// CompositionStatusAlert shows the current status of the composition
+templ CompositionStatusAlert(composition *pb.Composition) {
+	switch composition.GetStatus() {
+	case pb.CompositionStatus_COMPOSITION_STATUS_PENDING:
+		@alert.Alert(alert.Props{}) {
+			<div class="flex items-center gap-3">
+				@spinner.Spinner(spinner.Props{
+					Size: spinner.SizeSm,
+				})
+				@alert.Title() {
+					Pending
+				}
+				@alert.Description() {
+					Your composition is queued for processing.
+				}
+			</div>
+		}
+	case pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING:
+		@alert.Alert(alert.Props{}) {
+			<div class="flex items-center gap-3">
+				@spinner.Spinner(spinner.Props{
+					Size: spinner.SizeSm,
+				})
+				@alert.Title() {
+					Processing
+				}
+				@alert.Description() {
+					Your composition is being generated. This may take a few minutes.
+				}
+			</div>
+		}
+	case pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE:
+		@alert.Alert(alert.Props{}) {
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+				<polyline points="22,4 12,14.01 9,11.01"></polyline>
+			</svg>
+			@alert.Title() {
+				Complete
+			}
+			@alert.Description() {
+				Your composition has been successfully generated!
+			}
+		}
+	case pb.CompositionStatus_COMPOSITION_STATUS_FAILED:
+		@alert.Alert(alert.Props{Variant: alert.VariantDestructive}) {
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+				<path d="M12 9v4"></path>
+				<path d="m12 17 .01 0"></path>
+			</svg>
+			@alert.Title() {
+				Failed
+			}
+			@alert.Description() {
+				if composition.GetErrorMessage() != "" {
+					{ composition.GetErrorMessage() }
+				} else {
+					An error occurred while processing your composition.
+				}
+			}
+		}
+	}
+}
+
+// CompositionParameters displays the composition parameters
+templ CompositionParameters(composition *pb.Composition) {
+	<div class="space-y-4">
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Number of Nails</label>
+			<p class="text-slate-200">{ fmt.Sprint(composition.GetNailsQuantity()) }</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Image Size</label>
+			<p class="text-slate-200">{ fmt.Sprint(composition.GetImgSize()) } pixels</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Maximum Paths</label>
+			<p class="text-slate-200">{ fmt.Sprint(composition.GetMaxPaths()) }</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Starting Nail</label>
+			<p class="text-slate-200">{ fmt.Sprint(composition.GetStartingNail()) }</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Minimum Nail Difference</label>
+			<p class="text-slate-200">{ fmt.Sprint(composition.GetMinimumDifference()) }</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Brightness Factor</label>
+			<p class="text-slate-200">{ fmt.Sprint(composition.GetBrightnessFactor()) }</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Image Contrast</label>
+			<p class="text-slate-200">{ fmt.Sprintf("%.1fx", composition.GetImageContrast()) }</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Physical Radius</label>
+			<p class="text-slate-200">{ fmt.Sprintf("%.1f mm", composition.GetPhysicalRadius()) }</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-300 mb-1">Created</label>
+			<p class="text-slate-200">{ composition.GetCreateTime().AsTime().Format("January 2, 2006 at 3:04 PM") }</p>
+		</div>
+	</div>
+}
+
+// CompositionResults displays the composition results
+templ CompositionResults(composition *pb.Composition) {
+	if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE {
+		<div class="space-y-6">
+			// Preview Image
+			if composition.GetPreviewUrl() != "" {
+				<div>
+					<h3 class="text-lg font-medium text-slate-200 mb-3">Preview</h3>
+					<img 
+						src={ composition.GetPreviewUrl() } 
+						alt="Thread art preview"
+						class="w-full rounded-lg shadow-lg"
+					/>
+				</div>
+			}
+			
+			// Statistics
+			<div class="bg-dark-300 rounded-lg p-4 space-y-2">
+				<h3 class="text-lg font-medium text-slate-200 mb-3">Statistics</h3>
+				if composition.GetTotalLines() > 0 {
+					<div class="flex justify-between">
+						<span class="text-slate-400">Total Lines:</span>
+						<span class="text-slate-200">{ fmt.Sprint(composition.GetTotalLines()) }</span>
+					</div>
+				}
+				if composition.GetThreadLength() > 0 {
+					<div class="flex justify-between">
+						<span class="text-slate-400">Thread Length:</span>
+						<span class="text-slate-200">{ fmt.Sprintf("%.2f meters", float32(composition.GetThreadLength())/1000) }</span>
+					</div>
+				}
+			</div>
+			
+			// Download Buttons
+			<div class="space-y-3">
+				<h3 class="text-lg font-medium text-slate-200 mb-3">Downloads</h3>
+				if composition.GetGcodeUrl() != "" {
+					@button.Button(button.Props{
+						Class: "w-full",
+					}) {
+						<a href={ templ.SafeURL(composition.GetGcodeUrl()) } download class="flex items-center justify-center gap-2 w-full">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+							</svg>
+							Download G-Code
+						</a>
+					}
+				}
+				if composition.GetPathlistUrl() != "" {
+					@button.Button(button.Props{
+						Variant: button.VariantOutline,
+						Class: "w-full",
+					}) {
+						<a href={ templ.SafeURL(composition.GetPathlistUrl()) } download class="flex items-center justify-center gap-2 w-full">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+							</svg>
+							Download Path List
+						</a>
+					}
+				}
+			</div>
+		</div>
+	} else if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PENDING || 
+	          composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING {
+		<div class="flex items-center justify-center h-64">
+			<div class="text-center">
+				@spinner.Spinner(spinner.Props{
+					Size: spinner.SizeLg,
+				})
+				<p class="text-slate-400 mt-4">Waiting for results...</p>
+			</div>
+		</div>
+	} else if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_FAILED {
+		<div class="flex items-center justify-center h-64">
+			<div class="text-center">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+				</svg>
+				<p class="text-slate-400">Processing failed</p>
+				if composition.GetErrorMessage() != "" {
+					<p class="text-sm text-red-400 mt-2">{ composition.GetErrorMessage() }</p>
+				}
+			</div>
+		</div>
+	}
+}
+
+// Helper function to extract composition ID from resource name
+func extractCompositionID(resourceName string) string {
+	compositionResource, err := resource.ParseResourceName(resourceName)
+	if err != nil {
+		return ""
+	}
+
+	comp, ok := compositionResource.(*resource.Composition)
+	if !ok {
+		return ""
+	}
+
+	return comp.CompositionID
+}

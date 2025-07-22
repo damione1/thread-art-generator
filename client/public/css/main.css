@@ -110,3 +110,40 @@ body {
   opacity: 0;
   pointer-events: auto;
 }
+
+/* Override templUI Input component styling for better visibility */
+input[type="text"], 
+input[type="number"], 
+input[type="email"], 
+input[type="password"], 
+input[type="url"], 
+input[type="search"], 
+textarea, 
+select {
+  background-color: rgb(30 41 59) !important; /* slate-800 */
+  border-color: rgb(71 85 105) !important; /* slate-600 */
+  color: rgb(226 232 240) !important; /* slate-200 */
+}
+
+input[type="text"]::placeholder,
+input[type="number"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="url"]::placeholder,
+input[type="search"]::placeholder,
+textarea::placeholder {
+  color: rgb(148 163 184) !important; /* slate-400 */
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  border-color: rgb(99 102 241) !important; /* primary-500 */
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
