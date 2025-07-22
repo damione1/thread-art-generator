@@ -42,21 +42,30 @@ def watch_templ_changes():
     'templ-generate',
     cmd='make generate-templ',
     labels=["build"],
-    deps=['client/internal/templates/**/*.templ'],  # Only watch .templ files
-    ignore=['client/internal/templates/**/*.templ.go'],  # Explicitly ignore generated files
+    deps=[
+      'client/internal/templates/**/*.templ',
+      'client/internal/components/**/*.templ',
+    ],
+    ignore=[
+      'client/internal/templates/**/*_templ.go',  # Ignore generated Go files
+      'client/internal/components/**/*_templ.go',  # Ignore generated Go files
+      '**/*.templ.go',  # Catch any other generated templ files
+    ],
     trigger_mode=TRIGGER_MODE_AUTO,
   )
 
-def watch_tailwind_changes():
-  # Watch and build Tailwind CSS initially
+def watch_frontend_assets():
+  # Build CSS and JS assets using npm
   local_resource(
-    'tailwind-build',
-    cmd='cd client && mkdir -p public/css && npm install && npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify',
+    'frontend-assets-build',
+    cmd='cd client && npm install && npm run build',
     labels=["build"],
     deps=[
       'client/tailwind.config.js',
       'client/styles/input.css',
       'client/package.json',
+      'client/src/**/*.js',
+      'client/webpack.config.js',
     ],
     trigger_mode=TRIGGER_MODE_AUTO,
   )
@@ -73,7 +82,7 @@ watch_file('client/internal/pb')
 
 # Run helper functions to set up watches
 watch_templ_changes()
-watch_tailwind_changes()
+watch_frontend_assets()
 
 # Protocol buffer generation using make
 local_resource(
@@ -118,10 +127,14 @@ local_resource(
   cmd='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/frontend client/cmd/frontend/main.go',
   labels=["build"],
   deps=CODE_DIRS['frontend'],
-  resource_deps=['proto-generate', 'templ-generate'],
+  resource_deps=['proto-generate', 'templ-generate', 'frontend-assets-build'],
   ignore=[
     'client/internal/templates/**/*.templ',
-    'client/internal/templates/**/*.templ.go',
+    'client/internal/templates/**/*_templ.go',
+    'client/internal/components/**/*_templ.go',
+    'client/src/**/*.js',
+    'client/styles/**',
+    'client/public/**',
     'proto/**',
     'core/pb/**',
     'client/internal/pb/**',
@@ -142,8 +155,8 @@ docker_build(
   dockerfile='Infra/Dockerfiles/Dockerfile-api',
   only=['./build/api'],
   live_update=[
-    sync('./build/api', '/app/build/api'),
-    run('killall -TERM api || true', trigger=['./build/api']),
+    # Minimal run step required by Tilt
+    run('echo "Binary updated"', trigger=['./build/api']),
     restart_container()
   ]
 )
@@ -157,8 +170,8 @@ docker_build(
   dockerfile='Infra/Dockerfiles/Dockerfile-worker',
   only=['./build/worker'],
   live_update=[
-    sync('./build/worker', '/app/build/worker'),
-    run('killall -TERM worker || true', trigger=['./build/worker']),
+    # Minimal run step required by Tilt
+    run('echo "Binary updated"', trigger=['./build/worker']),
     restart_container()
   ]
 )
@@ -176,9 +189,7 @@ docker_build(
     # Sync public assets without restart
     sync('./client/public', '/app/client/public'),
 
-    # Sync binary and restart only when binary changes
-    sync('./build/frontend', '/app/frontend'),
-    run('killall -TERM frontend || true', trigger=['./build/frontend']),
+    # For binary updates, restart container (no sync needed due to volume mount)
     restart_container()
   ]
 )
@@ -205,15 +216,6 @@ local_resource(
   auto_init=False
 )
 
-# Build status indicator
-local_resource(
-  'build-status',
-  cmd='echo \"All services built successfully at $(date)\"',
-  labels=["build"],
-  resource_deps=['api-build', 'worker-build', 'frontend-build'],
-  auto_init=False,
-  trigger_mode=TRIGGER_MODE_AUTO,
-)
 
 
 # ================================================
@@ -312,7 +314,7 @@ dc_resource(
 dc_resource(
   'client',
   labels=['application'],
-  resource_deps=['frontend-build', 'tailwind-build', 'api'],
+  resource_deps=['frontend-build', 'frontend-assets-build', 'api'],
   auto_init=True,
   links=[
     link('http://localhost:8080', 'Go+HTMX Frontend'),
