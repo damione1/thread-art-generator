@@ -86,8 +86,6 @@ func runConnectServer(config util.Config) {
 		Debug:            config.Environment == "development", // Enable debug for development
 	})
 
-	// TODO Do that
-
 	// Create a mux for routing
 	mux := http.NewServeMux()
 

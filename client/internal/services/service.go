@@ -78,10 +78,18 @@ func (s *GeneratorService) ListCompositions(ctx context.Context, pageSize int, p
 	return s.CompositionService.ListCompositions(ctx, pageSize, pageToken)
 }
 
+func (s *GeneratorService) ListCompositionsForArt(ctx context.Context, userID, artID string, pageSize int, pageToken string) (*pb.ListCompositionsResponse, error) {
+	return s.CompositionService.ListCompositionsForArt(ctx, userID, artID, pageSize, pageToken)
+}
+
 func (s *GeneratorService) CreateComposition(ctx context.Context, createRequest *pb.CreateCompositionRequest) (*pb.Composition, map[string][]string, error) {
 	return s.CompositionService.CreateComposition(ctx, createRequest)
 }
 
 func (s *GeneratorService) GetComposition(ctx context.Context, userID, artID, compositionID string) (*pb.Composition, error) {
 	return s.CompositionService.GetComposition(ctx, userID, artID, compositionID)
+}
+
+func (s *GeneratorService) DeleteComposition(ctx context.Context, compositionName string) error {
+	return s.CompositionService.DeleteComposition(ctx, compositionName)
 }

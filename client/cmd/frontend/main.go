@@ -151,13 +151,14 @@ func main() {
 				r.Get("/new", artHandler.NewArtPage)
 				r.Post("/new", artHandler.CreateArt)
 				r.Get("/{artId}", artHandler.ViewArtPage)
-				
+
 				// Composition routes
 				r.Route("/{artId}/composition", func(r chi.Router) {
 					r.Get("/new", compositionHandler.NewCompositionForm)
 					r.Post("/new", compositionHandler.CreateComposition)
 					r.Get("/{compositionId}", compositionHandler.ViewComposition)
 					r.Get("/{compositionId}/status", compositionHandler.GetCompositionStatus)
+					r.Delete("/{compositionId}", compositionHandler.DeleteComposition)
 				})
 			})
 		})

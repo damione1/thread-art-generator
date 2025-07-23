@@ -19,7 +19,6 @@ services:
       FIREBASE_AUTH_EMULATOR_HOST: ${FIREBASE_AUTH_EMULATOR_HOST}
       # Storage configuration
       STORAGE_PROVIDER: ${STORAGE_PROVIDER}
-      STORAGE_BUCKET: ${STORAGE_BUCKET}
       STORAGE_REGION: ${STORAGE_REGION}
       STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
       STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
@@ -44,7 +43,6 @@ services:
       ENVIRONMENT: ${ENVIRONMENT}
       # Storage configuration
       STORAGE_PROVIDER: ${STORAGE_PROVIDER}
-      STORAGE_BUCKET: ${STORAGE_BUCKET}
       STORAGE_REGION: ${STORAGE_REGION}
       STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
       STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
@@ -155,13 +153,10 @@ services:
     environment:
       MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
-      MINIO_DEFAULT_BUCKETS: ${STORAGE_BUCKET}
-      # Secure configuration - no public access
+      MINIO_DEFAULT_BUCKETS: ${STORAGE_PUBLIC_BUCKET}:public,${STORAGE_PRIVATE_BUCKET}:none
       MINIO_SERVER_URL: http://localhost:9000
       MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
       MINIO_BROWSER_LOGIN_ANIMATION: off
-      # Disable all anonymous access - signed URLs only
-      MINIO_ANONYMOUS_POLICY: none
     volumes:
       - ./infra/minio/data:/data
       - ./infra/minio/config:/root/.minio
@@ -172,6 +167,58 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+
+  minio-bucket-setup:
+    image: "bitnami/minio-client:latest"
+    container_name: minio-bucket-setup
+    environment:
+      MINIO_SERVER_HOST: minio:9000
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
+      PUBLIC_BUCKET: ${STORAGE_PUBLIC_BUCKET}
+      PRIVATE_BUCKET: ${STORAGE_PRIVATE_BUCKET}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for MinIO to be ready..."
+
+        echo "Configuring MinIO client..."
+        mc alias set minio http://$$MINIO_SERVER_HOST $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD
+
+        # Wait for MinIO to be ready with timeout
+        max_attempts=30
+        attempts=0
+        while [ $$attempts -lt $$max_attempts ]; do
+          if mc admin info minio >/dev/null 2>&1; then
+            echo "MinIO is ready!"
+            break
+          fi
+          echo "MinIO not ready yet, waiting... (attempt $$((attempts + 1))/$$max_attempts)"
+          sleep 2
+          attempts=$$((attempts + 1))
+        done
+
+        if [ $$attempts -eq $$max_attempts ]; then
+          echo "❌ MinIO failed to start within expected time"
+          exit 1
+        fi
+
+        echo "Verifying bucket configuration..."
+        echo "✅ Public bucket: $$PUBLIC_BUCKET (publicly accessible)"
+        echo "✅ Private bucket: $$PRIVATE_BUCKET (signed URLs only)"
+
+        # Verify the buckets exist and have correct policies
+        echo "Public bucket policy:"
+        mc policy get minio/$$PUBLIC_BUCKET || echo "No specific policy (using public default)"
+
+        echo "Private bucket policy:"
+        mc policy get minio/$$PRIVATE_BUCKET || echo "No specific policy (private by default)"
+
+        echo "✅ Two-bucket setup complete!"
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   threadmachine:

@@ -4,10 +4,10 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/axzilla/templui/component/alert"
 	"github.com/axzilla/templui/component/button"
 	"github.com/axzilla/templui/component/form"
 	"github.com/axzilla/templui/component/input"
+	"github.com/axzilla/templui/component/spinner"
 )
 
 // extractArtID extracts the art ID from a resource name like "users/{user}/arts/{art}"
@@ -25,17 +25,31 @@ func extractArtID(resourceName string) string {
 	return art.ArtID
 }
 
+// extractUserID extracts the user ID from a resource name like "users/{user}/arts/{art}"
+func extractUserID(resourceName string) string {
+	artResource, err := resource.ParseResourceName(resourceName)
+	if err != nil {
+		return ""
+	}
+
+	art, ok := artResource.(*resource.Art)
+	if !ok {
+		return ""
+	}
+
+	return art.UserID
+}
+
 // ArtPage renders the art details page with upload functionality
 // data: PageData containing user info and other template data
 // art: The art resource to display
-templ ArtPage(data *PageData, art *pb.Art) {
+// compositions: List of compositions for this art (optional)
+templ ArtPage(data *PageData, art *pb.Art, compositions []*pb.Composition) {
 	@Layout(data) {
 		<div class="max-w-4xl mx-auto px-4 py-8">
 			<div class="mb-6">
 				<a href="/dashboard" class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-					</svg>
+					@MaterialIcon("arrow_back", "h-5 w-5")
 					Back to Dashboard
 				</a>
 				<h1 class="text-3xl font-bold text-slate-200">{ art.GetTitle() }</h1>
@@ -43,17 +57,7 @@ templ ArtPage(data *PageData, art *pb.Art) {
 					<span class="text-sm text-slate-400">
 						Created { art.GetCreateTime().AsTime().Format("January 2, 2006") }
 					</span>
-					<span
-						class={
-							"px-2 py-1 rounded text-xs font-medium",
-							templ.KV("bg-yellow-900/30 text-yellow-400", art.GetStatus() == pb.ArtStatus_ART_STATUS_PENDING_IMAGE),
-							templ.KV("bg-blue-900/30 text-blue-400", art.GetStatus() == pb.ArtStatus_ART_STATUS_PROCESSING),
-							templ.KV("bg-green-900/30 text-green-400", art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE),
-							templ.KV("bg-red-900/30 text-red-400", art.GetStatus() == pb.ArtStatus_ART_STATUS_FAILED),
-						}
-					>
-						{ string(art.GetStatus()) }
-					</span>
+					@ArtStatusBadge(art.GetStatus())
 				</div>
 			</div>
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -69,14 +73,11 @@ templ ArtPage(data *PageData, art *pb.Art) {
 								alt={ art.GetTitle() }
 								class="w-full rounded-lg shadow-lg"
 							/>
-							<p class="text-sm text-slate-400">Image uploaded successfully</p>
 						</div>
 					} else {
 						<div class="flex items-center justify-center h-64 bg-dark-300 rounded-lg">
 							<div class="text-center">
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-								</svg>
+								@MaterialIcon("image", "h-12 w-12 text-slate-500 mx-auto mb-2")
 								<p class="text-slate-400">No image available</p>
 							</div>
 						</div>
@@ -105,8 +106,8 @@ templ ArtPage(data *PageData, art *pb.Art) {
 							</div>
 						}
 					</div>
-					// Show "Create Composition" button when art is complete
-					if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE {
+					// Show "Create Composition" button when art is complete and no compositions exist
+					if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE && (compositions == nil || len(compositions) == 0) {
 						<div class="mt-6">
 							@button.Button(button.Props{
 								Class: "w-full",
@@ -119,10 +120,15 @@ templ ArtPage(data *PageData, art *pb.Art) {
 					}
 				</div>
 			</div>
-			
+			<!-- Composition Timeline -->
+			if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE {
+				<div class="mt-8">
+					@CompositionTimeline(extractUserID(art.GetName()), extractArtID(art.GetName()), compositions)
+				</div>
+			}
 			<!-- Auto-refresh while image URL is empty -->
 			if art.GetImageUrl() == "" {
-				<div 
+				<div
 					hx-get={ "/dashboard/arts/" + extractArtID(art.GetName()) }
 					hx-trigger="every 3s"
 					hx-swap="outerHTML"
@@ -145,9 +151,7 @@ templ ImageUploadDropzone(artId string) {
 		:class="{ 'border-primary-500 bg-primary-900/10': dragOver }"
 	>
 		<div x-show="!uploading && !uploaded">
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-			</svg>
+			@MaterialIcon("upload", "h-12 w-12 text-slate-400 mx-auto mb-4")
 			<h3 class="text-lg font-medium text-slate-200 mb-2">Upload Image</h3>
 			<p class="text-slate-400 mb-4">Drag and drop an image here, or click to select</p>
 			<input
@@ -167,19 +171,19 @@ templ ImageUploadDropzone(artId string) {
 			</button>
 		</div>
 		<div x-show="uploading" class="space-y-4">
-			<svg class="animate-spin h-8 w-8 text-primary-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-			</svg>
+			<div class="flex justify-center">
+				@spinner.Spinner(spinner.Props{
+					Size:  spinner.SizeLg,
+					Color: "text-primary-500",
+				})
+			</div>
 			<p class="text-slate-300">Uploading image...</p>
 			<div class="w-full bg-dark-300 rounded-full h-2">
 				<div class="bg-primary-500 h-2 rounded-full transition-all duration-300" :style="`width: ${uploadProgress}%`"></div>
 			</div>
 		</div>
 		<div x-show="uploaded" class="space-y-4">
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-			</svg>
+			@MaterialIcon("check_circle", "h-8 w-8 text-green-500 mx-auto")
 			<p class="text-green-400">Image uploaded successfully!</p>
 			<button
 				type="button"
@@ -190,9 +194,7 @@ templ ImageUploadDropzone(artId string) {
 			</button>
 		</div>
 		<div x-show="error" class="space-y-4">
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-			</svg>
+			@MaterialIcon("error", "h-8 w-8 text-red-500 mx-auto")
 			<p class="text-red-400" x-text="errorMessage"></p>
 			<button
 				type="button"
@@ -337,71 +339,6 @@ templ NewArtPage(data *PageData, formData *services.ArtFormData) {
 	}
 }
 
-// ErrorAlert renders a reusable error alert component using templUI
-templ ErrorAlert(errors []string) {
-	if len(errors) > 0 {
-		<div class="w-full mb-4">
-			@alert.Alert(alert.Props{Variant: alert.VariantDestructive}) {
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-					<path d="M12 9v4"></path>
-					<path d="m12 17 .01 0"></path>
-				</svg>
-				@alert.Title() {
-					Error
-				}
-				@alert.Description() {
-					<ul class="list-disc pl-5 space-y-1">
-						for _, err := range errors {
-							<li>{ err }</li>
-						}
-					</ul>
-				}
-			}
-		</div>
-	}
-}
-
-// SuccessAlert renders a success alert component using templUI
-templ SuccessAlert(message string) {
-	if message != "" {
-		<div class="w-full mb-4">
-			@alert.Alert() {
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-					<polyline points="22,4 12,14.01 9,11.01"></polyline>
-				</svg>
-				@alert.Title() {
-					Success
-				}
-				@alert.Description() {
-					{ message }
-				}
-			}
-		</div>
-	}
-}
-
-// InfoAlert renders an info alert component using templUI
-templ InfoAlert(message string) {
-	if message != "" {
-		<div class="w-full mb-4">
-			@alert.Alert() {
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<circle cx="12" cy="12" r="10"></circle>
-					<path d="m9 12 2 2 4-4"></path>
-				</svg>
-				@alert.Title() {
-					Information
-				}
-				@alert.Description() {
-					{ message }
-				}
-			}
-		</div>
-	}
-}
-
 // NewArtForm renders the form for creating new art
 // formData: Form data containing values and validation errors
 templ NewArtForm(formData *services.ArtFormData) {
@@ -445,14 +382,41 @@ templ NewArtForm(formData *services.ArtFormData) {
 				Type:    "submit",
 				Variant: button.VariantDefault,
 			}) {
-				<span id="submit-spinner" class="htmx-indicator">
-					<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-					</svg>
+				<span id="submit-spinner" class="htmx-indicator -ml-1 mr-3">
+					@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
 				</span>
 				Create Art
 			}
 		</div>
 	</form>
+}
+
+// ArtStatusBadge renders a status badge for an art
+templ ArtStatusBadge(status pb.ArtStatus) {
+	switch status {
+		case pb.ArtStatus_ART_STATUS_PENDING_IMAGE:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-yellow-900/30 text-yellow-400 text-sm">
+				@MaterialIcon("pending_actions", "")
+				Pending
+			</div>
+		case pb.ArtStatus_ART_STATUS_PROCESSING:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-sm">
+				@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
+				Processing
+			</div>
+		case pb.ArtStatus_ART_STATUS_COMPLETE:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-green-900/30 text-green-400 text-sm">
+				@MaterialIcon("check_circle", "")
+				<span>Complete</span>
+			</div>
+		case pb.ArtStatus_ART_STATUS_FAILED:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-red-900/30 text-red-400 text-sm">
+				@MaterialIcon("error", "")
+				<span>Failed</span>
+			</div>
+		default:
+			<div class="px-2 py-1 rounded bg-gray-900/30 text-gray-400 text-sm">
+				<span>Unknown</span>
+			</div>
+	}
 }

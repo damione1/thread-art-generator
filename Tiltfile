@@ -322,15 +322,19 @@ dc_resource(
   ]
 )
 
-# Envoy proxy removed - direct service communication
-# Frontend now handles HTTPS directly
-
 dc_resource(
   'minio',
   labels=['storage'],
   links=[
     link('http://localhost:9001', 'MinIO Console'),
   ]
+)
+
+dc_resource(
+  'minio-bucket-setup',
+  labels=['storage'],
+  resource_deps=['minio'],
+  auto_init=True,
 )
 
 dc_resource(

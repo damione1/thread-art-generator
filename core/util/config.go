@@ -18,7 +18,8 @@ type FirebaseConfig struct {
 // StorageConfig stores storage provider-specific configuration
 type StorageConfig struct {
 	Provider         string `mapstructure:"STORAGE_PROVIDER"`
-	Bucket           string `mapstructure:"STORAGE_BUCKET"`
+	PublicBucket     string `mapstructure:"STORAGE_PUBLIC_BUCKET"`
+	PrivateBucket    string `mapstructure:"STORAGE_PRIVATE_BUCKET"`
 	Region           string `mapstructure:"STORAGE_REGION"`
 	InternalEndpoint string `mapstructure:"STORAGE_INTERNAL_ENDPOINT"`
 	ExternalEndpoint string `mapstructure:"STORAGE_EXTERNAL_ENDPOINT"`
@@ -95,7 +96,8 @@ func LoadConfig() (config Config, err error) {
 
 	// Storage configuration
 	viper.BindEnv("STORAGE_PROVIDER")
-	viper.BindEnv("STORAGE_BUCKET")
+	viper.BindEnv("STORAGE_PUBLIC_BUCKET")
+	viper.BindEnv("STORAGE_PRIVATE_BUCKET")
 	viper.BindEnv("STORAGE_REGION")
 	viper.BindEnv("STORAGE_INTERNAL_ENDPOINT")
 	viper.BindEnv("STORAGE_EXTERNAL_ENDPOINT")
@@ -143,6 +145,14 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Firebase.ProjectID == "" {
 		c.Firebase.ProjectID = "demo-thread-art-generator"
+	}
+	
+	// Storage defaults - set default bucket names if not explicitly configured
+	if c.Storage.PublicBucket == "" {
+		c.Storage.PublicBucket = "local-public"
+	}
+	if c.Storage.PrivateBucket == "" {
+		c.Storage.PrivateBucket = "local-private"
 	}
 }
 

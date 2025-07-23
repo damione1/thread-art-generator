@@ -112,7 +112,7 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 	}
 
 	// Return the created composition
-	return pbx.CompositionDbToProto(ctx, server.bucket, artDb, compositionDb), nil
+	return pbx.CompositionDbToProto(ctx, server.storage, artDb, compositionDb), nil
 }
 
 // GetComposition retrieves a composition by ID
@@ -173,7 +173,7 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 	artDb := compositionDb.R.Art
 
 	// Return the composition
-	return pbx.CompositionDbToProto(ctx, server.bucket, artDb, compositionDb), nil
+	return pbx.CompositionDbToProto(ctx, server.storage, artDb, compositionDb), nil
 }
 
 // UpdateComposition updates an existing composition
@@ -279,7 +279,7 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 	// Convert to proto
 	var protoCompositions []*pb.Composition
 	for _, comp := range compositions {
-		protoCompositions = append(protoCompositions, pbx.CompositionDbToProto(ctx, server.bucket, artDb, comp))
+		protoCompositions = append(protoCompositions, pbx.CompositionDbToProto(ctx, server.storage, artDb, comp))
 	}
 
 	// Create response
@@ -356,21 +356,21 @@ func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompo
 
 	// Delete associated files from storage if they exist
 	if compositionDb.PreviewURL.Valid {
-		err = server.bucket.Delete(ctx, compositionDb.PreviewURL.String)
+		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.PreviewURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.PreviewURL.String).Msg("Failed to delete preview file")
 		}
 	}
 
 	if compositionDb.GcodeURL.Valid {
-		err = server.bucket.Delete(ctx, compositionDb.GcodeURL.String)
+		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.GcodeURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.GcodeURL.String).Msg("Failed to delete gcode file")
 		}
 	}
 
 	if compositionDb.PathlistURL.Valid {
-		err = server.bucket.Delete(ctx, compositionDb.PathlistURL.String)
+		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.PathlistURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.PathlistURL.String).Msg("Failed to delete pathlist file")
 		}

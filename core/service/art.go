@@ -67,7 +67,7 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 		return nil, pbErrors.InternalError("failed to insert art", err)
 	}
 
-	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
+	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
 }
 
 func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
@@ -130,7 +130,7 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, err
 	}
 
-	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
+	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
 }
 
 func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
@@ -228,7 +228,7 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 	// Convert the arts to protobuf format
 	artPbs := make([]*pb.Art, 0, len(arts))
 	for _, artDb := range arts {
-		artPbs = append(artPbs, pbx.ArtDbToProto(ctx, server.bucket, artDb))
+		artPbs = append(artPbs, pbx.ArtDbToProto(ctx, server.storage, artDb))
 	}
 
 	// Create next page token if there are more results
@@ -316,7 +316,7 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
-	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
+	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
 }
 
 func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (*emptypb.Empty, error) {
@@ -377,7 +377,7 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 	// Delete the image from the bucket
 	if artDb.ImageID.Valid {
 		imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
-		err = server.bucket.Delete(ctx, imageKey)
+		err = server.storage.GetPublicStorage().Delete(ctx, imageKey)
 		if err != nil {
 			log.Error().Err(err).Msg(fmt.Sprintf("Failed to delete image %s", artDb.ImageID.String))
 			return &emptypb.Empty{}, nil // Don't return a public error if the image deletion fails
@@ -463,7 +463,7 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 		ContentType: req.GetContentType(), // Include content type for validation
 	}
 
-	signedURL, err := server.bucket.SignedURL(ctx, imageKey, opts)
+	signedURL, err := server.storage.GetPublicStorage().SignedURL(ctx, imageKey, opts)
 	if err != nil {
 		return nil, pbErrors.InternalError("failed to generate signed URL", err)
 	}
@@ -541,7 +541,7 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 	// Verify the image exists in the bucket using resource builder
 	imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
 
-	exists, err := server.bucket.Exists(ctx, imageKey)
+	exists, err := server.storage.GetPublicStorage().Exists(ctx, imageKey)
 	if err != nil {
 		return nil, pbErrors.InternalError("failed to verify image exists", err)
 	}
@@ -559,5 +559,5 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		return nil, pbErrors.InternalError("failed to update art status", err)
 	}
 
-	return pbx.ArtDbToProto(ctx, server.bucket, artDb), nil
+	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
 }

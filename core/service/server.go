@@ -12,7 +12,6 @@ import (
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
-	"github.com/Damione1/thread-art-generator/core/token"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -22,8 +21,7 @@ import (
 
 type Server struct {
 	config      util.Config
-	tokenMaker  token.Maker
-	bucket      *storage.BlobStorage
+	storage     *storage.DualBucketStorage
 	mailService mailService.MailService
 	queueClient queue.QueueClient
 }
@@ -34,73 +32,16 @@ func NewServer(config util.Config) (*Server, error) {
 		config: config,
 	}
 
-	server.tokenMaker, err = token.NewPasetoMaker(config.TokenSymmetricKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create token maker. %v", err)
-	}
-
 	server.mailService, err = mailService.NewSendInBlueMailService(config.SendInBlueAPIKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create mail service. %v", err)
 	}
 
-	// Initialize blob storage based on environment and configuration
+	// Initialize dual bucket storage system
 	ctx := context.Background()
-
-	// Convert provider string to StorageProvider type
-	var provider storage.StorageProvider
-	switch config.Storage.Provider {
-	case "s3":
-		provider = storage.ProviderS3
-	case "minio":
-		provider = storage.ProviderMinIO
-	case "gcs":
-		provider = storage.ProviderGCS
-	default:
-		// Default to MinIO in development, S3 in production
-		if config.Environment == "development" {
-			provider = storage.ProviderMinIO
-		} else {
-			provider = storage.ProviderS3
-		}
-	}
-
-	// Create storage configuration from environment variables
-	storageConfig := storage.BlobStorageConfig{
-		Provider:         provider,
-		Bucket:           config.Storage.Bucket,
-		Region:           config.Storage.Region,
-		InternalEndpoint: config.Storage.InternalEndpoint,
-		ExternalEndpoint: config.Storage.ExternalEndpoint,
-		UseSSL:           config.Storage.UseSSL,
-		ForceExternalSSL: config.Storage.ForceExternalSSL,
-		AccessKey:        config.Storage.AccessKey,
-		SecretKey:        config.Storage.SecretKey,
-		GCPProjectID:     config.Storage.GCPProjectID,
-	}
-
-	// If config values are missing, provide reasonable defaults based on environment
-	if storageConfig.Bucket == "" {
-		storageConfig.Bucket = "local-bucket"
-	}
-
-	if storageConfig.Region == "" {
-		storageConfig.Region = "us-east-1" // Default region for S3/MinIO
-	}
-
-	// Set up endpoints based on environment if not provided
-	if config.Environment == "development" && provider == storage.ProviderMinIO {
-		if storageConfig.InternalEndpoint == "" {
-			storageConfig.InternalEndpoint = "http://minio:9000"
-		}
-		if storageConfig.ExternalEndpoint == "" {
-			storageConfig.ExternalEndpoint = "http://localhost:9000"
-		}
-	}
-
-	server.bucket, err = storage.NewBlobStorage(ctx, storageConfig)
+	server.storage, err = storage.NewDualBucketStorage(ctx, config.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create blob storage: %v", err)
+		return nil, fmt.Errorf("failed to create dual bucket storage: %v", err)
 	}
 
 	// Initialize queue client if URL is provided
@@ -114,17 +55,13 @@ func NewServer(config util.Config) (*Server, error) {
 	return server, nil
 }
 
-func (s *Server) GetTokenMaker() token.Maker {
-	return s.tokenMaker
-}
-
 func (s *Server) Close() error {
 	var err error
 
-	// Close bucket connection
-	if s.bucket != nil && s.bucket.Bucket != nil {
-		if bucketErr := s.bucket.Close(); bucketErr != nil {
-			err = bucketErr
+	// Close storage connections
+	if s.storage != nil {
+		if storageErr := s.storage.Close(); storageErr != nil {
+			err = storageErr
 		}
 	}
 
@@ -219,13 +156,13 @@ func (s *Server) validateInternalAPIKeyFromHeaders(headers http.Header) bool {
 
 	// Validate token (must be non-empty and match)
 	isValid := token != "" && expectedToken != "" && token == expectedToken
-	
+
 	if !isValid {
 		log.Warn().Msg("Internal API key validation failed")
 	} else {
 		log.Debug().Msg("Internal API key validation successful")
 	}
-	
+
 	return isValid
 }
 

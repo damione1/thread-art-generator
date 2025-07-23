@@ -1,6 +1,0 @@
-# Dockerfile-migrations
-FROM alpine
-WORKDIR /app
-ADD build/migrations build/migrations
-COPY core/db/migrations migrations
-ENTRYPOINT build/migrations

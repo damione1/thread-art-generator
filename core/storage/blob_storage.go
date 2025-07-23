@@ -321,6 +321,15 @@ func (b *BlobStorage) Upload(ctx context.Context, key string, data io.Reader, co
 	return nil
 }
 
+// UploadWithPublicRead uploads data to a blob with public read permissions
+// For S3/MinIO, this is handled by bucket policy configuration
+// For GCS, this would set object-level ACLs (not implemented yet)
+func (b *BlobStorage) UploadWithPublicRead(ctx context.Context, key string, data io.Reader, contentType string) error {
+	// For now, use the same upload method as public read is configured at bucket level
+	// In the future, this could be extended to set object-level permissions for GCS
+	return b.Upload(ctx, key, data, contentType)
+}
+
 // Download downloads data from a blob
 func (b *BlobStorage) Download(ctx context.Context, key string) (io.ReadCloser, error) {
 	return b.Bucket.NewReader(ctx, key, nil)
