@@ -123,7 +123,7 @@ func HandleBinaryFileUpload(server *Server) http.HandlerFunc {
 
 		fileKey := fmt.Sprintf("%s%s", resourceName, extension)
 
-		writer, err := server.bucket.NewWriter(ctx, fileKey, nil)
+		writer, err := server.storage.GetPublicStorage().NewWriter(ctx, fileKey, nil)
 		if err != nil {
 			http.Error(w, "Failed to create a new writer", http.StatusInternalServerError)
 			return

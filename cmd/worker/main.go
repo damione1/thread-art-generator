@@ -53,73 +53,24 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Initialize storage
-	bucket, err := initializeStorage(ctx, config)
+	// Initialize dual bucket storage
+	storage, err := initializeDualStorage(ctx, config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize storage")
 	}
-	defer bucket.Close()
+	defer storage.Close()
 
 	// Connect to RabbitMQ and start processing
-	if err := startQueueProcessing(ctx, config, bucket); err != nil {
+	if err := startQueueProcessing(ctx, config, storage); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start queue processing")
 	}
 }
 
-func initializeStorage(ctx context.Context, config util.Config) (*storage.BlobStorage, error) {
-	// Convert provider string to StorageProvider type
-	var provider storage.StorageProvider
-	switch config.Storage.Provider {
-	case "s3":
-		provider = storage.ProviderS3
-	case "minio":
-		provider = storage.ProviderMinIO
-	case "gcs":
-		provider = storage.ProviderGCS
-	default:
-		if config.Environment == "development" {
-			provider = storage.ProviderMinIO
-		} else {
-			provider = storage.ProviderS3
-		}
-	}
-
-	storageConfig := storage.BlobStorageConfig{
-		Provider:         provider,
-		Bucket:           config.Storage.Bucket,
-		Region:           config.Storage.Region,
-		InternalEndpoint: config.Storage.InternalEndpoint,
-		ExternalEndpoint: config.Storage.ExternalEndpoint,
-		UseSSL:           config.Storage.UseSSL,
-		ForceExternalSSL: config.Storage.ForceExternalSSL,
-		AccessKey:        config.Storage.AccessKey,
-		SecretKey:        config.Storage.SecretKey,
-		GCPProjectID:     config.Storage.GCPProjectID,
-	}
-
-	// If config values are missing, provide reasonable defaults
-	if storageConfig.Bucket == "" {
-		storageConfig.Bucket = "local-bucket"
-	}
-
-	if storageConfig.Region == "" {
-		storageConfig.Region = "us-east-1"
-	}
-
-	// Set up endpoints based on environment if not provided
-	if config.Environment == "development" && provider == storage.ProviderMinIO {
-		if storageConfig.InternalEndpoint == "" {
-			storageConfig.InternalEndpoint = "http://minio:9000"
-		}
-		if storageConfig.ExternalEndpoint == "" {
-			storageConfig.ExternalEndpoint = "http://localhost:9000"
-		}
-	}
-
-	return storage.NewBlobStorage(ctx, storageConfig)
+func initializeDualStorage(ctx context.Context, config util.Config) (*storage.DualBucketStorage, error) {
+	return storage.NewDualBucketStorage(ctx, config.Storage)
 }
 
-func startQueueProcessing(ctx context.Context, config util.Config, bucket *storage.BlobStorage) error {
+func startQueueProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
 	// Connect to RabbitMQ
 	queueURL := config.Queue.URL
 	if queueURL == "" {
@@ -191,7 +142,7 @@ func startQueueProcessing(ctx context.Context, config util.Config, bucket *stora
 			log.Info().Int("size", len(d.Body)).Msg("Received a message")
 
 			// Process message
-			err := processMessage(ctx, d.Body, config.DB, bucket)
+			err := processMessage(ctx, d.Body, config.DB, dualStorage)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to process message")
 
@@ -223,7 +174,7 @@ func startQueueProcessing(ctx context.Context, config util.Config, bucket *stora
 }
 
 // processMessage processes a single message from the queue
-func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storage.BlobStorage) error {
+func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *storage.DualBucketStorage) error {
 	processingStartTime := time.Now()
 
 	// Parse the message
@@ -295,7 +246,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 		Str("imageID", art.ImageID.String).
 		Msg("Attempting to download source image")
 
-	reader, err := bucket.Download(ctx, imageKey)
+	reader, err := dualStorage.GetPublicStorage().Download(ctx, imageKey)
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to download source image: %v", err))
 		return fmt.Errorf("failed to download source image: %w", err)
@@ -435,7 +386,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 	}
 	defer previewFile.Close()
 
-	err = bucket.Upload(ctx, previewKey, previewFile, "image/png")
+	err = dualStorage.GetPublicStorage().Upload(ctx, previewKey, previewFile, "image/png")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload preview image: %v", err))
 		return fmt.Errorf("failed to upload preview image: %w", err)
@@ -451,7 +402,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 	}
 	defer gcodeFile.Close()
 
-	err = bucket.Upload(ctx, gcodeKey, gcodeFile, "text/plain")
+	err = dualStorage.GetPublicStorage().Upload(ctx, gcodeKey, gcodeFile, "text/plain")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload gcode file: %v", err))
 		return fmt.Errorf("failed to upload gcode file: %w", err)
@@ -467,7 +418,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket *storag
 	}
 	defer pathsFile.Close()
 
-	err = bucket.Upload(ctx, pathsKey, pathsFile, "application/json")
+	err = dualStorage.GetPublicStorage().Upload(ctx, pathsKey, pathsFile, "application/json")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload paths file: %v", err))
 		return fmt.Errorf("failed to upload paths file: %w", err)

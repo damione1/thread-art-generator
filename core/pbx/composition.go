@@ -12,7 +12,7 @@ import (
 )
 
 // CompositionDbToProto converts a database composition model to a proto composition
-func CompositionDbToProto(ctx context.Context, bucket *storage.BlobStorage, artDb *models.Art, composition *models.Composition) *pb.Composition {
+func CompositionDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, artDb *models.Art, composition *models.Composition) *pb.Composition {
 	// Map status from database enum to proto enum
 	var status pb.CompositionStatus
 	switch composition.Status {
@@ -46,17 +46,22 @@ func CompositionDbToProto(ctx context.Context, bucket *storage.BlobStorage, artD
 	// Set the resource name using the new builder
 	compositionPb.Name = resource.BuildCompositionResourceName(artDb.AuthorID, artDb.ID, composition.ID)
 
-	// Set optional result fields if they exist
-	if composition.PreviewURL.Valid && bucket != nil {
-		compositionPb.PreviewUrl = bucket.GetPublicURL(composition.PreviewURL.String)
-	}
+	// Set optional result fields if they exist using public URL generator for CDN caching
+	if dualStorage != nil {
+		publicURLGenerator := storage.NewPublicURLGenerator(dualStorage.GetPublicStorage())
+		urlOptions := storage.DefaultURLOptions()
 
-	if composition.GcodeURL.Valid && bucket != nil {
-		compositionPb.GcodeUrl = bucket.GetPublicURL(composition.GcodeURL.String)
-	}
+		if composition.PreviewURL.Valid {
+			compositionPb.PreviewUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.PreviewURL.String, urlOptions)
+		}
 
-	if composition.PathlistURL.Valid && bucket != nil {
-		compositionPb.PathlistUrl = bucket.GetPublicURL(composition.PathlistURL.String)
+		if composition.GcodeURL.Valid {
+			compositionPb.GcodeUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.GcodeURL.String, urlOptions)
+		}
+
+		if composition.PathlistURL.Valid {
+			compositionPb.PathlistUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.PathlistURL.String, urlOptions)
+		}
 	}
 
 	if composition.ThreadLength.Valid {
