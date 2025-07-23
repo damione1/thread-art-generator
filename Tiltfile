@@ -322,9 +322,6 @@ dc_resource(
   ]
 )
 
-# Envoy proxy removed - direct service communication
-# Frontend now handles HTTPS directly
-
 dc_resource(
   'minio',
   labels=['storage'],
