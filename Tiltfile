@@ -334,6 +334,13 @@ dc_resource(
 )
 
 dc_resource(
+  'minio-bucket-setup',
+  labels=['storage'],
+  resource_deps=['minio'],
+  auto_init=True,
+)
+
+dc_resource(
   'redis',
   labels=['cache'],
   auto_init=True,
