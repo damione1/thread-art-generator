@@ -54,17 +54,6 @@ function setup_tools() {
     fi
     echo -e "✅ Tilt is installed"
 
-    # Check for mkcert
-    if ! command_exists mkcert; then
-        echo -e "${YELLOW}mkcert is not installed. Installing...${NC}"
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            brew install mkcert
-        else
-            echo -e "${RED}Unsupported OS, please install mkcert manually${NC}"
-            exit 1
-        fi
-    fi
-    echo -e "✅ mkcert is installed"
 
     # Check for Node.js and npm (needed for Tailwind CSS)
     if ! command_exists npm; then
@@ -106,38 +95,6 @@ function setup_tools() {
     echo -e "✅ Go version $GO_VERSION is compatible"
 }
 
-# Function to setup SSL certificates
-function setup_ssl() {
-    echo -e "\n${YELLOW}Setting up SSL certificates...${NC}"
-
-    # Install the local CA
-    mkcert -install
-
-    # Create certs directory if it doesn't exist
-    mkdir -p "$PROJECT_ROOT/certs"
-
-    # Generate certificates for tag.local, front.tag.local and storage.tag.local
-    echo "Generating certificates for tag.local, front.tag.local and storage.tag.local..."
-    mkcert -cert-file "$PROJECT_ROOT/certs/tag.local.crt" -key-file "$PROJECT_ROOT/certs/tag.local.key" tag.local "*.tag.local" front.tag.local storage.tag.local
-
-    # Add domains to /etc/hosts if not already present
-    if ! grep -q "tag.local" /etc/hosts; then
-        echo "Adding domains to /etc/hosts..."
-        echo "You might be prompted for your password to modify /etc/hosts"
-        sudo sh -c "echo '127.0.0.1 tag.local' >> /etc/hosts"
-        sudo sh -c "echo '127.0.0.1 front.tag.local' >> /etc/hosts"
-        sudo sh -c "echo '127.0.0.1 storage.tag.local' >> /etc/hosts"
-    fi
-
-    # Check if front.tag.local is in hosts, add it if not
-    if ! grep -q "front.tag.local" /etc/hosts; then
-        echo "Adding front.tag.local to /etc/hosts..."
-        echo "You might be prompted for your password to modify /etc/hosts"
-        sudo sh -c "echo '127.0.0.1 front.tag.local' >> /etc/hosts"
-    fi
-
-    echo -e "✅ SSL certificates setup complete"
-}
 
 # Setup environment variables
 function setup_env() {
@@ -150,10 +107,6 @@ function setup_env() {
         # Generate a symmetric key for tokens
         TOKEN_SYMMETRIC_KEY=$(openssl rand -hex 16)
         echo "TOKEN_SYMMETRIC_KEY=$TOKEN_SYMMETRIC_KEY" >> "$PROJECT_ROOT/.env"
-
-        # Generate a secret for NextAuth
-        NEXTAUTH_SECRET=$(openssl rand -hex 32)
-        echo "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" >> "$PROJECT_ROOT/.env"
 
         echo -e "✅ .env file created with generated keys"
     else
@@ -251,7 +204,6 @@ function setup_proto_tools() {
 
 # Main setup logic
 setup_tools
-setup_ssl
 setup_env
 setup_proto_tools
 setup_frontend

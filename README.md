@@ -54,10 +54,10 @@ make setup
 
 This will:
 
-- Check for required tools
-- Set up SSL certificates
+- Check for required tools (Docker, Tilt, Node.js, Go, etc.)
 - Create an `.env` file with generated keys
-- Configure local hostnames
+- Install protocol buffer tools
+- Set up frontend dependencies (Tailwind CSS, Templ)
 
 2. **Start Development Environment**
 
@@ -71,21 +71,32 @@ tilt up
 
 3. **Access the Application**
 
-- Web UI: https://tag.local
-- API: https://tag.local/grpc-api
+- Web UI: http://localhost:8080
+- API: http://localhost:9090
 - MinIO Console: http://localhost:9001 (credentials in .env)
+- RabbitMQ Management: http://localhost:15672 (guest/guest)
+- Firebase Emulator UI: http://localhost:4000
 
 ## Development
 
 ### Project Structure
 
-- `/cmd` - Application entry points
-- `/core` - Core business logic
+- `/cmd` - Application entry points (api, worker, migrations)
+- `/core` - Core business logic and shared libraries
+  - `/auth` - Firebase authentication
+  - `/db` - Database models and migrations
+  - `/service` - Business logic services
+  - `/storage` - Blob storage abstraction (MinIO/GCS)
+  - `/pb` - Generated protocol buffer code
+- `/client` - Go+HTMX frontend application
+  - `/cmd/frontend` - Frontend server entry point
+  - `/internal` - Frontend-specific code (handlers, templates, services)
+  - `/public` - Static assets (CSS, JS, images)
 - `/proto` - Protocol buffer definitions
-- `/client` - Go+HTMX frontend
 - `/threadGenerator` - Thread art generation algorithm
-- `/infra` - Infrastructure configuration
-- `/scripts` - Utility scripts
+- `/functions` - Firebase Functions (TypeScript)
+- `/Infra` - Infrastructure configuration (Dockerfiles, Terraform)
+- `/scripts` - Utility scripts and CLI tools
 
 
 ### Development Commands
@@ -139,37 +150,28 @@ Connect to the database using:
 docker-compose exec db psql local -U local -d local
 ```
 
-### Local HTTPS Development
+### Firebase Authentication Setup
 
-For local development with Auth0:
+The application uses Firebase Authentication for user management:
 
-1. Generate local certificates:
+1. **Development**: Firebase emulator runs automatically with `tilt up`
+   - Auth Emulator: http://localhost:9099
+   - Functions Emulator: http://localhost:5001  
+   - Emulator UI: http://localhost:4000
 
-   ```bash
-   tilt trigger setup-mkcert
-   ```
-
-2. Start the development environment:
-
-   ```bash
-   tilt up
-   ```
-
-3. Access at https://tag.local
-
-4. For Auth0 integration, add `https://tag.local/callback` to your Auth0 application's Allowed Callback URLs.
-
-The Traefik dashboard is available at http://localhost:8080/dashboard/.
+2. **Production**: Configure Firebase project credentials in `.env`
+   - Set `FIREBASE_PROJECT_ID`
+   - Set `FIREBASE_WEB_API_KEY` 
+   - Set `FIREBASE_AUTH_DOMAIN`
 
 ## Storage Options
 
 The application supports multiple storage providers:
 
-- **Local MinIO** (development): Configured automatically
-- **GCS** (production): Requires GCP credentials
-- **S3** (production): Requires AWS credentials
+- **Local MinIO** (development): Configured automatically with dual-bucket setup
+- **Google Cloud Storage (GCS)** (production): Requires GCP credentials and project configuration
 
-Configure in the `.env` file.
+Configure storage provider in the `.env` file using `STORAGE_PROVIDER=minio` for development or `STORAGE_PROVIDER=gcs` for production.
 
 ## Production Deployment
 
@@ -185,23 +187,35 @@ The project includes configuration files for FluidNC, a high-performance Grbl CN
 
 ## Roadmap
 
+### ✅ Completed Features
 - [x] Core thread art algorithm
-- [x] Basic web interface
+- [x] Basic web interface  
 - [x] API server with composition storage
 - [x] Worker service for async processing
 - [x] UI with real-time previews and visualization
-- [⏳] GCode generator for thread path creation (In Progress)
-- [⏳] Enhanced customization settings (In Progress)
-- [ ] Connect-RPC Migration
+- [x] **GCode generator for thread path creation** 
+- [x] **Enhanced customization settings**
+- [x] **CDN support for image storage and caching**
+- [x] **Migration from Next.js to Templ (full Go infrastructure)**
+- [x] **Addition of HTMX for frontend interactivity**
+- [x] **Compiled JavaScript integration** 
+- [x] **BFF (Backend for Frontend) setup**
+- [x] **Migration from Auth0 to Firebase Authentication**
+- [x] **Firebase Functions for user creation and management**
+- [x] Connect-RPC Migration
   - [x] API Server Connect handler setup
-  - [x] Update interceptors to Connect middleware
+  - [x] Update interceptors to Connect middleware  
   - [x] Update proto generation configuration
   - [x] Update client implementations
-  - [ ] Remove Envoy and gRPC Gateway dependencies
-  - [ ] Update documentation
+  - [x] Remove Envoy and gRPC Gateway dependencies
+
+### 🚧 In Progress / Todo
+- [ ] **Infrastructure & Deployment**
+  - [ ] Terraform infrastructure setup
+  - [ ] Automated deployment pipeline (CI/CD)
 - [ ] Testing implementation
   - [ ] Unit tests for core services
-  - [ ] Integration tests for API endpoints
+  - [ ] Integration tests for API endpoints  
   - [ ] Performance testing for thread generation
   - [ ] End-to-end testing
 

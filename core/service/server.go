@@ -12,7 +12,6 @@ import (
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
-	"github.com/Damione1/thread-art-generator/core/token"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -22,7 +21,6 @@ import (
 
 type Server struct {
 	config      util.Config
-	tokenMaker  token.Maker
 	storage     *storage.DualBucketStorage
 	mailService mailService.MailService
 	queueClient queue.QueueClient
@@ -32,11 +30,6 @@ func NewServer(config util.Config) (*Server, error) {
 	var err error
 	server := &Server{
 		config: config,
-	}
-
-	server.tokenMaker, err = token.NewPasetoMaker(config.TokenSymmetricKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create token maker. %v", err)
 	}
 
 	server.mailService, err = mailService.NewSendInBlueMailService(config.SendInBlueAPIKey)
@@ -60,10 +53,6 @@ func NewServer(config util.Config) (*Server, error) {
 	}
 
 	return server, nil
-}
-
-func (s *Server) GetTokenMaker() token.Maker {
-	return s.tokenMaker
 }
 
 func (s *Server) Close() error {
@@ -167,13 +156,13 @@ func (s *Server) validateInternalAPIKeyFromHeaders(headers http.Header) bool {
 
 	// Validate token (must be non-empty and match)
 	isValid := token != "" && expectedToken != "" && token == expectedToken
-	
+
 	if !isValid {
 		log.Warn().Msg("Internal API key validation failed")
 	} else {
 		log.Debug().Msg("Internal API key validation successful")
 	}
-	
+
 	return isValid
 }
 
