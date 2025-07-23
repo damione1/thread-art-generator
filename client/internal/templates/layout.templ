@@ -9,36 +9,8 @@ templ Layout(data *PageData) {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ data.GetPageTitle() }</title>
-			<script src="https://unpkg.com/htmx.org@2.0" crossorigin="anonymous"></script>
-			<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-			<script>
-				// Configure HTMX to include auth headers with every request
-				document.addEventListener('DOMContentLoaded', function() {
-					// Initialize headers object if it doesn't exist
-					if (!htmx.config.headers) {
-						htmx.config.headers = {};
-					}
-
-					// Add CSRF token to all HTMX requests for authentication
-					const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-					if (csrfToken) {
-						htmx.config.headers['X-CSRF-Token'] = csrfToken;
-					}
-
-					// Add event listener for all HTMX requests
-					htmx.on('htmx:configRequest', function(evt) {
-						// Ensure headers object exists
-						if (!evt.detail.headers) {
-							evt.detail.headers = {};
-						}
-
-						// Set CSRF token if not already present
-						if (csrfToken && !evt.detail.headers['X-CSRF-Token']) {
-							evt.detail.headers['X-CSRF-Token'] = csrfToken;
-						}
-					});
-				});
-			</script>
+			<script src="/static/js/vendors.js"></script>
+			<script src="/static/js/main.js" defer></script>
 			<!-- Include a CSRF token for authenticated users -->
 			if data.IsLoggedIn {
 				<meta name="csrf-token" id="csrf-token" content="auth-token-exists"/>
@@ -47,7 +19,8 @@ templ Layout(data *PageData) {
 			}
 			<link rel="stylesheet" href="/static/css/tailwind.css"/>
 			<link rel="stylesheet" href="/static/css/main.css"/>
-			<!-- Include Firebase Auth and config for authenticated users -->
+			<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+			<!-- Include Firebase Auth and config -->
 			if data.IsLoggedIn && data.FirebaseConfig != nil {
 				@templ.JSONScript("firebase-config", data.FirebaseConfig)
 				<script type="module" src="/static/js/firebase-auth.js"></script>

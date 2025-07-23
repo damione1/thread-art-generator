@@ -478,9 +478,14 @@ class FirebaseAuthManager {
   }
 }
 
-// Initialize Firebase Auth when page loads
+// Initialize Firebase Auth when page loads, only if config is available
 document.addEventListener("DOMContentLoaded", () => {
-  window.firebaseAuth = new FirebaseAuthManager();
+  const configElement = document.getElementById("firebase-config");
+  if (configElement) {
+    window.firebaseAuth = new FirebaseAuthManager();
+  } else {
+    console.log("Firebase config not found - Firebase auth not initialized");
+  }
 });
 
 // Export for global access

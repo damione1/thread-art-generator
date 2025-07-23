@@ -1,9 +1,12 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/js/firebase-auth.js',
+  entry: {
+    main: './src/js/main.js',
+    'firebase-auth': './src/js/firebase-auth.js'
+  },
   output: {
-    filename: 'firebase-auth.js',
+    filename: '[name].js',
     path: path.resolve(__dirname, 'public/js'),
     clean: false
   },
@@ -11,5 +14,17 @@ module.exports = {
   devtool: 'source-map',
   resolve: {
     extensions: ['.js']
+  },
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+      },
+    },
   }
 };

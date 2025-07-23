@@ -42,6 +42,53 @@ func (s *CompositionService) ListCompositions(ctx context.Context, pageSize int,
 	return resp.Msg, nil
 }
 
+// ListCompositionsForArt gets a list of compositions for a specific art
+func (s *CompositionService) ListCompositionsForArt(ctx context.Context, userID, artID string, pageSize int, pageToken string) (*pb.ListCompositionsResponse, error) {
+	// Build the art resource name as parent
+	artResourceName := fmt.Sprintf("users/%s/arts/%s", userID, artID)
+	
+	req := connect.NewRequest(&pb.ListCompositionsRequest{
+		Parent:    artResourceName,
+		PageSize:  int32(pageSize),
+		PageToken: pageToken,
+	})
+
+	resp, err := s.client.ListCompositions(ctx, req)
+	if err != nil {
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Str("parent", artResourceName).
+			Msg("Failed to list compositions for art")
+		return nil, fmt.Errorf("failed to list compositions for art: %s", standardErr.Message)
+	}
+
+	return resp.Msg, nil
+}
+
+// DeleteComposition deletes a composition
+func (s *CompositionService) DeleteComposition(ctx context.Context, compositionName string) error {
+	req := connect.NewRequest(&pb.DeleteCompositionRequest{
+		Name: compositionName,
+	})
+
+	_, err := s.client.DeleteComposition(ctx, req)
+	if err != nil {
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Str("compositionName", compositionName).
+			Msg("Failed to delete composition")
+		return fmt.Errorf("failed to delete composition: %s", standardErr.Message)
+	}
+
+	return nil
+}
+
 // CreateComposition creates a new composition
 func (s *CompositionService) CreateComposition(ctx context.Context, createRequest *pb.CreateCompositionRequest) (*pb.Composition, map[string][]string, error) {
 	req := connect.NewRequest(createRequest)

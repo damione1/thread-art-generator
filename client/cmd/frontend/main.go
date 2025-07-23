@@ -158,6 +158,7 @@ func main() {
 					r.Post("/new", compositionHandler.CreateComposition)
 					r.Get("/{compositionId}", compositionHandler.ViewComposition)
 					r.Get("/{compositionId}/status", compositionHandler.GetCompositionStatus)
+					r.Delete("/{compositionId}", compositionHandler.DeleteComposition)
 				})
 			})
 		})

@@ -85,6 +85,31 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 		Success:           false,
 	}
 
+	// Check if we need to pre-fill from an existing composition
+	fromCompositionID := r.URL.Query().Get("from")
+	if fromCompositionID != "" {
+		// Get the source composition to copy settings from
+		sourceComposition, err := h.generatorService.GetComposition(r.Context(), internalUserID, artID, fromCompositionID)
+		if err != nil {
+			log.Error().Err(err).
+				Str("internal_user_id", internalUserID).
+				Str("art_id", artID).
+				Str("from_composition_id", fromCompositionID).
+				Msg("Failed to get source composition for copying settings")
+			// Continue with defaults if we can't load the source composition
+		} else {
+			// Copy settings from the source composition
+			formData.NailsQuantity = sourceComposition.GetNailsQuantity()
+			formData.ImgSize = sourceComposition.GetImgSize()
+			formData.MaxPaths = sourceComposition.GetMaxPaths()
+			formData.StartingNail = sourceComposition.GetStartingNail()
+			formData.MinimumDifference = sourceComposition.GetMinimumDifference()
+			formData.BrightnessFactor = sourceComposition.GetBrightnessFactor()
+			formData.ImageContrast = sourceComposition.GetImageContrast()
+			formData.PhysicalRadius = sourceComposition.GetPhysicalRadius()
+		}
+	}
+
 	// Render the composition form
 	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("New Composition - %s - ThreadArt", art.GetTitle()), "composition")
 	err = templates.NewCompositionPage(pageData, art, formData).Render(r.Context(), w)
@@ -356,4 +381,55 @@ func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render composition status update")
 	}
+}
+
+// DeleteComposition handles deleting a composition
+func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Request) {
+	// Get user from context
+	user, _ := middleware.UserFromContext(r.Context())
+
+	// Extract IDs from URL
+	artID := chi.URLParam(r, "artId")
+	compositionID := chi.URLParam(r, "compositionId")
+	
+	if artID == "" || compositionID == "" {
+		http.Error(w, "Invalid IDs", http.StatusBadRequest)
+		return
+	}
+
+	// Get internal user ID
+	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for DeleteComposition")
+		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse the user resource name to extract internal user ID
+	userResource, err := resource.ParseResourceName(currentUser.ID)
+	if err != nil {
+		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
+		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
+		return
+	}
+	
+	internalUserID := userResource.(*resource.User).ID
+
+	// Build the composition resource name
+	compositionResourceName := resource.BuildCompositionResourceName(internalUserID, artID, compositionID)
+
+	// Delete the composition (note: we need to add this method to the service)
+	err = h.generatorService.DeleteComposition(r.Context(), compositionResourceName)
+	if err != nil {
+		log.Error().Err(err).
+			Str("internal_user_id", internalUserID).
+			Str("art_id", artID).
+			Str("composition_id", compositionID).
+			Msg("Failed to delete composition")
+		http.Error(w, "Failed to delete composition", http.StatusInternalServerError)
+		return
+	}
+
+	// Return success - the HTMX target will remove the element
+	w.WriteHeader(http.StatusOK)
 }
