@@ -67,9 +67,21 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get compositions for this art if it's complete
+	var compositions []*pb.Composition
+	if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE {
+		compositionsResponse, err := h.generatorService.ListCompositionsForArt(r.Context(), internalUserID, artID, 50, "")
+		if err != nil {
+			log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get compositions for art")
+			// Don't fail the page load, just log the error and continue with empty compositions
+		} else {
+			compositions = compositionsResponse.GetCompositions()
+		}
+	}
+
 	// Render the art page using middleware-provided context
 	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("Art: %s - ThreadArt", art.GetTitle()), "art")
-	err = templates.ArtPage(pageData, art).Render(r.Context(), w)
+	err = templates.ArtPage(pageData, art, compositions).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render art page")

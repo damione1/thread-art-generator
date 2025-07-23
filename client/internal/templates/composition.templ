@@ -10,14 +10,14 @@ import (
 
 // CompositionFormData represents the form data for creating compositions
 type CompositionFormData struct {
-	NailsQuantity     int32               // Default: 300
-	ImgSize           int32               // Default: 800
-	MaxPaths          int32               // Default: 10000
-	StartingNail      int32               // Default: 0
-	MinimumDifference int32               // Default: 10
-	BrightnessFactor  int32               // Default: 50
-	ImageContrast     float32             // Default: 40.0
-	PhysicalRadius    float32             // Default: 609.6
+	NailsQuantity     int32   // Default: 300
+	ImgSize           int32   // Default: 800
+	MaxPaths          int32   // Default: 10000
+	StartingNail      int32   // Default: 0
+	MinimumDifference int32   // Default: 10
+	BrightnessFactor  int32   // Default: 50
+	ImageContrast     float32 // Default: 40.0
+	PhysicalRadius    float32 // Default: 609.6
 	Errors            map[string][]string
 	Success           bool
 }
@@ -29,15 +29,12 @@ templ NewCompositionPage(data *PageData, art *pb.Art, formData *CompositionFormD
 		<div class="max-w-7xl mx-auto px-4 py-8">
 			<div class="mb-6">
 				<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-					</svg>
+					@MaterialIcon("arrow_back", "h-5 w-5")
 					Back to Art
 				</a>
 				<h1 class="text-3xl font-bold text-slate-200">Create Composition</h1>
 				<p class="text-slate-400 mt-2">Configure thread art parameters for "{ art.GetTitle() }"</p>
 			</div>
-			
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 				<!-- Art Preview -->
 				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
@@ -52,7 +49,6 @@ templ NewCompositionPage(data *PageData, art *pb.Art, formData *CompositionFormD
 						<p class="text-sm text-slate-400 mt-1">This image will be used to generate your thread art composition</p>
 					</div>
 				</div>
-				
 				<!-- Composition Form -->
 				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
 					<h2 class="text-xl font-semibold text-slate-200 mb-6">Composition Parameters</h2>
@@ -71,7 +67,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 		class="space-y-6"
 	>
 		@ErrorAlert(formData.Errors["_form"])
-		
 		<!-- Nails Quantity -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -102,7 +97,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Image Size -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -133,7 +127,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Max Paths -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -164,7 +157,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Starting Nail -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -194,7 +186,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Minimum Difference -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -235,7 +226,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Brightness Factor -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -273,7 +263,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Image Contrast -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -314,7 +303,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Physical Radius -->
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -345,7 +333,6 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				}
 			}
 		}
-		
 		<!-- Submit Button -->
 		<div class="flex justify-end mt-6">
 			@button.Button(button.Props{
@@ -353,13 +340,40 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				Variant: button.VariantDefault,
 			}) {
 				<span id="submit-spinner" class="htmx-indicator">
-					<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-					</svg>
+					@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
 				</span>
 				Create Composition
 			}
 		</div>
 	</form>
+}
+
+// CompositionStatusBadge renders a status badge for a composition
+templ CompositionStatusBadge(status pb.CompositionStatus) {
+	switch status {
+		case pb.CompositionStatus_COMPOSITION_STATUS_PENDING:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-yellow-900/30 text-yellow-400 text-sm">
+				@MaterialIcon("pending_actions", "")
+				Pending
+			</div>
+		case pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-sm">
+				@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
+				Processing
+			</div>
+		case pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-green-900/30 text-green-400 text-sm">
+				@MaterialIcon("check_circle", "")
+				Complete
+			</div>
+		case pb.CompositionStatus_COMPOSITION_STATUS_FAILED:
+			<div class="flex items-center gap-2 px-2 py-1 rounded bg-red-900/30 text-red-400 text-sm">
+				@MaterialIcon("error", "")
+				Failed
+			</div>
+		default:
+			<div class="px-2 py-1 rounded bg-gray-900/30 text-gray-400 text-sm">
+				Unknown
+			</div>
+	}
 }
