@@ -19,6 +19,7 @@ on:
 env:
   REGISTRY: us-central1-docker.pkg.dev
   IMAGE_TAG: ${{ github.sha }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'thread-art-staging-466319' }}
 
 jobs:
   build:
@@ -38,7 +39,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-staging/providers/github-provider
-          service_account: cicd-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          service_account: cicd-sa-staging@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
@@ -49,26 +50,26 @@ jobs:
       - name: Build and Push API Image
         run: |
           docker build -f Infra/Dockerfiles/Dockerfile-api \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:latest .
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }}
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:latest
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-api:latest .
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-api:latest
 
       - name: Build and Push Frontend Image
         run: |
           docker build -f Infra/Dockerfiles/Dockerfile-frontend \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }} \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:latest .
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }}
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:latest
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-frontend:latest .
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-frontend:latest
 
       - name: Build and Push Worker Image
         run: |
           docker build -f Infra/Dockerfiles/Dockerfile-worker \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }} \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:latest .
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }}
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:latest
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-worker:latest .
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-worker:latest
 
   migrate:
     name: Run Database Migrations
@@ -88,7 +89,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-staging/providers/github-provider
-          service_account: cicd-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          service_account: cicd-sa-staging@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
@@ -96,12 +97,12 @@ jobs:
       - name: Run Database Migrations
         run: |
           gcloud run jobs create migration-job-${{ github.run_id }} \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
-            --service-account=migrator-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
+            --service-account=migrator-sa-staging@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --region=us-central1 \
             --command=./build/migrations \
             --set-env-vars="POSTGRES_HOST=127.0.0.1,POSTGRES_PORT=5432" \
-            --set-cloudsql-instances=${{ vars.GCP_PROJECT_ID }}:us-central1:thread-art-db-staging \
+            --set-cloudsql-instances=${{ env.PROJECT_ID }}:us-central1:thread-art-db-staging \
             --max-retries=0 \
             --wait
           
@@ -128,7 +129,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-staging/providers/github-provider
-          service_account: cicd-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          service_account: cicd-sa-staging@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
@@ -136,9 +137,9 @@ jobs:
       - name: Deploy API Service
         run: |
           gcloud run deploy thread-art-api-staging \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
             --region=us-central1 \
-            --service-account=api-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --service-account=api-sa-staging@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --allow-unauthenticated \
             --port=9090 \
             --memory=1Gi \
@@ -149,9 +150,9 @@ jobs:
       - name: Deploy Frontend Service
         run: |
           gcloud run deploy thread-art-frontend-staging \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }} \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }} \
             --region=us-central1 \
-            --service-account=client-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --service-account=client-sa-staging@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --allow-unauthenticated \
             --port=8080 \
             --memory=512Mi \
@@ -162,9 +163,9 @@ jobs:
       - name: Deploy Worker Service
         run: |
           gcloud run deploy thread-art-worker-staging \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }} \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }} \
             --region=us-central1 \
-            --service-account=worker-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --service-account=worker-sa-staging@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --no-allow-unauthenticated \
             --memory=2Gi \
             --cpu=2 \

@@ -61,6 +61,10 @@ jobs:
         working-directory: terraform/environments/${{ matrix.environment }}
         run: terraform init
 
+      - name: Force Unlock Terraform State (if needed)
+        working-directory: terraform/environments/${{ matrix.environment }}
+        run: terraform force-unlock -force 1753381574578734 || true
+
       - name: Terraform Plan
         working-directory: terraform/environments/${{ matrix.environment }}
         run: terraform plan -out=tfplan
@@ -128,6 +132,10 @@ jobs:
       - name: Terraform Init
         working-directory: terraform/environments/${{ matrix.environment }}
         run: terraform init
+
+      - name: Force Unlock Terraform State (if needed)
+        working-directory: terraform/environments/${{ matrix.environment }}
+        run: terraform force-unlock -force 1753381574578734 || true
 
       - name: Terraform Apply
         working-directory: terraform/environments/${{ matrix.environment }}
