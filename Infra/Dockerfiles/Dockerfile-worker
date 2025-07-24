@@ -25,9 +25,8 @@ WORKDIR /app
 # Install ca-certificates for HTTPS requests
 RUN apk --no-cache add ca-certificates
 
-# Copy the binary from builder stage or from local build directory (for Tilt)
-COPY --from=builder /app/build/worker* ./
-COPY build/worker* ./ 2>/dev/null || true
+# Copy the binary from builder stage
+COPY --from=builder /app/build/worker ./worker
 
 # Create non-root user
 RUN adduser -D -u 1000 appuser

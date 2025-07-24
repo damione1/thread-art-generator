@@ -38,13 +38,11 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates
 
-# Copy the binary from go-builder stage or from local build directory (for Tilt)
-COPY --from=go-builder /app/build/frontend* ./
-COPY build/frontend* ./ 2>/dev/null || true
+# Copy the binary from go-builder stage
+COPY --from=go-builder /app/build/frontend ./frontend
 
-# Copy static files from node-builder stage or from local directory (for Tilt)
+# Copy static files from node-builder stage
 COPY --from=node-builder /app/client/public ./client/public
-COPY client/public ./client/public 2>/dev/null || true
 
 # Set environment variables
 ENV FRONTEND_PORT=8080
