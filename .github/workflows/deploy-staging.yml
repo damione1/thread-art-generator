@@ -36,17 +36,17 @@ jobs:
               - 'core/**'
               - 'go.mod'
               - 'go.sum'
-              - 'Dockerfile.api'
+              - 'Infra/Dockerfiles/Dockerfile-api'
             client:
               - 'client/**'
-              - 'Dockerfile.client'
+              - 'Infra/Dockerfiles/Dockerfile-frontend'
             worker:
               - 'cmd/worker/**'
               - 'core/**'
               - 'threadGenerator/**'
               - 'go.mod'
               - 'go.sum'
-              - 'Dockerfile.worker'
+              - 'Infra/Dockerfiles/Dockerfile-worker'
 
   terraform-plan:
     runs-on: ubuntu-latest
@@ -135,15 +135,15 @@ jobs:
         service: [api, client, worker]
         include:
           - service: api
-            dockerfile: Dockerfile.api
+            dockerfile: Infra/Dockerfiles/Dockerfile-api
             context: .
             build-target: api
           - service: client
-            dockerfile: Dockerfile.client
-            context: client
+            dockerfile: Infra/Dockerfiles/Dockerfile-frontend
+            context: .
             build-target: client
           - service: worker
-            dockerfile: Dockerfile.worker
+            dockerfile: Infra/Dockerfiles/Dockerfile-worker
             context: .
             build-target: worker
     steps:
@@ -350,7 +350,7 @@ jobs:
           MIGRATION_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/thread-art-${{ env.ENVIRONMENT }}/thread-art-migrations:${{ github.sha }}"
           
           docker build \
-            -f Dockerfile.migrations \
+            -f Infra/Dockerfiles/Dockerfile-migrations \
             -t $MIGRATION_IMAGE \
             .
           
