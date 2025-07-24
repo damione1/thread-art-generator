@@ -149,6 +149,13 @@ resource "google_project_iam_member" "cicd_service_account_user" {
   member  = "serviceAccount:${google_service_account.cicd_sa.email}"
 }
 
+# Allow CI/CD to access Terraform state bucket
+resource "google_project_iam_member" "cicd_storage_admin" {
+  project = var.project_id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.cicd_sa.email}"
+}
+
 # Allow CI/CD to impersonate migrator service account
 resource "google_service_account_iam_member" "cicd_migrator_impersonation" {
   service_account_id = google_service_account.migrator_sa.name
