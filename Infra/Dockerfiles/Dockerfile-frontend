@@ -1,15 +1,50 @@
-FROM alpine:latest
+# Multi-stage Dockerfile for Frontend service
+# Stage 1: Node.js build stage for assets
+FROM node:20-alpine AS node-builder
+WORKDIR /app/client
 
+# Copy package files
+COPY client/package*.json ./
+RUN npm ci
+
+# Copy frontend source
+COPY client/ ./
+
+# Build assets (CSS, JS)
+RUN npm run build
+
+# Stage 2: Go build stage
+FROM golang:1.24-alpine AS go-builder
+WORKDIR /app
+
+# Install git for go mod download
+RUN apk add --no-cache git
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY client ./client
+COPY core ./core
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/build/frontend ./client/cmd/frontend
+
+# Stage 3: Runtime stage
+FROM alpine:latest
 WORKDIR /app
 
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates
 
-# Copy the pre-built binary (built by Tilt)
-COPY ./build/frontend /app/frontend
+# Copy the binary from go-builder stage or from local build directory (for Tilt)
+COPY --from=go-builder /app/build/frontend* ./
+COPY build/frontend* ./ 2>/dev/null || true
 
-# Copy static files (these are already processed by Tilt)
-COPY ./client/public /app/client/public
+# Copy static files from node-builder stage or from local directory (for Tilt)
+COPY --from=node-builder /app/client/public ./client/public
+COPY client/public ./client/public 2>/dev/null || true
 
 # Set environment variables
 ENV FRONTEND_PORT=8080
@@ -21,5 +56,5 @@ EXPOSE 8080
 RUN adduser -D -u 1000 appuser
 USER appuser
 
-# Run the binary with proper logging
+# Run the binary
 CMD ["/app/frontend"]

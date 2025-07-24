@@ -395,28 +395,88 @@ The infrastructure supports secure CI/CD through Workload Identity Federation:
 3. **Security**: Identity federation with GitHub OIDC
 4. **Artifacts**: Automatic image building and pushing
 
+#### ⚠️ Bootstrap Process - First Deployment Only
+
+**IMPORTANT**: Due to the chicken-and-egg problem with Terraform state storage, the first deployment requires a manual bootstrap step:
+
+##### The Problem
+- **Terraform state** is stored in a Google Cloud Storage bucket
+- **IAM permissions** for the CI/CD service account are defined in Terraform code
+- **To apply Terraform**, the CI/CD service account needs storage permissions
+- **But storage permissions** are defined in the Terraform code that hasn't been applied yet!
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Bootstrap Process                        │
+│                                                             │
+│  1. Manual Permission Grant (one-time only)                │
+│     └─ Grants storage access to CI/CD service account      │
+│                                                             │
+│  2. Terraform Apply                                         │
+│     └─ Creates permanent IAM permissions                   │
+│                                                             │
+│  3. Remove Manual Permission (optional)                    │
+│     └─ Now managed by Terraform                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Bootstrap Steps
+
+1. **Grant temporary storage permissions**:
+   ```bash
+   gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+     --member="serviceAccount:cicd-sa-staging@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+     --role="roles/storage.admin"
+   ```
+
+2. **Run Terraform apply** (via GitHub Actions or manually)
+
+3. **Optional cleanup** (permission now managed by Terraform):
+   ```bash
+   gcloud projects remove-iam-policy-binding YOUR_PROJECT_ID \
+     --member="serviceAccount:cicd-sa-staging@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+     --role="roles/storage.admin"
+   ```
+
+##### Why This Happens
+This is a common **Infrastructure as Code bootstrapping problem**:
+- **First deployment**: Manual steps needed for initial permissions
+- **Subsequent deployments**: Terraform manages everything automatically
+- **Similar examples**: Creating Terraform state bucket, first admin user, initial service accounts
+
 #### Configuration Steps
 
-After deploying the infrastructure, configure GitHub repository secrets:
+After deploying the infrastructure, configure GitHub repository variables and secrets:
 
-1. **Get Terraform outputs**:
+1. **Get your GCP project information**:
+   ```bash
+   # Get project ID (if you don't already know it)
+   gcloud config get-value project
+   
+   # Get project number
+   gcloud projects describe YOUR_PROJECT_ID --format="value(projectNumber)"
+   ```
+
+2. **Add GitHub Repository Variables** in Settings → Secrets and variables → Actions → Variables:
+   - `GCP_PROJECT_ID`: Your GCP project ID (e.g., `thread-art-staging-466319`)
+   - `GCP_PROJECT_NUMBER`: Your GCP project number (numeric, e.g., `123456789012`)
+
+   **⚠️ Important**: Use **Variables**, not **Secrets** for project ID and number as they're not sensitive and needed in multiple workflow contexts.
+
+3. **Get Terraform outputs** (after first successful deployment):
    ```bash
    cd terraform/environments/staging
    terraform output workload_identity_provider
    terraform output cicd_service_account_email
    ```
 
-2. **Add GitHub Secrets** in your repository settings:
-   - `WIF_PROVIDER`: Copy the workload identity provider output
-   - `WIF_SERVICE_ACCOUNT`: Copy the CI/CD service account email
-
-3. **Verify GitHub Actions workflow** uses these secrets:
+4. **Verify GitHub Actions workflow** uses the correct authentication:
    ```yaml
    - name: Authenticate to Google Cloud
-     uses: google-github-actions/auth@v1
+     uses: google-github-actions/auth@v2
      with:
-       workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-       service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+       workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-staging/providers/github-provider
+       service_account: cicd-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
    ```
 
 ### Deployment Pipeline

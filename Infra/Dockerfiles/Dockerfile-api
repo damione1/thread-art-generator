@@ -1,5 +1,39 @@
-# Dockerfile-api
-FROM alpine
+# Multi-stage Dockerfile for API service
+# Stage 1: Build stage (for CI/CD)
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
-ADD build/api build/api
-ENTRYPOINT build/api
+
+# Install git for go mod download
+RUN apk add --no-cache git
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY cmd/api ./cmd/api
+COPY core ./core
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/build/api ./cmd/api
+
+# Stage 2: Runtime stage
+FROM alpine:latest
+WORKDIR /app
+
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
+
+# Copy the binary from builder stage or from local build directory (for Tilt)
+COPY --from=builder /app/build/api* ./
+COPY build/api* ./ 2>/dev/null || true
+
+# Create non-root user
+RUN adduser -D -u 1000 appuser
+USER appuser
+
+# Set the binary name
+ENV BINARY_NAME=api
+
+# Run the binary
+CMD ["/app/api"]
