@@ -109,7 +109,7 @@ resource "google_pubsub_subscription" "image_processing_worker" {
 
   dead_letter_policy {
     dead_letter_topic     = google_pubsub_topic.image_processing_dead_letter.id
-    max_delivery_attempts = 3
+    max_delivery_attempts = 5
   }
 
   labels = {

@@ -60,7 +60,7 @@ resource "google_compute_router_nat" "nat" {
 
 # VPC connector for Cloud Run
 resource "google_vpc_access_connector" "connector" {
-  name          = "thread-art-connector-${var.environment}"
+  name          = "thread-art-conn-${var.environment}"
   region        = var.region
   project       = var.project_id
   network       = google_compute_network.vpc.name

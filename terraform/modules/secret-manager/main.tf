@@ -34,6 +34,10 @@ resource "google_secret_manager_secret" "token_symmetric_key" {
   replication {
     auto {}
   }
+
+  lifecycle {
+    ignore_changes = [secret_id]
+  }
 }
 
 resource "google_secret_manager_secret_version" "token_symmetric_key" {
@@ -52,6 +56,10 @@ resource "google_secret_manager_secret" "internal_api_key" {
 
   replication {
     auto {}
+  }
+
+  lifecycle {
+    ignore_changes = [secret_id]
   }
 }
 
@@ -72,6 +80,10 @@ resource "google_secret_manager_secret" "cookie_hash_key" {
   replication {
     auto {}
   }
+
+  lifecycle {
+    ignore_changes = [secret_id]
+  }
 }
 
 resource "google_secret_manager_secret_version" "cookie_hash_key" {
@@ -90,6 +102,10 @@ resource "google_secret_manager_secret" "cookie_block_key" {
 
   replication {
     auto {}
+  }
+
+  lifecycle {
+    ignore_changes = [secret_id]
   }
 }
 

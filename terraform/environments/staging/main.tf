@@ -86,6 +86,7 @@ module "database" {
   project_id               = var.project_id
   environment              = var.environment
   region                   = var.region
+  application_name         = var.application_name
   vpc_network_self_link    = module.networking.vpc_network_self_link
   private_vpc_connection   = module.networking.private_vpc_connection
 

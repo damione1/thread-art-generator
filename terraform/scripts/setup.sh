@@ -114,6 +114,8 @@ enable_apis() {
         "cloudfunctions.googleapis.com"
         "cloudbuild.googleapis.com"
         "billing.googleapis.com"
+        "billingbudgets.googleapis.com"
+        "eventarc.googleapis.com"
     )
     
     for api in "${apis[@]}"; do

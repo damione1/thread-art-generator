@@ -8,6 +8,12 @@ variable "environment" {
   type        = string
 }
 
+variable "application_name" {
+  description = "Application name used for resource naming"
+  type        = string
+  default     = "thread-art"
+}
+
 variable "region" {
   description = "GCP Region"
   type        = string

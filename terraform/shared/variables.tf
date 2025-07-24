@@ -14,8 +14,13 @@ variable "environment" {
   type        = string
 }
 
-variable "github_repository" {
-  description = "GitHub repository for Workload Identity"
+variable "application_name" {
+  description = "Application name used for resource naming (e.g., thread-art)"
   type        = string
-  default     = "damione1/thread-art-generator"
+  default     = "thread-art"
+}
+
+variable "github_repository" {
+  description = "GitHub repository for Workload Identity (format: owner/repo-name)"
+  type        = string
 }

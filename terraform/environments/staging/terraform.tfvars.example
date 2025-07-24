@@ -1,9 +1,32 @@
 # Staging Environment Configuration
 # Copy this file to terraform.tfvars and fill in your values
+#
+# FORK CUSTOMIZATION GUIDE:
+# =========================
+# If you're forking this repository, update these key values:
+# 1. application_name: Change from "thread-art" to your app name (affects all resource names)
+# 2. github_repository: Update to your GitHub username/repository
+# 3. project_id: Use your GCP project ID
+# 4. firebase_project_id: Use your Firebase project ID
+# 5. billing_account_id: Use your GCP billing account
+#
+# All other values can be customized based on your requirements.
+
+# =============================================================================
+# PROJECT CONFIGURATION (REQUIRED - Customize for your fork)
+# =============================================================================
 
 # GCP Project Configuration
-project_id = "your-gcp-project-id"
-region     = "us-central1"
+project_id       = "your-gcp-project-id"
+region           = "us-central1"
+application_name = "thread-art"  # Change this for forks (affects all resource names)
+
+# GitHub Repository for CI/CD (format: owner/repo-name)
+github_repository = "your-github-username/thread-art-generator"
+
+# =============================================================================
+# BILLING & MONITORING
+# =============================================================================
 
 # Billing and Alerts
 billing_account_id    = "your-billing-account-id"  # Find with: gcloud billing accounts list
@@ -13,9 +36,9 @@ alert_emails = [
   "devops@example.com"
 ]
 
-# GitHub Repository for CI/CD
-github_repository       = "thread-art-generator"
-github_repository_owner = "your-github-username"
+# =============================================================================
+# APPLICATION CONFIGURATION
+# =============================================================================
 
 # Database
 database_name = "threadartdb"

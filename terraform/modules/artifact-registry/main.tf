@@ -22,7 +22,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
     action = "KEEP"
     condition {
       tag_state  = "UNTAGGED"
-      newer_than = "7d"
+      newer_than = "604800s"
     }
   }
 
@@ -31,7 +31,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
     action = "DELETE"
     condition {
       tag_state  = "TAGGED"
-      older_than = "30d"
+      older_than = "2592000s"
     }
   }
 

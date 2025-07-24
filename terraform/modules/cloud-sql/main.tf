@@ -5,8 +5,8 @@ resource "random_id" "db_name_suffix" {
 
 # Cloud SQL PostgreSQL instance
 resource "google_sql_database_instance" "main" {
-  name             = "thread-art-db-${var.environment}-${random_id.db_name_suffix.hex}"
-  database_version = "POSTGRES_15"
+  name             = "${var.application_name}-db-${var.environment}-${random_id.db_name_suffix.hex}"
+  database_version = "POSTGRES_17"
   region           = var.region
   project          = var.project_id
 
@@ -35,7 +35,7 @@ resource "google_sql_database_instance" "main" {
       ipv4_enabled                                  = false
       private_network                               = var.vpc_network_self_link
       enable_private_path_for_google_cloud_services = true
-      require_ssl                                   = true
+      ssl_mode                                      = "ENCRYPTED_ONLY"
     }
 
     database_flags {
@@ -104,6 +104,8 @@ resource "google_sql_user" "api_iam_user" {
   instance = google_sql_database_instance.main.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
   project  = var.project_id
+
+  depends_on = [google_sql_database.main_database]
 }
 
 # Create IAM database user for worker service
@@ -112,6 +114,8 @@ resource "google_sql_user" "worker_iam_user" {
   instance = google_sql_database_instance.main.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
   project  = var.project_id
+
+  depends_on = [google_sql_database.main_database]
 }
 
 # Create IAM database user for migrator service (for migrations)
@@ -120,6 +124,8 @@ resource "google_sql_user" "migrator_iam_user" {
   instance = google_sql_database_instance.main.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
   project  = var.project_id
+
+  depends_on = [google_sql_database.main_database]
 }
 
 # Grant necessary privileges to migration user
@@ -131,7 +137,7 @@ resource "google_sql_database" "migration_grants" {
 
 # SSL Certificate for secure connections
 resource "google_sql_ssl_cert" "client_cert" {
-  common_name = "thread-art-${var.environment}"
+  common_name = "${var.application_name}-${var.environment}"
   instance    = google_sql_database_instance.main.name
   project     = var.project_id
 }

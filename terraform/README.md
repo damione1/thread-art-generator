@@ -115,14 +115,54 @@ Update `terraform.tfvars` with your specific values:
 # Required values
 project_id = "your-gcp-project-id"
 alert_emails = ["your-email@example.com"]
-github_repository_owner = "your-github-username"
+github_repository = "your-github-username/thread-art-generator"
 firebase_project_id = "your-firebase-project-id"
 
 # Optional values (defaults shown)
 region = "us-central1"
+application_name = "thread-art"  # Change for forks
 monthly_budget_amount = 50
 database_name = "threadartdb"
 ```
+
+## 🔀 Fork Customization
+
+If you're forking this repository for your own project, follow these steps to customize the infrastructure:
+
+### Key Configuration Changes
+
+1. **Application Name**: Update `application_name` in `terraform.tfvars` to your project name:
+   ```hcl
+   application_name = "my-awesome-app"  # Affects all resource names
+   ```
+
+2. **GitHub Repository**: Update to your fork's repository:
+   ```hcl
+   github_repository = "your-username/your-repo-name"
+   ```
+
+3. **Project Configuration**: Use your own GCP and Firebase projects:
+   ```hcl
+   project_id = "your-gcp-project-id"
+   firebase_project_id = "your-firebase-project-id"
+   ```
+
+### Resource Naming Impact
+
+The `application_name` variable affects the naming of all infrastructure resources:
+
+- **Database**: `{application_name}-db-{environment}-{suffix}`
+- **Storage Buckets**: `{application_name}-public-{environment}-{suffix}`
+- **VPC Network**: `{application_name}-vpc-{environment}`
+- **Service Accounts**: `{application_name}-api-sa-{environment}`
+- **All other resources** follow similar patterns
+
+### Migration Considerations
+
+- **State Files**: Each fork should use its own Terraform state bucket
+- **Resource Conflicts**: Different `application_name` prevents resource naming conflicts
+- **Secrets**: Each fork maintains its own secrets in Google Secret Manager
+- **CI/CD**: GitHub Actions will authenticate to your specific GCP project
 
 ## 🔧 Module Details
 

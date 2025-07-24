@@ -15,6 +15,12 @@ variable "environment" {
   default     = "staging"
 }
 
+variable "application_name" {
+  description = "Application name used for resource naming (e.g., thread-art)"
+  type        = string
+  default     = "thread-art"
+}
+
 # Billing and Cost Management
 variable "billing_account_id" {
   description = "GCP Billing Account ID for budget enforcement"
@@ -34,12 +40,7 @@ variable "alert_emails" {
 
 # GitHub Configuration for CI/CD
 variable "github_repository" {
-  description = "GitHub repository name (e.g., thread-art-generator)"
-  type        = string
-}
-
-variable "github_repository_owner" {
-  description = "GitHub repository owner/organization"
+  description = "GitHub repository for Workload Identity (format: owner/repo-name)"
   type        = string
 }
 
