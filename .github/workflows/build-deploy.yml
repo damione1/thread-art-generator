@@ -49,26 +49,26 @@ jobs:
       - name: Build and Push API Image
         run: |
           docker build -f Infra/Dockerfiles/Dockerfile-api \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/api:${{ env.IMAGE_TAG }} \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/api:latest .
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/api:${{ env.IMAGE_TAG }}
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/api:latest
+            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
+            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:latest .
+          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }}
+          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:latest
 
       - name: Build and Push Frontend Image
         run: |
           docker build -f Infra/Dockerfiles/Dockerfile-frontend \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/frontend:${{ env.IMAGE_TAG }} \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/frontend:latest .
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/frontend:${{ env.IMAGE_TAG }}
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/frontend:latest
+            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }} \
+            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:latest .
+          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }}
+          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:latest
 
       - name: Build and Push Worker Image
         run: |
           docker build -f Infra/Dockerfiles/Dockerfile-worker \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/worker:${{ env.IMAGE_TAG }} \
-            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/worker:latest .
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/worker:${{ env.IMAGE_TAG }}
-          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/worker:latest
+            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }} \
+            -t ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:latest .
+          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }}
+          docker push ${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:latest
 
   migrate:
     name: Run Database Migrations
@@ -96,7 +96,7 @@ jobs:
       - name: Run Database Migrations
         run: |
           gcloud run jobs create migration-job-${{ github.run_id }} \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/api:${{ env.IMAGE_TAG }} \
+            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
             --service-account=migrator-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --region=us-central1 \
             --command=./build/migrations \
@@ -136,7 +136,7 @@ jobs:
       - name: Deploy API Service
         run: |
           gcloud run deploy thread-art-api-staging \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/api:${{ env.IMAGE_TAG }} \
+            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-api:${{ env.IMAGE_TAG }} \
             --region=us-central1 \
             --service-account=api-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --allow-unauthenticated \
@@ -149,7 +149,7 @@ jobs:
       - name: Deploy Frontend Service
         run: |
           gcloud run deploy thread-art-frontend-staging \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/frontend:${{ env.IMAGE_TAG }} \
+            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-frontend:${{ env.IMAGE_TAG }} \
             --region=us-central1 \
             --service-account=client-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --allow-unauthenticated \
@@ -162,7 +162,7 @@ jobs:
       - name: Deploy Worker Service
         run: |
           gcloud run deploy thread-art-worker-staging \
-            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art/worker:${{ env.IMAGE_TAG }} \
+            --image=${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/thread-art-staging/thread-art-worker:${{ env.IMAGE_TAG }} \
             --region=us-central1 \
             --service-account=worker-sa-staging@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --no-allow-unauthenticated \
