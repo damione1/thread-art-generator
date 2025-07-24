@@ -3,8 +3,16 @@ name: Build and Deploy
 on:
   push:
     branches: [main, master, develop]
+    paths-ignore:
+      - 'terraform/**'
+      - '*.md'
+      - 'docs/**'
   pull_request:
     branches: [main, master]
+    paths-ignore:
+      - 'terraform/**'
+      - '*.md'
+      - 'docs/**'
   workflow_dispatch:
     inputs:
       environment:
