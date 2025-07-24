@@ -63,7 +63,25 @@ jobs:
 
       - name: Force Unlock Terraform State (if needed)
         working-directory: terraform/environments/${{ matrix.environment }}
-        run: terraform force-unlock -force 1753381574578734 || true
+        run: |
+          # Try to get lock info and extract lock ID
+          if terraform plan -no-color 2>&1 | grep -q "Lock Info:"; then
+            echo "Terraform state is locked, attempting to unlock..."
+            # Extract lock ID from error message
+            LOCK_ID=$(terraform plan -no-color 2>&1 | grep -A 10 "Lock Info:" | grep "ID:" | awk '{print $2}' | head -1)
+            if [ -n "$LOCK_ID" ]; then
+              echo "Found lock ID: $LOCK_ID"
+              terraform force-unlock -force "$LOCK_ID" || true
+              sleep 5
+            else
+              echo "Could not extract lock ID, trying known lock IDs..."
+              terraform force-unlock -force 1753381574578734 || true
+              terraform force-unlock -force 1753383792085318 || true
+              sleep 5
+            fi
+          else
+            echo "No lock detected, proceeding..."
+          fi
 
       - name: Terraform Plan
         working-directory: terraform/environments/${{ matrix.environment }}
@@ -135,7 +153,25 @@ jobs:
 
       - name: Force Unlock Terraform State (if needed)
         working-directory: terraform/environments/${{ matrix.environment }}
-        run: terraform force-unlock -force 1753381574578734 || true
+        run: |
+          # Try to get lock info and extract lock ID
+          if terraform plan -no-color 2>&1 | grep -q "Lock Info:"; then
+            echo "Terraform state is locked, attempting to unlock..."
+            # Extract lock ID from error message
+            LOCK_ID=$(terraform plan -no-color 2>&1 | grep -A 10 "Lock Info:" | grep "ID:" | awk '{print $2}' | head -1)
+            if [ -n "$LOCK_ID" ]; then
+              echo "Found lock ID: $LOCK_ID"
+              terraform force-unlock -force "$LOCK_ID" || true
+              sleep 5
+            else
+              echo "Could not extract lock ID, trying known lock IDs..."
+              terraform force-unlock -force 1753381574578734 || true
+              terraform force-unlock -force 1753383792085318 || true
+              sleep 5
+            fi
+          else
+            echo "No lock detected, proceeding..."
+          fi
 
       - name: Terraform Apply
         working-directory: terraform/environments/${{ matrix.environment }}

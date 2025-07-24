@@ -20,6 +20,9 @@ WORKDIR /app
 # Install git for go mod download
 RUN apk add --no-cache git
 
+# Install templ tool for template generation
+RUN go install github.com/a-h/templ/cmd/templ@latest
+
 # Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
@@ -27,6 +30,12 @@ RUN go mod download
 # Copy source code
 COPY client ./client
 COPY core ./core
+
+# Copy built assets from node-builder
+COPY --from=node-builder /app/client/public ./client/public
+
+# Generate templ templates (creates *_templ.go files)
+RUN templ generate
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/build/frontend ./client/cmd/frontend

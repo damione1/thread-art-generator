@@ -1,0 +1,91 @@
+name: Clear Terraform Lock
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to clear lock from'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      lock_id:
+        description: 'Lock ID to clear (optional - will auto-detect if empty)'
+        required: false
+        type: string
+
+env:
+  TERRAFORM_VERSION: '1.5.0'
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'thread-art-staging-466319' }}
+
+jobs:
+  clear-lock:
+    name: Clear Terraform Lock
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-${{ github.event.inputs.environment }}/providers/github-provider
+          service_account: cicd-sa-${{ github.event.inputs.environment }}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Terraform Init
+        working-directory: terraform/environments/${{ github.event.inputs.environment }}
+        run: terraform init
+
+      - name: Clear Terraform Lock
+        working-directory: terraform/environments/${{ github.event.inputs.environment }}
+        run: |
+          if [ -n "${{ github.event.inputs.lock_id }}" ]; then
+            echo "Using provided lock ID: ${{ github.event.inputs.lock_id }}"
+            terraform force-unlock -force "${{ github.event.inputs.lock_id }}"
+          else
+            echo "Auto-detecting lock ID..."
+            if terraform plan -no-color 2>&1 | grep -q "Lock Info:"; then
+              echo "Terraform state is locked, extracting lock ID..."
+              LOCK_ID=$(terraform plan -no-color 2>&1 | grep -A 10 "Lock Info:" | grep "ID:" | awk '{print $2}' | head -1)
+              if [ -n "$LOCK_ID" ]; then
+                echo "Found lock ID: $LOCK_ID"
+                terraform force-unlock -force "$LOCK_ID"
+              else
+                echo "Could not extract lock ID from error message"
+                exit 1
+              fi
+            else
+              echo "No lock detected on Terraform state"
+            fi
+          fi
+
+      - name: Verify Lock Cleared
+        working-directory: terraform/environments/${{ github.event.inputs.environment }}
+        run: |
+          echo "Verifying lock is cleared..."
+          if terraform plan -no-color -detailed-exitcode; then
+            echo "✅ Terraform lock successfully cleared!"
+          else
+            exit_code=$?
+            if [ $exit_code -eq 2 ]; then
+              echo "✅ Terraform lock cleared (plan shows changes)"
+            else
+              echo "❌ Lock may still exist or other error occurred"
+              exit 1
+            fi
+          fi
