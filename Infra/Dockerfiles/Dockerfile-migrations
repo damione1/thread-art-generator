@@ -1,39 +1,6 @@
-# Multi-stage Dockerfile for Migrations service
-# Stage 1: Build stage (for CI/CD)
-FROM golang:1.24-alpine AS builder
+# Dockerfile-migrations
+FROM alpine
 WORKDIR /app
-
-# Install git for go mod download
-RUN apk add --no-cache git
-
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy source code
-COPY cmd/migrations ./cmd/migrations
-COPY core ./core
-
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/build/migrations ./cmd/migrations
-
-# Stage 2: Runtime stage
-FROM alpine:latest
-WORKDIR /app
-
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
-
-# Copy the binary from builder stage or from local build directory (for Tilt)
-COPY --from=builder /app/build/migrations* ./
-COPY build/migrations* ./ 2>/dev/null || true
-
-# Copy migration files
-COPY core/db/migrations ./migrations
-
-# Create non-root user
-RUN adduser -D -u 1000 appuser
-USER appuser
-
-# Run the binary
-CMD ["/app/migrations"]
+ADD build/migrations build/migrations
+COPY core/db/migrations migrations
+ENTRYPOINT build/migrations
