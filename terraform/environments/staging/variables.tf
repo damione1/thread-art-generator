@@ -86,20 +86,20 @@ variable "enable_redis" {
 variable "authorized_networks" {
   description = "List of CIDR blocks authorized to access resources"
   type        = list(string)
-  default     = ["0.0.0.0/0"]  # Open for staging - restrict in production
+  default     = ["0.0.0.0/0"] # Open for staging - restrict in production
 }
 
 # Resource Sizing (for cost optimization)
 variable "database_tier" {
   description = "Cloud SQL instance tier"
   type        = string
-  default     = "db-f1-micro"  # Free tier
+  default     = "db-f1-micro" # Free tier
 }
 
 variable "redis_memory_gb" {
   description = "Redis instance memory in GB"
   type        = number
-  default     = 1  # Minimum for staging
+  default     = 1 # Minimum for staging
 }
 
 variable "redis_tier" {

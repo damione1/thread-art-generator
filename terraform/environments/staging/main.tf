@@ -62,9 +62,9 @@ module "billing" {
 module "iam" {
   source = "../../modules/iam"
 
-  project_id            = var.project_id
-  environment           = var.environment
-  github_repository     = var.github_repository
+  project_id        = var.project_id
+  environment       = var.environment
+  github_repository = var.github_repository
 }
 
 # Networking Module
@@ -84,33 +84,33 @@ module "secrets" {
   environment = var.environment
 
   # Service account emails for IAM bindings
-  api_service_account_email      = module.iam.api_service_account_email
-  client_service_account_email   = module.iam.client_service_account_email
-  worker_service_account_email   = module.iam.worker_service_account_email
-  cicd_service_account_email     = module.iam.cicd_service_account_email
+  api_service_account_email    = module.iam.api_service_account_email
+  client_service_account_email = module.iam.client_service_account_email
+  worker_service_account_email = module.iam.worker_service_account_email
+  cicd_service_account_email   = module.iam.cicd_service_account_email
 }
 
 # Cloud SQL Module
 module "database" {
   source = "../../modules/cloud-sql"
 
-  project_id               = var.project_id
-  environment              = var.environment
-  region                   = var.region
-  application_name         = var.application_name
-  vpc_network_self_link    = module.networking.vpc_network_self_link
-  private_vpc_connection   = module.networking.private_vpc_connection
+  project_id             = var.project_id
+  environment            = var.environment
+  region                 = var.region
+  application_name       = var.application_name
+  vpc_network_self_link  = module.networking.vpc_network_self_link
+  private_vpc_connection = module.networking.private_vpc_connection
 
   # Free tier configuration for staging
-  database_tier                   = "db-f1-micro"
-  enable_point_in_time_recovery   = false
-  deletion_protection             = false
+  database_tier                 = "db-f1-micro"
+  enable_point_in_time_recovery = false
+  deletion_protection           = false
 
   # Database configuration with IAM authentication
-  database_name                   = var.database_name
-  api_service_account_email       = module.iam.api_service_account_email
-  worker_service_account_email    = module.iam.worker_service_account_email
-  migrator_service_account_email  = module.iam.migrator_service_account_email
+  database_name                  = var.database_name
+  api_service_account_email      = module.iam.api_service_account_email
+  worker_service_account_email   = module.iam.worker_service_account_email
+  migrator_service_account_email = module.iam.migrator_service_account_email
 }
 
 # Cloud Storage Module
@@ -151,16 +151,16 @@ module "redis" {
   region      = var.region
 
   # Free tier configuration
-  memory_size_gb           = 1
-  tier                     = "BASIC"
-  auth_enabled             = true
-  transit_encryption_mode  = "DISABLED"  # Disabled for cost savings in staging
-  enable_persistence       = false       # Disabled for cost savings
-  prevent_destroy          = false       # Allow easy teardown in staging
+  memory_size_gb          = 1
+  tier                    = "BASIC"
+  auth_enabled            = true
+  transit_encryption_mode = "DISABLED" # Disabled for cost savings in staging
+  enable_persistence      = false      # Disabled for cost savings
+  prevent_destroy         = false      # Allow easy teardown in staging
 
   # Network configuration
-  vpc_network_id           = module.networking.vpc_network_id
-  private_vpc_connection   = module.networking.private_vpc_connection
+  vpc_network_id         = module.networking.vpc_network_id
+  private_vpc_connection = module.networking.private_vpc_connection
 }
 
 # Pub/Sub Module (replacing RabbitMQ)
@@ -179,9 +179,9 @@ module "pubsub" {
 module "cloud_run" {
   source = "../../modules/cloud-run"
 
-  project_id    = var.project_id
-  environment   = var.environment
-  region        = var.region
+  project_id  = var.project_id
+  environment = var.environment
+  region      = var.region
 
 
   # VPC configuration
@@ -223,11 +223,11 @@ module "cloud_run" {
   secret_names = module.secrets.secret_names
 
   # Staging-specific resource limits (cost-optimized)
-  api_min_instances    = 0
-  api_max_instances    = 3
-  api_cpu_limit        = "1000m"
-  api_memory_limit     = "512Mi"
-  api_cpu_idle         = true
+  api_min_instances = 0
+  api_max_instances = 3
+  api_cpu_limit     = "1000m"
+  api_memory_limit  = "512Mi"
+  api_cpu_idle      = true
 
   client_min_instances = 0
   client_max_instances = 3

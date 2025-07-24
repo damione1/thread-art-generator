@@ -148,15 +148,15 @@ output "budget_amount" {
 output "infrastructure_summary" {
   description = "Summary of deployed infrastructure"
   value = {
-    environment          = var.environment
-    project_id          = var.project_id
-    region              = var.region
-    client_url          = module.cloud_run.client_service_url
-    database_tier       = var.database_tier
-    redis_memory_gb     = var.redis_memory_gb
-    monthly_budget      = var.monthly_budget_amount
-    auto_shutdown       = true
-    services_deployed   = {
+    environment     = var.environment
+    project_id      = var.project_id
+    region          = var.region
+    client_url      = module.cloud_run.client_service_url
+    database_tier   = var.database_tier
+    redis_memory_gb = var.redis_memory_gb
+    monthly_budget  = var.monthly_budget_amount
+    auto_shutdown   = true
+    services_deployed = {
       api    = module.cloud_run.api_service_name
       client = module.cloud_run.client_service_name
       worker = module.cloud_run.worker_service_name
