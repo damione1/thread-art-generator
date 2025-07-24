@@ -61,3 +61,29 @@ client/public/css/tailwind.css
 
 
 firebase-debug.log
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/*.tfplan
+terraform/**/*.tfplan.*
+terraform/**/terraform.tfvars
+terraform/**/.terraform/
+terraform/**/.terraform.lock.hcl
+terraform/**/crash.log
+terraform/**/crash.*.log
+terraform/**/*.auto.tfvars
+terraform/**/*.auto.tfvars.json
+terraform/**/override.tf
+terraform/**/override.tf.json
+terraform/**/*_override.tf
+terraform/**/*_override.tf.json
+terraform/**/.terraformrc
+terraform/**/terraform.rc
+
+# Secret files that should never be committed
+terraform/**/.env.secrets
+terraform/**/service-account-key.json
+terraform/**/credentials.json

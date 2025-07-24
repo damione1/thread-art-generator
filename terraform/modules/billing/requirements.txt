@@ -1,0 +1,4 @@
+google-cloud-run==0.10.0
+google-cloud-sql==3.4.4
+google-cloud-redis==2.15.1
+functions-framework==3.5.0

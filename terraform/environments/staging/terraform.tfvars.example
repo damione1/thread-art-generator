@@ -1,0 +1,40 @@
+# Staging Environment Configuration
+# Copy this file to terraform.tfvars and fill in your values
+
+# GCP Project Configuration
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+
+# Billing and Alerts
+billing_account_id    = "your-billing-account-id"  # Find with: gcloud billing accounts list
+monthly_budget_amount = 50
+alert_emails = [
+  "your-email@example.com",
+  "devops@example.com"
+]
+
+# GitHub Repository for CI/CD
+github_repository       = "thread-art-generator"
+github_repository_owner = "your-github-username"
+
+# Database
+database_name = "threadartdb"
+
+# Firebase
+firebase_project_id = "your-firebase-project-id"
+
+# Feature Flags (optional - defaults shown)
+# enable_monitoring         = false
+# enable_backup            = false
+# enable_ssl_certificates  = true
+
+# Resource Sizing (optional - defaults shown)
+# database_tier         = "db-f1-micro"
+# redis_memory_gb       = 1
+# api_max_instances     = 3
+# client_max_instances  = 3
+# worker_max_instances  = 2
+
+# Storage Configuration (staging only - allows force destroy)
+# public_bucket_force_destroy  = true
+# private_bucket_force_destroy = true
