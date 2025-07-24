@@ -29,8 +29,8 @@ output "vpc_connector_id" {
 }
 
 output "vpc_connector_name" {
-  description = "Name of the VPC connector"
-  value       = google_vpc_access_connector.connector.name
+  description = "Full path of the VPC connector for Cloud Run"
+  value       = google_vpc_access_connector.connector.id
 }
 
 output "private_vpc_connection" {

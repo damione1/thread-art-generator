@@ -59,19 +59,19 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
 		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for DashboardPage")
-		
+
 		// Create error page data using middleware-provided context
 		pageData := templates.NewPageDataFromRequest(r, "Dashboard - Error", "dashboard").
 			WithError("Error loading user information. Please try again.")
-		
+
 		// Create empty dashboard data for error case
 		dashboardData := &templates.DashboardPageData{
 			Arts: nil,
-			Sort: "create_time", 
+			Sort: "create_time",
 			Dir:  "desc",
 		}
 		pageData = pageData.WithData(dashboardData)
-		
+
 		err = pages.DashboardPage(pageData).Render(r.Context(), w)
 		if err != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
@@ -84,19 +84,19 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 	userResource, err := resource.ParseResourceName(currentUser.ID)
 	if err != nil {
 		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		
+
 		// Create error page data using middleware-provided context
 		pageData := templates.NewPageDataFromRequest(r, "Dashboard - Error", "dashboard").
 			WithError("Error parsing user information. Please try again.")
-		
+
 		// Create empty dashboard data for error case
 		dashboardData := &templates.DashboardPageData{
 			Arts: nil,
-			Sort: "create_time", 
+			Sort: "create_time",
 			Dir:  "desc",
 		}
 		pageData = pageData.WithData(dashboardData)
-		
+
 		err = pages.DashboardPage(pageData).Render(r.Context(), w)
 		if err != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
@@ -104,7 +104,7 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Read sort and dir from query params, default to create_time/desc

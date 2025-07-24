@@ -20,7 +20,7 @@ func FirebaseConfigMiddleware(config *util.Config) func(http.Handler) http.Handl
 			if ok && user != nil {
 				// Get Firebase configuration
 				coreConfig := config.GetFirebaseConfigForFrontend()
-				
+
 				// Convert to client types format
 				firebaseConfig := &types.FirebaseConfig{
 					ProjectID:    coreConfig.ProjectID,
@@ -30,12 +30,12 @@ func FirebaseConfigMiddleware(config *util.Config) func(http.Handler) http.Handl
 					EmulatorUI:   coreConfig.EmulatorUI,
 					IsEmulator:   coreConfig.IsEmulator,
 				}
-				
+
 				// Add Firebase config to request context
 				ctx := context.WithValue(r.Context(), firebaseConfigKey{}, firebaseConfig)
 				r = r.WithContext(ctx)
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}

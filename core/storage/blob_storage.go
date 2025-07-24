@@ -213,7 +213,7 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 		if opts.ContentType == "" {
 			return "", fmt.Errorf("content type is required for uploads")
 		}
-		
+
 		// Validate image content types
 		validImageTypes := map[string]bool{
 			"image/jpeg": true,
@@ -222,11 +222,11 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 			"image/gif":  true,
 			"image/webp": true,
 		}
-		
+
 		if !validImageTypes[opts.ContentType] {
 			return "", fmt.Errorf("invalid content type: %s. Only image files are allowed", opts.ContentType)
 		}
-		
+
 		// Enforce 1-minute expiration for security
 		if opts.Expiry > time.Minute {
 			opts.Expiry = time.Minute
@@ -285,7 +285,7 @@ func (b *BlobStorage) s3SignedURL(ctx context.Context, key string, opts *blob.Si
 
 	// Don't set headers before signing to avoid signature mismatches
 	// The client will send the Content-Type header which won't be part of the signature
-	
+
 	// Generate the signed URL with security constraints
 	url, err := req.Presign(opts.Expiry)
 	if err != nil {

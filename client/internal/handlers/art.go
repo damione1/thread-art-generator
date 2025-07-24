@@ -56,7 +56,7 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art using internal user ID
@@ -128,7 +128,7 @@ func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get upload URL using internal user ID with validation parameters
@@ -174,7 +174,7 @@ func (h *ArtHandler) ConfirmArtImageUpload(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Confirm upload - construct the full resource name as expected by the service

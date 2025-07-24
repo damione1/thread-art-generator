@@ -97,7 +97,7 @@ func (d *DualBucketStorage) Close() error {
 	if d.privateStorage != nil {
 		err2 = d.privateStorage.Close()
 	}
-	
+
 	if err1 != nil {
 		return err1
 	}

@@ -167,13 +167,13 @@ func (s *Server) validateInternalAPIKeyFromHeaders(headers http.Header) bool {
 
 	// Validate token (must be non-empty and match)
 	isValid := token != "" && expectedToken != "" && token == expectedToken
-	
+
 	if !isValid {
 		log.Warn().Msg("Internal API key validation failed")
 	} else {
 		log.Debug().Msg("Internal API key validation successful")
 	}
-	
+
 	return isValid
 }
 

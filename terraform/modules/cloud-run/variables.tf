@@ -91,10 +91,11 @@ variable "composition_subscription_name" {
   type        = string
 }
 
-# Redis Configuration
+# Redis Configuration (optional)
 variable "redis_host" {
-  description = "Redis instance host"
+  description = "Redis instance host (empty string if Redis disabled)"
   type        = string
+  default     = ""
 }
 
 variable "redis_port" {

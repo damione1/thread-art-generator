@@ -3,13 +3,18 @@ data "google_billing_account" "account" {
   billing_account = var.billing_account_id
 }
 
+# Get project information
+data "google_project" "current" {
+  project_id = var.project_id
+}
+
 # Create a budget with hard limits
 resource "google_billing_budget" "monthly_budget" {
   billing_account = data.google_billing_account.account.id
   display_name    = "Thread Art ${var.environment} Monthly Budget"
 
   budget_filter {
-    projects = ["projects/${var.project_id}"]
+    projects = ["projects/${data.google_project.current.number}"]
   }
 
   amount {

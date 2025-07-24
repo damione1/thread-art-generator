@@ -27,7 +27,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
 	// Get Firebase UID from context
 	log.Info().Msgf("CreateArt: %s", req)

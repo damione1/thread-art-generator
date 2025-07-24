@@ -21,13 +21,17 @@ terraform {
 
 # Configure the Google Cloud Provider
 provider "google" {
-  project = var.project_id
-  region  = var.region
+  project               = var.project_id
+  region                = var.region
+  user_project_override = true
+  billing_project       = var.project_id
 }
 
 provider "google-beta" {
-  project = var.project_id
-  region  = var.region
+  project               = var.project_id
+  region                = var.region
+  user_project_override = true
+  billing_project       = var.project_id
 }
 
 # Data sources
@@ -36,6 +40,11 @@ data "google_project" "current" {
 }
 
 # Billing Budget Module (includes auto-shutdown)
+# Temporarily disabled due to budget API and Cloud Function issues
+# Re-enable after resolving:
+# 1. Billing budget "invalid argument" error 
+# 2. Cloud Function container startup issues
+/*
 module "billing" {
   source = "../../modules/billing"
 
@@ -46,6 +55,8 @@ module "billing" {
   billing_account_id          = var.billing_account_id
   cicd_service_account_email  = module.iam.cicd_service_account_email
 }
+*/
+
 
 # IAM Module
 module "iam" {
@@ -130,8 +141,9 @@ module "artifact_registry" {
   cicd_service_account_email   = module.iam.cicd_service_account_email
 }
 
-# Redis Module (Cloud Memorystore)
+# Redis Module (Cloud Memorystore) - Conditional
 module "redis" {
+  count  = var.enable_redis ? 1 : 0
   source = "../../modules/redis"
 
   project_id  = var.project_id
@@ -180,10 +192,10 @@ module "cloud_run" {
   client_service_account_email = module.iam.client_service_account_email
   worker_service_account_email = module.iam.worker_service_account_email
 
-  # Container images (will be updated via CI/CD)
-  api_image_url    = "${var.region}-docker.pkg.dev/${var.project_id}/${module.artifact_registry.repository_id}/thread-art-api:latest"
-  client_image_url = "${var.region}-docker.pkg.dev/${var.project_id}/${module.artifact_registry.repository_id}/thread-art-client:latest"
-  worker_image_url = "${var.region}-docker.pkg.dev/${var.project_id}/${module.artifact_registry.repository_id}/thread-art-worker:latest"
+  # Container images (using hello world until real images are built)
+  api_image_url    = "us-docker.pkg.dev/cloudrun/container/hello"
+  client_image_url = "us-docker.pkg.dev/cloudrun/container/hello"
+  worker_image_url = "us-docker.pkg.dev/cloudrun/container/hello"
 
   # Database configuration with IAM authentication
   database_host            = module.database.instance_private_ip
@@ -200,9 +212,9 @@ module "cloud_run" {
   composition_topic_name        = module.pubsub.composition_processing_topic
   composition_subscription_name = module.pubsub.composition_processing_subscription
 
-  # Redis configuration
-  redis_host = module.redis.host
-  redis_port = module.redis.port
+  # Redis configuration (conditional)
+  redis_host = var.enable_redis ? module.redis[0].host : ""
+  redis_port = var.enable_redis ? module.redis[0].port : 6379
 
   # Firebase configuration
   firebase_project_id = var.firebase_project_id

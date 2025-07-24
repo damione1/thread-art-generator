@@ -151,7 +151,7 @@ func main() {
 				r.Get("/new", artHandler.NewArtPage)
 				r.Post("/new", artHandler.CreateArt)
 				r.Get("/{artId}", artHandler.ViewArtPage)
-				
+
 				// Composition routes
 				r.Route("/{artId}/composition", func(r chi.Router) {
 					r.Get("/new", compositionHandler.NewCompositionForm)

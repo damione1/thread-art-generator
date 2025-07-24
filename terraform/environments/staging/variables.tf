@@ -76,6 +76,12 @@ variable "enable_ssl_certificates" {
   default     = true
 }
 
+variable "enable_redis" {
+  description = "Enable Redis (Cloud Memorystore) for session storage and caching"
+  type        = bool
+  default     = true
+}
+
 # Network Configuration
 variable "authorized_networks" {
   description = "List of CIDR blocks authorized to access resources"
@@ -94,6 +100,12 @@ variable "redis_memory_gb" {
   description = "Redis instance memory in GB"
   type        = number
   default     = 1  # Minimum for staging
+}
+
+variable "redis_tier" {
+  description = "Redis instance tier (BASIC or STANDARD_HA)"
+  type        = string
+  default     = "BASIC"
 }
 
 # Service Configuration
@@ -126,4 +138,22 @@ variable "private_bucket_force_destroy" {
   description = "Allow force destruction of private bucket (staging only)"
   type        = bool
   default     = true
+}
+
+variable "public_bucket_lifecycle_days" {
+  description = "Number of days after which objects in public bucket are deleted"
+  type        = number
+  default     = 30
+}
+
+variable "private_bucket_lifecycle_days" {
+  description = "Number of days after which objects in private bucket are deleted"
+  type        = number
+  default     = 30
+}
+
+variable "enable_bucket_notifications" {
+  description = "Enable bucket notifications for storage events"
+  type        = bool
+  default     = false
 }

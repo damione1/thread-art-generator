@@ -99,9 +99,24 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.composition_topic_name
       }
 
+      # Session configuration
       env {
-        name  = "REDIS_ADDR"
-        value = "${var.redis_host}:${var.redis_port}"
+        name  = "SESSION_STORAGE_TYPE"
+        value = var.redis_host != "" ? "redis" : "memory"
+      }
+
+      env {
+        name  = "REDIS_ENABLED"
+        value = var.redis_host != "" ? "true" : "false"
+      }
+
+      # Only set REDIS_ADDR if Redis is enabled (non-empty host)
+      dynamic "env" {
+        for_each = var.redis_host != "" ? [1] : []
+        content {
+          name  = "REDIS_ADDR"
+          value = "${var.redis_host}:${var.redis_port}"
+        }
       }
 
       # Database IAM authentication (no password needed)
@@ -255,9 +270,24 @@ resource "google_cloud_run_v2_service" "client" {
         value = var.firebase_project_id
       }
 
+      # Session configuration
       env {
-        name  = "REDIS_ADDR"
-        value = "${var.redis_host}:${var.redis_port}"
+        name  = "SESSION_STORAGE_TYPE"
+        value = var.redis_host != "" ? "redis" : "memory"
+      }
+
+      env {
+        name  = "REDIS_ENABLED"
+        value = var.redis_host != "" ? "true" : "false"
+      }
+
+      # Only set REDIS_ADDR if Redis is enabled (non-empty host)
+      dynamic "env" {
+        for_each = var.redis_host != "" ? [1] : []
+        content {
+          name  = "REDIS_ADDR"
+          value = "${var.redis_host}:${var.redis_port}"
+        }
       }
 
       # Secrets from Secret Manager

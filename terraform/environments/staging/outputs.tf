@@ -59,16 +59,16 @@ output "private_bucket_name" {
   value       = module.storage.private_bucket_name
 }
 
-# Redis Information
+# Redis Information (conditional)
 output "redis_host" {
   description = "Redis instance host"
-  value       = module.redis.host
+  value       = var.enable_redis ? module.redis[0].host : "disabled"
   sensitive   = true
 }
 
 output "redis_port" {
   description = "Redis instance port"
-  value       = module.redis.port
+  value       = var.enable_redis ? module.redis[0].port : 6379
 }
 
 # Artifact Registry
@@ -118,6 +118,11 @@ output "workload_identity_provider" {
   value       = module.iam.workload_identity_provider
 }
 
+output "cicd_service_account_email" {
+  description = "CI/CD service account email for GitHub Actions"
+  value       = module.iam.cicd_service_account_email
+}
+
 # Secret Manager
 output "secret_names" {
   description = "Map of secret names in Secret Manager"
@@ -126,10 +131,13 @@ output "secret_names" {
 }
 
 # Budget Information
+# Temporarily disabled due to billing module issues
+/*
 output "budget_name" {
   description = "Billing budget name"
   value       = module.billing.budget_name
 }
+*/
 
 output "budget_amount" {
   description = "Monthly budget amount"

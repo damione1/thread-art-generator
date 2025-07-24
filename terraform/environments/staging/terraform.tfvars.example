@@ -50,6 +50,7 @@ firebase_project_id = "your-firebase-project-id"
 # enable_monitoring         = false
 # enable_backup            = false
 # enable_ssl_certificates  = true
+# enable_redis             = true
 
 # Resource Sizing (optional - defaults shown)
 # database_tier         = "db-f1-micro"
