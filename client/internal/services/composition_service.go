@@ -46,7 +46,7 @@ func (s *CompositionService) ListCompositions(ctx context.Context, pageSize int,
 func (s *CompositionService) ListCompositionsForArt(ctx context.Context, userID, artID string, pageSize int, pageToken string) (*pb.ListCompositionsResponse, error) {
 	// Build the art resource name as parent
 	artResourceName := fmt.Sprintf("users/%s/arts/%s", userID, artID)
-	
+
 	req := connect.NewRequest(&pb.ListCompositionsRequest{
 		Parent:    artResourceName,
 		PageSize:  int32(pageSize),
@@ -106,7 +106,7 @@ func (s *CompositionService) CreateComposition(ctx context.Context, createReques
 func (s *CompositionService) GetComposition(ctx context.Context, userID, artID, compositionID string) (*pb.Composition, error) {
 	// Build the composition resource name
 	compositionName := fmt.Sprintf("users/%s/arts/%s/compositions/%s", userID, artID, compositionID)
-	
+
 	req := connect.NewRequest(&pb.GetCompositionRequest{
 		Name: compositionName,
 	})

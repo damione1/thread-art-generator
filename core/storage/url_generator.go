@@ -47,8 +47,8 @@ type URLGenerationOptions struct {
 // DefaultURLOptions returns the default URL generation options
 func DefaultURLOptions() *URLGenerationOptions {
 	return &URLGenerationOptions{
-		UsePublicURL:     true,  // Use public URLs by default for CDN caching
-		FallbackToSigned: true,  // Fallback to signed URLs if public URLs are not available
+		UsePublicURL:     true, // Use public URLs by default for CDN caching
+		FallbackToSigned: true, // Fallback to signed URLs if public URLs are not available
 		SignedURLExpiry:  15 * time.Minute,
 	}
 }

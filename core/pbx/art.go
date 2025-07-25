@@ -44,7 +44,7 @@ func ArtDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, a
 		// Use public URL generator for CDN caching - art images should be publicly accessible
 		publicURLGenerator := storage.NewPublicURLGenerator(dualStorage.GetPublicStorage())
 		imageURL := storage.GenerateImageURL(ctx, publicURLGenerator, imageKey, storage.DefaultURLOptions())
-		
+
 		artPb.ImageUrl = imageURL
 	}
 

@@ -67,7 +67,7 @@ func (a *ConnectAdapter) SyncUserFromFirebase(ctx context.Context, req *connect.
 	if !a.server.validateInternalAPIKeyFromHeaders(req.Header()) {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid internal API key"))
 	}
-	
+
 	user, err := a.server.SyncUserFromFirebase(ctx, req.Msg)
 	if err != nil {
 		return nil, err

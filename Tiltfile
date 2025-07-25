@@ -152,7 +152,7 @@ local_resource(
 docker_build(
   'api-image',
   '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-api',
+  dockerfile='Infra/Dockerfiles/Dockerfile-api-local',
   only=['./build/api'],
   live_update=[
     # Minimal run step required by Tilt
@@ -167,7 +167,7 @@ docker_build(
 docker_build(
   'worker-image',
   '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-worker',
+  dockerfile='Infra/Dockerfiles/Dockerfile-worker-local',
   only=['./build/worker'],
   live_update=[
     # Minimal run step required by Tilt
@@ -180,7 +180,7 @@ docker_build(
 docker_build(
   'frontend-image',
   '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-frontend',
+  dockerfile='Infra/Dockerfiles/Dockerfile-frontend-local',
   only=[
     './build/frontend',
     './client/public',

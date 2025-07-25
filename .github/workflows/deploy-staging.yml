@@ -1,0 +1,518 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+    types: [opened, synchronize, reopened]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  ENVIRONMENT: staging
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # terraform: ${{ steps.changes.outputs.terraform }}
+      api: ${{ steps.changes.outputs.api }}
+      client: ${{ steps.changes.outputs.client }}
+      worker: ${{ steps.changes.outputs.worker }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            # terraform:
+            #   - 'terraform/**'
+            api:
+              - 'cmd/api/**'
+              - 'core/**'
+              - 'go.mod'
+              - 'go.sum'
+              - 'Infra/Dockerfiles/Dockerfile-api'
+            client:
+              - 'client/**'
+              - 'Infra/Dockerfiles/Dockerfile-frontend'
+            worker:
+              - 'cmd/worker/**'
+              - 'core/**'
+              - 'threadGenerator/**'
+              - 'go.mod'
+              - 'go.sum'
+              - 'Infra/Dockerfiles/Dockerfile-worker'
+
+  # terraform-plan:
+  #   runs-on: ubuntu-latest
+  #   needs: changes
+  #   if: needs.changes.outputs.terraform == 'true'
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+  #     pull-requests: write
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: "~1.5"
+
+  #     - name: Authenticate to Google Cloud
+  #       uses: google-github-actions/auth@v1
+  #       with:
+  #         workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+  #         service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+  #     - name: Setup gcloud
+  #       uses: google-github-actions/setup-gcloud@v1
+
+  #     - name: Terraform Init
+  #       working-directory: terraform/environments/staging
+  #       run: |
+  #         echo "Initializing Terraform..."
+  #         echo "Workflow: ${{ github.workflow }}"
+  #         echo "Job: terraform-plan"
+  #         echo "Run ID: ${{ github.run_id }}"
+  #         echo "Attempt: ${{ github.run_attempt }}"
+  #         terraform init
+
+  #     - name: Terraform Validate
+  #       working-directory: terraform/environments/staging
+  #       run: terraform validate
+
+  #     - name: Terraform Plan
+  #       id: plan
+  #       working-directory: terraform/environments/staging
+  #       run: |
+  #         terraform plan -no-color -out=tfplan -lock-timeout=10m
+  #         terraform show -no-color tfplan > plan.txt
+  #       continue-on-error: true
+
+  #     - name: Handle Plan Lock Failure
+  #       if: steps.plan.outcome == 'failure'
+  #       working-directory: terraform/environments/staging
+  #       run: |
+  #         echo "Plan failed, likely due to lock. Checking for stale locks..."
+  #         # This will help identify if there's a persistent lock issue
+  #         terraform plan -no-color -out=tfplan -lock-timeout=1s || echo "Lock still exists"
+  #         exit 1
+
+  #     - name: Comment PR with Plan
+  #       if: github.event_name == 'pull_request' && steps.plan.outcome == 'success'
+  #       uses: actions/github-script@v6
+  #       with:
+  #         script: |
+  #           const fs = require('fs');
+  #           const path = 'terraform/environments/staging/plan.txt';
+  #           
+  #           if (fs.existsSync(path)) {
+  #             const plan = fs.readFileSync(path, 'utf8');
+  #             const truncated = plan.length > 65000 ? plan.substring(0, 65000) + '\n... (truncated)' : plan;
+  #             
+  #             github.rest.issues.createComment({
+  #               issue_number: context.issue.number,
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               body: `## Terraform Plan 📋
+
+  #           <details>
+  #           <summary>Show Plan</summary>
+
+  #           \`\`\`hcl
+  #           ${truncated}
+  #           \`\`\`
+
+  #           </details>
+
+  #           Plan status: ${{ steps.plan.outcome }}`
+  #             });
+  #           }
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      needs.changes.outputs.api == 'true' || 
+      needs.changes.outputs.client == 'true' || 
+      needs.changes.outputs.worker == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        service: [api, client, worker]
+        include:
+          - service: api
+            dockerfile: Infra/Dockerfiles/Dockerfile-api
+            context: .
+            build-target: api
+          - service: client
+            dockerfile: Infra/Dockerfiles/Dockerfile-frontend
+            context: .
+            build-target: client
+          - service: worker
+            dockerfile: Infra/Dockerfiles/Dockerfile-worker
+            context: .
+            build-target: worker
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if service changed
+        id: service-changed
+        run: |
+          case "${{ matrix.service }}" in
+            api)
+              echo "changed=${{ needs.changes.outputs.api }}" >> $GITHUB_OUTPUT
+              ;;
+            client)
+              echo "changed=${{ needs.changes.outputs.client }}" >> $GITHUB_OUTPUT
+              ;;
+            worker)
+              echo "changed=${{ needs.changes.outputs.worker }}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Skip if service unchanged
+        if: steps.service-changed.outputs.changed != 'true'
+        run: |
+          echo "Skipping ${{ matrix.service }} - no changes detected"
+          exit 0
+
+      - name: Authenticate to Google Cloud
+        if: steps.service-changed.outputs.changed == 'true'
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        if: steps.service-changed.outputs.changed == 'true'
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        if: steps.service-changed.outputs.changed == 'true'
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and push Docker image
+        if: steps.service-changed.outputs.changed == 'true'
+        run: |
+          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/thread-art-${{ env.ENVIRONMENT }}/thread-art-${{ matrix.service }}:${{ github.sha }}"
+          LATEST_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/thread-art-${{ env.ENVIRONMENT }}/thread-art-${{ matrix.service }}:latest"
+          
+          docker build \
+            -f ${{ matrix.dockerfile }} \
+            -t $IMAGE_TAG \
+            -t $LATEST_TAG \
+            ${{ matrix.context }}
+          
+          docker push $IMAGE_TAG
+          docker push $LATEST_TAG
+          
+          echo "Pushed image: $IMAGE_TAG"
+
+  # deploy-infrastructure:
+  #   runs-on: ubuntu-latest
+  #   needs: [terraform-plan, changes]
+  #   if: |
+  #     github.event_name == 'push' && 
+  #     github.ref == 'refs/heads/develop' && 
+  #     needs.changes.outputs.terraform == 'true' &&
+  #     needs.terraform-plan.result == 'success'
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: "~1.5"
+
+  #     - name: Authenticate to Google Cloud
+  #       uses: google-github-actions/auth@v1
+  #       with:
+  #         workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+  #         service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+  #     - name: Setup gcloud
+  #       uses: google-github-actions/setup-gcloud@v1
+
+  #     - name: Terraform Init
+  #       working-directory: terraform/environments/staging
+  #       run: |
+  #         echo "Initializing Terraform..."
+  #         echo "Workflow: ${{ github.workflow }}"
+  #         echo "Job: deploy-infrastructure"
+  #         echo "Run ID: ${{ github.run_id }}"
+  #         echo "Attempt: ${{ github.run_attempt }}"
+  #         terraform init
+
+  #     - name: Terraform Apply
+  #       id: apply
+  #       working-directory: terraform/environments/staging
+  #       run: terraform apply -auto-approve -lock-timeout=10m
+  #       continue-on-error: true
+
+  #     - name: Handle Apply Lock Failure
+  #       if: steps.apply.outcome == 'failure'
+  #       working-directory: terraform/environments/staging
+  #       run: |
+  #         echo "Apply failed, likely due to lock. This is a critical issue."
+  #         echo "Manual intervention may be required to unlock the state."
+  #         exit 1
+
+  #     - name: Get Terraform Outputs
+  #       id: outputs
+  #       if: steps.apply.outcome == 'success'
+  #       working-directory: terraform/environments/staging
+  #       run: |
+  #         CLIENT_URL=$(terraform output -raw client_service_url -lock-timeout=5m)
+  #         echo "client_url=$CLIENT_URL" >> $GITHUB_OUTPUT
+
+  #     - name: Deployment Summary
+  #       if: steps.apply.outcome == 'success'
+  #       run: |
+  #         echo "## Deployment Summary 🚀" >> $GITHUB_STEP_SUMMARY
+  #         echo "- **Environment**: ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- **Project**: ${{ env.PROJECT_ID }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- **Region**: ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- **Client URL**: ${{ steps.outputs.outputs.client_url }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-services:
+    runs-on: ubuntu-latest
+    needs: [build-and-push, changes]
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/develop' && 
+      (needs.changes.outputs.api == 'true' || 
+       needs.changes.outputs.client == 'true' || 
+       needs.changes.outputs.worker == 'true')
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        service: [api, client, worker]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if service changed
+        id: service-changed
+        run: |
+          case "${{ matrix.service }}" in
+            api)
+              echo "changed=${{ needs.changes.outputs.api }}" >> $GITHUB_OUTPUT
+              ;;
+            client)
+              echo "changed=${{ needs.changes.outputs.client }}" >> $GITHUB_OUTPUT
+              ;;
+            worker)
+              echo "changed=${{ needs.changes.outputs.worker }}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Skip if service unchanged
+        if: steps.service-changed.outputs.changed != 'true'
+        run: |
+          echo "Skipping ${{ matrix.service }} deployment - no changes detected"
+          exit 0
+
+      - name: Authenticate to Google Cloud
+        if: steps.service-changed.outputs.changed == 'true'
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        if: steps.service-changed.outputs.changed == 'true'
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Deploy to Cloud Run
+        if: steps.service-changed.outputs.changed == 'true'
+        run: |
+          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/thread-art-${{ env.ENVIRONMENT }}/thread-art-${{ matrix.service }}:${{ github.sha }}"
+          SERVICE_NAME="thread-art-${{ matrix.service }}-${{ env.ENVIRONMENT }}"
+          
+          gcloud run deploy $SERVICE_NAME \
+            --image $IMAGE_TAG \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --quiet
+
+          echo "Deployed ${{ matrix.service }} to Cloud Run"
+
+  run-migrations:
+    runs-on: ubuntu-latest
+    needs: [deploy-services, changes]
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/develop' && 
+      needs.changes.outputs.api == 'true' &&
+      (needs.deploy-services.result == 'success' || needs.deploy-services.result == 'skipped')
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Run Database Migrations
+        run: |
+          # Build migration image
+          MIGRATION_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/thread-art-${{ env.ENVIRONMENT }}/thread-art-migrations:${{ github.sha }}"
+          
+          docker build \
+            -f Infra/Dockerfiles/Dockerfile-migrations \
+            -t $MIGRATION_IMAGE \
+            .
+          
+          docker push $MIGRATION_IMAGE
+          
+          # Run migrations via Cloud Run Jobs
+          gcloud run jobs create migration-job-${{ github.run_number }} \
+            --image $MIGRATION_IMAGE \
+            --region ${{ env.REGION }} \
+            --task-timeout 1800 \
+            --parallelism 1 \
+            --completions 1 \
+            --cpu 1 \
+            --memory 512Mi
+          
+          gcloud run jobs execute migration-job-${{ github.run_number }} \
+            --region ${{ env.REGION }} \
+            --wait
+
+  health-check:
+    runs-on: ubuntu-latest
+    needs: [deploy-services, run-migrations]
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # - name: Setup Terraform
+      #   uses: hashicorp/setup-terraform@v3
+      #   with:
+      #     terraform_version: "~1.5"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Get Service URLs
+        id: urls
+        run: |
+          # Since Terraform is disabled, we'll use gcloud to get the service URL
+          # You may need to adjust this based on your service naming convention
+          SERVICE_NAME="thread-art-client-${{ env.ENVIRONMENT }}"
+          CLIENT_URL=$(gcloud run services describe $SERVICE_NAME --region=${{ env.REGION }} --format="value(status.url)")
+          echo "client_url=$CLIENT_URL" >> $GITHUB_OUTPUT
+
+      - name: Health Check - Client Service
+        run: |
+          CLIENT_URL="${{ steps.urls.outputs.client_url }}"
+          
+          echo "Testing client service health check..."
+          
+          for i in {1..10}; do
+            if curl -sf "$CLIENT_URL/health" > /dev/null; then
+              echo "✅ Client service is healthy"
+              break
+            else
+              echo "⏳ Waiting for client service to be ready (attempt $i/10)"
+              sleep 30
+            fi
+          done
+
+      - name: Integration Tests
+        run: |
+          CLIENT_URL="${{ steps.urls.outputs.client_url }}"
+          
+          echo "Running basic integration tests..."
+          
+          # Test homepage
+          if curl -sf "$CLIENT_URL" > /dev/null; then
+            echo "✅ Homepage is accessible"
+          else
+            echo "❌ Homepage is not accessible"
+            exit 1
+          fi
+          
+          # Test API health through client
+          if curl -sf "$CLIENT_URL/api/health" > /dev/null; then
+            echo "✅ API is accessible through client"
+          else
+            echo "⚠️ API health check failed (might be expected if API is internal-only)"
+          fi
+
+      - name: Performance Test
+        run: |
+          CLIENT_URL="${{ steps.urls.outputs.client_url }}"
+          
+          echo "Running basic performance test..."
+          
+          # Simple load test with curl
+          response_time=$(curl -o /dev/null -s -w "%{time_total}\n" "$CLIENT_URL")
+          
+          echo "Response time: ${response_time}s"
+          
+          # Fail if response time > 10 seconds
+          if (( $(echo "$response_time > 10" | bc -l) )); then
+            echo "❌ Response time too high: ${response_time}s"
+            exit 1
+          else
+            echo "✅ Response time acceptable: ${response_time}s"
+          fi
+
+  notify-deployment:
+    runs-on: ubuntu-latest
+    needs: [health-check]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    steps:
+      - name: Deployment Notification
+        run: |
+          if [[ "${{ needs.health-check.result }}" == "success" ]]; then
+            echo "## ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+            echo "Staging environment has been updated successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "All health checks passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Staging deployment encountered issues." >> $GITHUB_STEP_SUMMARY
+            echo "Please check the logs and fix any issues." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: staging" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

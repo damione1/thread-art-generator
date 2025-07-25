@@ -54,7 +54,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
@@ -181,7 +181,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art to verify it exists and is complete
@@ -268,7 +268,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -289,7 +289,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
@@ -330,10 +330,10 @@ func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
-	
+
 	artID := pathParts[2]
 	compositionID := pathParts[4]
-	
+
 	// Get user from context
 	user, _ := middleware.UserFromContext(r.Context())
 
@@ -352,7 +352,7 @@ func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art and composition
@@ -391,7 +391,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -412,7 +412,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Build the composition resource name

@@ -38,6 +38,13 @@ type QueueConfig struct {
 	CompositionProcessing string `mapstructure:"QUEUE_COMPOSITION_PROCESSING"`
 }
 
+// SessionConfig stores session storage configuration
+type SessionConfig struct {
+	StorageType  string `mapstructure:"SESSION_STORAGE_TYPE"`
+	RedisAddr    string `mapstructure:"REDIS_ADDR"`
+	RedisEnabled bool   `mapstructure:"REDIS_ENABLED"`
+}
+
 // Config stores all configuration of the application.
 // The values are read by viper from a config file or environment variable.
 type Config struct {
@@ -63,6 +70,7 @@ type Config struct {
 	Firebase            FirebaseConfig `mapstructure:",squash"`
 	Storage             StorageConfig  `mapstructure:",squash"`
 	Queue               QueueConfig    `mapstructure:",squash"`
+	Session             SessionConfig  `mapstructure:",squash"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -113,6 +121,11 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("RABBITMQ_PASSWORD")
 	viper.BindEnv("QUEUE_COMPOSITION_PROCESSING")
 
+	// Session configuration
+	viper.BindEnv("SESSION_STORAGE_TYPE")
+	viper.BindEnv("REDIS_ADDR")
+	viper.BindEnv("REDIS_ENABLED")
+
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
@@ -146,13 +159,25 @@ func (c *Config) applyDefaults() {
 	if c.Firebase.ProjectID == "" {
 		c.Firebase.ProjectID = "demo-thread-art-generator"
 	}
-	
+
 	// Storage defaults - set default bucket names if not explicitly configured
 	if c.Storage.PublicBucket == "" {
 		c.Storage.PublicBucket = "local-public"
 	}
 	if c.Storage.PrivateBucket == "" {
 		c.Storage.PrivateBucket = "local-private"
+	}
+
+	// Session defaults
+	if c.Session.StorageType == "" {
+		if c.Session.RedisEnabled {
+			c.Session.StorageType = "redis"
+		} else {
+			c.Session.StorageType = "memory"
+		}
+	}
+	if c.Session.RedisAddr == "" {
+		c.Session.RedisAddr = "localhost:6379"
 	}
 }
 
