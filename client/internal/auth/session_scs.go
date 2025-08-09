@@ -112,11 +112,31 @@ func (s *SCSSessionManager) GetSession(r *http.Request) (*SessionData, error) {
 	tokenExpiryUnix := s.sessionManager.GetInt64(r.Context(), sessionKeyExpiry)
 	tokenExpiry := time.Unix(tokenExpiryUnix, 0)
 
-	// Check if token is expired
-	if time.Now().After(tokenExpiry) {
-		log.Warn().Str("user_id", userID).Msg("Firebase token expired in session")
-		// Note: In a full implementation, we'd implement token refresh here
-		// For now, we'll let the API handle token validation
+	// Check if token is expired with grace period
+	now := time.Now()
+	if now.After(tokenExpiry) {
+		log.Warn().
+			Str("user_id", userID).
+			Time("token_expiry", tokenExpiry).
+			Time("current_time", now).
+			Msg("Firebase token expired in session - cleaning up session")
+
+		// Automatically destroy the expired session
+		if err := s.sessionManager.Destroy(r.Context()); err != nil {
+			log.Error().Err(err).Str("user_id", userID).Msg("Failed to destroy expired session")
+		} else {
+			log.Info().Str("user_id", userID).Msg("Expired session destroyed successfully")
+		}
+
+		return nil, fmt.Errorf("session expired: Firebase token has expired")
+	}
+
+	// Check if token is close to expiry (within 5 minutes) and log warning
+	if now.Add(5 * time.Minute).After(tokenExpiry) {
+		log.Warn().
+			Str("user_id", userID).
+			Time("token_expiry", tokenExpiry).
+			Msg("Firebase token will expire soon - user may need to refresh")
 	}
 
 	// Create legacy UserInfo for compatibility
@@ -187,4 +207,21 @@ func (s *SCSSessionManager) DestroySession(w http.ResponseWriter, r *http.Reques
 // RenewToken renews the session token (extends lifetime)
 func (s *SCSSessionManager) RenewToken(w http.ResponseWriter, r *http.Request) error {
 	return s.sessionManager.RenewToken(r.Context())
+}
+
+// IsSessionValid checks if a session exists and is valid without retrieving full data
+func (s *SCSSessionManager) IsSessionValid(r *http.Request) bool {
+	userID := s.sessionManager.GetString(r.Context(), sessionKeyUserID)
+	if userID == "" {
+		return false
+	}
+
+	// Check token expiry without full session retrieval
+	tokenExpiryUnix := s.sessionManager.GetInt64(r.Context(), sessionKeyExpiry)
+	if tokenExpiryUnix == 0 {
+		return false
+	}
+
+	tokenExpiry := time.Unix(tokenExpiryUnix, 0)
+	return time.Now().Before(tokenExpiry)
 }

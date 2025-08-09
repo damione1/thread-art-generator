@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Firebase Storage security rules for thread art generator - PRODUCTION
+// These rules are EXTREMELY STRICT and require signed URLs for all uploads
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // PUBLIC READ ONLY: Allow public read access to user art files
+    // Path: users/{uid}/arts/{art_id}
+    // This allows public viewing of art pieces after they're processed
+    match /users/{uid}/arts/{art_id} {
+      allow read: if true; // Public read for art display
+      allow write: if false; // NO direct writes - signed URLs only
+    }
+    
+    // AUTHENTICATED READ: User can read their own private files
+    // Path: users/{uid}/** (excluding already covered arts path)
+    match /users/{uid}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false; // NO direct writes - signed URLs only
+    }
+    
+    // ADMIN/SYSTEM FILES: Completely private, no direct access
+    // Path: system/** or any other root-level paths
+    match /{allPaths=**} {
+      allow read: if false; // No direct reads
+      allow write: if false; // No direct writes - signed URLs only
+    }
+  }
+}

@@ -223,9 +223,12 @@ func (d *DashboardPageData) GetArts() []*pb.Art {
 
 // ArtPageData contains data specific to art-related pages
 type ArtPageData struct {
-	Art       interface{} // Will be the actual art type from pb
-	UploadURL string
-	IsEditing bool
+	Art          *pb.Art          // The art resource
+	Compositions []*pb.Composition // List of compositions for this art
+	CanGenerate  bool             // Whether user can generate compositions
+	ShowUpload   bool             // Whether to show upload interface
+	UploadURL    string           // Upload URL if needed
+	IsEditing    bool             // Whether in editing mode
 }
 
 // AuthPageData contains data specific to authentication pages

@@ -54,11 +54,11 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
-	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
+	art, err := h.generatorService.GetArt(r.Context(), r, internalUserID, artID)
 	if err != nil {
 		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art")
 		http.Error(w, "Art not found", http.StatusNotFound)
@@ -89,7 +89,8 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 	fromCompositionID := r.URL.Query().Get("from")
 	if fromCompositionID != "" {
 		// Get the source composition to copy settings from
-		sourceComposition, err := h.generatorService.GetComposition(r.Context(), internalUserID, artID, fromCompositionID)
+		compositionResourceName := resource.BuildCompositionResourceName(internalUserID, artID, fromCompositionID)
+		sourceComposition, err := h.generatorService.GetComposition(r.Context(), r, compositionResourceName)
 		if err != nil {
 			log.Error().Err(err).
 				Str("internal_user_id", internalUserID).
@@ -181,11 +182,11 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art to verify it exists and is complete
-	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
+	art, err := h.generatorService.GetArt(r.Context(), r, internalUserID, artID)
 	if err != nil {
 		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art")
 		formData.Errors["_form"] = []string{"Failed to load art. Please try again."}
@@ -197,26 +198,20 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Build the parent resource name
-	parent := resource.BuildArtResourceName(internalUserID, artID)
-
-	// Create composition request
-	createRequest := &pb.CreateCompositionRequest{
-		Parent: parent,
-		Composition: &pb.Composition{
-			NailsQuantity:     formData.NailsQuantity,
-			ImgSize:           formData.ImgSize,
-			MaxPaths:          formData.MaxPaths,
-			StartingNail:      formData.StartingNail,
-			MinimumDifference: formData.MinimumDifference,
-			BrightnessFactor:  formData.BrightnessFactor,
-			ImageContrast:     formData.ImageContrast,
-			PhysicalRadius:    formData.PhysicalRadius,
-		},
+	// Create composition with form data
+	composition := &pb.Composition{
+		NailsQuantity:     formData.NailsQuantity,
+		ImgSize:           formData.ImgSize,
+		MaxPaths:          formData.MaxPaths,
+		StartingNail:      formData.StartingNail,
+		MinimumDifference: formData.MinimumDifference,
+		BrightnessFactor:  formData.BrightnessFactor,
+		ImageContrast:     formData.ImageContrast,
+		PhysicalRadius:    formData.PhysicalRadius,
 	}
 
 	// Call service to create composition
-	composition, fieldErrors, err := h.generatorService.CreateComposition(r.Context(), createRequest)
+	composition, fieldErrors, err := h.generatorService.CreateComposition(r.Context(), r, internalUserID, artID, composition)
 	if err != nil {
 		// If there are field validation errors
 		if fieldErrors != nil {
@@ -268,7 +263,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -289,11 +284,11 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
-	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
+	art, err := h.generatorService.GetArt(r.Context(), r, internalUserID, artID)
 	if err != nil {
 		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art")
 		http.Error(w, "Art not found", http.StatusNotFound)
@@ -301,7 +296,8 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get the composition
-	composition, err := h.generatorService.GetComposition(r.Context(), internalUserID, artID, compositionID)
+	compositionResourceName := resource.BuildCompositionResourceName(internalUserID, artID, compositionID)
+	composition, err := h.generatorService.GetComposition(r.Context(), r, compositionResourceName)
 	if err != nil {
 		log.Error().Err(err).
 			Str("internal_user_id", internalUserID).
@@ -330,10 +326,10 @@ func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
-	
+
 	artID := pathParts[2]
 	compositionID := pathParts[4]
-	
+
 	// Get user from context
 	user, _ := middleware.UserFromContext(r.Context())
 
@@ -352,18 +348,19 @@ func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art and composition
-	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
+	art, err := h.generatorService.GetArt(r.Context(), r, internalUserID, artID)
 	if err != nil {
 		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art for status")
 		http.Error(w, "Art not found", http.StatusNotFound)
 		return
 	}
 
-	composition, err := h.generatorService.GetComposition(r.Context(), internalUserID, artID, compositionID)
+	compositionResourceName := resource.BuildCompositionResourceName(internalUserID, artID, compositionID)
+	composition, err := h.generatorService.GetComposition(r.Context(), r, compositionResourceName)
 	if err != nil {
 		log.Error().Err(err).
 			Str("internal_user_id", internalUserID).
@@ -391,7 +388,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -412,14 +409,14 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Build the composition resource name
 	compositionResourceName := resource.BuildCompositionResourceName(internalUserID, artID, compositionID)
 
-	// Delete the composition (note: we need to add this method to the service)
-	err = h.generatorService.DeleteComposition(r.Context(), compositionResourceName)
+	// Delete the composition
+	err = h.generatorService.DeleteComposition(r.Context(), r, compositionResourceName)
 	if err != nil {
 		log.Error().Err(err).
 			Str("internal_user_id", internalUserID).

@@ -61,7 +61,7 @@ type UserProfile struct {
 	LastName  string `json:"last_name"`
 }
 
-// AuthSync handles Firebase token validation and session creation
+// AuthSync handles Firebase token validation and session creation with fallback user sync
 func (h *FirebaseAuthHandler) AuthSync(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -96,14 +96,8 @@ func (h *FirebaseAuthHandler) AuthSync(w http.ResponseWriter, r *http.Request) {
 		Msg("Firebase token validated successfully")
 
 	// Use Firebase UID directly as session user ID
-	// User creation is handled asynchronously by Firebase Cloud Function
+	// User creation is handled asynchronously by Firebase Cloud Function or fallback sync
 	internalUserID := userInfo.ID
-
-	log.Info().
-		Str("firebase_uid", userInfo.ID).
-		Str("email", userInfo.Email).
-		Str("name", userInfo.Name).
-		Msg("Firebase token validated successfully - user creation handled by Cloud Function")
 
 	// Create session data
 	sessionUserInfo := auth.SessionUserInfo{
@@ -118,12 +112,43 @@ func (h *FirebaseAuthHandler) AuthSync(w http.ResponseWriter, r *http.Request) {
 	// Calculate token expiry
 	tokenExpiry := time.Now().Add(1 * time.Hour)
 
-	// Create session
+	// Create session first
 	err = h.sessionManager.CreateSession(w, r, internalUserID, sessionUserInfo, req.IDToken, tokenExpiry)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", internalUserID).Msg("Failed to create session")
 		h.sendErrorResponse(w, "Failed to create session", http.StatusInternalServerError)
 		return
+	}
+
+	log.Info().
+		Str("user_id", internalUserID).
+		Str("firebase_uid", userInfo.ID).
+		Str("email", userInfo.Email).
+		Msg("Session created successfully")
+
+	// Attempt proactive user sync to ensure user exists in database
+	// This is a best-effort operation - session creation succeeds even if sync fails
+	if h.generatorService != nil {
+		log.Info().
+			Str("firebase_uid", userInfo.ID).
+			Msg("AuthSync: Attempting proactive user sync to ensure database record exists")
+		
+		_, syncErr := h.generatorService.UserService.SyncUserFromFirebase(r.Context(), r)
+		if syncErr != nil {
+			// Log the sync failure but don't fail the authentication
+			log.Warn().
+				Err(syncErr).
+				Str("firebase_uid", userInfo.ID).
+				Msg("AuthSync: Proactive user sync failed - user will be synced on first API call")
+		} else {
+			log.Info().
+				Str("firebase_uid", userInfo.ID).
+				Msg("AuthSync: Proactive user sync successful - user record exists in database")
+		}
+	} else {
+		log.Debug().
+			Str("firebase_uid", userInfo.ID).
+			Msg("AuthSync: GeneratorService not available - user sync will happen on first API call")
 	}
 
 	// Prepare response
@@ -149,7 +174,7 @@ func (h *FirebaseAuthHandler) AuthSync(w http.ResponseWriter, r *http.Request) {
 		Str("user_id", internalUserID).
 		Str("firebase_uid", userInfo.ID).
 		Str("email", userInfo.Email).
-		Msg("User authenticated and session created")
+		Msg("User authenticated and session created successfully")
 }
 
 // Logout handles user logout with enhanced error handling and support for multiple HTTP methods
@@ -291,8 +316,6 @@ func (h *FirebaseAuthHandler) Status(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
-
-// Note: User creation is now handled by the API interceptor when first API call is made
 
 // sendErrorResponse sends a JSON error response
 func (h *FirebaseAuthHandler) sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {

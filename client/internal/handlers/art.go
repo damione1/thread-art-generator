@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
@@ -53,189 +51,79 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 	userResource, err := resource.ParseResourceName(currentUser.ID)
 	if err != nil {
 		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
+		http.Error(w, "Failed to parse user information", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art using internal user ID
-	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
+	art, err := h.generatorService.GetArt(r.Context(), r, internalUserID, artID)
 	if err != nil {
 		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art")
 		http.Error(w, "Art not found", http.StatusNotFound)
 		return
 	}
 
-	// Get compositions for this art if it's complete
+	// Get compositions if art is complete
 	var compositions []*pb.Composition
 	if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE {
-		compositionsResponse, err := h.generatorService.ListCompositionsForArt(r.Context(), internalUserID, artID, 50, "")
+		compositionsResponse, err := h.generatorService.CompositionService.ListCompositionsForArt(r.Context(), r, internalUserID, artID, 50, "")
 		if err != nil {
 			log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get compositions for art")
-			// Don't fail the page load, just log the error and continue with empty compositions
+			// Don't fail the page, just leave compositions empty
 		} else {
 			compositions = compositionsResponse.GetCompositions()
 		}
 	}
 
-	// Render the art page using middleware-provided context
-	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("Art: %s - ThreadArt", art.GetTitle()), "art")
+	// Create page data
+	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("Art: %s", art.GetTitle()), "art")
+
+	// Render the art details page
 	err = templates.ArtPage(pageData, art, compositions).Render(r.Context(), w)
 	if err != nil {
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
-		log.Error().Err(err).Msg("Failed to render art page")
+		log.Error().Err(err).Msg("Failed to render art details page")
+		http.Error(w, "Error rendering page", http.StatusInternalServerError)
 	}
 }
 
-// UploadRequest represents the upload request body
-type UploadRequest struct {
-	ContentType string `json:"content_type"`
-	FileSize    int64  `json:"file_size"`
-}
-
-// GetArtUploadUrl handles getting a signed upload URL for an art
-func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (contains Firebase UID)
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Extract art ID from URL parameter
-	artID := chi.URLParam(r, "artId")
-	if artID == "" {
-		http.Error(w, "Invalid art ID", http.StatusBadRequest)
-		return
-	}
-
-	// Parse request body for content type and file size
-	var uploadReq UploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&uploadReq); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Get internal user ID by calling GetCurrentUser API
-	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for GetArtUploadUrl")
-		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the user resource name to extract internal user ID
-	userResource, err := resource.ParseResourceName(currentUser.ID)
-	if err != nil {
-		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
-		return
-	}
-	
-	internalUserID := userResource.(*resource.User).ID
-
-	// Get upload URL using internal user ID with validation parameters
-	uploadResponse, err := h.generatorService.GetArtUploadUrl(r.Context(), internalUserID, artID, uploadReq.ContentType, uploadReq.FileSize)
-	if err != nil {
-		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get upload URL")
-		http.Error(w, "Failed to get upload URL", http.StatusInternalServerError)
-		return
-	}
-
-	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"upload_url":      uploadResponse.GetUploadUrl(),
-		"expiration_time": uploadResponse.GetExpirationTime().AsTime(),
-	})
-}
-
-// ConfirmArtImageUpload handles confirming that an image has been uploaded
-func (h *ArtHandler) ConfirmArtImageUpload(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (contains Firebase UID)
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Extract art ID from URL parameter
-	artID := chi.URLParam(r, "artId")
-	if artID == "" {
-		http.Error(w, "Invalid art ID", http.StatusBadRequest)
-		return
-	}
-
-	// Get internal user ID by calling GetCurrentUser API
-	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for ConfirmArtImageUpload")
-		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the user resource name to extract internal user ID
-	userResource, err := resource.ParseResourceName(currentUser.ID)
-	if err != nil {
-		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
-		return
-	}
-	
-	internalUserID := userResource.(*resource.User).ID
-
-	// Confirm upload - construct the full resource name as expected by the service
-	// Following Google AIP resource naming: users/{internal_user_id}/arts/{art_id}
-	resourceName := resource.BuildArtResourceName(internalUserID, artID)
-
-	art, err := h.generatorService.ConfirmArtImageUpload(r.Context(), resourceName)
-	if err != nil {
-		log.Error().Err(err).Str("art_id", artID).Str("resource_name", resourceName).Msg("Failed to confirm upload")
-		http.Error(w, "Failed to confirm upload", http.StatusInternalServerError)
-		return
-	}
-
-	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"status":  art.GetStatus().String(),
-	})
-}
-
-// NewArtPage renders the art creation form
-func (h *ArtHandler) NewArtPage(w http.ResponseWriter, r *http.Request) {
-	// Initial form data with empty values
+// CreateArtForm renders the create art form
+func (h *ArtHandler) CreateArtForm(w http.ResponseWriter, r *http.Request) {
+	// Create page data with empty form data
 	formData := &services.ArtFormData{
 		Title:   "",
 		Errors:  make(map[string][]string),
 		Success: false,
 	}
 
-	// Render the art creation form using middleware-provided context
-	pageData := templates.NewPageDataFromRequest(r, "Create New Art - ThreadArt", "new-art")
+	pageData := templates.NewPageDataFromRequest(r, "Create Art", "create-art")
+
+	// Render the create art form
 	err := templates.NewArtPage(pageData, formData).Render(r.Context(), w)
 	if err != nil {
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
-		log.Error().Err(err).Msg("Failed to render new art page")
+		log.Error().Err(err).Msg("Failed to render create art form")
+		http.Error(w, "Error rendering form", http.StatusInternalServerError)
 	}
 }
 
-// CreateArt handles the art creation form submission
+// CreateArt handles art creation
 func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (contains Firebase UID)
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Parse form
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, "Error parsing form", http.StatusBadRequest)
-		log.Error().Err(err).Msg("Failed to parse form")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Get title from form
-	title := r.FormValue("title")
-
-	// Initialize form data
-	formData := &services.ArtFormData{
-		Title:   title,
-		Errors:  make(map[string][]string),
-		Success: false,
+	// Parse form
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
 	}
+
+	title := strings.TrimSpace(r.FormValue("title"))
+
+	// Get user from context (contains Firebase UID)
+	user, _ := middleware.UserFromContext(r.Context())
 
 	// Get internal user ID by calling GetCurrentUser API
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
@@ -245,56 +133,66 @@ func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createArtRequest := &pb.CreateArtRequest{
-		Art: &pb.Art{
-			Title: title,
-		},
-		Parent: currentUser.ID, // currentUser.ID contains the resource name with internal user ID
+	// Parse the user resource name to extract internal user ID
+	userResource, err := resource.ParseResourceName(currentUser.ID)
+	if err != nil {
+		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
+		http.Error(w, "Failed to parse user information", http.StatusInternalServerError)
+		return
 	}
+	internalUserID := userResource.(*resource.User).ID
 
-	// Call service to create art with the request object for auth headers
-	art, fieldErrors, err := h.generatorService.CreateArt(r.Context(), createArtRequest)
+	// Call service to create art - using the new signature
+	art, fieldErrors, err := h.generatorService.CreateArt(r.Context(), r, internalUserID, title)
 	if err != nil {
 		// If there are field validation errors
 		if fieldErrors != nil {
-			formData.Errors = fieldErrors
-			// Render form with errors
-			renderErr := templates.NewArtForm(formData).Render(r.Context(), w)
-			if renderErr != nil {
-				http.Error(w, "Error rendering template", http.StatusInternalServerError)
-				log.Error().Err(renderErr).Msg("Failed to render new art form with errors")
+			formData := &services.ArtFormData{
+				Title:   title,
+				Errors:  fieldErrors,
+				Success: false,
+			}
+
+			// Check if this is an HTMX request
+			if r.Header.Get("HX-Request") == "true" {
+				// For HTMX requests, render only the form component
+				err = templates.NewArtForm(formData).Render(r.Context(), w)
+			} else {
+				// For normal requests, render the full page
+				pageData := templates.NewPageDataFromRequest(r, "Create Art", "create-art")
+				err = templates.NewArtPage(pageData, formData).Render(r.Context(), w)
+			}
+
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to render create art form with errors")
+				http.Error(w, "Error rendering form", http.StatusInternalServerError)
 			}
 			return
 		}
 
-		// For other errors, display a general error
-		formData.Errors["_form"] = []string{"An error occurred while creating the art. Please try again."}
-		renderErr := templates.NewArtForm(formData).Render(r.Context(), w)
-		if renderErr != nil {
-			http.Error(w, "Error rendering template", http.StatusInternalServerError)
-			log.Error().Err(renderErr).Msg("Failed to render new art form with general error")
-		}
+		// Other errors
+		log.Error().Err(err).Str("internal_user_id", internalUserID).Msg("Failed to create art")
+		http.Error(w, "Failed to create art", http.StatusInternalServerError)
 		return
 	}
 
-	// Art created successfully - parse resource name properly
+	// Success - redirect to art details page
 	artResource, err := resource.ParseResourceName(art.GetName())
 	if err != nil {
-		// Fallback to dashboard if we can't parse
-		w.Header().Set("HX-Redirect", "/dashboard")
-		w.WriteHeader(http.StatusOK)
+		log.Error().Err(err).Str("art_resource_name", art.GetName()).Msg("Failed to parse created art resource name")
+		http.Error(w, "Failed to process created art", http.StatusInternalServerError)
 		return
 	}
 
-	if parsedArt, ok := artResource.(*resource.Art); ok {
-		// Redirect to the art page
-		w.Header().Set("HX-Redirect", "/dashboard/arts/"+parsedArt.ArtID)
+	artID := artResource.(*resource.Art).ArtID
+
+	// Check if this is an HTMX request
+	if r.Header.Get("HX-Request") == "true" {
+		// For HTMX requests, use HX-Redirect header
+		w.Header().Set("HX-Redirect", fmt.Sprintf("/dashboard/arts/%s", artID))
 		w.WriteHeader(http.StatusOK)
 	} else {
-		// Fallback to dashboard if wrong type
-		w.Header().Set("HX-Redirect", "/dashboard")
-		w.WriteHeader(http.StatusOK)
+		// For normal requests, use regular redirect
+		http.Redirect(w, r, fmt.Sprintf("/dashboard/arts/%s", artID), http.StatusSeeOther)
 	}
 }
-
-// Firebase config is now handled by middleware - no need for manual injection

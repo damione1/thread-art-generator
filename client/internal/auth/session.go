@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -44,10 +43,12 @@ type UserInfo struct {
 type SessionManager struct {
 	redis        *redis.Client
 	secureCookie *securecookie.SecureCookie
+	environment  string
+	cookieDomain string
 }
 
 // NewSessionManager creates a new session manager
-func NewSessionManager(redisAddr string, hashKey, blockKey []byte) (*SessionManager, error) {
+func NewSessionManager(redisAddr string, hashKey, blockKey []byte, environment, cookieDomain string) (*SessionManager, error) {
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
 	})
@@ -63,6 +64,8 @@ func NewSessionManager(redisAddr string, hashKey, blockKey []byte) (*SessionMana
 	return &SessionManager{
 		redis:        redisClient,
 		secureCookie: sc,
+		environment:  environment,
+		cookieDomain: cookieDomain,
 	}, nil
 }
 
@@ -101,20 +104,15 @@ func (sm *SessionManager) CreateSession(w http.ResponseWriter, data *SessionData
 		return err
 	}
 
-	// Get environment for domain configuration
-	environment := os.Getenv("ENVIRONMENT")
-	cookieDomain := ""
-	if environment == "production" || environment == "staging" {
-		cookieDomain = os.Getenv("COOKIE_DOMAIN")
-	}
+	// Use configured environment and cookie domain
 
 	cookie := &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    encoded,
 		Path:     "/",
-		Domain:   cookieDomain,
+		Domain:   sm.cookieDomain,
 		HttpOnly: true,
-		Secure:   environment != "development", // Only disable for local development
+		Secure:   sm.environment != "development", // Only disable for local development
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(sessionExpiration.Seconds()),
 	}
@@ -212,21 +210,16 @@ func (sm *SessionManager) DestroySession(w http.ResponseWriter, r *http.Request)
 	ctx := context.Background()
 	sm.redis.Del(ctx, sessionPrefix+sessionID)
 
-	// Get environment for domain configuration - same as in CreateSession
-	environment := os.Getenv("ENVIRONMENT")
-	cookieDomain := ""
-	if environment == "production" || environment == "staging" {
-		cookieDomain = os.Getenv("COOKIE_DOMAIN")
-	}
+	// Use configured environment and cookie domain - same as in CreateSession
 
 	// Clear the cookie - use same settings as when creating
 	expiredCookie := &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    "",
 		Path:     "/",
-		Domain:   cookieDomain,
+		Domain:   sm.cookieDomain,
 		HttpOnly: true,
-		Secure:   environment != "development", // Match the setting used in CreateSession
+		Secure:   sm.environment != "development", // Match the setting used in CreateSession
 		MaxAge:   -1,
 	}
 

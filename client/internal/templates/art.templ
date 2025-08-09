@@ -65,7 +65,7 @@ templ ArtPage(data *PageData, art *pb.Art, compositions []*pb.Composition) {
 				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
 					<h2 class="text-xl font-semibold text-slate-200 mb-4">Image</h2>
 					if art.GetStatus() == pb.ArtStatus_ART_STATUS_PENDING_IMAGE {
-						@ImageUploadDropzone(extractArtID(art.GetName()))
+						@ImageUploadDropzone(extractUserID(art.GetName()), extractArtID(art.GetName()))
 					} else if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE && art.GetImageUrl() != "" {
 						<div class="space-y-4">
 							<img
@@ -140,17 +140,18 @@ templ ArtPage(data *PageData, art *pb.Art, compositions []*pb.Composition) {
 }
 
 // ImageUploadDropzone renders a dropzone for image upload
-templ ImageUploadDropzone(artId string) {
+templ ImageUploadDropzone(internalUserId, artId string) {
 	<div
 		id="upload-dropzone"
 		class="border-2 border-dashed border-dark-400 rounded-lg p-8 text-center hover:border-primary-500 transition-colors duration-300 cursor-pointer"
-		x-data={ "imageUpload('" + artId + "')" }
+		x-data={ "createArtUpload({ artId: '" + artId + "', internalUserId: '" + internalUserId + "' })" }
 		@drop.prevent="handleDrop($event)"
 		@dragover.prevent="dragOver = true"
 		@dragleave.prevent="dragOver = false"
 		:class="{ 'border-primary-500 bg-primary-900/10': dragOver }"
 	>
-		<div x-show="!uploading && !uploaded">
+		<!-- Ready State (default state - no loading needed) -->
+		<div x-show="!uploading && !uploaded && !error" class="space-y-4">
 			@MaterialIcon("upload", "h-12 w-12 text-slate-400 mx-auto mb-4")
 			<h3 class="text-lg font-medium text-slate-200 mb-2">Upload Image</h3>
 			<p class="text-slate-400 mb-4">Drag and drop an image here, or click to select</p>
@@ -170,6 +171,8 @@ templ ImageUploadDropzone(artId string) {
 				Select Image
 			</button>
 		</div>
+
+		<!-- Uploading State -->
 		<div x-show="uploading" class="space-y-4">
 			<div class="flex justify-center">
 				@spinner.Spinner(spinner.Props{
@@ -177,152 +180,48 @@ templ ImageUploadDropzone(artId string) {
 					Color: "text-primary-500",
 				})
 			</div>
-			<p class="text-slate-300">Uploading image...</p>
+			<p class="text-slate-300" x-text="uploadProgress < 100 ? 'Uploading image...' : 'Processing image...'"></p>
 			<div class="w-full bg-dark-300 rounded-full h-2">
-				<div class="bg-primary-500 h-2 rounded-full transition-all duration-300" :style="`width: ${uploadProgress}%`"></div>
+				<div class="bg-primary-500 h-2 rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
 			</div>
+			<p class="text-sm text-slate-400" x-text="`${uploadProgress}% complete`"></p>
 		</div>
+
+		<!-- Upload Complete State -->
 		<div x-show="uploaded" class="space-y-4">
 			@MaterialIcon("check_circle", "h-8 w-8 text-green-500 mx-auto")
 			<p class="text-green-400">Image uploaded successfully!</p>
-			<button
-				type="button"
-				class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors duration-300"
-				@click="refreshPage()"
-			>
-				Refresh Page
-			</button>
+			<p class="text-sm text-slate-400">Processing your image and refreshing the page...</p>
+			<div class="flex justify-center">
+				@spinner.Spinner(spinner.Props{
+					Size:  spinner.SizeSm,
+					Color: "text-green-500",
+				})
+			</div>
 		</div>
+
+		<!-- Error State -->
 		<div x-show="error" class="space-y-4">
 			@MaterialIcon("error", "h-8 w-8 text-red-500 mx-auto")
 			<p class="text-red-400" x-text="errorMessage"></p>
-			<button
-				type="button"
-				class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors duration-300"
-				@click="resetUpload()"
-			>
-				Try Again
-			</button>
+			<div class="flex space-x-2 justify-center">
+				<button
+					type="button"
+					class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors duration-300"
+					@click="resetUpload()"
+				>
+					Try Again
+				</button>
+				<button
+					type="button"
+					class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors duration-300"
+					@click="refreshPage()"
+				>
+					Refresh Page
+				</button>
+			</div>
 		</div>
 	</div>
-	<script>
-		function imageUpload(artId) {
-			return {
-				dragOver: false,
-				uploading: false,
-				uploaded: false,
-				error: false,
-				errorMessage: '',
-				uploadProgress: 0,
-
-				handleDrop(event) {
-					this.dragOver = false;
-					const files = event.dataTransfer.files;
-					if (files.length > 0) {
-						this.uploadFile(files[0]);
-					}
-				},
-
-				handleFileSelect(event) {
-					const files = event.target.files;
-					if (files.length > 0) {
-						this.uploadFile(files[0]);
-					}
-				},
-
-				async uploadFile(file) {
-					// Validate file type
-					if (!file.type.startsWith('image/')) {
-						this.showError('Please select an image file');
-						return;
-					}
-
-					// Validate file size (10MB limit)
-					if (file.size > 10 * 1024 * 1024) {
-						this.showError('File size must be less than 10MB');
-						return;
-					}
-
-					this.uploading = true;
-					this.error = false;
-					this.uploadProgress = 0;
-
-					try {
-						// Get upload URL with file validation parameters
-						const uploadUrlResponse = await fetch(`/api/get-upload-url/${encodeURIComponent(artId)}`, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-							},
-							body: JSON.stringify({
-								content_type: file.type,
-								file_size: file.size
-							})
-						});
-
-						if (!uploadUrlResponse.ok) {
-							throw new Error('Failed to get upload URL');
-						}
-
-						const uploadData = await uploadUrlResponse.json();
-
-						// Upload file to signed URL with matching content type
-						const uploadResponse = await fetch(uploadData.upload_url, {
-							method: 'PUT',
-							body: file,
-							headers: {
-								'Content-Type': file.type,
-							},
-						});
-
-						if (!uploadResponse.ok) {
-							throw new Error('Failed to upload image');
-						}
-
-						this.uploadProgress = 100;
-
-						// Confirm upload
-						const confirmResponse = await fetch(`/api/confirm-upload/${encodeURIComponent(artId)}`, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-							},
-						});
-
-						if (!confirmResponse.ok) {
-							throw new Error('Failed to confirm upload');
-						}
-
-						this.uploading = false;
-						this.uploaded = true;
-
-					} catch (error) {
-						this.uploading = false;
-						this.showError(error.message || 'Upload failed');
-					}
-				},
-
-				showError(message) {
-					this.error = true;
-					this.errorMessage = message;
-					this.uploading = false;
-					this.uploaded = false;
-				},
-
-				resetUpload() {
-					this.error = false;
-					this.errorMessage = '';
-					this.uploading = false;
-					this.uploaded = false;
-					this.uploadProgress = 0;
-				},
-
-				refreshPage() {
-					window.location.reload();
-				}
-			}
-		}
-	</script>
 }
 
 // NewArtPage renders the page to create a new art

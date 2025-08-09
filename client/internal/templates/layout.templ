@@ -11,6 +11,10 @@ templ Layout(data *PageData) {
 			<title>{ data.GetPageTitle() }</title>
 			<script src="/static/js/vendors.js"></script>
 			<script src="/static/js/main.js" defer></script>
+			<!-- Load art-upload functionality if needed -->
+			if data.PageType == "art" {
+				<script type="module" src="/static/js/art-upload.js"></script>
+			}
 			<!-- Include a CSRF token for authenticated users -->
 			if data.IsLoggedIn {
 				<meta name="csrf-token" id="csrf-token" content="auth-token-exists"/>
@@ -20,8 +24,8 @@ templ Layout(data *PageData) {
 			<link rel="stylesheet" href="/static/css/tailwind.css"/>
 			<link rel="stylesheet" href="/static/css/main.css"/>
 			<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
-			<!-- Include Firebase Auth and config -->
-			if data.IsLoggedIn && data.FirebaseConfig != nil {
+			<!-- Include Firebase Auth and config (for auth pages) -->
+			if data.FirebaseConfig != nil {
 				@templ.JSONScript("firebase-config", data.FirebaseConfig)
 				<script type="module" src="/static/js/firebase-auth.js"></script>
 			}

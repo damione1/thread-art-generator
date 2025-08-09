@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
-	"github.com/Damione1/thread-art-generator/client/internal/client"
+	"github.com/Damione1/thread-art-generator/client/internal/transport"
 	"github.com/Damione1/thread-art-generator/client/internal/handlers"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
@@ -71,12 +71,18 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create SCS session manager")
 	}
 
-	// Create HTTP client with auth transport (updated for SCS session manager)
+	// Initialize PASETO service for BFF → API authentication
+	pasetoService, err := createPasetoService(config)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize PASETO service")
+	}
+
+	// Create PASETO converter for Firebase → PASETO token conversion
+	pasetoConverter := auth.NewPasetoConverter(pasetoService, sessionManager)
+
+	// Create HTTP client with PASETO auth transport
 	httpClient := &http.Client{
-		Transport: &client.FirebaseAuthTransport{
-			SessionManager: sessionManager,
-			Base:           http.DefaultTransport,
-		},
+		Transport: transport.NewPasetoAuthTransport(pasetoConverter),
 	}
 
 	// Create connect client directly
@@ -93,10 +99,10 @@ func main() {
 	}
 
 	if isEmulator {
-		firebaseConfig.EmulatorHost = "host.docker.internal:9099"
+		firebaseConfig.EmulatorHost = config.Firebase.EmulatorHost
 	}
 
-	firebaseAuth, err := coreauth.NewFirebaseAuthService(firebaseConfig)
+	firebaseAuth, err := coreauth.NewFirebaseAuthService(firebaseConfig, &config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize Firebase auth service")
 	}
@@ -109,6 +115,7 @@ func main() {
 	pageHandler := handlers.NewPageHandler(generatorService, &config)
 	artHandler := handlers.NewArtHandler(generatorService)
 	compositionHandler := handlers.NewCompositionHandler(generatorService)
+	uploadHandler := handlers.NewUploadHandler(generatorService)
 
 	// Create router
 	r := chi.NewRouter()
@@ -148,10 +155,10 @@ func main() {
 		r.Route("/dashboard", func(r chi.Router) {
 			r.Get("/", pageHandler.DashboardPage)
 			r.Route("/arts", func(r chi.Router) {
-				r.Get("/new", artHandler.NewArtPage)
+				r.Get("/new", artHandler.CreateArtForm)
 				r.Post("/new", artHandler.CreateArt)
 				r.Get("/{artId}", artHandler.ViewArtPage)
-				
+
 				// Composition routes
 				r.Route("/{artId}/composition", func(r chi.Router) {
 					r.Get("/new", compositionHandler.NewCompositionForm)
@@ -181,9 +188,12 @@ func main() {
 					user.ID, user.Name, user.Email)
 			})
 
-			// Art upload API routes
-			r.Post("/get-upload-url/{artId}", artHandler.GetArtUploadUrl)
-			r.Post("/confirm-upload/{artId}", artHandler.ConfirmArtImageUpload)
+			// Storage endpoints for secure signed URL generation
+			r.Route("/storage", func(r chi.Router) {
+				r.Post("/upload-url", uploadHandler.GenerateUploadURL)
+				r.Post("/download-url/{artId}", uploadHandler.GenerateDownloadURL)
+				r.Get("/download-url/{artId}", uploadHandler.GenerateDownloadURL) // Support GET for simple downloads
+			})
 		})
 	})
 
@@ -219,4 +229,38 @@ func main() {
 	}
 
 	log.Info().Msg("Server gracefully stopped")
+}
+
+func createPasetoService(config util.Config) (*coreauth.PasetoService, error) {
+	// Validate PASETO configuration at startup
+	if config.Paseto.SecretKey == "" {
+		return nil, fmt.Errorf("PASETO_SECRET_KEY is not configured")
+	}
+
+	if len(config.Paseto.SecretKey) != 32 {
+		return nil, fmt.Errorf("PASETO_SECRET_KEY must be exactly 32 bytes, got %d bytes", len(config.Paseto.SecretKey))
+	}
+
+	if config.Paseto.Issuer == "" {
+		log.Warn().Msg("PASETO_ISSUER not set, using default 'thread-art-generator'")
+		config.Paseto.Issuer = "thread-art-generator"
+	}
+
+	if config.Paseto.TTLMinutes <= 0 {
+		log.Warn().Msg("PASETO_TTL_MINUTES not set or invalid, using default 15 minutes")
+		config.Paseto.TTLMinutes = 15
+	}
+
+	pasetoConfig := coreauth.PasetoConfig{
+		SecretKey:  config.Paseto.SecretKey,
+		Issuer:     config.Paseto.Issuer,
+		TTLMinutes: config.Paseto.TTLMinutes,
+	}
+
+	log.Info().
+		Str("issuer", pasetoConfig.Issuer).
+		Int("ttl_minutes", pasetoConfig.TTLMinutes).
+		Msg("PASETO service configured successfully")
+
+	return coreauth.NewPasetoService(pasetoConfig)
 }

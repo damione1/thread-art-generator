@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Firebase Storage security rules for thread art generator  
+// TEMPORARY: Allow all operations for debugging emulator upload issues
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

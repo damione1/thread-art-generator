@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/Damione1/thread-art-generator/client/internal/transport"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/rs/zerolog/log"
@@ -22,10 +24,22 @@ func NewArtService(baseService *BaseService) *ArtService {
 	}
 }
 
-// CreateArt creates a new art resource
-func (s *ArtService) CreateArt(ctx context.Context, createArtRequest *pb.CreateArtRequest) (*pb.Art, map[string][]string, error) {
-	req := connect.NewRequest(createArtRequest)
+// CreateArt creates a new art for the authenticated user
+func (s *ArtService) CreateArt(ctx context.Context, r *http.Request, userID string, title string) (*pb.Art, map[string][]string, error) {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
 
+	// Create the request payload with parent field (Google AIP pattern)
+	req := connect.NewRequest(&pb.CreateArtRequest{
+		Art: &pb.Art{
+			Title: title,
+		},
+		Parent: resource.BuildUserResourceName(userID), // "users/{user_id}"
+	})
+
+	// Make the API call through the authenticated client
 	resp, err := s.client.CreateArt(ctx, req)
 	if err != nil {
 		fieldErrors := s.parseErrorToFieldErrors(err)
@@ -35,20 +49,26 @@ func (s *ArtService) CreateArt(ctx context.Context, createArtRequest *pb.CreateA
 	return resp.Msg, nil, nil
 }
 
-// GetArt gets a specific art by its resource name
-func (s *ArtService) GetArt(ctx context.Context, userID, artID string) (*pb.Art, error) {
-	artName := resource.BuildArtResourceName(userID, artID)
+// GetArt gets a specific art by ID for the authenticated user
+func (s *ArtService) GetArt(ctx context.Context, r *http.Request, userID, artID string) (*pb.Art, error) {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
 
+	// Create the request payload
 	req := connect.NewRequest(&pb.GetArtRequest{
-		Name: artName,
+		Name: resource.BuildArtResourceName(userID, artID),
 	})
 
+	// Make the API call through the authenticated client
 	resp, err := s.client.GetArt(ctx, req)
 	if err != nil {
 		standardErr := s.parseErrorForLogging(err)
 		log.Error().
 			Err(err).
-			Str("art_name", artName).
+			Str("userID", userID).
+			Str("artID", artID).
 			Str("errorType", string(standardErr.Type)).
 			Str("message", standardErr.Message).
 			Msg("Failed to get art")
@@ -58,56 +78,13 @@ func (s *ArtService) GetArt(ctx context.Context, userID, artID string) (*pb.Art,
 	return resp.Msg, nil
 }
 
-// GetArtUploadUrl gets a signed URL for uploading an image to an art
-func (s *ArtService) GetArtUploadUrl(ctx context.Context, userID, artID, contentType string, fileSize int64) (*pb.GetArtUploadUrlResponse, error) {
-	artName := resource.BuildArtResourceName(userID, artID)
-
-	req := connect.NewRequest(&pb.GetArtUploadUrlRequest{
-		Name:        artName,
-		ContentType: contentType,
-		FileSize:    fileSize,
-	})
-
-	resp, err := s.client.GetArtUploadUrl(ctx, req)
-	if err != nil {
-		standardErr := s.parseErrorForLogging(err)
-		log.Error().
-			Err(err).
-			Str("art_name", artName).
-			Str("content_type", contentType).
-			Int64("file_size", fileSize).
-			Str("errorType", string(standardErr.Type)).
-			Str("message", standardErr.Message).
-			Msg("Failed to get art upload URL")
-		return nil, fmt.Errorf("failed to get art upload URL: %s", standardErr.Message)
-	}
-
-	return resp.Msg, nil
-}
-
-// ConfirmArtImageUpload confirms that an image has been uploaded for an art
-func (s *ArtService) ConfirmArtImageUpload(ctx context.Context, artName string) (*pb.Art, error) {
-	req := connect.NewRequest(&pb.ConfirmArtImageUploadRequest{
-		Name: artName,
-	})
-
-	resp, err := s.client.ConfirmArtImageUpload(ctx, req)
-	if err != nil {
-		standardErr := s.parseErrorForLogging(err)
-		log.Error().
-			Err(err).
-			Str("art_name", artName).
-			Str("errorType", string(standardErr.Type)).
-			Str("message", standardErr.Message).
-			Msg("Failed to confirm art image upload")
-		return nil, fmt.Errorf("failed to confirm art image upload: %s", standardErr.Message)
-	}
-
-	return resp.Msg, nil
-}
-
 // ListArts gets a list of arts for the authenticated user
-func (s *ArtService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
+func (s *ArtService) ListArts(ctx context.Context, r *http.Request, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
+
 	// Create the request payload with parent field
 	req := connect.NewRequest(&pb.ListArtsRequest{
 		Parent:         resource.BuildUserResourceName(userID),

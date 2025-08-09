@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/Damione1/thread-art-generator/client/internal/transport"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/rs/zerolog/log"
 )
@@ -22,7 +24,12 @@ func NewCompositionService(baseService *BaseService) *CompositionService {
 }
 
 // ListCompositions gets a list of compositions for the authenticated user
-func (s *CompositionService) ListCompositions(ctx context.Context, pageSize int, pageToken string) (*pb.ListCompositionsResponse, error) {
+func (s *CompositionService) ListCompositions(ctx context.Context, r *http.Request, pageSize int, pageToken string) (*pb.ListCompositionsResponse, error) {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
+
 	req := connect.NewRequest(&pb.ListCompositionsRequest{
 		PageSize:  int32(pageSize),
 		PageToken: pageToken,
@@ -43,10 +50,15 @@ func (s *CompositionService) ListCompositions(ctx context.Context, pageSize int,
 }
 
 // ListCompositionsForArt gets a list of compositions for a specific art
-func (s *CompositionService) ListCompositionsForArt(ctx context.Context, userID, artID string, pageSize int, pageToken string) (*pb.ListCompositionsResponse, error) {
+func (s *CompositionService) ListCompositionsForArt(ctx context.Context, r *http.Request, userID, artID string, pageSize int, pageToken string) (*pb.ListCompositionsResponse, error) {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
+
 	// Build the art resource name as parent
 	artResourceName := fmt.Sprintf("users/%s/arts/%s", userID, artID)
-	
+
 	req := connect.NewRequest(&pb.ListCompositionsRequest{
 		Parent:    artResourceName,
 		PageSize:  int32(pageSize),
@@ -69,7 +81,12 @@ func (s *CompositionService) ListCompositionsForArt(ctx context.Context, userID,
 }
 
 // DeleteComposition deletes a composition
-func (s *CompositionService) DeleteComposition(ctx context.Context, compositionName string) error {
+func (s *CompositionService) DeleteComposition(ctx context.Context, r *http.Request, compositionName string) error {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
+
 	req := connect.NewRequest(&pb.DeleteCompositionRequest{
 		Name: compositionName,
 	})
@@ -90,25 +107,50 @@ func (s *CompositionService) DeleteComposition(ctx context.Context, compositionN
 }
 
 // CreateComposition creates a new composition
-func (s *CompositionService) CreateComposition(ctx context.Context, createRequest *pb.CreateCompositionRequest) (*pb.Composition, map[string][]string, error) {
-	req := connect.NewRequest(createRequest)
+func (s *CompositionService) CreateComposition(ctx context.Context, r *http.Request, userID, artID string, composition *pb.Composition) (*pb.Composition, map[string][]string, error) {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
+
+	// Build the parent art resource name
+	parent := fmt.Sprintf("users/%s/arts/%s", userID, artID)
+
+	req := connect.NewRequest(&pb.CreateCompositionRequest{
+		Parent:      parent,
+		Composition: composition,
+	})
 
 	resp, err := s.client.CreateComposition(ctx, req)
 	if err != nil {
+		// Check if this is a field validation error
 		fieldErrors := s.parseErrorToFieldErrors(err)
-		return nil, fieldErrors, err
+		if len(fieldErrors) > 0 {
+			return nil, fieldErrors, err
+		}
+
+		standardErr := s.parseErrorForLogging(err)
+		log.Error().
+			Err(err).
+			Str("errorType", string(standardErr.Type)).
+			Str("message", standardErr.Message).
+			Str("parent", parent).
+			Msg("Failed to create composition")
+		return nil, nil, fmt.Errorf("failed to create composition: %s", standardErr.Message)
 	}
 
 	return resp.Msg, nil, nil
 }
 
 // GetComposition retrieves a specific composition
-func (s *CompositionService) GetComposition(ctx context.Context, userID, artID, compositionID string) (*pb.Composition, error) {
-	// Build the composition resource name
-	compositionName := fmt.Sprintf("users/%s/arts/%s/compositions/%s", userID, artID, compositionID)
-	
+func (s *CompositionService) GetComposition(ctx context.Context, r *http.Request, compositionID string) (*pb.Composition, error) {
+	// Add the session request to context so the transport layer can access it
+	if r != nil {
+		ctx = transport.WithSessionRequest(ctx, r)
+	}
+
 	req := connect.NewRequest(&pb.GetCompositionRequest{
-		Name: compositionName,
+		Name: compositionID, // Assume compositionID is already a full resource name
 	})
 
 	resp, err := s.client.GetComposition(ctx, req)
@@ -118,7 +160,7 @@ func (s *CompositionService) GetComposition(ctx context.Context, userID, artID, 
 			Err(err).
 			Str("errorType", string(standardErr.Type)).
 			Str("message", standardErr.Message).
-			Str("compositionName", compositionName).
+			Str("compositionName", compositionID).
 			Msg("Failed to get composition")
 		return nil, fmt.Errorf("failed to get composition: %s", standardErr.Message)
 	}
