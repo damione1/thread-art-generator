@@ -5,7 +5,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/util"
-	"github.com/volatiletech/null/v8"
 )
 
 func DbUserToProto(user *models.User) *pb.User {
@@ -35,39 +34,12 @@ func DbUserToProto(user *models.User) *pb.User {
 		userPb.LastName = user.LastName.String
 	}
 
-	userPb.Name = resource.BuildUserResourceName(user.ID)
+	// Use Firebase UID for resource name instead of internal ID
+	firebaseUID := ""
+	if user.FirebaseUID.Valid {
+		firebaseUID = user.FirebaseUID.String
+	}
+	userPb.Name = resource.BuildUserResourceName(firebaseUID)
 
 	return userPb
-}
-
-func ProtoUserToDb(user *pb.User) *models.User {
-	userDb := &models.User{
-		FirstName: user.GetFirstName(),
-	}
-
-	// Handle email conversion to null.String
-	if user.GetEmail() != "" {
-		userDb.Email = null.StringFrom(user.GetEmail())
-	} else {
-		userDb.Email = null.String{}
-	}
-
-	if user.GetName() != "" {
-		userResource, err := resource.ParseResourceName(user.GetName())
-		if err != nil {
-			return nil
-		}
-
-		if parsedUser, ok := userResource.(*resource.User); ok {
-			userDb.ID = parsedUser.ID
-		}
-	}
-
-	if user.GetLastName() != "" {
-		userDb.LastName = null.StringFrom(user.GetLastName())
-	} else {
-		userDb.LastName = null.String{}
-	}
-
-	return userDb
 }

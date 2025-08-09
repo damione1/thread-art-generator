@@ -2,16 +2,17 @@ package pbx
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func ArtDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, art *models.Art) *pb.Art {
+func ArtDbToProto(ctx context.Context, storageProvider storage.StorageProvider, art *models.Art, authorFirebaseUID string) *pb.Art {
 	// Map status from database enum to proto enum
 	var status pb.ArtStatus
 	switch art.Status {
@@ -31,64 +32,52 @@ func ArtDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, a
 
 	artPb := &pb.Art{
 		Title:      art.Title,
-		Author:     resource.BuildUserResourceName(art.AuthorID),
+		Author:     resource.BuildUserResourceName(authorFirebaseUID),
 		CreateTime: timestamppb.New(art.CreatedAt),
 		UpdateTime: timestamppb.New(art.UpdatedAt),
 		Status:     status,
 	}
-	artPb.Name = resource.BuildArtResourceName(art.AuthorID, art.ID)
+	artPb.Name = resource.BuildArtResourceName(authorFirebaseUID, art.ID)
 
-	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) {
-		imageKey := resource.BuildArtResourceName(art.AuthorID, art.ImageID.String)
-
-		// Use public URL generator for CDN caching - art images should be publicly accessible
-		publicURLGenerator := storage.NewPublicURLGenerator(dualStorage.GetPublicStorage())
-		imageURL := storage.GenerateImageURL(ctx, publicURLGenerator, imageKey, storage.DefaultURLOptions())
+	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) && storageProvider != nil {
+		// Construct the storage path using Firebase UID: users/{firebase_uid}/arts/{art_id}
+		// This matches the upload path used by the client
+		imagePath := GetResourceName([]Resource{
+			{Type: RessourceTypeUsers, ID: authorFirebaseUID},
+			{Type: RessourceTypeArts, ID: art.ID},
+		})
 		
+		log.Debug().
+			Str("art_id", art.ID).
+			Str("author_firebase_uid", authorFirebaseUID).
+			Str("image_path", imagePath).
+			Msg("ArtDbToProto: About to generate Firebase Storage URL")
+		
+		// Add timeout to prevent hanging Firebase Storage operations
+		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		
+		// Use storage provider to generate public URL directly
+		imageURL := storageProvider.GetPublicURL(imagePath)
+		
+		// Check if context was cancelled or timed out
+		if timeoutCtx.Err() != nil {
+			log.Error().
+				Str("art_id", art.ID).
+				Str("image_path", imagePath).
+				Err(timeoutCtx.Err()).
+				Msg("ArtDbToProto: Firebase Storage URL generation timed out")
+			// Continue without image URL rather than hanging the entire request
+			imageURL = ""
+		} else {
+			log.Debug().
+				Str("art_id", art.ID).
+				Str("image_url", imageURL).
+				Msg("ArtDbToProto: Successfully generated Firebase Storage URL")
+		}
+
 		artPb.ImageUrl = imageURL
 	}
 
 	return artPb
-}
-
-func ProtoArtToDb(post *pb.Art) *models.Art {
-	artDb := &models.Art{
-		Title: post.GetTitle(),
-	}
-
-	if post.GetName() != "" {
-		artResource, err := resource.ParseResourceName(post.GetName())
-		if err != nil {
-			return nil
-		}
-
-		if art, ok := artResource.(*resource.Art); ok {
-			artDb.ID = art.ArtID
-			artDb.AuthorID = art.UserID
-		}
-	}
-
-	if post.GetCreateTime() != nil {
-		artDb.CreatedAt = post.GetCreateTime().AsTime()
-	}
-	if post.GetUpdateTime() != nil {
-		artDb.UpdatedAt = post.GetUpdateTime().AsTime()
-	}
-	return artDb
-}
-
-// ParseArtResourceName parses an art resource name and returns user ID and art ID
-// Deprecated: Use resource.ParseResourceName instead
-func ParseArtResourceName(resourceName string) (string, string, error) {
-	artResource, err := resource.ParseResourceName(resourceName)
-	if err != nil {
-		return "", "", err
-	}
-
-	art, ok := artResource.(*resource.Art)
-	if !ok {
-		return "", "", fmt.Errorf("invalid art resource name")
-	}
-
-	return art.UserID, art.ArtID, nil
 }

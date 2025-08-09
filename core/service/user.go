@@ -14,6 +14,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/rs/zerolog/log"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
@@ -52,17 +53,20 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userIdFromContext, ok := middleware.UserIDFromContext(ctx)
+	// Get Firebase UID from context 
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 
-	if user.ID != userIdFromContext {
+	if user.ID != firebaseUID {
 		return nil, pbErrors.PermissionDeniedError("cannot update other user's info")
 	}
 
-	userDb, err := models.Users(models.UserWhere.ID.EQ(user.ID)).One(ctx, server.config.DB)
+	// Query user by Firebase UID to get internal ID for database operations
+	userDb, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, pbErrors.NotFoundError("user not found")
@@ -130,14 +134,19 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 	}
 
 	// Get user from database - user should already exist from auth sync
-	userDb, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	userDb, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, server.config.DB)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
 		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetUser failed to get user - user should have been created during auth sync")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 
-	// Ensure the current user has permission to access the requested user
-	if user.ID != userDb.ID {
+	// Ensure the current user has permission to access the requested user (compare Firebase UIDs)
+	if user.ID != firebaseUID {
 		return nil, pbErrors.PermissionDeniedError("cannot get other user's info")
 	}
 
@@ -153,8 +162,13 @@ func (server *Server) GetCurrentUser(ctx context.Context, req *pb.GetCurrentUser
 	}
 
 	// Get user from database - user should already exist from auth sync
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, server.config.DB)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
 		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetCurrentUser failed to get user - user should have been created during auth sync")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
@@ -179,7 +193,9 @@ func (server *Server) SyncUserFromFirebase(ctx context.Context, req *pb.SyncUser
 		Msg("SyncUserFromFirebase: Syncing user from Firebase")
 
 	// Check if user already exists (idempotency)
-	existingUser, err := server.getUserFromFirebaseUID(ctx, req.FirebaseUid)
+	existingUser, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(req.FirebaseUid)),
+	).One(ctx, server.config.DB)
 	if err == nil && existingUser != nil {
 		log.Info().
 			Str("firebase_uid", req.FirebaseUid).

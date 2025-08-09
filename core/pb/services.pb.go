@@ -29,7 +29,7 @@ var File_services_proto protoreflect.FileDescriptor
 const file_services_proto_rawDesc = "" +
 	"\n" +
 	"\x0eservices.proto\x12\x02pb\x1a\n" +
-	"user.proto\x1a\tart.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/descriptor.proto\x1a.protoc-gen-openapiv2/options/annotations.proto2\x83\x1c\n" +
+	"user.proto\x1a\tart.proto\x1a\rstorage.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/descriptor.proto\x1a.protoc-gen-openapiv2/options/annotations.proto2\xcc\x1c\n" +
 	"\x13ArtGeneratorService\x12\xa5\x01\n" +
 	"\n" +
 	"UpdateUser\x12\x15.pb.UpdateUserRequest\x1a\b.pb.User\"v\x92AP\n" +
@@ -55,11 +55,7 @@ const file_services_proto_rawDesc = "" +
 	"\bListArts\x12\x13.pb.ListArtsRequest\x1a\x14.pb.ListArtsResponse\"n\x92AA\n" +
 	"\x04Arts\x12\rList all arts\x1a*Retrieve a list of all arts in the system.\xdaA\x06parent\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/{parent=users/*}/arts\x12\xa3\x01\n" +
 	"\tDeleteArt\x12\x14.pb.DeleteArtRequest\x1a\x16.google.protobuf.Empty\"h\x92A=\n" +
-	"\x04Arts\x12\rDelete an art\x1a&Remove a specific art from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02\x1b*\x19/v1/{name=users/*/arts/*}\x12\xec\x01\n" +
-	"\x0fGetArtUploadUrl\x12\x1a.pb.GetArtUploadUrlRequest\x1a\x1b.pb.GetArtUploadUrlResponse\"\x9f\x01\x92Ag\n" +
-	"\x05Media\x12\x1cGet upload URL for art image\x1a@Generate a signed URL for uploading an image for a specific art.\xdaA\x04name\x82\xd3\xe4\x93\x02(\x12&/v1/{name=users/*/arts/*}:getUploadUrl\x12\xdd\x01\n" +
-	"\x15ConfirmArtImageUpload\x12 .pb.ConfirmArtImageUploadRequest\x1a\a.pb.Art\"\x98\x01\x92AW\n" +
-	"\x05Media\x12\x18Confirm art image upload\x1a4Mark an art resource as complete after image upload.\xdaA\x04name\x82\xd3\xe4\x93\x021:\x01*\",/v1/{name=users/*/arts/*}:confirmImageUpload\x12\xfb\x01\n" +
+	"\x04Arts\x12\rDelete an art\x1a&Remove a specific art from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02\x1b*\x19/v1/{name=users/*/arts/*}\x12\xfb\x01\n" +
 	"\x11CreateComposition\x12\x1c.pb.CreateCompositionRequest\x1a\x0f.pb.Composition\"\xb6\x01\x92Aa\n" +
 	"\fCompositions\x12\x18Create a new composition\x1a7Create a new thread art composition for a specific art.\xdaA\x12parent,composition\x82\xd3\xe4\x93\x027:\vcomposition\"(/v1/{parent=users/*/arts/*}/compositions\x12\xd6\x01\n" +
 	"\x0eGetComposition\x12\x19.pb.GetCompositionRequest\x1a\x0f.pb.Composition\"\x97\x01\x92A]\n" +
@@ -69,7 +65,11 @@ const file_services_proto_rawDesc = "" +
 	"\x10ListCompositions\x12\x1b.pb.ListCompositionsRequest\x1a\x1c.pb.ListCompositionsResponse\"\x9a\x01\x92A^\n" +
 	"\fCompositions\x12\x15List all compositions\x1a7Retrieve a list of all compositions for a specific art.\xdaA\x06parent\x82\xd3\xe4\x93\x02*\x12(/v1/{parent=users/*/arts/*}/compositions\x12\xda\x01\n" +
 	"\x11DeleteComposition\x12\x1c.pb.DeleteCompositionRequest\x1a\x16.google.protobuf.Empty\"\x8e\x01\x92AT\n" +
-	"\fCompositions\x12\x14Delete a composition\x1a.Remove a specific composition from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02**(/v1/{name=users/*/arts/*/compositions/*}B\xcc\x04\x92A\x96\x04\x12\x84\x01\n" +
+	"\fCompositions\x12\x14Delete a composition\x1a.Remove a specific composition from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02**(/v1/{name=users/*/arts/*/compositions/*}\x12\xfe\x01\n" +
+	"\x11GenerateUploadURL\x12\x1c.pb.GenerateUploadURLRequest\x1a\x1d.pb.GenerateUploadURLResponse\"\xab\x01\x92A\x86\x01\n" +
+	"\aStorage\x12\x1aGenerate signed upload URL\x1a_Generate a signed URL for secure file upload to Firebase Storage. Requires user authentication.\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/storage/upload-url\x12\x94\x02\n" +
+	"\x13GenerateDownloadURL\x12\x1e.pb.GenerateDownloadURLRequest\x1a\x1f.pb.GenerateDownloadURLResponse\"\xbb\x01\x92A\x94\x01\n" +
+	"\aStorage\x12\x1cGenerate signed download URL\x1akGenerate a signed URL for secure file download from private Firebase Storage. Requires user authentication.\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/storage/download-urlB\x85\x05\x92A\xcf\x04\x12\x84\x01\n" +
 	"\x18Thread art Generator API\"a\n" +
 	"\x0eDamien Goehrig\x12(github.com/Damione1/thread-art-generator\x1a%thread-art-generator@damiengoehrig.ca2\x050.0.1Z\xa0\x01\n" +
 	"\x9d\x01\n" +
@@ -81,35 +81,37 @@ const file_services_proto_rawDesc = "" +
 	"\x05Users\x12\x1dEndpoints for user managementj$\n" +
 	"\x04Arts\x12\x1cEndpoints for art managementj5\n" +
 	"\fCompositions\x12%Endpoints for thread art compositionsj'\n" +
-	"\x05Media\x12\x1eEndpoints for media managementZ0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
+	"\x05Media\x12\x1eEndpoints for media managementj7\n" +
+	"\aStorage\x12,Endpoints for secure file storage operationsZ0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
 
 var file_services_proto_goTypes = []any{
-	(*UpdateUserRequest)(nil),            // 0: pb.UpdateUserRequest
-	(*GetUserRequest)(nil),               // 1: pb.GetUserRequest
-	(*ListUsersRequest)(nil),             // 2: pb.ListUsersRequest
-	(*DeleteUserRequest)(nil),            // 3: pb.DeleteUserRequest
-	(*GetCurrentUserRequest)(nil),        // 4: pb.GetCurrentUserRequest
-	(*SyncUserFromFirebaseRequest)(nil),  // 5: pb.SyncUserFromFirebaseRequest
-	(*CreateArtRequest)(nil),             // 6: pb.CreateArtRequest
-	(*GetArtRequest)(nil),                // 7: pb.GetArtRequest
-	(*UpdateArtRequest)(nil),             // 8: pb.UpdateArtRequest
-	(*ListArtsRequest)(nil),              // 9: pb.ListArtsRequest
-	(*DeleteArtRequest)(nil),             // 10: pb.DeleteArtRequest
-	(*GetArtUploadUrlRequest)(nil),       // 11: pb.GetArtUploadUrlRequest
-	(*ConfirmArtImageUploadRequest)(nil), // 12: pb.ConfirmArtImageUploadRequest
-	(*CreateCompositionRequest)(nil),     // 13: pb.CreateCompositionRequest
-	(*GetCompositionRequest)(nil),        // 14: pb.GetCompositionRequest
-	(*UpdateCompositionRequest)(nil),     // 15: pb.UpdateCompositionRequest
-	(*ListCompositionsRequest)(nil),      // 16: pb.ListCompositionsRequest
-	(*DeleteCompositionRequest)(nil),     // 17: pb.DeleteCompositionRequest
-	(*User)(nil),                         // 18: pb.User
-	(*ListUsersResponse)(nil),            // 19: pb.ListUsersResponse
-	(*emptypb.Empty)(nil),                // 20: google.protobuf.Empty
-	(*Art)(nil),                          // 21: pb.Art
-	(*ListArtsResponse)(nil),             // 22: pb.ListArtsResponse
-	(*GetArtUploadUrlResponse)(nil),      // 23: pb.GetArtUploadUrlResponse
-	(*Composition)(nil),                  // 24: pb.Composition
-	(*ListCompositionsResponse)(nil),     // 25: pb.ListCompositionsResponse
+	(*UpdateUserRequest)(nil),           // 0: pb.UpdateUserRequest
+	(*GetUserRequest)(nil),              // 1: pb.GetUserRequest
+	(*ListUsersRequest)(nil),            // 2: pb.ListUsersRequest
+	(*DeleteUserRequest)(nil),           // 3: pb.DeleteUserRequest
+	(*GetCurrentUserRequest)(nil),       // 4: pb.GetCurrentUserRequest
+	(*SyncUserFromFirebaseRequest)(nil), // 5: pb.SyncUserFromFirebaseRequest
+	(*CreateArtRequest)(nil),            // 6: pb.CreateArtRequest
+	(*GetArtRequest)(nil),               // 7: pb.GetArtRequest
+	(*UpdateArtRequest)(nil),            // 8: pb.UpdateArtRequest
+	(*ListArtsRequest)(nil),             // 9: pb.ListArtsRequest
+	(*DeleteArtRequest)(nil),            // 10: pb.DeleteArtRequest
+	(*CreateCompositionRequest)(nil),    // 11: pb.CreateCompositionRequest
+	(*GetCompositionRequest)(nil),       // 12: pb.GetCompositionRequest
+	(*UpdateCompositionRequest)(nil),    // 13: pb.UpdateCompositionRequest
+	(*ListCompositionsRequest)(nil),     // 14: pb.ListCompositionsRequest
+	(*DeleteCompositionRequest)(nil),    // 15: pb.DeleteCompositionRequest
+	(*GenerateUploadURLRequest)(nil),    // 16: pb.GenerateUploadURLRequest
+	(*GenerateDownloadURLRequest)(nil),  // 17: pb.GenerateDownloadURLRequest
+	(*User)(nil),                        // 18: pb.User
+	(*ListUsersResponse)(nil),           // 19: pb.ListUsersResponse
+	(*emptypb.Empty)(nil),               // 20: google.protobuf.Empty
+	(*Art)(nil),                         // 21: pb.Art
+	(*ListArtsResponse)(nil),            // 22: pb.ListArtsResponse
+	(*Composition)(nil),                 // 23: pb.Composition
+	(*ListCompositionsResponse)(nil),    // 24: pb.ListCompositionsResponse
+	(*GenerateUploadURLResponse)(nil),   // 25: pb.GenerateUploadURLResponse
+	(*GenerateDownloadURLResponse)(nil), // 26: pb.GenerateDownloadURLResponse
 }
 var file_services_proto_depIdxs = []int32{
 	0,  // 0: pb.ArtGeneratorService.UpdateUser:input_type -> pb.UpdateUserRequest
@@ -123,13 +125,13 @@ var file_services_proto_depIdxs = []int32{
 	8,  // 8: pb.ArtGeneratorService.UpdateArt:input_type -> pb.UpdateArtRequest
 	9,  // 9: pb.ArtGeneratorService.ListArts:input_type -> pb.ListArtsRequest
 	10, // 10: pb.ArtGeneratorService.DeleteArt:input_type -> pb.DeleteArtRequest
-	11, // 11: pb.ArtGeneratorService.GetArtUploadUrl:input_type -> pb.GetArtUploadUrlRequest
-	12, // 12: pb.ArtGeneratorService.ConfirmArtImageUpload:input_type -> pb.ConfirmArtImageUploadRequest
-	13, // 13: pb.ArtGeneratorService.CreateComposition:input_type -> pb.CreateCompositionRequest
-	14, // 14: pb.ArtGeneratorService.GetComposition:input_type -> pb.GetCompositionRequest
-	15, // 15: pb.ArtGeneratorService.UpdateComposition:input_type -> pb.UpdateCompositionRequest
-	16, // 16: pb.ArtGeneratorService.ListCompositions:input_type -> pb.ListCompositionsRequest
-	17, // 17: pb.ArtGeneratorService.DeleteComposition:input_type -> pb.DeleteCompositionRequest
+	11, // 11: pb.ArtGeneratorService.CreateComposition:input_type -> pb.CreateCompositionRequest
+	12, // 12: pb.ArtGeneratorService.GetComposition:input_type -> pb.GetCompositionRequest
+	13, // 13: pb.ArtGeneratorService.UpdateComposition:input_type -> pb.UpdateCompositionRequest
+	14, // 14: pb.ArtGeneratorService.ListCompositions:input_type -> pb.ListCompositionsRequest
+	15, // 15: pb.ArtGeneratorService.DeleteComposition:input_type -> pb.DeleteCompositionRequest
+	16, // 16: pb.ArtGeneratorService.GenerateUploadURL:input_type -> pb.GenerateUploadURLRequest
+	17, // 17: pb.ArtGeneratorService.GenerateDownloadURL:input_type -> pb.GenerateDownloadURLRequest
 	18, // 18: pb.ArtGeneratorService.UpdateUser:output_type -> pb.User
 	18, // 19: pb.ArtGeneratorService.GetUser:output_type -> pb.User
 	19, // 20: pb.ArtGeneratorService.ListUsers:output_type -> pb.ListUsersResponse
@@ -141,13 +143,13 @@ var file_services_proto_depIdxs = []int32{
 	21, // 26: pb.ArtGeneratorService.UpdateArt:output_type -> pb.Art
 	22, // 27: pb.ArtGeneratorService.ListArts:output_type -> pb.ListArtsResponse
 	20, // 28: pb.ArtGeneratorService.DeleteArt:output_type -> google.protobuf.Empty
-	23, // 29: pb.ArtGeneratorService.GetArtUploadUrl:output_type -> pb.GetArtUploadUrlResponse
-	21, // 30: pb.ArtGeneratorService.ConfirmArtImageUpload:output_type -> pb.Art
-	24, // 31: pb.ArtGeneratorService.CreateComposition:output_type -> pb.Composition
-	24, // 32: pb.ArtGeneratorService.GetComposition:output_type -> pb.Composition
-	24, // 33: pb.ArtGeneratorService.UpdateComposition:output_type -> pb.Composition
-	25, // 34: pb.ArtGeneratorService.ListCompositions:output_type -> pb.ListCompositionsResponse
-	20, // 35: pb.ArtGeneratorService.DeleteComposition:output_type -> google.protobuf.Empty
+	23, // 29: pb.ArtGeneratorService.CreateComposition:output_type -> pb.Composition
+	23, // 30: pb.ArtGeneratorService.GetComposition:output_type -> pb.Composition
+	23, // 31: pb.ArtGeneratorService.UpdateComposition:output_type -> pb.Composition
+	24, // 32: pb.ArtGeneratorService.ListCompositions:output_type -> pb.ListCompositionsResponse
+	20, // 33: pb.ArtGeneratorService.DeleteComposition:output_type -> google.protobuf.Empty
+	25, // 34: pb.ArtGeneratorService.GenerateUploadURL:output_type -> pb.GenerateUploadURLResponse
+	26, // 35: pb.ArtGeneratorService.GenerateDownloadURL:output_type -> pb.GenerateDownloadURLResponse
 	18, // [18:36] is the sub-list for method output_type
 	0,  // [0:18] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
@@ -162,6 +164,7 @@ func file_services_proto_init() {
 	}
 	file_user_proto_init()
 	file_art_proto_init()
+	file_storage_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

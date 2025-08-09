@@ -7,19 +7,21 @@ import (
 	"fmt"
 	"image/png"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	_ "github.com/lib/pq"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/db/models"
@@ -53,128 +55,99 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Initialize dual bucket storage
-	storage, err := initializeDualStorage(ctx, config)
+	// Initialize storage using the storage interface
+	storageProvider, err := storage.NewStorageProviderFromUtil(ctx, config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize storage")
 	}
-	defer storage.Close()
+	defer storageProvider.Close()
 
-	// Connect to RabbitMQ and start processing
-	if err := startQueueProcessing(ctx, config, storage); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start queue processing")
+	// Start health check server
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		port := config.WorkerPort
+		startHealthCheckServer(port)
+	}()
+
+	// Start queue processing with Pub/Sub
+	go func() {
+		defer wg.Done()
+		if err := startPubSubProcessing(ctx, config, storageProvider); err != nil {
+			log.Fatal().Err(err).Msg("Failed to start queue processing")
+		}
+	}()
+
+	wg.Wait()
+}
+
+func startHealthCheckServer(port string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	addr := fmt.Sprintf("0.0.0.0:%s", port)
+	log.Info().Str("addr", addr).Msg("Starting health check server")
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatal().Err(err).Msg("Health check server failed")
 	}
 }
 
-func initializeDualStorage(ctx context.Context, config util.Config) (*storage.DualBucketStorage, error) {
-	return storage.NewDualBucketStorage(ctx, config.Storage)
-}
-
-func startQueueProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
-	// Connect to RabbitMQ
-	queueURL := config.Queue.URL
-	if queueURL == "" {
-		queueURL = "amqp://guest:guest@rabbitmq:5672/"
-	}
-
-	conn, err := amqp.Dial(queueURL)
+func startPubSubProcessing(ctx context.Context, config util.Config, storageProvider storage.StorageProvider) error {
+	// Create Pub/Sub client
+	pubsubClient, err := queue.NewPubSubClient(ctx, config.PubSub.ProjectID, config.PubSub.EmulatorHost, config.Environment)
 	if err != nil {
-		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
+		return fmt.Errorf("failed to create Pub/Sub client: %w", err)
 	}
-	defer conn.Close()
+	defer pubsubClient.Close()
 
-	ch, err := conn.Channel()
+	// Get topic and subscription names
+	topicName := fmt.Sprintf("%s-composition-processing", config.PubSub.TopicPrefix)
+	subscriptionName := fmt.Sprintf("%s-composition-processing-worker", config.PubSub.TopicPrefix)
+
+	// Create subscription
+	_, err = pubsubClient.CreateSubscription(ctx, subscriptionName, topicName)
 	if err != nil {
-		return fmt.Errorf("failed to open a channel: %w", err)
-	}
-	defer ch.Close()
-
-	// Get queue name from config
-	queueName := config.Queue.CompositionProcessing
-	if queueName == "" {
-		queueName = "composition-processing"
-	}
-
-	// Declare queue
-	q, err := ch.QueueDeclare(
-		queueName, // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
-	)
-	if err != nil {
-		return fmt.Errorf("failed to declare a queue: %w", err)
-	}
-
-	// Set QoS
-	err = ch.Qos(
-		1,     // prefetch count
-		0,     // prefetch size
-		false, // global
-	)
-	if err != nil {
-		return fmt.Errorf("failed to set QoS: %w", err)
-	}
-
-	// Consume messages
-	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register a consumer: %w", err)
+		return fmt.Errorf("failed to create subscription: %w", err)
 	}
 
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Process messages
+	// Create a context that can be cancelled
+	processCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Start message processing in a goroutine
 	go func() {
-		for d := range msgs {
-			log.Info().Int("size", len(d.Body)).Msg("Received a message")
-
-			// Process message
-			err := processMessage(ctx, d.Body, config.DB, dualStorage)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to process message")
-
-				// Nack the message with requeue
-				err = d.Nack(false, true)
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to nack message")
-				}
-
-				// Wait a bit before continuing to avoid rapid requeuing
-				time.Sleep(5 * time.Second)
-				continue
-			}
-
-			// Ack the message
-			err = d.Ack(false)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to ack message")
-			}
+		err := pubsubClient.ReceiveMessages(processCtx, subscriptionName, func(ctx context.Context, data []byte) error {
+			return processMessage(ctx, data, config.DB, storageProvider)
+		})
+		if err != nil && err != context.Canceled {
+			log.Error().Err(err).Msg("Error receiving messages")
 		}
 	}()
 
-	log.Info().Str("queue", queueName).Msg("🧵 Worker is waiting for messages")
+	log.Info().
+		Str("subscription", subscriptionName).
+		Str("topic", topicName).
+		Msg("🧵 Worker is waiting for Pub/Sub messages")
 
 	// Wait for termination signal
 	<-sigChan
 	log.Info().Msg("Received termination signal, shutting down")
+	cancel() // Cancel the processing context
 	return nil
 }
 
 // processMessage processes a single message from the queue
-func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *storage.DualBucketStorage) error {
+func processMessage(ctx context.Context, body []byte, db *sql.DB, storageProvider storage.StorageProvider) error {
 	processingStartTime := time.Now()
 
 	// Parse the message
@@ -204,12 +177,23 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 		return fmt.Errorf("failed to get composition: %w", err)
 	}
 
-	// Get the art (needed for accessing the image)
+	// Get the art with author information (needed for Firebase UID to construct storage path)
 	art, err := models.Arts(
 		models.ArtWhere.ID.EQ(message.ArtID),
+		qm.Load(models.ArtRels.Author),
 	).One(ctx, db)
 	if err != nil {
 		return fmt.Errorf("failed to get art: %w", err)
+	}
+
+	// Verify we have the author and Firebase UID
+	if art.R == nil || art.R.Author == nil {
+		setCompositionError(ctx, db, composition, "art author not found")
+		return fmt.Errorf("art author not found")
+	}
+	if !art.R.Author.FirebaseUID.Valid {
+		setCompositionError(ctx, db, composition, "author Firebase UID not available")
+		return fmt.Errorf("author Firebase UID not available")
 	}
 
 	// Update status to processing
@@ -235,18 +219,21 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer sourceFile.Close()
 
+	// Construct the storage path using Firebase UID and art ID
+	// This matches the upload path used by the client: users/{firebase_uid}/arts/{art_id}
 	imageKey := pbx.GetResourceName([]pbx.Resource{
-		{Type: pbx.RessourceTypeUsers, ID: art.AuthorID},
-		{Type: pbx.RessourceTypeArts, ID: art.ImageID.String},
+		{Type: pbx.RessourceTypeUsers, ID: art.R.Author.FirebaseUID.String},
+		{Type: pbx.RessourceTypeArts, ID: art.ID},
 	})
 
 	log.Info().
 		Str("imageKey", imageKey).
 		Str("artID", art.ID).
+		Str("authorFirebaseUID", art.R.Author.FirebaseUID.String).
 		Str("imageID", art.ImageID.String).
 		Msg("Attempting to download source image")
 
-	reader, err := dualStorage.GetPublicStorage().Download(ctx, imageKey)
+	reader, err := storageProvider.Download(ctx, imageKey)
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to download source image: %v", err))
 		return fmt.Errorf("failed to download source image: %w", err)
@@ -386,7 +373,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer previewFile.Close()
 
-	err = dualStorage.GetPublicStorage().Upload(ctx, previewKey, previewFile, "image/png")
+	err = storageProvider.Upload(ctx, previewKey, previewFile, "image/png")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload preview image: %v", err))
 		return fmt.Errorf("failed to upload preview image: %w", err)
@@ -402,7 +389,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer gcodeFile.Close()
 
-	err = dualStorage.GetPublicStorage().Upload(ctx, gcodeKey, gcodeFile, "text/plain")
+	err = storageProvider.Upload(ctx, gcodeKey, gcodeFile, "text/plain")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload gcode file: %v", err))
 		return fmt.Errorf("failed to upload gcode file: %w", err)
@@ -418,7 +405,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer pathsFile.Close()
 
-	err = dualStorage.GetPublicStorage().Upload(ctx, pathsKey, pathsFile, "application/json")
+	err = storageProvider.Upload(ctx, pathsKey, pathsFile, "application/json")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload paths file: %v", err))
 		return fmt.Errorf("failed to upload paths file: %w", err)

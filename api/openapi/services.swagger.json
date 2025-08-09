@@ -31,6 +31,10 @@
       "description": "Endpoints for media management"
     },
     {
+      "name": "Storage",
+      "description": "Endpoints for secure file storage operations"
+    },
+    {
       "name": "ArtGeneratorService"
     }
   ],
@@ -73,6 +77,74 @@
         ],
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/v1/storage/download-url": {
+      "post": {
+        "summary": "Generate signed download URL",
+        "description": "Generate a signed URL for secure file download from private Firebase Storage. Requires user authentication.",
+        "operationId": "ArtGeneratorService_GenerateDownloadURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbGenerateDownloadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbGenerateDownloadURLRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Storage"
+        ]
+      }
+    },
+    "/v1/storage/upload-url": {
+      "post": {
+        "summary": "Generate signed upload URL",
+        "description": "Generate a signed URL for secure file upload to Firebase Storage. Requires user authentication.",
+        "operationId": "ArtGeneratorService_GenerateUploadURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbGenerateUploadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbGenerateUploadURLRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Storage"
         ]
       }
     },
@@ -627,97 +699,6 @@
         ]
       }
     },
-    "/v1/{name}:confirmImageUpload": {
-      "post": {
-        "summary": "Confirm art image upload",
-        "description": "Mark an art resource as complete after image upload.",
-        "operationId": "ArtGeneratorService_ConfirmArtImageUpload",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbArt"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "description": "The name of the Art resource that has been uploaded.\nFor example: \"users/123/arts/456\"",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "pattern": "users/[^/]+/arts/[^/]+"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ArtGeneratorServiceConfirmArtImageUploadBody"
-            }
-          }
-        ],
-        "tags": [
-          "Media"
-        ]
-      }
-    },
-    "/v1/{name}:getUploadUrl": {
-      "get": {
-        "summary": "Get upload URL for art image",
-        "description": "Generate a signed URL for uploading an image for a specific art.",
-        "operationId": "ArtGeneratorService_GetArtUploadUrl",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pbGetArtUploadUrlResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "description": "The name of the Art resource to upload an image for.\nFor example: \"users/123/arts/456\"",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "pattern": "users/[^/]+/arts/[^/]+"
-          },
-          {
-            "name": "contentType",
-            "description": "The content type of the image to upload",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "fileSize",
-            "description": "The size of the file to upload in bytes",
-            "in": "query",
-            "required": true,
-            "type": "string",
-            "format": "int64"
-          }
-        ],
-        "tags": [
-          "Media"
-        ]
-      }
-    },
     "/v1/{parent}/arts": {
       "get": {
         "summary": "List all arts",
@@ -920,9 +901,6 @@
     }
   },
   "definitions": {
-    "ArtGeneratorServiceConfirmArtImageUploadBody": {
-      "type": "object"
-    },
     "pbArt": {
       "type": "object",
       "properties": {
@@ -1094,19 +1072,93 @@
       "description": "- COMPOSITION_STATUS_UNSPECIFIED: Default unspecified status\n - COMPOSITION_STATUS_PENDING: Composition created but waiting to be processed\n - COMPOSITION_STATUS_PROCESSING: Composition is currently being processed\n - COMPOSITION_STATUS_COMPLETE: Composition has been successfully processed\n - COMPOSITION_STATUS_FAILED: Composition processing failed",
       "title": "Status of the composition"
     },
-    "pbGetArtUploadUrlResponse": {
+    "pbGenerateDownloadURLRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "title": "The user ID making the request (validated by BFF authentication)"
+        },
+        "artId": {
+          "type": "string",
+          "title": "The art ID to download"
+        },
+        "filePath": {
+          "type": "string",
+          "title": "Optional specific file path (if not provided, uses default art image path)"
+        }
+      },
+      "title": "GenerateDownloadURLRequest contains the parameters for generating a download URL"
+    },
+    "pbGenerateDownloadURLResponse": {
+      "type": "object",
+      "properties": {
+        "downloadUrl": {
+          "type": "string",
+          "title": "The signed URL for downloading the file"
+        },
+        "storagePath": {
+          "type": "string",
+          "title": "The storage path of the file"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expiration time of the signed URL"
+        }
+      },
+      "title": "GenerateDownloadURLResponse contains the signed download URL"
+    },
+    "pbGenerateUploadURLRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "title": "The user ID making the request (validated by BFF authentication)"
+        },
+        "artId": {
+          "type": "string",
+          "title": "The art ID this upload is for"
+        },
+        "contentType": {
+          "type": "string",
+          "title": "The content type of the file to be uploaded"
+        },
+        "filename": {
+          "type": "string",
+          "title": "The original filename (optional, for metadata)"
+        },
+        "fileSize": {
+          "type": "string",
+          "format": "int64",
+          "title": "File size in bytes for validation"
+        }
+      },
+      "title": "GenerateUploadURLRequest contains the parameters for generating an upload URL"
+    },
+    "pbGenerateUploadURLResponse": {
       "type": "object",
       "properties": {
         "uploadUrl": {
           "type": "string",
-          "title": "The signed URL to upload the art image to"
+          "title": "The signed URL for uploading the file"
         },
-        "expirationTime": {
+        "storagePath": {
+          "type": "string",
+          "title": "The storage path where the file will be uploaded"
+        },
+        "expiresAt": {
           "type": "string",
           "format": "date-time",
-          "title": "The expiration time for the signed URL"
+          "title": "Expiration time of the signed URL"
+        },
+        "maxFileSize": {
+          "type": "string",
+          "format": "int64",
+          "title": "Maximum file size allowed for this upload"
         }
-      }
+      },
+      "title": "GenerateUploadURLResponse contains the signed URL and metadata"
     },
     "pbListArtsResponse": {
       "type": "object",

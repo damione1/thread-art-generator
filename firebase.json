@@ -6,20 +6,42 @@
       "npm --prefix \"$RESOURCE_DIR\" run build"
     ]
   },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "emulators": {
     "auth": {
       "host": "0.0.0.0",
-      "port": 9099
+      "port": 9099,
+      "options": {
+        "disableWarnings": true
+      }
     },
     "functions": {
       "host": "0.0.0.0",
       "port": 5001
+    },
+    "pubsub": {
+      "host": "0.0.0.0",
+      "port": 8085
+    },
+    "storage": {
+      "host": "0.0.0.0",
+      "port": 9199,
+      "options": {
+        "cors": {
+          "origin": ["http://localhost:8080", "http://localhost:3000", "http://localhost:4000"],
+          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+          "allowedHeaders": ["Content-Type", "Authorization", "X-Requested-With"]
+        }
+      }
     },
     "ui": {
       "enabled": true,
       "host": "0.0.0.0",
       "port": 4000
     },
-    "singleProjectMode": true
+    "singleProjectMode": true,
+    "logging": false
   }
 }

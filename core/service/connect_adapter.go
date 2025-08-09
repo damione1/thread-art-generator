@@ -14,9 +14,21 @@ type ConnectAdapter struct {
 	server *Server
 }
 
+// FirebaseFunctionsConnectAdapter wraps a gRPC server implementation for Firebase Functions service
+type FirebaseFunctionsConnectAdapter struct {
+	server *Server
+}
+
 // NewConnectAdapter creates a new adapter for the gRPC server
 func NewConnectAdapter(server *Server) *ConnectAdapter {
 	return &ConnectAdapter{
+		server: server,
+	}
+}
+
+// NewFirebaseFunctionsConnectAdapter creates a new adapter for the Firebase Functions service
+func NewFirebaseFunctionsConnectAdapter(server *Server) *FirebaseFunctionsConnectAdapter {
+	return &FirebaseFunctionsConnectAdapter{
 		server: server,
 	}
 }
@@ -67,7 +79,7 @@ func (a *ConnectAdapter) SyncUserFromFirebase(ctx context.Context, req *connect.
 	if !a.server.validateInternalAPIKeyFromHeaders(req.Header()) {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid internal API key"))
 	}
-	
+
 	user, err := a.server.SyncUserFromFirebase(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -120,23 +132,7 @@ func (a *ConnectAdapter) DeleteArt(ctx context.Context, req *connect.Request[pb.
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
-// GetArtUploadUrl implements the Connect handler interface
-func (a *ConnectAdapter) GetArtUploadUrl(ctx context.Context, req *connect.Request[pb.GetArtUploadUrlRequest]) (*connect.Response[pb.GetArtUploadUrlResponse], error) {
-	response, err := a.server.GetArtUploadUrl(ctx, req.Msg)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(response), nil
-}
 
-// ConfirmArtImageUpload implements the Connect handler interface
-func (a *ConnectAdapter) ConfirmArtImageUpload(ctx context.Context, req *connect.Request[pb.ConfirmArtImageUploadRequest]) (*connect.Response[pb.Art], error) {
-	art, err := a.server.ConfirmArtImageUpload(ctx, req.Msg)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(art), nil
-}
 
 // CreateComposition implements the Connect handler interface
 func (a *ConnectAdapter) CreateComposition(ctx context.Context, req *connect.Request[pb.CreateCompositionRequest]) (*connect.Response[pb.Composition], error) {
@@ -181,4 +177,45 @@ func (a *ConnectAdapter) DeleteComposition(ctx context.Context, req *connect.Req
 		return nil, err
 	}
 	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+// ==============================
+// Storage Service Methods
+// ==============================
+
+// GenerateUploadURL implements the Connect handler interface for signed upload URLs
+func (a *ConnectAdapter) GenerateUploadURL(ctx context.Context, req *connect.Request[pb.GenerateUploadURLRequest]) (*connect.Response[pb.GenerateUploadURLResponse], error) {
+	response, err := a.server.GenerateUploadURL(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(response), nil
+}
+
+// GenerateDownloadURL implements the Connect handler interface for signed download URLs
+func (a *ConnectAdapter) GenerateDownloadURL(ctx context.Context, req *connect.Request[pb.GenerateDownloadURLRequest]) (*connect.Response[pb.GenerateDownloadURLResponse], error) {
+	response, err := a.server.GenerateDownloadURL(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(response), nil
+}
+
+// ==============================
+// Firebase Functions Service Methods
+// ==============================
+
+// ConfirmArtImageUploadFromFunction implements the Firebase Functions Connect handler interface
+// This method requires internal API key validation for security
+func (a *FirebaseFunctionsConnectAdapter) ConfirmArtImageUploadFromFunction(ctx context.Context, req *connect.Request[pb.ConfirmArtImageUploadFromFunctionRequest]) (*connect.Response[pb.Art], error) {
+	// CRITICAL: Validate internal API key from Connect-RPC headers
+	if !a.server.validateInternalAPIKeyFromHeaders(req.Header()) {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid internal API key"))
+	}
+
+	art, err := a.server.ConfirmArtImageUploadFromFunction(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(art), nil
 }

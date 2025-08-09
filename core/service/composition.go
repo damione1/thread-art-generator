@@ -16,6 +16,7 @@ import (
 	"github.com/friendsofgo/errors"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -33,8 +34,13 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 	}
 
 	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, server.config.DB)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
 		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("CreateComposition: Failed to get user from Firebase UID")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
@@ -59,8 +65,8 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 		})
 	}
 
-	// Verify the user is authorized to create a composition for this art
-	if art.UserID != user.ID {
+	// Verify the user is authorized to create a composition for this art (using Firebase UID)
+	if art.UserID != firebaseUID {
 		return nil, pbErrors.PermissionDeniedError("only the author can create compositions for this art")
 	}
 
@@ -112,7 +118,7 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 	}
 
 	// Return the created composition
-	return pbx.CompositionDbToProto(ctx, server.storage, artDb, compositionDb), nil
+	return pbx.CompositionDbToProto(ctx, server.GetStorage(), artDb, compositionDb, firebaseUID), nil
 }
 
 // GetComposition retrieves a composition by ID
@@ -124,8 +130,13 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 	}
 
 	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, server.config.DB)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
 		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetComposition: Failed to get user from Firebase UID")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
@@ -150,8 +161,8 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 		})
 	}
 
-	// Verify the user is authorized to get this composition
-	if composition.UserID != user.ID {
+	// Verify the user is authorized to get this composition (using Firebase UID)
+	if composition.UserID != firebaseUID {
 		return nil, pbErrors.PermissionDeniedError("only the author can get this composition")
 	}
 
@@ -173,7 +184,7 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 	artDb := compositionDb.R.Art
 
 	// Return the composition
-	return pbx.CompositionDbToProto(ctx, server.storage, artDb, compositionDb), nil
+	return pbx.CompositionDbToProto(ctx, server.GetStorage(), artDb, compositionDb, firebaseUID), nil
 }
 
 // UpdateComposition updates an existing composition
@@ -192,8 +203,13 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 	}
 
 	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, server.config.DB)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
 		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ListCompositions: Failed to get user from Firebase UID")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
@@ -218,8 +234,8 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 		})
 	}
 
-	// Verify the user is authorized to list compositions for this art
-	if art.UserID != user.ID {
+	// Verify the user is authorized to list compositions for this art (using Firebase UID)
+	if art.UserID != firebaseUID {
 		return nil, pbErrors.PermissionDeniedError("only the author can list compositions for this art")
 	}
 
@@ -279,7 +295,7 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 	// Convert to proto
 	var protoCompositions []*pb.Composition
 	for _, comp := range compositions {
-		protoCompositions = append(protoCompositions, pbx.CompositionDbToProto(ctx, server.storage, artDb, comp))
+		protoCompositions = append(protoCompositions, pbx.CompositionDbToProto(ctx, server.GetStorage(), artDb, comp, firebaseUID))
 	}
 
 	// Create response
@@ -304,8 +320,13 @@ func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompo
 	}
 
 	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := models.Users(
+		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
+	).One(ctx, server.config.DB)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, pbErrors.NotFoundError("user not found")
+		}
 		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("DeleteComposition: Failed to get user from Firebase UID")
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
@@ -330,8 +351,8 @@ func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompo
 		})
 	}
 
-	// Verify the user is authorized to delete this composition
-	if composition.UserID != user.ID {
+	// Verify the user is authorized to delete this composition (using Firebase UID)
+	if composition.UserID != firebaseUID {
 		return nil, pbErrors.PermissionDeniedError("only the author can delete this composition")
 	}
 
@@ -356,21 +377,21 @@ func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompo
 
 	// Delete associated files from storage if they exist
 	if compositionDb.PreviewURL.Valid {
-		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.PreviewURL.String)
+		err = server.GetStorage().Delete(ctx, compositionDb.PreviewURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.PreviewURL.String).Msg("Failed to delete preview file")
 		}
 	}
 
 	if compositionDb.GcodeURL.Valid {
-		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.GcodeURL.String)
+		err = server.GetStorage().Delete(ctx, compositionDb.GcodeURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.GcodeURL.String).Msg("Failed to delete gcode file")
 		}
 	}
 
 	if compositionDb.PathlistURL.Valid {
-		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.PathlistURL.String)
+		err = server.GetStorage().Delete(ctx, compositionDb.PathlistURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.PathlistURL.String).Msg("Failed to delete pathlist file")
 		}
@@ -395,14 +416,13 @@ func (server *Server) enqueueCompositionForProcessing(ctx context.Context, compo
 		return fmt.Errorf("failed to serialize composition processing message: %w", err)
 	}
 
-	// Get queue name from config
-	queueName := server.config.Queue.CompositionProcessing
-	if queueName == "" {
-		queueName = "composition-processing" // Default queue name
-	}
+	// Get topic/queue name from config
+	var topicName string
+	// Always use Pub/Sub topic naming
+	topicName = fmt.Sprintf("%s-composition-processing", server.config.PubSub.TopicPrefix)
 
-	// Publish to queue
-	err = server.queueClient.PublishMessage(ctx, queueName, jsonData)
+	// Publish to queue/topic
+	err = server.queueClient.PublishMessage(ctx, topicName, jsonData)
 	if err != nil {
 		return fmt.Errorf("failed to publish composition to queue: %w", err)
 	}
@@ -410,7 +430,7 @@ func (server *Server) enqueueCompositionForProcessing(ctx context.Context, compo
 	log.Info().
 		Str("compositionID", composition.ID).
 		Str("artID", art.ID).
-		Str("queue", queueName).
+		Str("topic", topicName).
 		Msg("Composition enqueued for processing")
 
 	return nil

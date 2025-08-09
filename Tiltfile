@@ -152,7 +152,7 @@ local_resource(
 docker_build(
   'api-image',
   '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-api',
+  dockerfile='Infra/Dockerfiles/Dockerfile-api-local',
   only=['./build/api'],
   live_update=[
     # Minimal run step required by Tilt
@@ -167,7 +167,7 @@ docker_build(
 docker_build(
   'worker-image',
   '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-worker',
+  dockerfile='Infra/Dockerfiles/Dockerfile-worker-local',
   only=['./build/worker'],
   live_update=[
     # Minimal run step required by Tilt
@@ -180,7 +180,7 @@ docker_build(
 docker_build(
   'frontend-image',
   '.',
-  dockerfile='Infra/Dockerfiles/Dockerfile-frontend',
+  dockerfile='Infra/Dockerfiles/Dockerfile-frontend-local',
   only=[
     './build/frontend',
     './client/public',
@@ -224,7 +224,7 @@ local_resource(
 
 # Build Firebase Functions using make target
 local_resource(
-  'firebase-functions-build',
+  'functions-build',
   cmd='make firebase-build',
   labels=['firebase'],
   deps=['functions/src/**/*.ts', 'functions/package.json', 'functions/tsconfig.json', '.env'],
@@ -249,6 +249,8 @@ local_resource(
     link('http://localhost:4000', 'Firebase Emulator UI'),
     link('http://localhost:9099', 'Firebase Auth Emulator'),
     link('http://localhost:5001', 'Firebase Functions Emulator'),
+    link('http://localhost:8085', 'Pub/Sub Emulator'),
+    link('http://localhost:9199', 'Firebase Storage Emulator'),
   ]
 )
 
@@ -284,26 +286,18 @@ dc_resource(
   auto_init=True,
 )
 
-dc_resource(
-  'rabbitmq',
-  labels=['queue'],
-  auto_init=True,
-  links=[
-    link('http://localhost:15672', 'RabbitMQ Management (guest/guest)'),
-  ]
-)
 
 dc_resource(
   'worker',
   labels=['worker'],
-  resource_deps=['worker-build', 'rabbitmq', 'minio'],
+  resource_deps=['worker-build'],
   auto_init=True,
 )
 
 dc_resource(
   'api',
   labels=['application'],
-  resource_deps=['api-build', 'db', 'rabbitmq', 'minio'],
+  resource_deps=['api-build', 'db'],
   auto_init=True,
   links=[
     link('http://localhost:9090', 'Connect API'),
@@ -325,20 +319,6 @@ dc_resource(
 # Envoy proxy removed - direct service communication
 # Frontend now handles HTTPS directly
 
-dc_resource(
-  'minio',
-  labels=['storage'],
-  links=[
-    link('http://localhost:9001', 'MinIO Console'),
-  ]
-)
-
-dc_resource(
-  'minio-bucket-setup',
-  labels=['storage'],
-  resource_deps=['minio'],
-  auto_init=True,
-)
 
 dc_resource(
   'redis',

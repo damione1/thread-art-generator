@@ -1,0 +1,206 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "storage.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "StorageService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/storage/download-url": {
+      "post": {
+        "summary": "Generate signed download URL",
+        "description": "Generate a signed URL for secure file download from private Firebase Storage. Requires user authentication.",
+        "operationId": "StorageService_GenerateDownloadURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbGenerateDownloadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbGenerateDownloadURLRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Storage"
+        ]
+      }
+    },
+    "/v1/storage/upload-url": {
+      "post": {
+        "summary": "Generate signed upload URL",
+        "description": "Generate a signed URL for secure file upload to Firebase Storage. Requires user authentication.",
+        "operationId": "StorageService_GenerateUploadURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbGenerateUploadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbGenerateUploadURLRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Storage"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "pbGenerateDownloadURLRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "title": "The user ID making the request (validated by BFF authentication)"
+        },
+        "artId": {
+          "type": "string",
+          "title": "The art ID to download"
+        },
+        "filePath": {
+          "type": "string",
+          "title": "Optional specific file path (if not provided, uses default art image path)"
+        }
+      },
+      "title": "GenerateDownloadURLRequest contains the parameters for generating a download URL"
+    },
+    "pbGenerateDownloadURLResponse": {
+      "type": "object",
+      "properties": {
+        "downloadUrl": {
+          "type": "string",
+          "title": "The signed URL for downloading the file"
+        },
+        "storagePath": {
+          "type": "string",
+          "title": "The storage path of the file"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expiration time of the signed URL"
+        }
+      },
+      "title": "GenerateDownloadURLResponse contains the signed download URL"
+    },
+    "pbGenerateUploadURLRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "title": "The user ID making the request (validated by BFF authentication)"
+        },
+        "artId": {
+          "type": "string",
+          "title": "The art ID this upload is for"
+        },
+        "contentType": {
+          "type": "string",
+          "title": "The content type of the file to be uploaded"
+        },
+        "filename": {
+          "type": "string",
+          "title": "The original filename (optional, for metadata)"
+        },
+        "fileSize": {
+          "type": "string",
+          "format": "int64",
+          "title": "File size in bytes for validation"
+        }
+      },
+      "title": "GenerateUploadURLRequest contains the parameters for generating an upload URL"
+    },
+    "pbGenerateUploadURLResponse": {
+      "type": "object",
+      "properties": {
+        "uploadUrl": {
+          "type": "string",
+          "title": "The signed URL for uploading the file"
+        },
+        "storagePath": {
+          "type": "string",
+          "title": "The storage path where the file will be uploaded"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expiration time of the signed URL"
+        },
+        "maxFileSize": {
+          "type": "string",
+          "format": "int64",
+          "title": "Maximum file size allowed for this upload"
+        }
+      },
+      "title": "GenerateUploadURLResponse contains the signed URL and metadata"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

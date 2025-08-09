@@ -3,6 +3,7 @@ syntax = "proto3";
 package pb;
 import "user.proto";
 import "art.proto";
+import "storage.proto";
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/protobuf/empty.proto";
@@ -54,6 +55,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   tags: {
     name: "Media"
     description: "Endpoints for media management"
+  }
+  tags: {
+    name: "Storage"
+    description: "Endpoints for secure file storage operations"
   }
 };
 
@@ -188,30 +193,6 @@ service ArtGeneratorService {
     option (google.api.method_signature) = "name";
   }
 
-  rpc GetArtUploadUrl (GetArtUploadUrlRequest) returns (GetArtUploadUrlResponse) {
-    option (google.api.http) = {
-      get: "/v1/{name=users/*/arts/*}:getUploadUrl"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Get upload URL for art image"
-      description: "Generate a signed URL for uploading an image for a specific art."
-      tags: "Media";
-    };
-    option (google.api.method_signature) = "name";
-  }
-
-  rpc ConfirmArtImageUpload (ConfirmArtImageUploadRequest) returns (Art) {
-    option (google.api.http) = {
-      post: "/v1/{name=users/*/arts/*}:confirmImageUpload"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "Confirm art image upload"
-      description: "Mark an art resource as complete after image upload."
-      tags: "Media";
-    };
-    option (google.api.method_signature) = "name";
-  }
 
   // Composition RPCs
   rpc CreateComposition (CreateCompositionRequest) returns (Composition) {
@@ -274,5 +255,30 @@ service ArtGeneratorService {
       tags: "Compositions";
     };
     option (google.api.method_signature) = "name";
+  }
+
+  // Storage RPCs
+  rpc GenerateUploadURL(GenerateUploadURLRequest) returns (GenerateUploadURLResponse) {
+    option (google.api.http) = {
+      post: "/v1/storage/upload-url"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Generate signed upload URL"
+      description: "Generate a signed URL for secure file upload to Firebase Storage. Requires user authentication."
+      tags: "Storage";
+    };
+  }
+
+  rpc GenerateDownloadURL(GenerateDownloadURLRequest) returns (GenerateDownloadURLResponse) {
+    option (google.api.http) = {
+      post: "/v1/storage/download-url"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Generate signed download URL"
+      description: "Generate a signed URL for secure file download from private Firebase Storage. Requires user authentication."
+      tags: "Storage";
+    };
   }
 }

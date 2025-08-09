@@ -104,6 +104,26 @@ function setup_tools() {
         exit 1
     fi
     echo -e "✅ Go version $GO_VERSION is compatible"
+
+    # Check for Java (required for Pub/Sub emulator)
+    if ! command_exists java; then
+        echo -e "${YELLOW}Java is not installed. Installing OpenJDK 11 for Pub/Sub emulator...${NC}"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            brew install openjdk@11
+            # Try to symlink Java for system-wide access
+            if sudo -n true 2>/dev/null; then
+                sudo ln -sfn /opt/homebrew/opt/openjdk@11/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-11.jdk
+            else
+                echo -e "${YELLOW}Note: You may need to run 'sudo ln -sfn /opt/homebrew/opt/openjdk@11/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-11.jdk' for system-wide Java access${NC}"
+            fi
+            # Export Java path for current session
+            export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
+        else
+            echo -e "${RED}Please install Java 11+ manually: https://openjdk.org/install/${NC}"
+            exit 1
+        fi
+    fi
+    echo -e "✅ Java is installed"
 }
 
 # Function to setup SSL certificates

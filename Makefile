@@ -1,3 +1,33 @@
+.PHONY: help
+help:
+	@echo "Thread Art Generator - Development Commands"
+	@echo ""
+	@echo "🚀 Development Environment:"
+	@echo "  make setup          - Run initial local development setup"
+	@echo "  make up             - Start all services with Tilt"
+	@echo "  make down           - Stop all services"
+	@echo "  make restart        - Restart all services"
+	@echo ""
+	@echo "🔐 Security & Keys:"
+	@echo "  make generate-keys  - Generate secure 32-byte keys for PASETO/cookies"
+	@echo "  make update-env-keys - Update .env file with new secure keys"
+	@echo "  make validate-keys  - Validate that keys are properly formatted"
+	@echo ""
+	@echo "🔧 Code Generation:"
+	@echo "  make proto          - Generate protocol buffer files"
+	@echo "  make proto-clean    - Clean generated protocol buffer files"
+	@echo "  make generate-models - Generate SQLBoiler models from database"
+	@echo "  make generate-templ - Generate Templ templates"
+	@echo ""
+	@echo "🗄️  Database:"
+	@echo "  make psql              - Connect to PostgreSQL database"
+	@echo "  make migration <name>  - Create new database migration"
+	@echo "  make run-migrations    - Run all pending database migrations"
+	@echo ""
+	@echo "🔥 Firebase:"
+	@echo "  make firebase-build - Build Firebase functions"
+	@echo "  make firebase-start - Start Firebase emulator suite"
+
 .PHONY: up
 up:
 	tilt up
@@ -109,7 +139,57 @@ firebase-build:
 .PHONY: firebase-start
 firebase-start: firebase-build
 	@echo "🚀 Starting Firebase Emulator Suite..."
-	@firebase emulators:start --only auth,functions,ui --project demo-thread-art-generator
+	@PATH="/opt/homebrew/opt/openjdk/bin:$$PATH" firebase emulators:start --only auth,functions,pubsub,storage,ui --project demo-thread-art-generator
+
+.PHONY: generate-keys
+generate-keys:
+	@echo "🔐 Generating secure keys for PASETO authentication..."
+	@echo "PASETO_SECRET_KEY=$$(openssl rand -hex 32 | head -c 32)"
+	@echo "COOKIE_HASH_KEY=$$(openssl rand -hex 32 | head -c 32)"
+	@echo "COOKIE_BLOCK_KEY=$$(openssl rand -hex 32 | head -c 32)"
+	@echo ""
+	@echo "🔧 Copy these keys to your .env file:"
+	@echo "   PASETO_SECRET_KEY=$$(openssl rand -hex 32 | head -c 32)"
+	@echo "   COOKIE_HASH_KEY=$$(openssl rand -hex 32 | head -c 32)"
+	@echo "   COOKIE_BLOCK_KEY=$$(openssl rand -hex 32 | head -c 32)"
+	@echo ""
+	@echo "⚠️  IMPORTANT: Keep these keys secure and consistent across deployments!"
+
+.PHONY: update-env-keys
+update-env-keys:
+	@echo "🔄 Updating .env file with new secure keys..."
+	@if [ ! -f .env ]; then echo "❌ .env file not found. Run 'make setup' first."; exit 1; fi
+	@PASETO_KEY=$$(openssl rand -hex 32 | head -c 32); \
+	HASH_KEY=$$(openssl rand -hex 32 | head -c 32); \
+	BLOCK_KEY=$$(openssl rand -hex 32 | head -c 32); \
+	sed -i.bak \
+		-e "s/^PASETO_SECRET_KEY=.*/PASETO_SECRET_KEY=$$PASETO_KEY/g" \
+		-e "s/^COOKIE_HASH_KEY=.*/COOKIE_HASH_KEY=$$HASH_KEY/g" \
+		-e "s/^COOKIE_BLOCK_KEY=.*/COOKIE_BLOCK_KEY=$$BLOCK_KEY/g" \
+		.env
+	@echo "✅ Updated .env file with new secure keys"
+	@echo "🔒 Backup saved as .env.bak"
+	@echo ""
+	@echo "Generated keys:"
+	@grep -E "^(PASETO_SECRET_KEY|COOKIE_HASH_KEY|COOKIE_BLOCK_KEY)=" .env
+
+.PHONY: validate-keys
+validate-keys:
+	@echo "🔍 Validating PASETO and cookie keys..."
+	@if [ ! -f .env ]; then echo "❌ .env file not found. Run 'make setup' first."; exit 1; fi
+	@PASETO_KEY=$$(grep "^PASETO_SECRET_KEY=" .env | cut -d'=' -f2); \
+	HASH_KEY=$$(grep "^COOKIE_HASH_KEY=" .env | cut -d'=' -f2); \
+	BLOCK_KEY=$$(grep "^COOKIE_BLOCK_KEY=" .env | cut -d'=' -f2); \
+	if [ -z "$$PASETO_KEY" ]; then echo "❌ PASETO_SECRET_KEY not found in .env"; exit 1; fi; \
+	if [ $${#PASETO_KEY} -ne 32 ]; then echo "❌ PASETO_SECRET_KEY must be exactly 32 bytes, got $${#PASETO_KEY}"; exit 1; fi; \
+	if [ -z "$$HASH_KEY" ]; then echo "❌ COOKIE_HASH_KEY not found in .env"; exit 1; fi; \
+	if [ $${#HASH_KEY} -ne 32 ]; then echo "❌ COOKIE_HASH_KEY must be exactly 32 bytes, got $${#HASH_KEY}"; exit 1; fi; \
+	if [ -z "$$BLOCK_KEY" ]; then echo "❌ COOKIE_BLOCK_KEY not found in .env"; exit 1; fi; \
+	if [ $${#BLOCK_KEY} -ne 32 ]; then echo "❌ COOKIE_BLOCK_KEY must be exactly 32 bytes, got $${#BLOCK_KEY}"; exit 1; fi; \
+	echo "✅ All keys are properly formatted (32 bytes each)"; \
+	echo "✅ PASETO_SECRET_KEY: $$PASETO_KEY"; \
+	echo "✅ COOKIE_HASH_KEY: $$HASH_KEY"; \
+	echo "✅ COOKIE_BLOCK_KEY: $$BLOCK_KEY"
 
 # This rule allows capturing arbitrary targets as arguments
 %:

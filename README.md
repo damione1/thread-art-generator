@@ -29,7 +29,7 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 ```
 
 - **API Server**: Handles user requests, manages art/composition metadata
-- **Queue**: Manages composition processing tasks (RabbitMQ)
+- **Queue**: Manages composition processing tasks (Google Cloud Pub/Sub)
 - **Worker Service**: Processes compositions using thread_generator
 - **Database**: Stores metadata (PostgreSQL)
 - **Storage**: Stores images and generation results (Object Storage)
@@ -40,8 +40,10 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 ### Prerequisites
 
 - Docker and Docker Compose
-- Go 1.22+
+- Go 1.24+
 - Tilt (for local development)
+- Node.js 18+ (for Firebase emulator)
+- Java 11+ (for Pub/Sub emulator)
 
 ### Quick Start
 
@@ -55,9 +57,9 @@ make setup
 This will:
 
 - Check for required tools
-- Set up SSL certificates
+- Install Firebase CLI and initialize emulators
 - Create an `.env` file with generated keys
-- Configure local hostnames
+- Configure protocol buffer tools
 
 2. **Start Development Environment**
 
@@ -71,9 +73,11 @@ tilt up
 
 3. **Access the Application**
 
-- Web UI: https://tag.local
-- API: https://tag.local/grpc-api
-- MinIO Console: http://localhost:9001 (credentials in .env)
+- Web UI: http://localhost:8080 (Go+HTMX frontend)
+- API: http://localhost:9090 (Connect-RPC API)
+- Firebase Emulator UI: http://localhost:4000 (includes Auth, Functions, Pub/Sub, Storage)
+- Firebase Storage Emulator: http://localhost:9199
+- Firebase Auth Emulator: http://localhost:9099
 
 ## Development
 
@@ -163,13 +167,37 @@ The Traefik dashboard is available at http://localhost:8080/dashboard/.
 
 ## Storage Options
 
-The application supports multiple storage providers:
+The application uses Firebase Storage for all environments:
 
-- **Local MinIO** (development): Configured automatically
-- **GCS** (production): Requires GCP credentials
-- **S3** (production): Requires AWS credentials
+- **Firebase Storage Emulator** (development): Configured automatically for local development
+- **Firebase Storage** (production): Uses Google Cloud Storage backend with Firebase Admin SDK
 
 Configure in the `.env` file.
+
+## Message Queue System
+
+The application uses **Google Cloud Pub/Sub** for asynchronous message processing:
+
+### Local Development
+- Uses Firebase Pub/Sub emulator running on `localhost:8085`
+- Automatically configured when starting the development environment
+- Topics and subscriptions are created automatically
+
+### Configuration
+```bash
+# Pub/Sub Settings (in .env)
+PUBSUB_PROJECT_ID=demo-thread-art-generator
+PUBSUB_EMULATOR_HOST=localhost:8085
+PUBSUB_TOPIC_PREFIX=thread-art
+```
+
+### Topics
+- `thread-art-composition-processing`: Main topic for composition processing tasks
+- `thread-art-composition-processing-worker`: Worker subscription for processing messages
+
+### Production
+- Uses actual Google Cloud Pub/Sub with IAM authentication
+- Topics and subscriptions are managed via Terraform
 
 ## Production Deployment
 
@@ -190,15 +218,20 @@ The project includes configuration files for FluidNC, a high-performance Grbl CN
 - [x] API server with composition storage
 - [x] Worker service for async processing
 - [x] UI with real-time previews and visualization
+- [x] Message Queue Migration (RabbitMQ → Google Cloud Pub/Sub)
+  - [x] Pub/Sub emulator integration with Firebase
+  - [x] Worker service migration to Pub/Sub subscriptions
+  - [x] API service migration to Pub/Sub publishing
+  - [x] Infrastructure cleanup and documentation
 - [⏳] GCode generator for thread path creation (In Progress)
 - [⏳] Enhanced customization settings (In Progress)
-- [ ] Connect-RPC Migration
+- [x] Connect-RPC Migration
   - [x] API Server Connect handler setup
   - [x] Update interceptors to Connect middleware
   - [x] Update proto generation configuration
   - [x] Update client implementations
-  - [ ] Remove Envoy and gRPC Gateway dependencies
-  - [ ] Update documentation
+  - [x] Remove Envoy and gRPC Gateway dependencies
+  - [x] Update documentation
 - [ ] Testing implementation
   - [ ] Unit tests for core services
   - [ ] Integration tests for API endpoints

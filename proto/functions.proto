@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package pb;
+import "art.proto";
+import "google/protobuf/timestamp.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/api/annotations.proto";
+import "buf/validate/validate.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/Damione1/thread-art-generator/core/pb";
+
+// FirebaseFunctionsService provides backend-to-backend RPC methods
+// specifically designed for Firebase Functions to call with internal authentication.
+// All methods in this service require internal API key validation.
+service FirebaseFunctionsService {
+  // ConfirmArtImageUploadFromFunction confirms that an art image has been uploaded
+  // and updates the art status. This method is called by Firebase Functions
+  // after a successful storage upload and requires internal API key authentication.
+  rpc ConfirmArtImageUploadFromFunction (ConfirmArtImageUploadFromFunctionRequest) returns (Art) {
+    option (google.api.http) = {
+      post: "/v1/internal/functions/arts/{name=users/*/arts/*}/confirm-upload"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Confirm art image upload from Firebase Function (Internal)"
+      description: "Internal endpoint called by Firebase Functions to confirm an art image has been uploaded. Requires internal API key authentication."
+      tags: "Firebase Functions";
+      security: {
+        security_requirement: { key: "InternalApiKey" value: {} }
+      };
+    };
+  }
+}
+
+// Art message is imported from art.proto
+
+// Request message for confirming art image upload from Firebase Functions
+message ConfirmArtImageUploadFromFunctionRequest {
+  // The name of the Art resource.
+  // For example: "users/123/arts/456"
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "art.example.com/Art"},
+    (buf.validate.field).cel = {
+      id: "confirm_art_image_upload_from_function.name.format",
+      message: "Art resource name is required and must follow pattern 'users/*/arts/*'",
+      expression: "this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')"
+    }
+  ];
+
+  // The Firebase UID of the user who uploaded the image.
+  // This is extracted from upload metadata for authorization validation.
+  string firebase_uid = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).cel = {
+      id: "confirm_art_image_upload_from_function.firebase_uid.required",
+      message: "Firebase UID is required",
+      expression: "this.size() > 0"
+    }
+  ];
+
+  // The image URL that was uploaded to Firebase Storage
+  string image_url = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).cel = {
+      id: "confirm_art_image_upload_from_function.image_url.uri",
+      message: "Image URL must be a valid URI",
+      expression: "this.size() > 0 && this.matches('^https?://.+')"
+    }
+  ];
+
+  // Optional: The original file name that was uploaded
+  string original_filename = 4 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).cel = {
+      id: "confirm_art_image_upload_from_function.original_filename.length",
+      message: "Original filename must be less than 255 characters when provided",
+      expression: "this == '' || this.size() <= 255"
+    }
+  ];
+
+  // Optional: The content type of the uploaded file
+  string content_type = 5 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).cel = {
+      id: "confirm_art_image_upload_from_function.content_type.image",
+      message: "Content type must be an image type when provided",
+      expression: "this == '' || this.startsWith('image/')"
+    }
+  ];
+
+  // Optional: The size of the uploaded file in bytes
+  int64 file_size = 6 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int64 = {gte: 0, lte: 10485760} // Max 10MB
+  ];
+}

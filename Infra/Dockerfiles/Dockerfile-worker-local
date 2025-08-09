@@ -1,0 +1,16 @@
+# Local development Dockerfile for Worker service (used by Tilt)
+FROM alpine:latest
+WORKDIR /app
+
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
+
+# Copy the pre-built binary (built by Tilt)
+COPY build/worker ./worker
+
+# Create non-root user
+RUN adduser -D -u 1000 appuser
+USER appuser
+
+# Run the binary
+CMD ["/app/worker"]

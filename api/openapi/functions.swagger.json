@@ -1,0 +1,186 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "functions.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "FirebaseFunctionsService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/internal/functions/arts/{name}/confirm-upload": {
+      "post": {
+        "summary": "Confirm art image upload from Firebase Function (Internal)",
+        "description": "Internal endpoint called by Firebase Functions to confirm an art image has been uploaded. Requires internal API key authentication.",
+        "operationId": "FirebaseFunctionsService_ConfirmArtImageUploadFromFunction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbArt"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Art resource.\nFor example: \"users/123/arts/456\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "users/[^/]+/arts/[^/]+"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FirebaseFunctionsServiceConfirmArtImageUploadFromFunctionBody"
+            }
+          }
+        ],
+        "tags": [
+          "Firebase Functions"
+        ],
+        "security": [
+          {
+            "InternalApiKey": []
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "FirebaseFunctionsServiceConfirmArtImageUploadFromFunctionBody": {
+      "type": "object",
+      "properties": {
+        "firebaseUid": {
+          "type": "string",
+          "description": "The Firebase UID of the user who uploaded the image.\nThis is extracted from upload metadata for authorization validation."
+        },
+        "imageUrl": {
+          "type": "string",
+          "title": "The image URL that was uploaded to Firebase Storage"
+        },
+        "originalFilename": {
+          "type": "string",
+          "title": "Optional: The original file name that was uploaded"
+        },
+        "contentType": {
+          "type": "string",
+          "title": "Optional: The content type of the uploaded file"
+        },
+        "fileSize": {
+          "type": "string",
+          "format": "int64",
+          "title": "Optional: The size of the uploaded file in bytes"
+        }
+      },
+      "title": "Request message for confirming art image upload from Firebase Functions",
+      "required": [
+        "firebaseUid",
+        "imageUrl"
+      ]
+    },
+    "pbArt": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "The name of the Art resource.\nFor example: \"users/123/arts/456\"",
+          "readOnly": true
+        },
+        "title": {
+          "type": "string",
+          "description": "Title is the art's title."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "ImageURL is the art's image URL.",
+          "readOnly": true
+        },
+        "status": {
+          "$ref": "#/definitions/pbArtStatus",
+          "title": "Status of the art",
+          "readOnly": true
+        },
+        "author": {
+          "type": "string",
+          "title": "The name of the User resource who is the author of the art.\nFor example: \"users/456\"",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "CreatedAt is the art's creation time. Output only.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UpdatedAt is the art's last update time.",
+          "readOnly": true
+        }
+      },
+      "required": [
+        "title"
+      ]
+    },
+    "pbArtStatus": {
+      "type": "string",
+      "enum": [
+        "ART_STATUS_UNSPECIFIED",
+        "ART_STATUS_PENDING_IMAGE",
+        "ART_STATUS_PROCESSING",
+        "ART_STATUS_COMPLETE",
+        "ART_STATUS_FAILED",
+        "ART_STATUS_ARCHIVED"
+      ],
+      "default": "ART_STATUS_UNSPECIFIED",
+      "description": "- ART_STATUS_UNSPECIFIED: Default unspecified status\n - ART_STATUS_PENDING_IMAGE: Art is created but image is pending upload\n - ART_STATUS_PROCESSING: Image is uploaded and being processed\n - ART_STATUS_COMPLETE: Art is complete with processed image\n - ART_STATUS_FAILED: Processing failed\n - ART_STATUS_ARCHIVED: Art is archived/hidden but not deleted",
+      "title": "Status of the art"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

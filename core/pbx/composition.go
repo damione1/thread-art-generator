@@ -3,16 +3,18 @@ package pbx
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // CompositionDbToProto converts a database composition model to a proto composition
-func CompositionDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, artDb *models.Art, composition *models.Composition) *pb.Composition {
+func CompositionDbToProto(ctx context.Context, storageProvider storage.StorageProvider, artDb *models.Art, composition *models.Composition, authorFirebaseUID string) *pb.Composition {
 	// Map status from database enum to proto enum
 	var status pb.CompositionStatus
 	switch composition.Status {
@@ -43,24 +45,67 @@ func CompositionDbToProto(ctx context.Context, dualStorage *storage.DualBucketSt
 		UpdateTime:        timestamppb.New(composition.UpdatedAt),
 	}
 
-	// Set the resource name using the new builder
-	compositionPb.Name = resource.BuildCompositionResourceName(artDb.AuthorID, artDb.ID, composition.ID)
+	// Set the resource name using Firebase UID instead of internal ID
+	compositionPb.Name = resource.BuildCompositionResourceName(authorFirebaseUID, artDb.ID, composition.ID)
 
-	// Set optional result fields if they exist using public URL generator for CDN caching
-	if dualStorage != nil {
-		publicURLGenerator := storage.NewPublicURLGenerator(dualStorage.GetPublicStorage())
-		urlOptions := storage.DefaultURLOptions()
+	// Set optional result fields if they exist using storage provider
+	if storageProvider != nil {
+		// Add timeout to prevent hanging Firebase Storage operations
+		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
 
 		if composition.PreviewURL.Valid {
-			compositionPb.PreviewUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.PreviewURL.String, urlOptions)
+			log.Debug().
+				Str("composition_id", composition.ID).
+				Str("preview_path", composition.PreviewURL.String).
+				Msg("CompositionDbToProto: Generating preview URL")
+			
+			previewURL := storageProvider.GetPublicURL(composition.PreviewURL.String)
+			if timeoutCtx.Err() != nil {
+				log.Error().
+					Str("composition_id", composition.ID).
+					Str("preview_path", composition.PreviewURL.String).
+					Err(timeoutCtx.Err()).
+					Msg("CompositionDbToProto: Preview URL generation timed out")
+			} else {
+				compositionPb.PreviewUrl = previewURL
+			}
 		}
 
 		if composition.GcodeURL.Valid {
-			compositionPb.GcodeUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.GcodeURL.String, urlOptions)
+			log.Debug().
+				Str("composition_id", composition.ID).
+				Str("gcode_path", composition.GcodeURL.String).
+				Msg("CompositionDbToProto: Generating gcode URL")
+			
+			gcodeURL := storageProvider.GetPublicURL(composition.GcodeURL.String)
+			if timeoutCtx.Err() != nil {
+				log.Error().
+					Str("composition_id", composition.ID).
+					Str("gcode_path", composition.GcodeURL.String).
+					Err(timeoutCtx.Err()).
+					Msg("CompositionDbToProto: Gcode URL generation timed out")
+			} else {
+				compositionPb.GcodeUrl = gcodeURL
+			}
 		}
 
 		if composition.PathlistURL.Valid {
-			compositionPb.PathlistUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.PathlistURL.String, urlOptions)
+			log.Debug().
+				Str("composition_id", composition.ID).
+				Str("pathlist_path", composition.PathlistURL.String).
+				Msg("CompositionDbToProto: Generating pathlist URL")
+			
+			pathlistURL := storageProvider.GetPublicURL(composition.PathlistURL.String)
+			if timeoutCtx.Err() != nil {
+				log.Error().
+					Str("composition_id", composition.ID).
+					Str("pathlist_path", composition.PathlistURL.String).
+					Err(timeoutCtx.Err()).
+					Msg("CompositionDbToProto: Pathlist URL generation timed out")
+			} else {
+				compositionPb.PathlistUrl = pathlistURL
+			}
 		}
 	}
 

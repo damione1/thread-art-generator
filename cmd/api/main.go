@@ -9,7 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/Damione1/thread-art-generator/core/auth"
-	"github.com/Damione1/thread-art-generator/core/cache"
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/interceptors"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
@@ -28,7 +27,6 @@ func main() {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
 
-	go cache.CleanExpiredCacheEntries()
 	runConnectServer(config)
 }
 
@@ -41,22 +39,25 @@ func runConnectServer(config util.Config) {
 	defer server.Close()
 	log.Print("🍩 Server created")
 
-	authService, err := createAuthService(config)
+	// Initialize PASETO service for BFF → API authentication
+	pasetoService, err := createPasetoService(config)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize auth service")
+		log.Fatal().Err(err).Msg("Failed to initialize PASETO service")
 	}
 
-	// Define our Connect interceptors
+	// Define our Connect interceptors - using PASETO for secure, stateless authentication
 	interceptorChain := connect.WithInterceptors(
 		interceptors.ConnectLogger(),
-		interceptors.AuthMiddleware(authService), // Simplified Firebase-first auth
+		interceptors.PasetoAuthMiddleware(pasetoService), // PASETO-only auth for internal communication
 	)
 
-	// Create Connect adapter
+	// Create Connect adapters
 	adapter := service.NewConnectAdapter(server)
+	functionsAdapter := service.NewFirebaseFunctionsConnectAdapter(server)
 
-	// Create API handler
+	// Create API handlers
 	path, handler := pbconnect.NewArtGeneratorServiceHandler(adapter, interceptorChain)
+	functionsPath, functionsHandler := pbconnect.NewFirebaseFunctionsServiceHandler(functionsAdapter, interceptorChain)
 
 	// Setup CORS
 	corsHandler := cors.New(cors.Options{
@@ -95,8 +96,9 @@ func runConnectServer(config util.Config) {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// Register the service
+	// Register the services
 	mux.Handle(path, corsHandler.Handler(handler))
+	mux.Handle(functionsPath, corsHandler.Handler(functionsHandler))
 
 	// Create the server
 	serverPort := config.HTTPServerPort
@@ -113,11 +115,36 @@ func runConnectServer(config util.Config) {
 	}
 }
 
-func createAuthService(config util.Config) (auth.AuthService, error) {
-	firebaseConfig := auth.FirebaseConfiguration{
-		ProjectID:    config.Firebase.ProjectID,
-		EmulatorHost: config.Firebase.EmulatorHost,
+func createPasetoService(config util.Config) (*auth.PasetoService, error) {
+	// Validate PASETO configuration at startup
+	if config.Paseto.SecretKey == "" {
+		return nil, fmt.Errorf("PASETO_SECRET_KEY is not configured")
 	}
 
-	return auth.NewFirebaseAuthService(firebaseConfig)
+	if len(config.Paseto.SecretKey) != 32 {
+		return nil, fmt.Errorf("PASETO_SECRET_KEY must be exactly 32 bytes, got %d bytes", len(config.Paseto.SecretKey))
+	}
+
+	if config.Paseto.Issuer == "" {
+		log.Warn().Msg("PASETO_ISSUER not set, using default 'thread-art-generator'")
+		config.Paseto.Issuer = "thread-art-generator"
+	}
+
+	if config.Paseto.TTLMinutes <= 0 {
+		log.Warn().Msg("PASETO_TTL_MINUTES not set or invalid, using default 15 minutes")
+		config.Paseto.TTLMinutes = 15
+	}
+
+	pasetoConfig := auth.PasetoConfig{
+		SecretKey:  config.Paseto.SecretKey,
+		Issuer:     config.Paseto.Issuer,
+		TTLMinutes: config.Paseto.TTLMinutes,
+	}
+
+	log.Info().
+		Str("issuer", pasetoConfig.Issuer).
+		Int("ttl_minutes", pasetoConfig.TTLMinutes).
+		Msg("PASETO service configured successfully")
+
+	return auth.NewPasetoService(pasetoConfig)
 }

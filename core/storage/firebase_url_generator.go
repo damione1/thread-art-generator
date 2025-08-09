@@ -3,8 +3,6 @@ package storage
 import (
 	"context"
 	"time"
-
-	"gocloud.dev/blob"
 )
 
 // ImageURLGenerator provides methods for generating different types of URLs for stored images
@@ -15,7 +13,7 @@ type ImageURLGenerator interface {
 
 	// GetSignedURL returns a signed URL with expiration for secure access
 	// This is used for admin operations or when public access is not desired
-	GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error)
+	GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
 
 	// GetUploadURL returns a signed URL for uploading content
 	// This includes security constraints and content type validation
@@ -24,12 +22,12 @@ type ImageURLGenerator interface {
 
 // PublicImageURLGenerator generates URLs for publicly accessible images (CDN-cacheable)
 type PublicImageURLGenerator struct {
-	storage *BlobStorage
+	storage *FirebaseStorage
 }
 
 // PrivateImageURLGenerator generates URLs for private images (signed URLs only)
 type PrivateImageURLGenerator struct {
-	storage *BlobStorage
+	storage *FirebaseStorage
 }
 
 // URLGenerationOptions provides options for URL generation
@@ -47,8 +45,8 @@ type URLGenerationOptions struct {
 // DefaultURLOptions returns the default URL generation options
 func DefaultURLOptions() *URLGenerationOptions {
 	return &URLGenerationOptions{
-		UsePublicURL:     true,  // Use public URLs by default for CDN caching
-		FallbackToSigned: true,  // Fallback to signed URLs if public URLs are not available
+		UsePublicURL:     true, // Use public URLs by default for CDN caching
+		FallbackToSigned: true, // Fallback to signed URLs if public URLs are not available
 		SignedURLExpiry:  15 * time.Minute,
 	}
 }
@@ -62,45 +60,45 @@ func AdminURLOptions() *URLGenerationOptions {
 	}
 }
 
-// URLGenerator implements the ImageURLGenerator interface using BlobStorage
-type URLGenerator struct {
-	storage *BlobStorage
+// FirebaseURLGenerator implements the ImageURLGenerator interface using FirebaseStorage
+type FirebaseURLGenerator struct {
+	storage *FirebaseStorage
 }
 
-// NewURLGenerator creates a new URL generator with the given storage
-func NewURLGenerator(storage *BlobStorage) ImageURLGenerator {
-	return &URLGenerator{
+// NewFirebaseURLGenerator creates a new URL generator with the given Firebase storage
+func NewFirebaseURLGenerator(storage *FirebaseStorage) ImageURLGenerator {
+	return &FirebaseURLGenerator{
 		storage: storage,
 	}
 }
 
-// NewPublicURLGenerator creates a URL generator for public bucket content
-func NewPublicURLGenerator(storage *BlobStorage) ImageURLGenerator {
+// NewPublicFirebaseURLGenerator creates a URL generator for public bucket content
+func NewPublicFirebaseURLGenerator(storage *FirebaseStorage) ImageURLGenerator {
 	return &PublicImageURLGenerator{
 		storage: storage,
 	}
 }
 
-// NewPrivateURLGenerator creates a URL generator for private bucket content
-func NewPrivateURLGenerator(storage *BlobStorage) ImageURLGenerator {
+// NewPrivateFirebaseURLGenerator creates a URL generator for private bucket content
+func NewPrivateFirebaseURLGenerator(storage *FirebaseStorage) ImageURLGenerator {
 	return &PrivateImageURLGenerator{
 		storage: storage,
 	}
 }
 
 // GetPublicURL returns a direct public URL for the given key
-func (g *URLGenerator) GetPublicURL(key string) string {
+func (g *FirebaseURLGenerator) GetPublicURL(key string) string {
 	return g.storage.GetPublicURL(key)
 }
 
 // GetSignedURL returns a signed URL with expiration for secure access
-func (g *URLGenerator) GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
+func (g *FirebaseURLGenerator) GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return g.storage.SignedURL(ctx, key, opts)
 }
 
 // GetUploadURL returns a signed URL for uploading content with security constraints
-func (g *URLGenerator) GetUploadURL(ctx context.Context, key string, contentType string, expiry time.Duration) (string, error) {
-	opts := &blob.SignedURLOptions{
+func (g *FirebaseURLGenerator) GetUploadURL(ctx context.Context, key string, contentType string, expiry time.Duration) (string, error) {
+	opts := &SignedURLOptions{
 		Expiry:      expiry,
 		Method:      "PUT",
 		ContentType: contentType,
@@ -129,7 +127,7 @@ func GenerateImageURL(ctx context.Context, generator ImageURLGenerator, key stri
 	}
 
 	// Generate signed URL
-	signedOpts := &blob.SignedURLOptions{
+	signedOpts := &SignedURLOptions{
 		Expiry: opts.SignedURLExpiry,
 		Method: "GET",
 	}
@@ -144,15 +142,24 @@ func GenerateImageURL(ctx context.Context, generator ImageURLGenerator, key stri
 
 // PublicImageURLGenerator implementations
 func (g *PublicImageURLGenerator) GetPublicURL(key string) string {
-	return g.storage.GetPublicURL(key)
+	// Use SDK-native method with background context for public URL generation
+	ctx := context.Background()
+	
+	url, err := g.storage.GetDownloadURL(ctx, key)
+	if err != nil {
+		// Log error but return empty string to trigger fallback to signed URL
+		// The GenerateImageURL function will handle the fallback logic
+		return ""
+	}
+	return url
 }
 
-func (g *PublicImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
+func (g *PublicImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return g.storage.SignedURL(ctx, key, opts)
 }
 
 func (g *PublicImageURLGenerator) GetUploadURL(ctx context.Context, key string, contentType string, expiry time.Duration) (string, error) {
-	opts := &blob.SignedURLOptions{
+	opts := &SignedURLOptions{
 		Expiry:      expiry,
 		Method:      "PUT",
 		ContentType: contentType,
@@ -166,12 +173,12 @@ func (g *PrivateImageURLGenerator) GetPublicURL(key string) string {
 	return ""
 }
 
-func (g *PrivateImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
+func (g *PrivateImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return g.storage.SignedURL(ctx, key, opts)
 }
 
 func (g *PrivateImageURLGenerator) GetUploadURL(ctx context.Context, key string, contentType string, expiry time.Duration) (string, error) {
-	opts := &blob.SignedURLOptions{
+	opts := &SignedURLOptions{
 		Expiry:      expiry,
 		Method:      "PUT",
 		ContentType: contentType,

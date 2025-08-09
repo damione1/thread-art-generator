@@ -1110,170 +1110,6 @@ func (x *DeleteArtRequest) GetName() string {
 	return ""
 }
 
-type GetArtUploadUrlRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The name of the Art resource to upload an image for.
-	// For example: "users/123/arts/456"
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// The content type of the image to upload
-	ContentType string `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	// The size of the file to upload in bytes
-	FileSize      int64 `protobuf:"varint,3,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetArtUploadUrlRequest) Reset() {
-	*x = GetArtUploadUrlRequest{}
-	mi := &file_art_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetArtUploadUrlRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetArtUploadUrlRequest) ProtoMessage() {}
-
-func (x *GetArtUploadUrlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetArtUploadUrlRequest.ProtoReflect.Descriptor instead.
-func (*GetArtUploadUrlRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *GetArtUploadUrlRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *GetArtUploadUrlRequest) GetContentType() string {
-	if x != nil {
-		return x.ContentType
-	}
-	return ""
-}
-
-func (x *GetArtUploadUrlRequest) GetFileSize() int64 {
-	if x != nil {
-		return x.FileSize
-	}
-	return 0
-}
-
-type GetArtUploadUrlResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The signed URL to upload the art image to
-	UploadUrl string `protobuf:"bytes,1,opt,name=upload_url,json=uploadUrl,proto3" json:"upload_url,omitempty"`
-	// The expiration time for the signed URL
-	ExpirationTime *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expiration_time,json=expirationTime,proto3" json:"expiration_time,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *GetArtUploadUrlResponse) Reset() {
-	*x = GetArtUploadUrlResponse{}
-	mi := &file_art_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetArtUploadUrlResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetArtUploadUrlResponse) ProtoMessage() {}
-
-func (x *GetArtUploadUrlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetArtUploadUrlResponse.ProtoReflect.Descriptor instead.
-func (*GetArtUploadUrlResponse) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *GetArtUploadUrlResponse) GetUploadUrl() string {
-	if x != nil {
-		return x.UploadUrl
-	}
-	return ""
-}
-
-func (x *GetArtUploadUrlResponse) GetExpirationTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ExpirationTime
-	}
-	return nil
-}
-
-type ConfirmArtImageUploadRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The name of the Art resource that has been uploaded.
-	// For example: "users/123/arts/456"
-	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ConfirmArtImageUploadRequest) Reset() {
-	*x = ConfirmArtImageUploadRequest{}
-	mi := &file_art_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ConfirmArtImageUploadRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ConfirmArtImageUploadRequest) ProtoMessage() {}
-
-func (x *ConfirmArtImageUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_art_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ConfirmArtImageUploadRequest.ProtoReflect.Descriptor instead.
-func (*ConfirmArtImageUploadRequest) Descriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *ConfirmArtImageUploadRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
 var File_art_proto protoreflect.FileDescriptor
 
 const file_art_proto_rawDesc = "" +
@@ -1387,22 +1223,7 @@ const file_art_proto_rawDesc = "" +
 	"\x10DeleteArtRequest\x12\xd5\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\xc0\x01\xe0A\x02\xfaA\x15\n" +
 	"\x13art.example.com/Art\xbaH\xa1\x01\xba\x01\x9d\x01\n" +
-	"\x16delete_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\"\xf5\x03\n" +
-	"\x16GetArtUploadUrlRequest\x12\xdd\x01\n" +
-	"\x04name\x18\x01 \x01(\tB\xc8\x01\xe0A\x02\xfaA\x15\n" +
-	"\x13art.example.com/Art\xbaH\xa9\x01\xba\x01\xa5\x01\n" +
-	"\x1eget_art_upload_url.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name\x12\xcc\x01\n" +
-	"\fcontent_type\x18\x02 \x01(\tB\xa8\x01\xe0A\x02\xbaH\xa1\x01\xba\x01\x9d\x01\n" +
-	"%get_art_upload_url.content_type.valid\x12'Content type must be a valid image type\x1aKthis in ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']R\vcontentType\x12,\n" +
-	"\tfile_size\x18\x03 \x01(\x03B\x0f\xe0A\x02\xbaH\t\"\a\x18\x80\x80\xc0\x02(\x01R\bfileSize\"}\n" +
-	"\x17GetArtUploadUrlResponse\x12\x1d\n" +
-	"\n" +
-	"upload_url\x18\x01 \x01(\tR\tuploadUrl\x12C\n" +
-	"\x0fexpiration_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x0eexpirationTime\"\x84\x02\n" +
-	"\x1cConfirmArtImageUploadRequest\x12\xe3\x01\n" +
-	"\x04name\x18\x01 \x01(\tB\xce\x01\xe0A\x02\xfaA\x15\n" +
-	"\x13art.example.com/Art\xbaH\xaf\x01\xba\x01\xab\x01\n" +
-	"$confirm_art_image_upload.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name*\xa9\x01\n" +
+	"\x16delete_art.name.format\x12FArt resource name is required and must follow pattern 'users/*/arts/*'\x1a;this.size() > 0 && this.matches('^users/[^/]+/arts/[^/]+$')R\x04name*\xa9\x01\n" +
 	"\tArtStatus\x12\x1a\n" +
 	"\x16ART_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18ART_STATUS_PENDING_IMAGE\x10\x01\x12\x19\n" +
@@ -1430,51 +1251,47 @@ func file_art_proto_rawDescGZIP() []byte {
 }
 
 var file_art_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_art_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_art_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_art_proto_goTypes = []any{
-	(ArtStatus)(0),                       // 0: pb.ArtStatus
-	(CompositionStatus)(0),               // 1: pb.CompositionStatus
-	(*Art)(nil),                          // 2: pb.Art
-	(*Composition)(nil),                  // 3: pb.Composition
-	(*CreateCompositionRequest)(nil),     // 4: pb.CreateCompositionRequest
-	(*GetCompositionRequest)(nil),        // 5: pb.GetCompositionRequest
-	(*UpdateCompositionRequest)(nil),     // 6: pb.UpdateCompositionRequest
-	(*ListCompositionsRequest)(nil),      // 7: pb.ListCompositionsRequest
-	(*ListCompositionsResponse)(nil),     // 8: pb.ListCompositionsResponse
-	(*DeleteCompositionRequest)(nil),     // 9: pb.DeleteCompositionRequest
-	(*CreateArtRequest)(nil),             // 10: pb.CreateArtRequest
-	(*UpdateArtRequest)(nil),             // 11: pb.UpdateArtRequest
-	(*GetArtRequest)(nil),                // 12: pb.GetArtRequest
-	(*ListArtsRequest)(nil),              // 13: pb.ListArtsRequest
-	(*ListArtsResponse)(nil),             // 14: pb.ListArtsResponse
-	(*DeleteArtRequest)(nil),             // 15: pb.DeleteArtRequest
-	(*GetArtUploadUrlRequest)(nil),       // 16: pb.GetArtUploadUrlRequest
-	(*GetArtUploadUrlResponse)(nil),      // 17: pb.GetArtUploadUrlResponse
-	(*ConfirmArtImageUploadRequest)(nil), // 18: pb.ConfirmArtImageUploadRequest
-	(*timestamppb.Timestamp)(nil),        // 19: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),        // 20: google.protobuf.FieldMask
+	(ArtStatus)(0),                   // 0: pb.ArtStatus
+	(CompositionStatus)(0),           // 1: pb.CompositionStatus
+	(*Art)(nil),                      // 2: pb.Art
+	(*Composition)(nil),              // 3: pb.Composition
+	(*CreateCompositionRequest)(nil), // 4: pb.CreateCompositionRequest
+	(*GetCompositionRequest)(nil),    // 5: pb.GetCompositionRequest
+	(*UpdateCompositionRequest)(nil), // 6: pb.UpdateCompositionRequest
+	(*ListCompositionsRequest)(nil),  // 7: pb.ListCompositionsRequest
+	(*ListCompositionsResponse)(nil), // 8: pb.ListCompositionsResponse
+	(*DeleteCompositionRequest)(nil), // 9: pb.DeleteCompositionRequest
+	(*CreateArtRequest)(nil),         // 10: pb.CreateArtRequest
+	(*UpdateArtRequest)(nil),         // 11: pb.UpdateArtRequest
+	(*GetArtRequest)(nil),            // 12: pb.GetArtRequest
+	(*ListArtsRequest)(nil),          // 13: pb.ListArtsRequest
+	(*ListArtsResponse)(nil),         // 14: pb.ListArtsResponse
+	(*DeleteArtRequest)(nil),         // 15: pb.DeleteArtRequest
+	(*timestamppb.Timestamp)(nil),    // 16: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),    // 17: google.protobuf.FieldMask
 }
 var file_art_proto_depIdxs = []int32{
 	0,  // 0: pb.Art.status:type_name -> pb.ArtStatus
-	19, // 1: pb.Art.create_time:type_name -> google.protobuf.Timestamp
-	19, // 2: pb.Art.update_time:type_name -> google.protobuf.Timestamp
+	16, // 1: pb.Art.create_time:type_name -> google.protobuf.Timestamp
+	16, // 2: pb.Art.update_time:type_name -> google.protobuf.Timestamp
 	1,  // 3: pb.Composition.status:type_name -> pb.CompositionStatus
-	19, // 4: pb.Composition.create_time:type_name -> google.protobuf.Timestamp
-	19, // 5: pb.Composition.update_time:type_name -> google.protobuf.Timestamp
+	16, // 4: pb.Composition.create_time:type_name -> google.protobuf.Timestamp
+	16, // 5: pb.Composition.update_time:type_name -> google.protobuf.Timestamp
 	3,  // 6: pb.CreateCompositionRequest.composition:type_name -> pb.Composition
 	3,  // 7: pb.UpdateCompositionRequest.composition:type_name -> pb.Composition
-	20, // 8: pb.UpdateCompositionRequest.update_mask:type_name -> google.protobuf.FieldMask
+	17, // 8: pb.UpdateCompositionRequest.update_mask:type_name -> google.protobuf.FieldMask
 	3,  // 9: pb.ListCompositionsResponse.compositions:type_name -> pb.Composition
 	2,  // 10: pb.CreateArtRequest.art:type_name -> pb.Art
 	2,  // 11: pb.UpdateArtRequest.art:type_name -> pb.Art
-	20, // 12: pb.UpdateArtRequest.update_mask:type_name -> google.protobuf.FieldMask
+	17, // 12: pb.UpdateArtRequest.update_mask:type_name -> google.protobuf.FieldMask
 	2,  // 13: pb.ListArtsResponse.arts:type_name -> pb.Art
-	19, // 14: pb.GetArtUploadUrlResponse.expiration_time:type_name -> google.protobuf.Timestamp
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_art_proto_init() }
@@ -1488,7 +1305,7 @@ func file_art_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_art_proto_rawDesc), len(file_art_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   17,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -2,14 +2,14 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/http"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/Damione1/thread-art-generator/core/db/models"
-	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
+	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/token"
@@ -23,7 +23,7 @@ import (
 type Server struct {
 	config      util.Config
 	tokenMaker  token.Maker
-	storage     *storage.DualBucketStorage
+	storage     storage.StorageProvider
 	mailService mailService.MailService
 	queueClient queue.QueueClient
 }
@@ -44,32 +44,73 @@ func NewServer(config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create mail service. %v", err)
 	}
 
-	// Initialize dual bucket storage system
+	// Initialize single storage provider using the new interface approach
 	ctx := context.Background()
-	server.storage, err = storage.NewDualBucketStorage(ctx, config.Storage)
+	
+	server.storage, err = storage.NewStorageProviderFromUtil(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create dual bucket storage: %v", err)
+		return nil, fmt.Errorf("failed to create storage provider: %v", err)
 	}
 
-	// Initialize queue client if URL is provided
-	if config.Queue.URL != "" {
-		server.queueClient, err = queue.NewRabbitMQClient(config.Queue.URL)
+	// Initialize queue client - prefer Pub/Sub if configured
+	if config.PubSub.ProjectID != "" {
+		server.queueClient, err = queue.NewPubSubClient(ctx, config.PubSub.ProjectID, config.PubSub.EmulatorHost, config.Environment)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create queue client: %v", err)
+			return nil, fmt.Errorf("failed to create Pub/Sub client: %v", err)
 		}
 	}
 
 	return server, nil
 }
 
-func (s *Server) GetTokenMaker() token.Maker {
-	return s.tokenMaker
+// GetStorage returns the storage provider for all resource types
+// Resource-based security is handled through Firebase storage rules and paths
+func (s *Server) GetStorage() storage.StorageProvider {
+	return s.storage
+}
+
+// GenerateUploadURL generates a signed URL for secure file uploads
+func (s *Server) GenerateUploadURL(ctx context.Context, req *pb.GenerateUploadURLRequest) (*pb.GenerateUploadURLResponse, error) {
+	// Create a storage service instance and delegate to it
+	storageService, err := NewStorageService(s.config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create storage service: %w", err)
+	}
+	defer storageService.Close()
+
+	// Create a connect request wrapper and call the storage service
+	connectReq := connect.NewRequest(req)
+	response, err := storageService.GenerateUploadURL(ctx, connectReq)
+	if err != nil {
+		return nil, err
+	}
+	
+	return response.Msg, nil
+}
+
+// GenerateDownloadURL generates a signed URL for secure file downloads
+func (s *Server) GenerateDownloadURL(ctx context.Context, req *pb.GenerateDownloadURLRequest) (*pb.GenerateDownloadURLResponse, error) {
+	// Create a storage service instance and delegate to it
+	storageService, err := NewStorageService(s.config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create storage service: %w", err)
+	}
+	defer storageService.Close()
+
+	// Create a connect request wrapper and call the storage service
+	connectReq := connect.NewRequest(req)
+	response, err := storageService.GenerateDownloadURL(ctx, connectReq)
+	if err != nil {
+		return nil, err
+	}
+	
+	return response.Msg, nil
 }
 
 func (s *Server) Close() error {
 	var err error
 
-	// Close storage connections
+	// Close storage connection
 	if s.storage != nil {
 		if storageErr := s.storage.Close(); storageErr != nil {
 			err = storageErr
@@ -90,19 +131,6 @@ func (s *Server) Close() error {
 	return err
 }
 
-// getUserFromFirebaseUID is a helper method to get the internal user from Firebase UID
-func (s *Server) getUserFromFirebaseUID(ctx context.Context, firebaseUID string) (*models.User, error) {
-	user, err := models.Users(
-		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
-	).One(ctx, s.config.DB)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, pbErrors.NotFoundError("user not found")
-		}
-		return nil, pbErrors.InternalError("failed to get user", err)
-	}
-	return user, nil
-}
 
 // createUserFromFirebaseClaims creates a new user record from Firebase auth claims
 func (s *Server) createUserFromFirebaseClaims(ctx context.Context, firebaseUID, email, name, picture string) (*models.User, error) {
@@ -167,13 +195,13 @@ func (s *Server) validateInternalAPIKeyFromHeaders(headers http.Header) bool {
 
 	// Validate token (must be non-empty and match)
 	isValid := token != "" && expectedToken != "" && token == expectedToken
-	
+
 	if !isValid {
 		log.Warn().Msg("Internal API key validation failed")
 	} else {
 		log.Debug().Msg("Internal API key validation successful")
 	}
-	
+
 	return isValid
 }
 

@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package pb;
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/Damione1/thread-art-generator/core/pb";
+
+// StorageService provides secure signed URL generation for Firebase Storage
+service StorageService {
+  // GenerateUploadURL generates a signed URL for uploading files to Firebase Storage
+  rpc GenerateUploadURL(GenerateUploadURLRequest) returns (GenerateUploadURLResponse) {
+    option (google.api.http) = {
+      post: "/v1/storage/upload-url"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Generate signed upload URL"
+      description: "Generate a signed URL for secure file upload to Firebase Storage. Requires user authentication."
+      tags: "Storage";
+    };
+  }
+
+  // GenerateDownloadURL generates a signed URL for downloading private files
+  rpc GenerateDownloadURL(GenerateDownloadURLRequest) returns (GenerateDownloadURLResponse) {
+    option (google.api.http) = {
+      post: "/v1/storage/download-url"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Generate signed download URL"
+      description: "Generate a signed URL for secure file download from private Firebase Storage. Requires user authentication."
+      tags: "Storage";
+    };
+  }
+}
+
+// GenerateUploadURLRequest contains the parameters for generating an upload URL
+message GenerateUploadURLRequest {
+  // The user ID making the request (validated by BFF authentication)
+  string user_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+    pattern: "^[a-zA-Z0-9_-]+$"
+  }];
+
+  // The art ID this upload is for
+  string art_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+    pattern: "^[a-zA-Z0-9_-]+$"
+  }];
+
+  // The content type of the file to be uploaded
+  string content_type = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+    pattern: "^image/(jpeg|jpg|png|gif|webp)$"
+  }];
+
+  // The original filename (optional, for metadata)
+  optional string filename = 4 [(buf.validate.field).string.max_len = 255];
+
+  // File size in bytes for validation
+  int64 file_size = 5 [(buf.validate.field).int64 = {
+    gte: 1
+    lte: 10485760 // 10MB limit
+  }];
+}
+
+// GenerateUploadURLResponse contains the signed URL and metadata
+message GenerateUploadURLResponse {
+  // The signed URL for uploading the file
+  string upload_url = 1;
+
+  // The storage path where the file will be uploaded
+  string storage_path = 2;
+
+  // Expiration time of the signed URL
+  google.protobuf.Timestamp expires_at = 3;
+
+  // Maximum file size allowed for this upload
+  int64 max_file_size = 4;
+}
+
+// GenerateDownloadURLRequest contains the parameters for generating a download URL
+message GenerateDownloadURLRequest {
+  // The user ID making the request (validated by BFF authentication)
+  string user_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+    pattern: "^[a-zA-Z0-9_-]+$"
+  }];
+
+  // The art ID to download
+  string art_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+    pattern: "^[a-zA-Z0-9_-]+$"
+  }];
+
+  // Optional specific file path (if not provided, uses default art image path)
+  optional string file_path = 3 [(buf.validate.field).string.max_len = 500];
+}
+
+// GenerateDownloadURLResponse contains the signed download URL
+message GenerateDownloadURLResponse {
+  // The signed URL for downloading the file
+  string download_url = 1;
+
+  // The storage path of the file
+  string storage_path = 2;
+
+  // Expiration time of the signed URL
+  google.protobuf.Timestamp expires_at = 3;
+}
