@@ -237,7 +237,7 @@ local_resource(
   serve_cmd='make firebase-start',
   serve_dir='.',
   labels=['firebase'],
-  resource_deps=['firebase-functions-build'],
+  resource_deps=['functions-build'],
   auto_init=True,
   readiness_probe=probe(
     http_get=http_get_action(port=9099, path='/'),
