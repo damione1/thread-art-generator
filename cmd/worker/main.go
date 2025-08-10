@@ -25,8 +25,8 @@ import (
 
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/db/models"
-	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/Damione1/thread-art-generator/threadGenerator"
@@ -221,10 +221,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, storageProvide
 
 	// Construct the storage path using Firebase UID and art ID
 	// This matches the upload path used by the client: users/{firebase_uid}/arts/{art_id}
-	imageKey := pbx.GetResourceName([]pbx.Resource{
-		{Type: pbx.RessourceTypeUsers, ID: art.R.Author.FirebaseUID.String},
-		{Type: pbx.RessourceTypeArts, ID: art.ID},
-	})
+	imageKey := resource.BuildArtResourceName(art.R.Author.FirebaseUID.String, art.ID)
 
 	log.Info().
 		Str("imageKey", imageKey).
@@ -361,9 +358,9 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, storageProvide
 
 	// Upload files to storage
 	uploadStartTime := time.Now()
-	previewKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/preview.png", art.AuthorID, art.ID, composition.ID)
-	gcodeKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/gcode.txt", art.AuthorID, art.ID, composition.ID)
-	pathsKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/paths.json", art.AuthorID, art.ID, composition.ID)
+	previewKey := fmt.Sprintf("%s/preview.png", resource.BuildCompositionResourceName(art.R.Author.FirebaseUID.String, art.ID, composition.ID))
+	gcodeKey := fmt.Sprintf("%s/gcode.txt", resource.BuildCompositionResourceName(art.R.Author.FirebaseUID.String, art.ID, composition.ID))
+	pathsKey := fmt.Sprintf("%s/paths.json", resource.BuildCompositionResourceName(art.R.Author.FirebaseUID.String, art.ID, composition.ID))
 
 	// Upload preview image
 	previewFile, err = os.Open(previewPath)

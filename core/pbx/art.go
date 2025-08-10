@@ -42,10 +42,7 @@ func ArtDbToProto(ctx context.Context, storageProvider storage.StorageProvider, 
 	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) && storageProvider != nil {
 		// Construct the storage path using Firebase UID: users/{firebase_uid}/arts/{art_id}
 		// This matches the upload path used by the client
-		imagePath := GetResourceName([]Resource{
-			{Type: RessourceTypeUsers, ID: authorFirebaseUID},
-			{Type: RessourceTypeArts, ID: art.ID},
-		})
+		imagePath := resource.BuildArtResourceName(authorFirebaseUID, art.ID)
 		
 		log.Debug().
 			Str("art_id", art.ID).
