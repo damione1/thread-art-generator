@@ -63,6 +63,8 @@ type Config struct {
 	Firebase            FirebaseConfig `mapstructure:",squash"`
 	Storage             StorageConfig  `mapstructure:",squash"`
 	Queue               QueueConfig    `mapstructure:",squash"`
+	ServiceHMACSecret   string         `mapstructure:"SERVICE_HMAC_SECRET"`
+	QueueProvider       string         `mapstructure:"QUEUE_PROVIDER"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -112,6 +114,8 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("RABBITMQ_USER")
 	viper.BindEnv("RABBITMQ_PASSWORD")
 	viper.BindEnv("QUEUE_COMPOSITION_PROCESSING")
+	viper.BindEnv("SERVICE_HMAC_SECRET")
+	viper.BindEnv("QUEUE_PROVIDER")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
@@ -153,6 +157,12 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Storage.PrivateBucket == "" {
 		c.Storage.PrivateBucket = "local-private"
+	}
+	if c.ServiceHMACSecret == "" {
+		c.ServiceHMACSecret = c.TokenSymmetricKey
+	}
+	if c.QueueProvider == "" {
+		c.QueueProvider = "postgres"
 	}
 }
 
