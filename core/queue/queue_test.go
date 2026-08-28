@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,34 @@ func TestNewQueueClientUnknownProvider(t *testing.T) {
 	_, err := NewQueueClient(t.Context(), "mystery", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unsupported queue provider")
+}
+
+func TestNewQueueClientRabbitMQWrongConfig(t *testing.T) {
+	_, err := NewQueueClient(t.Context(), "rabbitmq", 123)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "expected string URL")
+}
+
+func TestPostgresQueue_PublishRequiresTopic(t *testing.T) {
+	q := NewPostgresQueue(nil, PostgresOptions{})
+	err := q.Publish(t.Context(), "", []byte("x"))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "topic")
+}
+
+func TestPostgresQueue_SubscribeRequiresTopic(t *testing.T) {
+	q := NewPostgresQueue(nil, PostgresOptions{})
+	err := q.Subscribe(t.Context(), "", "w", func(context.Context, []byte) error { return nil })
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "topic")
+}
+
+func TestPostgresOptionsDefaults(t *testing.T) {
+	got := PostgresOptions{}.withDefaults()
+	require.Equal(t, defaultMaxAttempts, got.MaxAttempts)
+	require.Equal(t, defaultPollInterval, got.PollInterval)
+	require.Equal(t, defaultVisibilityTimeout, got.VisibilityTimeout)
+	require.Equal(t, defaultBaseBackoff, got.BaseBackoff)
 }
 
 func TestClaimSQLUsesSkipLocked(t *testing.T) {

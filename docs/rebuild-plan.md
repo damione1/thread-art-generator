@@ -646,3 +646,7 @@ Stacked PRs merged into `feature/rebuild` (not master):
 
 Remaining for §12: Firebase Auth JS + emu + `FIREBASE_*` (Phase E), RabbitMQ dual-run, DualBucket → one bucket, session `user_id` still Firebase UID.
 
+### 2026-08-28 ~12:30 EDT | progress | rebuild unit tests
+
+Coverage for the helpers that landed without DB: `validateUploadedObject` (type + 10MB), object-key dual-run, BlobStorage GCS reject + Exists, IdentityInterceptor whitelist, QueueClient/Postgres options, ConnectAdapter ListUsers/DeleteUser unimplemented. `make test` runs that set. Start/Complete still need a fake Bucket + postgres for the full RPC.
+

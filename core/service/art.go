@@ -573,6 +573,21 @@ func flattenPresignHeaders(h http.Header) map[string]string {
 	return out
 }
 
+const maxArtImageBytes = 10 * 1024 * 1024
+
+func validateUploadedObject(info *storage.ObjectInfo) error {
+	if info == nil {
+		return pbErrors.FailedPreconditionError("image not found in storage, upload first")
+	}
+	if info.ContentType != "" && !strings.HasPrefix(info.ContentType, "image/") {
+		return pbErrors.FailedPreconditionError("uploaded object is not an image")
+	}
+	if info.Size > maxArtImageBytes {
+		return pbErrors.FailedPreconditionError("uploaded object exceeds 10MB")
+	}
+	return nil
+}
+
 func (server *Server) loadOwnedArt(ctx context.Context, name, action string) (*models.Art, *models.User, error) {
 	firebaseUID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
@@ -650,12 +665,8 @@ func (server *Server) CompleteArtUpload(ctx context.Context, req *pb.CompleteArt
 	if err != nil {
 		return nil, pbErrors.FailedPreconditionError("image not found in storage, upload first")
 	}
-	if info.ContentType != "" && !strings.HasPrefix(info.ContentType, "image/") {
-		return nil, pbErrors.FailedPreconditionError("uploaded object is not an image")
-	}
-	const maxArtImageBytes = 10 * 1024 * 1024
-	if info.Size > maxArtImageBytes {
-		return nil, pbErrors.FailedPreconditionError("uploaded object exceeds 10MB")
+	if err := validateUploadedObject(info); err != nil {
+		return nil, err
 	}
 	artDb.Status = models.ArtStatusEnumCOMPLETE
 	artDb.ImageID = null.StringFrom(artDb.ID)
