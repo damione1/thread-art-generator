@@ -2,20 +2,14 @@ package pbErrors
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/bufbuild/protovalidate-go"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
-// Error message constants
 const (
-	// Validation error prefix
-	ErrValidationPrefix = "failed to validate request"
-
-	// Common validation errors
 	ErrEmailAlreadyExists        = "email already exists"
 	ErrInvalidResourceName       = "invalid resource name"
 	ErrUserNotFound              = "user not found"
@@ -24,9 +18,14 @@ const (
 	ErrTooManyValidationRequests = "too many validation requests"
 	ErrSessionNotFound           = "session not found"
 	ErrSessionBlocked            = "session is blocked"
+
+	// UserFacingInternalMessage is what forms show for CodeInternal.
+	// The wire message stays the operator-safe first argument to InternalError.
+	UserFacingInternalMessage = "Something went wrong. Please try again."
 )
 
-// FieldViolation creates a field violation for gRPC error details
+// FieldViolation creates a google.rpc.BadRequest field violation.
+// field is the proto path (snake_case, dotted), e.g. "art.title".
 func FieldViolation(field string, err error) *errdetails.BadRequest_FieldViolation {
 	return &errdetails.BadRequest_FieldViolation{
 		Field:       field,
@@ -47,46 +46,30 @@ func withBadRequest(code connect.Code, message string, violations []*errdetails.
 	return cerr
 }
 
-// InvalidArgumentError creates an InvalidArgument error with field violations
 func InvalidArgumentError(violations []*errdetails.BadRequest_FieldViolation) error {
 	return withBadRequest(connect.CodeInvalidArgument, "invalid parameters", violations)
 }
 
-// UnauthenticatedError creates an Unauthenticated error
 func UnauthenticatedError(message string) error {
 	return connect.NewError(connect.CodeUnauthenticated, errors.New(message))
 }
 
-// PermissionDeniedError creates a PermissionDenied error
 func PermissionDeniedError(message string) error {
 	return connect.NewError(connect.CodePermissionDenied, errors.New(message))
 }
 
-// InternalError creates an Internal error
-func InternalError(message string, err error) error {
-	cerr := connect.NewError(connect.CodeInternal, errors.New(message))
-	if err == nil {
-		return cerr
+// InternalError returns CodeInternal with message only. cause is logged, never put on the wire.
+func InternalError(message string, cause error) error {
+	if cause != nil {
+		log.Error().Err(cause).Str("public", message).Msg("internal error")
 	}
-	detail, dErr := connect.NewErrorDetail(&errdetails.ErrorInfo{
-		Reason: "INTERNAL_ERROR",
-		Metadata: map[string]string{
-			"error": err.Error(),
-		},
-	})
-	if dErr != nil {
-		return cerr
-	}
-	cerr.AddDetail(detail)
-	return cerr
+	return connect.NewError(connect.CodeInternal, errors.New(message))
 }
 
-// NotFoundError creates a NotFound error
 func NotFoundError(message string) error {
 	return connect.NewError(connect.CodeNotFound, errors.New(message))
 }
 
-// AlreadyExistsError creates an AlreadyExists error
 func AlreadyExistsError(message string, field string) error {
 	if field == "" {
 		return connect.NewError(connect.CodeAlreadyExists, errors.New(message))
@@ -96,79 +79,34 @@ func AlreadyExistsError(message string, field string) error {
 	})
 }
 
-// FailedPreconditionError creates a FailedPrecondition error
 func FailedPreconditionError(message string) error {
 	return connect.NewError(connect.CodeFailedPrecondition, errors.New(message))
-}
-
-// FormatValidationError formats a validation error with the standard prefix
-func FormatValidationError(err error) error {
-	return fmt.Errorf("%s: %w", ErrValidationPrefix, err)
-}
-
-// NewValidationError creates a new validation error with the standard prefix
-func NewValidationError(message string) error {
-	return fmt.Errorf("%s: %s", ErrValidationPrefix, message)
-}
-
-// NewFieldValidationError creates a new field validation error with the standard format
-func NewFieldValidationError(field, message string) error {
-	return fmt.Errorf("%s: (%s: %s)", ErrValidationPrefix, field, message)
-}
-
-// NewNotFoundError creates a new not found error
-func NewNotFoundError(message string) error {
-	return NotFoundError(message)
-}
-
-// NewInternalError creates a new internal error
-func NewInternalError(message string, err error) error {
-	return InternalError(message, err)
-}
-
-// NewUnauthenticatedError creates a new unauthenticated error
-func NewUnauthenticatedError(message string) error {
-	return UnauthenticatedError(message)
-}
-
-// IsValidationError checks if an error is a validation error
-func IsValidationError(err error) bool {
-	if err == nil {
-		return false
-	}
-	return strings.Contains(fmt.Sprint(err), ErrValidationPrefix)
 }
 
 func hasCode(err error, code connect.Code) bool {
 	return err != nil && connect.CodeOf(err) == code
 }
 
-// IsNotFoundError checks if an error is a not found error
 func IsNotFoundError(err error) bool {
 	return hasCode(err, connect.CodeNotFound)
 }
 
-// IsUnauthenticatedError checks if an error is an unauthenticated error
 func IsUnauthenticatedError(err error) bool {
 	return hasCode(err, connect.CodeUnauthenticated)
 }
 
-// IsPermissionDeniedError checks if an error is a permission denied error
 func IsPermissionDeniedError(err error) bool {
 	return hasCode(err, connect.CodePermissionDenied)
 }
 
-// IsInternalError checks if an error is an internal error
 func IsInternalError(err error) bool {
 	return hasCode(err, connect.CodeInternal)
 }
 
-// IsInvalidArgumentError checks if an error is an invalid argument error
 func IsInvalidArgumentError(err error) bool {
 	return hasCode(err, connect.CodeInvalidArgument)
 }
 
-// ExtractFieldViolations extracts field violations from an error
 func ExtractFieldViolations(err error) []*errdetails.BadRequest_FieldViolation {
 	if err == nil {
 		return nil
@@ -189,21 +127,12 @@ func ExtractFieldViolations(err error) []*errdetails.BadRequest_FieldViolation {
 	return nil
 }
 
-// HasFieldViolation checks if an error has a field violation for a specific field
 func HasFieldViolation(err error, field string) bool {
-	violations := ExtractFieldViolations(err)
-	for _, v := range violations {
-		if v.GetField() == field {
-			return true
-		}
-	}
-	return false
+	return GetFieldViolationMessage(err, field) != ""
 }
 
-// GetFieldViolationMessage gets the message for a specific field violation
 func GetFieldViolationMessage(err error, field string) string {
-	violations := ExtractFieldViolations(err)
-	for _, v := range violations {
+	for _, v := range ExtractFieldViolations(err) {
 		if v.GetField() == field {
 			return v.GetDescription()
 		}
@@ -211,42 +140,33 @@ func GetFieldViolationMessage(err error, field string) string {
 	return ""
 }
 
-// ConvertProtoValidateError converts a protovalidate error to an InvalidArgumentError
+// ConvertProtoValidateError turns protovalidate violations into InvalidArgument
+// with proto field paths (art.title, composition.nails_quantity, page_size).
 func ConvertProtoValidateError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	validationErr, ok := err.(*protovalidate.ValidationError)
-	if !ok {
-		return InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
-			FieldViolation("", errors.New("validation failed")),
-		})
+	var validationErr *protovalidate.ValidationError
+	if !errors.As(err, &validationErr) {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("validation failed"))
 	}
 
 	fieldViolations := make([]*errdetails.BadRequest_FieldViolation, 0, len(validationErr.Violations))
 	for _, violation := range validationErr.Violations {
-		fieldPath := extractFieldName(violation)
+		fieldPath := ""
+		if violation != nil && violation.Proto != nil {
+			fieldPath = protovalidate.FieldPathString(violation.Proto.GetField())
+		}
+		message := "validation failed"
+		if violation != nil && violation.Proto != nil && violation.Proto.GetMessage() != "" {
+			message = violation.Proto.GetMessage()
+		}
 		fieldViolations = append(fieldViolations, &errdetails.BadRequest_FieldViolation{
 			Field:       fieldPath,
-			Description: violation.Proto.GetMessage(),
+			Description: message,
 		})
 	}
 
 	return InvalidArgumentError(fieldViolations)
-}
-
-func extractFieldName(violation *protovalidate.Violation) string {
-	if violation == nil || violation.FieldDescriptor == nil {
-		return ""
-	}
-
-	fieldName := string(violation.FieldDescriptor.Name())
-	parts := strings.Split(fieldName, "_")
-	for i := 1; i < len(parts); i++ {
-		if len(parts[i]) > 0 {
-			parts[i] = strings.ToUpper(string(parts[i][0])) + parts[i][1:]
-		}
-	}
-	return strings.Join(parts, "")
 }

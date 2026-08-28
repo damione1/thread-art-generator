@@ -676,6 +676,11 @@ DualBucket now aliases private=public (one S3 bucket). `GetArtUploadUrl` / Rabbi
 
 The user-facing field-error stack already exists: `StandardError` + `errdetails.BadRequest` + templ `FieldError` + `FormErrorData`. API constructors (`InvalidArgumentError`) attach details. `FromConnectError` extracts them. **The BFF used `ErrorParser.ParseConnectError`, which dropped details** (`"Connect error details parsing is complex"` leftover). Forms therefore never received per-field maps — only `_form`. Fix: `ParseConnectError` delegates to `FromConnectError`. Dual system remains (`pbErrors.*` vs `StandardError.ToConnectError`); services emit the former. A later pass should pick one constructor path and stop leaking `InternalError` metadata on the wire.
 
+### 2026-08-28 ~14:00 EDT | progress | Error pass
+
+One emit path: `InvalidArgumentError` / `InternalError` / `NotFoundError` / … `ConvertProtoValidateError` now uses protovalidate `FieldPathString` (`art.title`, `composition.nails_quantity`). `InternalError` logs the cause and puts **no** ErrorInfo/SQL on the wire. `FromConnectError` uses `errors.As` (unwrap). `FormFields` expands proto path + last segment + snake/camel so templates match HTML names. Internal is shown as a generic `_form` message. Dead `ErrorParser` / example dual-API deleted.
+
+
 
 
 

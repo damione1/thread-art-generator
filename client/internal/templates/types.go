@@ -131,15 +131,14 @@ func (pd *PageData) HasFieldErrors() bool {
 	return len(pd.FieldErrors) > 0
 }
 
-// GetFieldErrors returns errors for a specific field
+// GetFieldErrors returns errors for a specific field (proto path or HTML name)
 func (pd *PageData) GetFieldErrors(field string) []string {
-	return pd.FieldErrors[field]
+	return FieldMsgs(pd.FieldErrors, field)
 }
 
 // HasFieldError returns true if a specific field has errors
 func (pd *PageData) HasFieldError(field string) bool {
-	errors, exists := pd.FieldErrors[field]
-	return exists && len(errors) > 0
+	return HasFieldErr(pd.FieldErrors, field)
 }
 
 // GetPageTitle returns the full page title with fallback
