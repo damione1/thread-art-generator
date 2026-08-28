@@ -17,22 +17,8 @@ setup:
 
 .PHONY: proto
 proto:
-	@echo "🔧 Generating protocol buffers..."
-	@echo "Checking for required tools..."
-	@test -f "$(shell go env GOPATH)/bin/protoc-gen-go" || (echo "❌ protoc-gen-go not found. Installing..." && go install google.golang.org/protobuf/cmd/protoc-gen-go@latest)
-	@test -f "$(shell go env GOPATH)/bin/protoc-gen-connect-go" || (echo "❌ protoc-gen-connect-go not found. Installing..." && go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest)
-	@test -f "$(shell go env GOPATH)/bin/protoc-gen-openapiv2" || (echo "❌ protoc-gen-openapiv2 not found. Installing..." && go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest)
-	@echo "✅ All tools available"
-	@echo "Creating output directories..."
-	@mkdir -p core/pb/pbconnect
-	@mkdir -p api/openapi
-	@echo "Generating Go and Connect-RPC files..."
-	@cd proto && PATH="$(shell go env GOPATH)/bin:$$PATH" buf generate --template buf.gen.make.yaml
-	@echo "✅ Protocol buffers generated successfully!"
-	@echo "📁 Generated files:"
-	@echo "   - Go types: core/pb/"
-	@echo "   - Connect-RPC: core/pb/pbconnect/"
-	@echo "   - OpenAPI: api/openapi/"
+	@command -v buf >/dev/null 2>&1 || { echo "❌ buf CLI not found on PATH. Install: https://buf.build/docs/installation"; exit 1; }
+	@cd proto && buf generate && buf lint
 
 .PHONY: proto-clean
 proto-clean:

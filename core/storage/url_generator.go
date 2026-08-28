@@ -3,8 +3,6 @@ package storage
 import (
 	"context"
 	"time"
-
-	"gocloud.dev/blob"
 )
 
 // ImageURLGenerator provides methods for generating different types of URLs for stored images
@@ -15,7 +13,7 @@ type ImageURLGenerator interface {
 
 	// GetSignedURL returns a signed URL with expiration for secure access
 	// This is used for admin operations or when public access is not desired
-	GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error)
+	GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
 
 	// GetUploadURL returns a signed URL for uploading content
 	// This includes security constraints and content type validation
@@ -94,13 +92,13 @@ func (g *URLGenerator) GetPublicURL(key string) string {
 }
 
 // GetSignedURL returns a signed URL with expiration for secure access
-func (g *URLGenerator) GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
+func (g *URLGenerator) GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return g.storage.SignedURL(ctx, key, opts)
 }
 
 // GetUploadURL returns a signed URL for uploading content with security constraints
 func (g *URLGenerator) GetUploadURL(ctx context.Context, key string, contentType string, expiry time.Duration) (string, error) {
-	opts := &blob.SignedURLOptions{
+	opts := &SignedURLOptions{
 		Expiry:      expiry,
 		Method:      "PUT",
 		ContentType: contentType,
@@ -129,7 +127,7 @@ func GenerateImageURL(ctx context.Context, generator ImageURLGenerator, key stri
 	}
 
 	// Generate signed URL
-	signedOpts := &blob.SignedURLOptions{
+	signedOpts := &SignedURLOptions{
 		Expiry: opts.SignedURLExpiry,
 		Method: "GET",
 	}
@@ -147,12 +145,12 @@ func (g *PublicImageURLGenerator) GetPublicURL(key string) string {
 	return g.storage.GetPublicURL(key)
 }
 
-func (g *PublicImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
+func (g *PublicImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return g.storage.SignedURL(ctx, key, opts)
 }
 
 func (g *PublicImageURLGenerator) GetUploadURL(ctx context.Context, key string, contentType string, expiry time.Duration) (string, error) {
-	opts := &blob.SignedURLOptions{
+	opts := &SignedURLOptions{
 		Expiry:      expiry,
 		Method:      "PUT",
 		ContentType: contentType,
@@ -166,12 +164,12 @@ func (g *PrivateImageURLGenerator) GetPublicURL(key string) string {
 	return ""
 }
 
-func (g *PrivateImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *blob.SignedURLOptions) (string, error) {
+func (g *PrivateImageURLGenerator) GetSignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return g.storage.SignedURL(ctx, key, opts)
 }
 
 func (g *PrivateImageURLGenerator) GetUploadURL(ctx context.Context, key string, contentType string, expiry time.Duration) (string, error) {
-	opts := &blob.SignedURLOptions{
+	opts := &SignedURLOptions{
 		Expiry:      expiry,
 		Method:      "PUT",
 		ContentType: contentType,

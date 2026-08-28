@@ -213,6 +213,14 @@ service ArtGeneratorService {
     option (google.api.method_signature) = "name";
   }
 
+  rpc StartArtUpload (StartArtUploadRequest) returns (StartArtUploadResponse) {
+    option (google.api.method_signature) = "name,content_type";
+  }
+
+  rpc CompleteArtUpload (CompleteArtUploadRequest) returns (Art) {
+    option (google.api.method_signature) = "name";
+  }
+
   // Composition RPCs
   rpc CreateComposition (CreateCompositionRequest) returns (Composition) {
     option (google.api.http) = {
