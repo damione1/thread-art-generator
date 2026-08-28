@@ -14,7 +14,7 @@ import (
 
 // IdentityInterceptor fills auth.Identity from Service HMAC or a session cookie.
 // Cookie is the user gate. Authorization: Service … is the worker gate.
-// Bare Bearer is rejected (no PASETO/Firebase dual-run).
+// Bare Bearer is rejected.
 func IdentityInterceptor(sessions auth.Sessions, services auth.ServiceAuth) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {

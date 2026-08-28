@@ -95,7 +95,7 @@ func TestResolveIdentityCookie(t *testing.T) {
 
 func TestResolveIdentityBearerRejected(t *testing.T) {
 	h := make(http.Header)
-	h.Set("Authorization", "Bearer leftover-paseto")
+	h.Set("Authorization", "Bearer leftover-token")
 	_, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/CreateArt", h, nil, nil)
 	require.Error(t, err)
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))

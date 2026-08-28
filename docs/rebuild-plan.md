@@ -700,7 +700,7 @@ Ported onto `feature/rebuild`:
 - Compose pins `STORAGE_PROVIDER=minio` so a leftover `.env` `firebase` cannot split API vs worker
 - `mc anonymous set download` + CORS on the public MinIO bucket (browser `<img>` 403)
 
+### 2026-08-28 ~19:00 EDT | progress | Phase E — cut GCP leftovers
 
-
-
+One S3 `Bucket` (`NewBucket` + `BucketConfigFromUtil`). Queue is Postgres only. Deleted `functions/`, `firebase.json`, DualBucket/BlobStorage/url_generator, PASETO/cache, Firebase BFF middleware, leftover TS gen (`functions_pb`/`storage_pb`). Migration `000015_drop_firebase_uid`. Compose: MinIO only, no RabbitMQ / Firebase emu. `.env.sample` is Postgres + MinIO + cookie/HMAC. README matches. `grep firebase/paseto --include='*.go'` empty outside this journal.
 

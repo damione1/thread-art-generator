@@ -13,7 +13,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/Damione1/thread-art-generator/core/auth"
-	"github.com/Damione1/thread-art-generator/core/cache"
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/interceptors"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
@@ -32,7 +31,6 @@ func main() {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
 
-	go cache.CleanExpiredCacheEntries()
 	runConnectServer(config)
 }
 

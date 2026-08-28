@@ -33,7 +33,6 @@ type User struct {
 	Role        RoleEnum    `boil:"role" json:"role" toml:"role" yaml:"role"`
 	FirstName   string      `boil:"first_name" json:"first_name" toml:"first_name" yaml:"first_name"`
 	LastName    null.String `boil:"last_name" json:"last_name,omitempty" toml:"last_name" yaml:"last_name,omitempty"`
-	FirebaseUID null.String `boil:"firebase_uid" json:"firebase_uid,omitempty" toml:"firebase_uid" yaml:"firebase_uid,omitempty"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -49,7 +48,6 @@ var UserColumns = struct {
 	Role        string
 	FirstName   string
 	LastName    string
-	FirebaseUID string
 }{
 	ID:          "id",
 	Email:       "email",
@@ -60,7 +58,6 @@ var UserColumns = struct {
 	Role:        "role",
 	FirstName:   "first_name",
 	LastName:    "last_name",
-	FirebaseUID: "firebase_uid",
 }
 
 var UserTableColumns = struct {
@@ -73,7 +70,6 @@ var UserTableColumns = struct {
 	Role        string
 	FirstName   string
 	LastName    string
-	FirebaseUID string
 }{
 	ID:          "users.id",
 	Email:       "users.email",
@@ -84,7 +80,6 @@ var UserTableColumns = struct {
 	Role:        "users.role",
 	FirstName:   "users.first_name",
 	LastName:    "users.last_name",
-	FirebaseUID: "users.firebase_uid",
 }
 
 // Generated where
@@ -134,7 +129,6 @@ var UserWhere = struct {
 	Role        whereHelperRoleEnum
 	FirstName   whereHelperstring
 	LastName    whereHelpernull_String
-	FirebaseUID whereHelpernull_String
 }{
 	ID:          whereHelperstring{field: "\"users\".\"id\""},
 	Email:       whereHelpernull_String{field: "\"users\".\"email\""},
@@ -145,7 +139,6 @@ var UserWhere = struct {
 	Role:        whereHelperRoleEnum{field: "\"users\".\"role\""},
 	FirstName:   whereHelperstring{field: "\"users\".\"first_name\""},
 	LastName:    whereHelpernull_String{field: "\"users\".\"last_name\""},
-	FirebaseUID: whereHelpernull_String{field: "\"users\".\"firebase_uid\""},
 }
 
 // UserRels is where relationship names are stored.
@@ -196,9 +189,9 @@ func (r *userR) GetAuthorArts() ArtSlice {
 type userL struct{}
 
 var (
-	userAllColumns            = []string{"id", "email", "avatar_id", "active", "created_at", "updated_at", "role", "first_name", "last_name", "firebase_uid"}
+	userAllColumns            = []string{"id", "email", "avatar_id", "active", "created_at", "updated_at", "role", "first_name", "last_name"}
 	userColumnsWithoutDefault = []string{"first_name"}
-	userColumnsWithDefault    = []string{"id", "email", "avatar_id", "active", "created_at", "updated_at", "role", "last_name", "firebase_uid"}
+	userColumnsWithDefault    = []string{"id", "email", "avatar_id", "active", "created_at", "updated_at", "role", "last_name"}
 	userPrimaryKeyColumns     = []string{"id"}
 	userGeneratedColumns      = []string{}
 )

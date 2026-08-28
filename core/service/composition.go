@@ -14,7 +14,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/friendsofgo/errors"
 	"github.com/google/uuid"
@@ -27,7 +26,6 @@ import (
 
 // CreateComposition creates a new composition for an art
 func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompositionRequest) (*pb.Composition, error) {
-	// Get Firebase UID from context
 	user, err := server.currentUser(ctx)
 	if err != nil {
 		return nil, err
@@ -111,7 +109,6 @@ func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompo
 
 // GetComposition retrieves a composition by ID
 func (server *Server) getComposition(ctx context.Context, req *pb.GetCompositionRequest) (*pb.Composition, error) {
-	// Get Firebase UID from context
 	user, err := server.currentUser(ctx)
 	if err != nil {
 		return nil, err
@@ -172,7 +169,6 @@ func (server *Server) updateComposition(ctx context.Context, req *pb.UpdateCompo
 
 // ListCompositions lists all compositions for an art
 func (server *Server) listCompositions(ctx context.Context, req *pb.ListCompositionsRequest) (*pb.ListCompositionsResponse, error) {
-	// Get Firebase UID from context
 	user, err := server.currentUser(ctx)
 	if err != nil {
 		return nil, err
@@ -264,7 +260,6 @@ func (server *Server) listCompositions(ctx context.Context, req *pb.ListComposit
 
 // DeleteComposition deletes a composition
 func (server *Server) deleteComposition(ctx context.Context, req *pb.DeleteCompositionRequest) (*emptypb.Empty, error) {
-	// Get Firebase UID from context
 	user, err := server.currentUser(ctx)
 	if err != nil {
 		return nil, err
@@ -316,21 +311,21 @@ func (server *Server) deleteComposition(ctx context.Context, req *pb.DeleteCompo
 
 	// Delete associated files from storage if they exist
 	if compositionDb.PreviewURL.Valid {
-		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.PreviewURL.String)
+		err = server.bucket.Delete(ctx, compositionDb.PreviewURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.PreviewURL.String).Msg("Failed to delete preview file")
 		}
 	}
 
 	if compositionDb.GcodeURL.Valid {
-		err = server.storage.DeletePrivate(ctx, compositionDb.GcodeURL.String)
+		err = server.bucket.Delete(ctx, compositionDb.GcodeURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.GcodeURL.String).Msg("Failed to delete gcode file")
 		}
 	}
 
 	if compositionDb.PathlistURL.Valid {
-		err = server.storage.DeletePrivate(ctx, compositionDb.PathlistURL.String)
+		err = server.bucket.Delete(ctx, compositionDb.PathlistURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.PathlistURL.String).Msg("Failed to delete pathlist file")
 		}
@@ -358,7 +353,7 @@ func (server *Server) enqueueCompositionForProcessing(ctx context.Context, compo
 	queueName := queue.TopicCompositionProcessing
 
 	// Publish to queue
-	err = server.queueClient.PublishMessage(ctx, queueName, jsonData)
+	err = server.queueClient.Publish(ctx, queueName, jsonData)
 	if err != nil {
 		return fmt.Errorf("failed to publish composition to queue: %w", err)
 	}
@@ -373,7 +368,7 @@ func (server *Server) enqueueCompositionForProcessing(ctx context.Context, compo
 }
 
 func (server *Server) compositionToProto(ctx context.Context, artDb *models.Art, composition *models.Composition) (*pb.Composition, error) {
-	out := pbx.CompositionDbToProto(server.storage, artDb, composition)
+	out := pbx.CompositionDbToProto(server.publicBaseURL, artDb, composition)
 	if err := server.signCompositionDownloads(ctx, out); err != nil {
 		return nil, pbErrors.InternalError("failed to sign composition downloads", err)
 	}
@@ -381,23 +376,18 @@ func (server *Server) compositionToProto(ctx context.Context, artDb *models.Art,
 }
 
 func (server *Server) signCompositionDownloads(ctx context.Context, c *pb.Composition) error {
-	if c == nil || server.storage == nil {
+	if c == nil || server.bucket == nil {
 		return nil
 	}
-	priv := server.storage.GetPrivateStorage()
-	if priv == nil {
-		return nil
-	}
-	opts := &storage.SignedURLOptions{Method: "GET", Expiry: 15 * time.Minute}
 	if c.GcodeUrl != "" && !strings.HasPrefix(c.GcodeUrl, "http") {
-		url, err := priv.SignedURL(ctx, c.GcodeUrl, opts)
+		url, err := server.bucket.PresignGet(ctx, c.GcodeUrl, 15*time.Minute)
 		if err != nil {
 			return err
 		}
 		c.GcodeUrl = url
 	}
 	if c.PathlistUrl != "" && !strings.HasPrefix(c.PathlistUrl, "http") {
-		url, err := priv.SignedURL(ctx, c.PathlistUrl, opts)
+		url, err := server.bucket.PresignGet(ctx, c.PathlistUrl, 15*time.Minute)
 		if err != nil {
 			return err
 		}

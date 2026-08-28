@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
-	"github.com/Damione1/thread-art-generator/client/internal/client"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 )
@@ -48,7 +47,7 @@ func NewGeneratorService(client pbconnect.ArtGeneratorServiceClient, sessionMana
 }
 
 // User domain methods - delegate to UserService
-func (s *GeneratorService) GetCurrentUser(ctx context.Context, r *http.Request) (*client.User, error) {
+func (s *GeneratorService) GetCurrentUser(ctx context.Context, r *http.Request) (*auth.UserInfo, error) {
 	return s.UserService.GetCurrentUser(ctx, r)
 }
 

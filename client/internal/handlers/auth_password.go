@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	coreauth "github.com/Damione1/thread-art-generator/core/auth"
@@ -146,7 +145,7 @@ func (h *PasswordAuthHandler) issueSession(w http.ResponseWriter, r *http.Reques
 		Email: identity.Email,
 		Name:  identity.Email,
 	}
-	return h.sessionManager.CreateSession(w, r, identity.UserID, info, "", time.Now().Add(24*time.Hour))
+	return h.sessionManager.CreateSession(w, r, identity.UserID, info)
 }
 
 func decodePasswordAuth(r *http.Request, req *passwordAuthRequest) error {

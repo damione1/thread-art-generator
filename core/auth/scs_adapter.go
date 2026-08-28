@@ -17,8 +17,7 @@ const (
 // ErrNoSession is returned when Load/LoadFromCookie finds no user id.
 var ErrNoSession = errors.New("no session")
 
-// SCSSessions wraps *scs.SessionManager. Store (mem/postgres/redis) is injected
-// with the manager — redisstore is not in go.mod this round; wiring stays in cmd/client.
+// SCSSessions wraps *scs.SessionManager. Store is injected with the manager.
 type SCSSessions struct {
 	sm *scs.SessionManager
 }

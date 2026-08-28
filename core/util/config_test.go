@@ -6,20 +6,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestApplyDefaultsQueueAndHMAC(t *testing.T) {
+func TestApplyDefaultsStorage(t *testing.T) {
 	t.Parallel()
-	c := Config{TokenSymmetricKey: "token-symmetric-key-32-bytes!!!!"}
+	c := Config{}
 	c.applyDefaults()
-	require.Equal(t, "postgres", c.QueueProvider)
-	require.Empty(t, c.ServiceHMACSecret)
-	require.Equal(t, "local-public", c.Storage.PublicBucket)
-	require.Equal(t, "local-private", c.Storage.PrivateBucket)
+	require.Equal(t, "postgres", c.PostgresUser)
+	require.Equal(t, "thread-art", c.Storage.Bucket)
+	require.Equal(t, "http://localhost:9000/thread-art", c.Storage.PublicBaseURL)
+	require.False(t, c.Storage.ForcePathStyle)
+	require.Empty(t, c.Storage.Endpoint)
 }
 
-func TestApplyDefaultsDoesNotOverrideQueueProvider(t *testing.T) {
+func TestApplyDefaultsDoesNotOverrideHMAC(t *testing.T) {
 	t.Parallel()
-	c := Config{QueueProvider: "rabbitmq", ServiceHMACSecret: "explicit-hmac-secret-32-bytes!!"}
+	c := Config{ServiceHMACSecret: "explicit-hmac-secret-32-bytes!!"}
 	c.applyDefaults()
-	require.Equal(t, "rabbitmq", c.QueueProvider)
 	require.Equal(t, "explicit-hmac-secret-32-bytes!!", c.ServiceHMACSecret)
 }

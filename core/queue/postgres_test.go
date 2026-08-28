@@ -20,9 +20,3 @@ func TestPostgresQueue_SubscribeRequiresHandler(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "handler")
 }
-
-func TestNewQueueClientPostgres(t *testing.T) {
-	_, err := NewQueueClient(t.Context(), "postgres", "nope")
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "expected *sql.DB")
-}

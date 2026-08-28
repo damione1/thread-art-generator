@@ -29,18 +29,6 @@ func TestFromJSONRejectsGarbage(t *testing.T) {
 	require.Error(t, msg.FromJSON([]byte(`{not json`)))
 }
 
-func TestNewQueueClientUnknownProvider(t *testing.T) {
-	_, err := NewQueueClient(t.Context(), "mystery", nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unsupported queue provider")
-}
-
-func TestNewQueueClientRabbitMQWrongConfig(t *testing.T) {
-	_, err := NewQueueClient(t.Context(), "rabbitmq", 123)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "expected string URL")
-}
-
 func TestPostgresQueue_PublishRequiresTopic(t *testing.T) {
 	q := NewPostgresQueue(nil, PostgresOptions{})
 	err := q.Publish(t.Context(), "", []byte("x"))

@@ -51,22 +51,22 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	storage, err := initializeDualStorage(ctx, config)
+	bucket, err := storage.NewBucket(ctx, storage.BucketConfigFromUtil(config))
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize storage")
 	}
-	defer storage.Close()
 
-	if err := startPostgresProcessing(ctx, config, storage); err != nil {
+	log.Info().
+		Str("endpoint", config.Storage.Endpoint).
+		Str("bucket", config.Storage.Bucket).
+		Msg("Worker storage is S3")
+
+	if err := startPostgresProcessing(ctx, config, bucket); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start queue processing")
 	}
 }
 
-func initializeDualStorage(ctx context.Context, config util.Config) (*storage.DualBucketStorage, error) {
-	return storage.NewDualBucketStorage(ctx, config.Storage)
-}
-
-func startPostgresProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
+func startPostgresProcessing(ctx context.Context, config util.Config, bucket storage.Bucket) error {
 	if config.DB == nil {
 		return fmt.Errorf("postgres queue requires a database connection")
 	}
@@ -87,7 +87,7 @@ func startPostgresProcessing(ctx context.Context, config util.Config, dualStorag
 	go func() {
 		log.Info().Str("queue", queue.TopicCompositionProcessing).Str("consumer", consumer).Msg("🧵 Worker is waiting for postgres jobs")
 		err := q.Subscribe(ctx, queue.TopicCompositionProcessing, consumer, func(ctx context.Context, body []byte) error {
-			return processMessage(ctx, body, config.DB, dualStorage)
+			return processMessage(ctx, body, config.DB, bucket)
 		})
 		errCh <- err
 	}()
@@ -102,7 +102,7 @@ func startPostgresProcessing(ctx context.Context, config util.Config, dualStorag
 }
 
 // processMessage processes a single message from the queue
-func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *storage.DualBucketStorage) error {
+func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket storage.Bucket) error {
 	processingStartTime := time.Now()
 
 	// Parse the message
@@ -163,15 +163,15 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer sourceFile.Close()
 
-	imageKey := resource.ArtImageObjectKey(art.AuthorID, art.ID, art.ImageID.String)
+	imageKey := resource.ArtOriginalObjectKey(art.AuthorID, art.ID)
 
 	log.Info().
 		Str("imageKey", imageKey).
 		Str("artID", art.ID).
-		Str("imageID", art.ImageID.String).
+		Str("authorID", art.AuthorID).
 		Msg("Attempting to download source image")
 
-	reader, err := dualStorage.GetPublicStorage().Download(ctx, imageKey)
+	reader, _, err := bucket.Get(ctx, imageKey)
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to download source image: %v", err))
 		return fmt.Errorf("failed to download source image: %w", err)
@@ -311,7 +311,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer previewFile.Close()
 
-	err = dualStorage.GetPublicStorage().Upload(ctx, previewKey, previewFile, "image/png")
+	err = bucket.Put(ctx, previewKey, previewFile, storage.PutOptions{ContentType: "image/png"})
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload preview image: %v", err))
 		return fmt.Errorf("failed to upload preview image: %w", err)
@@ -327,7 +327,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer gcodeFile.Close()
 
-	err = dualStorage.UploadPrivate(ctx, gcodeKey, gcodeFile, "text/plain")
+	err = bucket.Put(ctx, gcodeKey, gcodeFile, storage.PutOptions{ContentType: "text/plain"})
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload gcode file: %v", err))
 		return fmt.Errorf("failed to upload gcode file: %w", err)
@@ -343,7 +343,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer pathsFile.Close()
 
-	err = dualStorage.UploadPrivate(ctx, pathsKey, pathsFile, "application/json")
+	err = bucket.Put(ctx, pathsKey, pathsFile, storage.PutOptions{ContentType: "application/json"})
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload paths file: %v", err))
 		return fmt.Errorf("failed to upload paths file: %w", err)

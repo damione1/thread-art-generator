@@ -7,7 +7,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/Damione1/thread-art-generator/core/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -37,14 +36,7 @@ func artStatus(art *models.Art) pb.ArtStatus {
 	}
 }
 
-func publicURLFromStorage(dualStorage *storage.DualBucketStorage, key string) string {
-	if dualStorage == nil || dualStorage.GetPublicStorage() == nil {
-		return ""
-	}
-	return dualStorage.GetPublicStorage().GetPublicURL(key)
-}
-
-func ArtDbToProto(art *models.Art, dualStorage *storage.DualBucketStorage) *pb.Art {
+func ArtDbToProto(art *models.Art, publicBaseURL string) *pb.Art {
 	status := artStatus(art)
 	artPb := &pb.Art{
 		Title:      art.Title,
@@ -57,7 +49,7 @@ func ArtDbToProto(art *models.Art, dualStorage *storage.DualBucketStorage) *pb.A
 
 	if art.ImageID.Valid && status == pb.ArtStatus_ART_STATUS_COMPLETE {
 		key := resource.ArtImageObjectKey(art.AuthorID, art.ID, art.ImageID.String)
-		artPb.ImageUrl = publicURLFromStorage(dualStorage, key)
+		artPb.ImageUrl = PublicURL(publicBaseURL, key)
 	}
 
 	return artPb

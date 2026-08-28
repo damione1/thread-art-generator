@@ -18,16 +18,18 @@ import (
 )
 
 type Server struct {
-	config      util.Config
-	storage     *storage.DualBucketStorage
-	mailService mailService.MailService
-	queueClient queue.QueueClient
+	config        util.Config
+	bucket        storage.Bucket
+	publicBaseURL string
+	mailService   mailService.MailService
+	queueClient   queue.Queue
 }
 
 func NewServer(config util.Config) (*Server, error) {
 	var err error
 	server := &Server{
-		config: config,
+		config:        config,
+		publicBaseURL: config.Storage.PublicBaseURL,
 	}
 
 	server.mailService, err = mailService.NewSendInBlueMailService(config.SendInBlueAPIKey)
@@ -36,9 +38,9 @@ func NewServer(config util.Config) (*Server, error) {
 	}
 
 	ctx := context.Background()
-	server.storage, err = storage.NewDualBucketStorage(ctx, config.Storage)
+	server.bucket, err = storage.NewBucket(ctx, storage.BucketConfigFromUtil(config))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create dual bucket storage: %v", err)
+		return nil, fmt.Errorf("failed to create bucket: %v", err)
 	}
 
 	if config.DB != nil {
@@ -49,27 +51,10 @@ func NewServer(config util.Config) (*Server, error) {
 }
 
 func (s *Server) Close() error {
-	var err error
-
-	// Close storage connections
-	if s.storage != nil {
-		if storageErr := s.storage.Close(); storageErr != nil {
-			err = storageErr
-		}
-	}
-
-	// Close queue connection
 	if s.queueClient != nil {
-		if queueErr := s.queueClient.Close(); queueErr != nil {
-			if err == nil {
-				err = queueErr
-			} else {
-				err = fmt.Errorf("%v; %v", err, queueErr)
-			}
-		}
+		return s.queueClient.Close()
 	}
-
-	return err
+	return nil
 }
 
 // currentUser resolves the Postgres user from cookie/HMAC identity (UUID only).

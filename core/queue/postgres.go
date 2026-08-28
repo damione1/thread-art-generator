@@ -86,8 +86,7 @@ func (o PostgresOptions) withDefaults() PostgresOptions {
 	return o
 }
 
-// PostgresQueue implements Queue (and QueueClient) with FOR UPDATE SKIP LOCKED.
-// Dual-run: Pub/Sub stays the worker transport until Phase C.
+// PostgresQueue implements Queue with FOR UPDATE SKIP LOCKED.
 type PostgresQueue struct {
 	db   *sql.DB
 	opts PostgresOptions
@@ -98,10 +97,7 @@ type PostgresQueue struct {
 	cancel    context.CancelFunc
 }
 
-var (
-	_ Queue       = (*PostgresQueue)(nil)
-	_ QueueClient = (*PostgresQueue)(nil)
-)
+var _ Queue = (*PostgresQueue)(nil)
 
 // NewPostgresQueue wraps an existing *sql.DB. It does not close the DB.
 func NewPostgresQueue(db *sql.DB, opts PostgresOptions) *PostgresQueue {
@@ -128,11 +124,6 @@ func (q *PostgresQueue) Publish(ctx context.Context, topic string, body []byte) 
 		return fmt.Errorf("queue: insert job: %w", err)
 	}
 	return nil
-}
-
-// PublishMessage implements QueueClient. queueName maps 1:1 onto topic.
-func (q *PostgresQueue) PublishMessage(ctx context.Context, queueName string, message []byte) error {
-	return q.Publish(ctx, queueName, message)
 }
 
 // Subscribe blocks, claiming jobs for topic with SKIP LOCKED until ctx or Close.

@@ -103,12 +103,7 @@ function setup_env() {
     if [ ! -f "$PROJECT_ROOT/.env" ]; then
         echo "Creating .env file from template..."
         cp "$PROJECT_ROOT/.env.sample" "$PROJECT_ROOT/.env"
-
-        # Generate a symmetric key for tokens
-        TOKEN_SYMMETRIC_KEY=$(openssl rand -hex 16)
-        echo "TOKEN_SYMMETRIC_KEY=$TOKEN_SYMMETRIC_KEY" >> "$PROJECT_ROOT/.env"
-
-        echo -e "✅ .env file created with generated keys"
+        echo -e "✅ .env file created"
     else
         echo -e "✅ .env file already exists, skipping"
     fi

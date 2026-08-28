@@ -106,7 +106,7 @@ func TestPostgresQueue_DeadAfterMaxAttempts(t *testing.T) {
 	})
 	defer q.Close()
 
-	require.NoError(t, q.PublishMessage(t.Context(), topic, []byte("nope")))
+	require.NoError(t, q.Publish(t.Context(), topic, []byte("nope")))
 
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()

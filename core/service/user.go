@@ -87,7 +87,7 @@ func (server *Server) updateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		userDb.AvatarID.Valid = true
 		userDb.AvatarID.String = pbUser.GetAvatar()
 	}
-	// Note: We don't reset AvatarID if it's not provided to preserve the Auth0 avatar
+	// Note: We don't reset AvatarID if it's not provided.
 
 	if _, err = userDb.Update(ctx, server.config.DB, boil.Infer()); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {

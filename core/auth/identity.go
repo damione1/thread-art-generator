@@ -3,7 +3,7 @@ package auth
 import "context"
 
 // Identity is the authenticated principal on a request.
-// UserID is the public resource id (Postgres UUID), never a Firebase UID.
+// UserID is the public resource id (Postgres UUID).
 type Identity struct {
 	UserID string
 	Email  string

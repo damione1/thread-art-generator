@@ -47,7 +47,7 @@ func NewPageData(title, pageType string) *PageData {
 	}
 }
 
-// NewPageDataFromRequest creates a new PageData with basic information and Firebase config from request context
+// NewPageDataFromRequest creates a new PageData with basic information from request context
 func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
 	pageData := &PageData{
 		Title:       title,

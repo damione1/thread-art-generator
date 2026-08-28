@@ -28,7 +28,7 @@ func NewCompositionHandler(generatorService *services.GeneratorService) *Composi
 
 // NewCompositionForm renders the composition creation form
 func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (contains Firebase UID)
+	// Get user from context (session user)
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Extract art ID from URL
@@ -41,7 +41,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 	// Get internal user ID by calling GetCurrentUser API
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for NewCompositionForm")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for NewCompositionForm")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
@@ -168,7 +168,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	// Get internal user ID
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for CreateComposition")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for CreateComposition")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
@@ -263,7 +263,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	// Get internal user ID
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for ViewComposition")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for ViewComposition")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
@@ -324,7 +324,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 	// Get internal user ID
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for DeleteComposition")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for DeleteComposition")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}

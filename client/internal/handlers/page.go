@@ -40,13 +40,12 @@ func (h *PageHandler) HomePage(w http.ResponseWriter, r *http.Request) {
 
 // DashboardPage renders the dashboard page (protected)
 func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
-	// User will be in context due to RequireAuth middleware (contains Firebase UID)
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Get internal user ID by calling GetCurrentUser API
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for DashboardPage")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for DashboardPage")
 
 		// Create error page data using middleware-provided context
 		pageData := templates.NewPageDataFromRequest(r, "Dashboard - Error", "dashboard").
@@ -140,7 +139,7 @@ func (h *PageHandler) DashboardPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// LoginPage renders the Firebase login page
+// LoginPage renders the login page
 func (h *PageHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	// Get user from context if authenticated (to redirect if already logged in)
 	user, _ := middleware.UserFromContext(r.Context())

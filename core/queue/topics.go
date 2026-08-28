@@ -2,8 +2,7 @@ package queue
 
 import "context"
 
-// Queue is the cloud-agnostic job bus.
-// Default impl: Postgres SKIP LOCKED. Pub/Sub is a legacy adapter.
+// Queue is the job bus. Default impl: Postgres SKIP LOCKED.
 type Queue interface {
 	Publish(ctx context.Context, topic string, body []byte) error
 	Subscribe(ctx context.Context, topic, consumer string, h Handler) error

@@ -1,5 +1,4 @@
-// Main JavaScript Entry Point
-// Consolidates HTMX, Alpine.js, and Firebase auth initialization
+// Main JavaScript Entry Point — HTMX and Alpine.js. 
 
 // Import dependencies
 import 'htmx.org';

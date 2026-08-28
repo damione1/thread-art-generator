@@ -29,7 +29,7 @@ Thread Art Generator transforms your images into unique pieces of circular threa
 ```
 
 - **API Server**: Handles user requests, manages art/composition metadata
-- **Queue**: Manages composition processing tasks (RabbitMQ)
+- **Queue**: Postgres `SKIP LOCKED` jobs table
 - **Worker Service**: Processes compositions using thread_generator
 - **Database**: Stores metadata (PostgreSQL)
 - **Storage**: Stores images and generation results (Object Storage)
@@ -74,19 +74,18 @@ tilt up
 - Web UI: http://localhost:8080
 - API: http://localhost:9090
 - MinIO Console: http://localhost:9001 (credentials in .env)
-- RabbitMQ Management: http://localhost:15672 (guest/guest)
-- Firebase Emulator UI: http://localhost:4000
 
 ## Development
 
 ### Project Structure
 
-- `/cmd` - Application entry points (api, worker, migrations)
+- `/cmd` - Application entry points (api, worker)
 - `/core` - Core business logic and shared libraries
-  - `/auth` - Firebase authentication
+  - `/auth` - Sessions, passwords, HMAC service credentials
   - `/db` - Database models and migrations
   - `/service` - Business logic services
-  - `/storage` - Blob storage abstraction (MinIO/GCS)
+  - `/storage` - S3-compatible bucket (MinIO local, R2/S3 prod)
+  - `/queue` - Postgres job queue
   - `/pb` - Generated protocol buffer code
 - `/client` - Go+HTMX frontend application
   - `/cmd/frontend` - Frontend server entry point
@@ -94,8 +93,7 @@ tilt up
   - `/public` - Static assets (CSS, JS, images)
 - `/proto` - Protocol buffer definitions
 - `/threadGenerator` - Thread art generation algorithm
-- `/functions` - Firebase Functions (TypeScript)
-- `/Infra` - Infrastructure configuration (Dockerfiles, Terraform)
+- `/Infra` - Dockerfiles
 - `/scripts` - Utility scripts and CLI tools
 
 
@@ -131,10 +129,9 @@ make proto
 ```
 
 This command will:
-- Auto-install required tools (protoc-gen-go, protoc-gen-connect-go, protoc-gen-openapiv2)
 - Generate Go types in `core/pb/`
-- Generate Connect-RPC clients/servers in `core/pb/pbconnect/`
-- Generate OpenAPI documentation in `api/openapi/`
+- Generate Connect-RPC clients/servers in `core/pb/` (Connect plugin, `paths=source_relative`)
+- Generate TypeScript Connect clients in `client/src/gen/`
 
 **Requirements:**
 - [Buf CLI](https://buf.build/docs/installation) - Protocol buffer build tool
@@ -150,28 +147,13 @@ Connect to the database using:
 docker-compose exec db psql local -U local -d local
 ```
 
-### Firebase Authentication Setup
+### Authentication
 
-The application uses Firebase Authentication for user management:
+Email/password on the BFF (`/auth/login`, `/auth/signup`). Session cookie `session_id` (SCS + Postgres). The API accepts that cookie or `Authorization: Service …` (HMAC) for the worker.
 
-1. **Development**: Firebase emulator runs automatically with `tilt up`
-   - Auth Emulator: http://localhost:9099
-   - Functions Emulator: http://localhost:5001  
-   - Emulator UI: http://localhost:4000
+## Storage
 
-2. **Production**: Configure Firebase project credentials in `.env`
-   - Set `FIREBASE_PROJECT_ID`
-   - Set `FIREBASE_WEB_API_KEY` 
-   - Set `FIREBASE_AUTH_DOMAIN`
-
-## Storage Options
-
-The application supports multiple storage providers:
-
-- **Local MinIO** (development): Configured automatically with dual-bucket setup
-- **Google Cloud Storage (GCS)** (production): Requires GCP credentials and project configuration
-
-Configure storage provider in the `.env` file using `STORAGE_PROVIDER=minio` for development or `STORAGE_PROVIDER=gcs` for production.
+One S3-compatible bucket. Local: MinIO (`S3_*` in `.env`). Prod: R2 or AWS S3, same env vars. Public image URLs are `S3_PUBLIC_BASE_URL/{key}`. Gcode/pathlist use presigned GET.
 
 ## Production Deployment
 
@@ -200,8 +182,7 @@ The project includes configuration files for FluidNC, a high-performance Grbl CN
 - [x] **Addition of HTMX for frontend interactivity**
 - [x] **Compiled JavaScript integration** 
 - [x] **BFF (Backend for Frontend) setup**
-- [x] **Migration from Auth0 to Firebase Authentication**
-- [x] **Firebase Functions for user creation and management**
+- [x] Email/password sessions (cookie)
 - [x] Connect-RPC Migration
   - [x] API Server Connect handler setup
   - [x] Update interceptors to Connect middleware  

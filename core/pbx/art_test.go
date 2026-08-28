@@ -25,7 +25,7 @@ func TestArtDbToProtoNoIO(t *testing.T) {
 		Status:   models.ArtStatusEnumCOMPLETE,
 		ImageID:  null.StringFrom("art-1"),
 	}
-	got := ArtDbToProto(art, nil)
+	got := ArtDbToProto(art, "")
 	require.Equal(t, "users/user-1/arts/art-1", got.Name)
 	require.Equal(t, "users/user-1", got.Author)
 	require.Equal(t, pb.ArtStatus_ART_STATUS_COMPLETE, got.Status)

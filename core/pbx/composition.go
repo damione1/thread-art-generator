@@ -6,11 +6,10 @@ import (
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/Damione1/thread-art-generator/core/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func CompositionDbToProto(dualStorage *storage.DualBucketStorage, artDb *models.Art, composition *models.Composition) *pb.Composition {
+func CompositionDbToProto(publicBaseURL string, artDb *models.Art, composition *models.Composition) *pb.Composition {
 	var status pb.CompositionStatus
 	switch composition.Status {
 	case models.CompositionStatusEnumPENDING:
@@ -42,7 +41,7 @@ func CompositionDbToProto(dualStorage *storage.DualBucketStorage, artDb *models.
 	compositionPb.Name = resource.BuildCompositionResourceName(artDb.AuthorID, artDb.ID, composition.ID)
 
 	if composition.PreviewURL.Valid {
-		compositionPb.PreviewUrl = publicURLFromStorage(dualStorage, composition.PreviewURL.String)
+		compositionPb.PreviewUrl = PublicURL(publicBaseURL, composition.PreviewURL.String)
 	}
 	if composition.GcodeURL.Valid {
 		compositionPb.GcodeUrl = composition.GcodeURL.String

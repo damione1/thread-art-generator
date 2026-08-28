@@ -25,7 +25,7 @@ proto-clean:
 	@echo "🧹 Cleaning generated protocol buffer files..."
 	@rm -rf core/pb/*.pb.go
 	@rm -rf core/pb/pbconnect/
-	@rm -rf api/openapi/
+	@rm -rf client/src/gen/
 	@echo "✅ Protocol buffer files cleaned"
 
 .PHONY: test
@@ -85,17 +85,6 @@ generate-templ:
 	@echo "🔄 Generating Templ templates ($(TEMPL_VERSION), matches go.mod)..."
 	@go run github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION) generate || { echo "❌ Template generation failed"; exit 1; }
 	@echo "✅ Templ templates generated successfully"
-
-.PHONY: firebase-build
-firebase-build:
-	@echo "🔧 Building Firebase Functions..."
-	@cd functions && npm install && npm run build
-	@echo "✅ Firebase Functions built successfully"
-
-.PHONY: firebase-start
-firebase-start: firebase-build
-	@echo "🚀 Starting Firebase Emulator Suite..."
-	@firebase emulators:start --only auth,functions,ui --project demo-thread-art-generator
 
 # This rule allows capturing arbitrary targets as arguments
 %:

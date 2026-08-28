@@ -219,41 +219,6 @@ local_resource(
 
 
 # ================================================
-# FIREBASE EMULATOR CONFIGURATION
-# ================================================
-
-# Firebase emulator leftover in functions/. Cookie auth is the live path.
-local_resource(
-  'firebase-functions-build',
-  cmd='make firebase-build',
-  labels=['firebase'],
-  deps=['functions/src/**/*.ts', 'functions/package.json', 'functions/tsconfig.json', '.env'],
-  trigger_mode=TRIGGER_MODE_MANUAL,
-  auto_init=False,
-)
-
-local_resource(
-  'firebase-emulator',
-  serve_cmd='make firebase-start',
-  serve_dir='.',
-  labels=['firebase'],
-  resource_deps=['firebase-functions-build'],
-  auto_init=False,
-  trigger_mode=TRIGGER_MODE_MANUAL,
-  readiness_probe=probe(
-    http_get=http_get_action(port=9099, path='/'),
-    initial_delay_secs=10,
-    timeout_secs=5,
-    period_secs=5,
-  ),
-  links=[
-    link('http://localhost:4000', 'Firebase Emulator UI'),
-    link('http://localhost:9099', 'Firebase Auth Emulator'),
-    link('http://localhost:5001', 'Firebase Functions Emulator'),
-  ]
-)
-
-# ================================================
 # SERVICE CONFIGURATION
 # ================================================
 
@@ -287,15 +252,6 @@ dc_resource(
 )
 
 dc_resource(
-  'rabbitmq',
-  labels=['queue'],
-  auto_init=True,
-  links=[
-    link('http://localhost:15672', 'RabbitMQ Management (guest/guest)'),
-  ]
-)
-
-dc_resource(
   'worker',
   labels=['worker'],
   resource_deps=['worker-build', 'run-migrations', 'minio'],
@@ -305,7 +261,7 @@ dc_resource(
 dc_resource(
   'api',
   labels=['application'],
-  resource_deps=['api-build', 'db', 'rabbitmq', 'minio'],
+  resource_deps=['api-build', 'db', 'minio'],
   auto_init=True,
   links=[
     link('http://localhost:9090', 'Connect API'),
@@ -333,7 +289,7 @@ dc_resource(
 )
 
 dc_resource(
-  'minio-bucket-setup',
+  'minio-init',
   labels=['storage'],
   resource_deps=['minio'],
   auto_init=True,
