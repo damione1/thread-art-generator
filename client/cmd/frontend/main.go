@@ -185,10 +185,6 @@ func main() {
 				fmt.Fprintf(w, `{"id":"%s","name":"%s","email":"%s"}`,
 					user.ID, user.Name, user.Email)
 			})
-
-			// Art upload API routes
-			r.Post("/get-upload-url/{artId}", artHandler.GetArtUploadUrl)
-			r.Post("/confirm-upload/{artId}", artHandler.ConfirmArtImageUpload)
 		})
 	})
 

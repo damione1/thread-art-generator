@@ -61,14 +61,6 @@ func (s *GeneratorService) GetArt(ctx context.Context, userID, artID string) (*p
 	return s.ArtService.GetArt(ctx, userID, artID)
 }
 
-func (s *GeneratorService) GetArtUploadUrl(ctx context.Context, userID, artID, contentType string, fileSize int64) (*pb.GetArtUploadUrlResponse, error) {
-	return s.ArtService.GetArtUploadUrl(ctx, userID, artID, contentType, fileSize)
-}
-
-func (s *GeneratorService) ConfirmArtImageUpload(ctx context.Context, artName string) (*pb.Art, error) {
-	return s.ArtService.ConfirmArtImageUpload(ctx, artName)
-}
-
 func (s *GeneratorService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
 	return s.ArtService.ListArts(ctx, userID, pageSize, pageToken, orderBy, orderDirection)
 }

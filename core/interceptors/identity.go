@@ -87,9 +87,7 @@ func skipIdentity(procedure string) bool {
 		return true
 	}
 	switch procedure {
-	case "/pb.ArtGeneratorService/GetMediaUploadUrl",
-		"/pb.ArtGeneratorService/GetMediaDownloadUrl",
-		"/pb.ArtGeneratorService/SyncUserFromFirebase":
+	case "/pb.ArtGeneratorService/SyncUserFromFirebase":
 		return true
 	}
 	return false

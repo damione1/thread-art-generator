@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/alexedwards/scs/postgresstore"
@@ -46,7 +47,7 @@ func NewSCSSessionManager(db *sql.DB) (*SCSSessionManager, error) {
 	sessionManager.Lifetime = 24 * time.Hour // 24 hour session lifetime
 	sessionManager.Cookie.Name = "session_id"
 	sessionManager.Cookie.HttpOnly = true
-	sessionManager.Cookie.Secure = false // Set to true in production with HTTPS
+	sessionManager.Cookie.Secure = os.Getenv("ENVIRONMENT") != "" && os.Getenv("ENVIRONMENT") != "development"
 	sessionManager.Cookie.SameSite = http.SameSiteLaxMode
 
 	// Initialize the store (creates tables if they don't exist)
@@ -64,7 +65,9 @@ func (s *SCSSessionManager) GetSessionManager() *scs.SessionManager {
 
 // CreateSession creates a new session with Firebase user data
 func (s *SCSSessionManager) CreateSession(w http.ResponseWriter, r *http.Request, userID string, userInfo SessionUserInfo, idToken string, tokenExpiry time.Time) error {
-	// Store user ID
+	if err := s.sessionManager.RenewToken(r.Context()); err != nil {
+		return fmt.Errorf("failed to renew session token: %w", err)
+	}
 	s.sessionManager.Put(r.Context(), sessionKeyUserID, userID)
 	s.sessionManager.Put(r.Context(), "email", userInfo.Email)
 

@@ -27,8 +27,6 @@ const (
 )
 
 var whiteListedPaths = []string{
-	"/pb.ArtGeneratorService/GetMediaUploadUrl",
-	"/pb.ArtGeneratorService/GetMediaDownloadUrl",
 	"/pb.ArtGeneratorService/SyncUserFromFirebase",
 }
 

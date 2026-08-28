@@ -150,16 +150,13 @@ func (c *Config) applyDefaults() {
 	if c.Firebase.ProjectID == "" {
 		c.Firebase.ProjectID = "demo-thread-art-generator"
 	}
-	
+
 	// Storage defaults - set default bucket names if not explicitly configured
 	if c.Storage.PublicBucket == "" {
 		c.Storage.PublicBucket = "local-public"
 	}
 	if c.Storage.PrivateBucket == "" {
 		c.Storage.PrivateBucket = "local-private"
-	}
-	if c.ServiceHMACSecret == "" {
-		c.ServiceHMACSecret = c.TokenSymmetricKey
 	}
 	if c.QueueProvider == "" {
 		c.QueueProvider = "postgres"

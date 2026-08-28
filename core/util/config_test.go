@@ -11,7 +11,7 @@ func TestApplyDefaultsQueueAndHMAC(t *testing.T) {
 	c := Config{TokenSymmetricKey: "token-symmetric-key-32-bytes!!!!"}
 	c.applyDefaults()
 	require.Equal(t, "postgres", c.QueueProvider)
-	require.Equal(t, c.TokenSymmetricKey, c.ServiceHMACSecret)
+	require.Empty(t, c.ServiceHMACSecret)
 	require.Equal(t, "local-public", c.Storage.PublicBucket)
 	require.Equal(t, "local-private", c.Storage.PrivateBucket)
 }

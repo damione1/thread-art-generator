@@ -366,9 +366,6 @@ func (server *Server) enqueueCompositionForProcessing(ctx context.Context, compo
 	}
 
 	queueName := queue.TopicCompositionProcessing
-	if server.config.Queue.CompositionProcessing != "" {
-		queueName = server.config.Queue.CompositionProcessing
-	}
 
 	// Publish to queue
 	err = server.queueClient.PublishMessage(ctx, queueName, jsonData)

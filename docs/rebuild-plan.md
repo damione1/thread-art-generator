@@ -668,5 +668,14 @@ DualBucket now aliases private=public (one S3 bucket). `GetArtUploadUrl` / Rabbi
 
 `users.id` is UUID. Lookup by Firebase UID as PK raises `22P02`, so the dual-run fallback never ran and legacy sessions would Internal. `currentUser` now parses UUID first; `PrincipalService` is refused on user RPCs. AuthSync no longer links an existing password row by email.
 
+### 2026-08-28 ~13:50 EDT | progress | Drop GetArtUploadUrl + leftovers
+
+`GetArtUploadUrl` / `ConfirmArtImageUpload` removed from proto, API, BFF `/api/get-upload-url`. Upload path is Start/Complete only. `page_size` CEL `gte: 0`. HMAC no longer falls back to `TOKEN_SYMMETRIC_KEY`. Queue topic is always `composition-processing`. Worker consumer = hostname, visibility 45m. Dead GetMedia whitelist gone. Cookie `Secure` hors development. `CreateSession` renews the SCS token.
+
+### 2026-08-28 ~13:50 EDT | discovery | Error system (review, not rewrite)
+
+The user-facing field-error stack already exists: `StandardError` + `errdetails.BadRequest` + templ `FieldError` + `FormErrorData`. API constructors (`InvalidArgumentError`) attach details. `FromConnectError` extracts them. **The BFF used `ErrorParser.ParseConnectError`, which dropped details** (`"Connect error details parsing is complex"` leftover). Forms therefore never received per-field maps — only `_form`. Fix: `ParseConnectError` delegates to `FromConnectError`. Dual system remains (`pbErrors.*` vs `StandardError.ToConnectError`); services emit the former. A later pass should pick one constructor path and stop leaking `InternalError` metadata on the wire.
+
+
 
 

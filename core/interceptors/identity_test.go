@@ -114,8 +114,8 @@ func TestSkipIdentity(t *testing.T) {
 	require.True(t, skipIdentity("/connectrpc.health.v1.Health"))
 	require.False(t, skipIdentity("/pb.ArtGeneratorService/CreateArt"))
 	require.True(t, skipIdentity("/pb.ArtGeneratorService/SyncUserFromFirebase"))
-	require.True(t, skipIdentity("/pb.ArtGeneratorService/GetMediaUploadUrl"))
-	require.True(t, skipIdentity("/pb.ArtGeneratorService/GetMediaDownloadUrl"))
+	require.False(t, skipIdentity("/pb.ArtGeneratorService/GetMediaUploadUrl"))
+	require.False(t, skipIdentity("/pb.ArtGeneratorService/GetMediaDownloadUrl"))
 	require.False(t, skipIdentity("/pb.FirebaseFunctionsService/ConfirmArtImageUploadFromFunction"))
 }
 
