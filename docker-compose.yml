@@ -29,6 +29,8 @@ services:
       # Queue configuration
       RABBITMQ_URL: ${RABBITMQ_URL}
       QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
+      QUEUE_PROVIDER: ${QUEUE_PROVIDER:-postgres}
+      SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
     depends_on:
       - db
       - rabbitmq
@@ -53,6 +55,7 @@ services:
       # Queue configuration
       RABBITMQ_URL: ${RABBITMQ_URL}
       QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
+      QUEUE_PROVIDER: ${QUEUE_PROVIDER:-postgres}
     depends_on:
       - db
       - rabbitmq

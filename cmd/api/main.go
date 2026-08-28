@@ -3,9 +3,13 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
-	"github.com/rs/cors"
+	"connectrpc.com/grpchealth"
+	"connectrpc.com/grpcreflect"
+	"github.com/alexedwards/scs/postgresstore"
+	"github.com/alexedwards/scs/v2"
 	"github.com/rs/zerolog/log"
 
 	"github.com/Damione1/thread-art-generator/core/auth"
@@ -46,71 +50,66 @@ func runConnectServer(config util.Config) {
 		log.Fatal().Err(err).Msg("Failed to initialize auth service")
 	}
 
-	// Define our Connect interceptors
+	var hmacAuth auth.ServiceAuth
+	hmacAuth, err = auth.NewHMACServiceAuth(config.ServiceHMACSecret)
+	if err != nil {
+		log.Warn().Err(err).Msg("HMAC service auth disabled (secret too short); cookie/Firebase still work")
+		hmacAuth = nil
+	}
+
+	sm := scs.New()
+	sm.Store = postgresstore.New(config.DB)
+	sm.Cookie.Name = "session_id"
+	sm.Cookie.HttpOnly = true
+	sm.Cookie.SameSite = http.SameSiteLaxMode
+	sm.Lifetime = 24 * time.Hour
+	sessions, err := auth.NewSCSSessions(sm)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize SCS sessions")
+	}
+
 	interceptorChain := connect.WithInterceptors(
 		interceptors.ConnectLogger(),
-		interceptors.AuthMiddleware(authService), // Simplified Firebase-first auth
+		interceptors.IdentityInterceptor(sessions, hmacAuth),
+		interceptors.AuthMiddleware(authService),
 	)
 
-	// Create Connect adapter
 	adapter := service.NewConnectAdapter(server)
-
-	// Create API handler
 	path, handler := pbconnect.NewArtGeneratorServiceHandler(adapter, interceptorChain)
 
-	// Setup CORS
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"}, // Adjust this in production
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders: []string{
-			"Accept",
-			"Authorization",
-			"Content-Type",
-			"Connect-Protocol-Version",
-			"X-Requested-With",
-			"X-User-Agent",
-			"X-Grpc-Web",
-			"Origin",
-			"Access-Control-Request-Method",
-			"Access-Control-Request-Headers",
-		},
-		ExposedHeaders: []string{
-			"Connect-Protocol-Version",
-			"Grpc-Status",
-			"Grpc-Message",
-			"Access-Control-Allow-Origin",
-			"Access-Control-Allow-Credentials",
-		},
-		AllowCredentials: true,
-		MaxAge:           86400,                               // 24 hours
-		Debug:            config.Environment == "development", // Enable debug for development
-	})
-
-	// Create a mux for routing
 	mux := http.NewServeMux()
-
-	// Health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))
 	})
+	mux.Handle(path, handler)
 
-	// Register the service
-	mux.Handle(path, corsHandler.Handler(handler))
+	reflector := grpcreflect.NewStaticReflector(pbconnect.ArtGeneratorServiceName)
+	mux.Handle(grpcreflect.NewHandlerV1(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 
-	// Create the server
+	checker := grpchealth.NewStaticChecker(pbconnect.ArtGeneratorServiceName)
+	mux.Handle(grpchealth.NewHandler(checker))
+
 	serverPort := config.HTTPServerPort
 	if serverPort == "" {
-		serverPort = config.GRPCServerPort // Fallback to GRPC port if HTTP port not set
+		serverPort = config.GRPCServerPort
 		log.Warn().Msg("HTTP_SERVER_PORT not set, using GRPC_SERVER_PORT instead")
 	}
 	addr := fmt.Sprintf("0.0.0.0:%s", serverPort)
 	log.Print("🍩 Starting to listen on " + addr)
 
-	err = http.ListenAndServe(addr, interceptors.HttpLogger(mux))
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to start server")
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           interceptors.HttpLogger(mux),
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		Protocols:         protocols,
 	}
+	log.Fatal().Err(srv.ListenAndServe()).Msg("failed to listen")
 }
 
 func createAuthService(config util.Config) (auth.AuthService, error) {
