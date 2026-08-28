@@ -253,19 +253,17 @@ templ NewArtForm(formData *services.ArtFormData) {
 				Name:        "title",
 				Placeholder: "Enter a title for your art",
 				Value:       formData.Title,
-				HasError:    len(formData.Errors["art.title"]) > 0,
+				HasError:    HasFieldErr(formData.Errors, "art.title"),
 				Required:    true,
 			})
 			@form.Description() {
 				Enter a descriptive title for your thread art project
 			}
-			if len(formData.Errors["art.title"]) > 0 {
-				for _, err := range formData.Errors["art.title"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "art.title") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}

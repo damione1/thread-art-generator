@@ -54,7 +54,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
@@ -181,7 +181,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art to verify it exists and is complete
@@ -218,24 +218,11 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	// Call service to create composition
 	composition, fieldErrors, err := h.generatorService.CreateComposition(r.Context(), createRequest)
 	if err != nil {
-		// If there are field validation errors
-		if fieldErrors != nil {
-			formData.Errors = fieldErrors
-			// Render form with errors
-			renderErr := templates.CompositionForm(art, formData).Render(r.Context(), w)
-			if renderErr != nil {
-				http.Error(w, "Error rendering template", http.StatusInternalServerError)
-				log.Error().Err(renderErr).Msg("Failed to render composition form with field errors")
-			}
-			return
-		}
-
-		// For other errors, display a general error
-		formData.Errors["_form"] = []string{"An error occurred while creating the composition. Please try again."}
+		formData.Errors = fieldErrors
 		renderErr := templates.CompositionForm(art, formData).Render(r.Context(), w)
 		if renderErr != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
-			log.Error().Err(renderErr).Msg("Failed to render composition form with general error")
+			log.Error().Err(renderErr).Msg("Failed to render composition form with field errors")
 		}
 		return
 	}
@@ -268,7 +255,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -289,7 +276,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
@@ -330,10 +317,10 @@ func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
-	
+
 	artID := pathParts[2]
 	compositionID := pathParts[4]
-	
+
 	// Get user from context
 	user, _ := middleware.UserFromContext(r.Context())
 
@@ -352,7 +339,7 @@ func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art and composition
@@ -391,7 +378,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -412,7 +399,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Build the composition resource name

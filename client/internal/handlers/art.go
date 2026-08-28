@@ -145,24 +145,11 @@ func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
 	// Call service to create art with the request object for auth headers
 	art, fieldErrors, err := h.generatorService.CreateArt(r.Context(), createArtRequest)
 	if err != nil {
-		// If there are field validation errors
-		if fieldErrors != nil {
-			formData.Errors = fieldErrors
-			// Render form with errors
-			renderErr := templates.NewArtForm(formData).Render(r.Context(), w)
-			if renderErr != nil {
-				http.Error(w, "Error rendering template", http.StatusInternalServerError)
-				log.Error().Err(renderErr).Msg("Failed to render new art form with errors")
-			}
-			return
-		}
-
-		// For other errors, display a general error
-		formData.Errors["_form"] = []string{"An error occurred while creating the art. Please try again."}
+		formData.Errors = fieldErrors
 		renderErr := templates.NewArtForm(formData).Render(r.Context(), w)
 		if renderErr != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
-			log.Error().Err(renderErr).Msg("Failed to render new art form with general error")
+			log.Error().Err(renderErr).Msg("Failed to render new art form with errors")
 		}
 		return
 	}
