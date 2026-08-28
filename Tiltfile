@@ -45,6 +45,7 @@ def watch_templ_changes():
     deps=[
       'client/internal/templates/**/*.templ',
       'client/internal/components/**/*.templ',
+      'Makefile',
     ],
     ignore=[
       'client/internal/templates/**/*_templ.go',  # Ignore generated Go files
@@ -131,8 +132,6 @@ local_resource(
   resource_deps=['proto-generate', 'templ-generate', 'frontend-assets-build'],
   ignore=[
     'client/internal/templates/**/*.templ',
-    'client/internal/templates/**/*_templ.go',
-    'client/internal/components/**/*_templ.go',
     'client/src/**/*.js',
     'client/styles/**',
     'client/public/**',
@@ -264,8 +263,9 @@ local_resource(
   cmd='make run-migrations',
   labels=['database'],
   resource_deps=['db'],
-  auto_init=False,
-  trigger_mode=TRIGGER_MODE_MANUAL,
+  deps=['core/db/migrations'],
+  auto_init=True,
+  trigger_mode=TRIGGER_MODE_AUTO,
 )
 
 local_resource(
@@ -298,7 +298,7 @@ dc_resource(
 dc_resource(
   'worker',
   labels=['worker'],
-  resource_deps=['worker-build', 'rabbitmq', 'minio'],
+  resource_deps=['worker-build', 'run-migrations', 'minio'],
   auto_init=True,
 )
 

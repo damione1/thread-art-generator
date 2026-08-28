@@ -689,6 +689,17 @@ Points 1–4 of the proto-contract cut (no SPA). Schema stays sacred; the browse
 3. **Codec.** Shared `rpc.ts` uses `createConnectTransport` (`useBinaryFormat`, `credentials: 'include'`). `art-upload.ts` shares it.
 4. **Contract leftovers.** Opaque einride page tokens. `order_by` AIP-132 (`create_time desc`), dropped `order_direction`. DualBucket wires `STORAGE_PRIVATE_BUCKET` when it differs; worker puts gcode/pathlist private; `pbx` keeps keys; service `PresignGet`s. Queue is Postgres only (Rabbit dual-run out of `NewServer` / worker). HMAC service creds unchanged.
 
+### 2026-08-28 ~17:45 EDT | progress | Reconcile session work onto feature/rebuild
+
+Tilt was running in `thread-art-generator` still checked out to `feature/routing-improvment`. Session work (Argon2id, MinIO anonymous download, logout, `STORAGE_PROVIDER` pin) landed as a dirty tree there instead of the `feature/rebuild` worktree. Smart-router stays on routing-improvment. Not copied: that tree's leftover PASETO/ConnectAdapter/Firebase StorageProvider — rebuild already dropped those via #94–#104.
+
+Ported onto `feature/rebuild`:
+- Login hashes with `Argon2idPasswords` (bcrypt kept for tests / legacy rows)
+- `password-auth.ts` binds after `DOMContentLoaded`
+- `window.logout` → `POST /logout` (header still called `logout()`)
+- Compose pins `STORAGE_PROVIDER=minio` so a leftover `.env` `firebase` cannot split API vs worker
+- `mc anonymous set download` + CORS on the public MinIO bucket (browser `<img>` 403)
+
 
 
 

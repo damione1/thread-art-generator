@@ -7,6 +7,16 @@ import Alpine from 'alpinejs';
 
 // Initialize Alpine.js
 window.Alpine = Alpine;
+
+window.logout = async function logout() {
+  await fetch('/logout', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  window.location.href = '/';
+};
+
 Alpine.start();
 
 // Configure HTMX when DOM is ready

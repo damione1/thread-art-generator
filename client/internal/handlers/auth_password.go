@@ -29,7 +29,7 @@ type PasswordAuthHandler struct {
 func NewPasswordAuthHandler(identities coreauth.Identities, sessionManager *auth.SCSSessionManager) *PasswordAuthHandler {
 	return &PasswordAuthHandler{
 		identities:     identities,
-		passwords:      coreauth.BcryptPasswords{},
+		passwords:      coreauth.Argon2idPasswords{},
 		sessionManager: sessionManager,
 	}
 }

@@ -78,16 +78,12 @@ generate-models:
 	@echo "✅ Database models generated successfully"
 	@echo "📁 Generated models in: core/db/models/"
 
+TEMPL_VERSION := $(shell go list -m -f '{{.Version}}' github.com/a-h/templ)
+
 .PHONY: generate-templ
 generate-templ:
-	@echo "🔄 Building npm packages..."
-	@cd client && npm install && npm run build
-	@echo "✅ Npm packages built successfully"
-	@echo "🔄 Generating Templ templates..."
-	@echo "Installing Templ if needed..."
-	@test -f "$(shell go env GOPATH)/bin/templ" || go install github.com/a-h/templ/cmd/templ@latest
-	@echo "Generating templates..."
-	@PATH="$(shell go env GOPATH)/bin:$$PATH" $(shell go env GOPATH)/bin/templ generate || { echo "❌ Template generation failed"; exit 1; }
+	@echo "🔄 Generating Templ templates ($(TEMPL_VERSION), matches go.mod)..."
+	@go run github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION) generate || { echo "❌ Template generation failed"; exit 1; }
 	@echo "✅ Templ templates generated successfully"
 
 .PHONY: firebase-build

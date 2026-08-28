@@ -30,33 +30,41 @@ async function postAuth(url: string, body: Record<string, string>): Promise<void
   }
 }
 
-document.getElementById('email-signin-form')?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = event.target as HTMLFormElement;
-  const email = (form.elements.namedItem('email') as HTMLInputElement)?.value ?? '';
-  const password = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? '';
-  try {
-    await postAuth('/auth/login', { email, password });
-    window.location.href = '/dashboard';
-  } catch (err) {
-    showError(err instanceof Error ? err.message : 'Sign in failed');
-  }
-});
+function bindAuthForms(): void {
+  document.getElementById('email-signin-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const email = (form.elements.namedItem('email') as HTMLInputElement)?.value ?? '';
+    const password = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? '';
+    try {
+      await postAuth('/auth/login', { email, password });
+      window.location.href = '/dashboard';
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Sign in failed');
+    }
+  });
 
-document.getElementById('email-signup-form')?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = event.target as HTMLFormElement;
-  const email = (form.elements.namedItem('email') as HTMLInputElement)?.value ?? '';
-  const password = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? '';
-  const confirm = (form.elements.namedItem('confirmPassword') as HTMLInputElement)?.value ?? '';
-  if (password !== confirm) {
-    showError('Passwords do not match');
-    return;
-  }
-  try {
-    await postAuth('/auth/signup', { email, password });
-    window.location.href = '/dashboard';
-  } catch (err) {
-    showError(err instanceof Error ? err.message : 'Sign up failed');
-  }
-});
+  document.getElementById('email-signup-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const email = (form.elements.namedItem('email') as HTMLInputElement)?.value ?? '';
+    const password = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? '';
+    const confirm = (form.elements.namedItem('confirmPassword') as HTMLInputElement)?.value ?? '';
+    if (password !== confirm) {
+      showError('Passwords do not match');
+      return;
+    }
+    try {
+      await postAuth('/auth/signup', { email, password });
+      window.location.href = '/dashboard';
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Sign up failed');
+    }
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindAuthForms);
+} else {
+  bindAuthForms();
+}

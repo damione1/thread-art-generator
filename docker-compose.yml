@@ -18,7 +18,7 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       FIREBASE_AUTH_EMULATOR_HOST: ${FIREBASE_AUTH_EMULATOR_HOST}
       # Storage configuration
-      STORAGE_PROVIDER: ${STORAGE_PROVIDER}
+      STORAGE_PROVIDER: minio
       STORAGE_REGION: ${STORAGE_REGION}
       STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
       STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
@@ -46,7 +46,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       ENVIRONMENT: ${ENVIRONMENT}
       # Storage configuration
-      STORAGE_PROVIDER: ${STORAGE_PROVIDER}
+      STORAGE_PROVIDER: minio
       STORAGE_REGION: ${STORAGE_REGION}
       STORAGE_INTERNAL_ENDPOINT: ${STORAGE_INTERNAL_ENDPOINT}
       STORAGE_EXTERNAL_ENDPOINT: ${STORAGE_EXTERNAL_ENDPOINT}
@@ -217,6 +217,25 @@ services:
         # Verify the buckets exist and have correct policies
         echo "Public bucket policy:"
         mc policy get minio/$$PUBLIC_BUCKET || echo "No specific policy (using public default)"
+        mc anonymous set download minio/$$PUBLIC_BUCKET || true
+        cat >/tmp/cors.xml <<'EOF'
+<CORSConfiguration>
+  <CORSRule>
+    <AllowedOrigin>http://localhost:8080</AllowedOrigin>
+    <AllowedOrigin>http://127.0.0.1:8080</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedMethod>HEAD</AllowedMethod>
+    <AllowedMethod>POST</AllowedMethod>
+    <AllowedHeader>*</AllowedHeader>
+    <ExposeHeader>ETag</ExposeHeader>
+    <ExposeHeader>Content-Length</ExposeHeader>
+    <ExposeHeader>Content-Type</ExposeHeader>
+    <MaxAgeSeconds>3600</MaxAgeSeconds>
+  </CORSRule>
+</CORSConfiguration>
+EOF
+        mc cors set minio/$$PUBLIC_BUCKET /tmp/cors.xml || true
 
         echo "Private bucket policy:"
         mc policy get minio/$$PRIVATE_BUCKET || echo "No specific policy (private by default)"
