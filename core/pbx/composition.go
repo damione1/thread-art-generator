@@ -45,10 +45,10 @@ func CompositionDbToProto(dualStorage *storage.DualBucketStorage, artDb *models.
 		compositionPb.PreviewUrl = publicURLFromStorage(dualStorage, composition.PreviewURL.String)
 	}
 	if composition.GcodeURL.Valid {
-		compositionPb.GcodeUrl = publicURLFromStorage(dualStorage, composition.GcodeURL.String)
+		compositionPb.GcodeUrl = composition.GcodeURL.String
 	}
 	if composition.PathlistURL.Valid {
-		compositionPb.PathlistUrl = publicURLFromStorage(dualStorage, composition.PathlistURL.String)
+		compositionPb.PathlistUrl = composition.PathlistURL.String
 	}
 
 	if composition.ThreadLength.Valid {

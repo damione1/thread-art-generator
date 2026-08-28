@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/Damione1/thread-art-generator/core/db/models"
@@ -12,6 +14,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/resource"
+	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/friendsofgo/errors"
 	"github.com/google/uuid"
@@ -103,7 +106,7 @@ func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompo
 	}
 
 	// Return the created composition
-	return pbx.CompositionDbToProto(server.storage, artDb, compositionDb), nil
+	return server.compositionToProto(ctx, artDb, compositionDb)
 }
 
 // GetComposition retrieves a composition by ID
@@ -157,7 +160,7 @@ func (server *Server) getComposition(ctx context.Context, req *pb.GetComposition
 	artDb := compositionDb.R.Art
 
 	// Return the composition
-	return pbx.CompositionDbToProto(server.storage, artDb, compositionDb), nil
+	return server.compositionToProto(ctx, artDb, compositionDb)
 }
 
 // UpdateComposition updates an existing composition
@@ -212,25 +215,13 @@ func (server *Server) listCompositions(ctx context.Context, req *pb.ListComposit
 		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
-	// Set default page size if not specified
-	pageSize := int(req.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-	if pageSize > 100 {
-		pageSize = 100
-	}
+	pageSize := int(clampPageSize(req.GetPageSize(), 10, 100))
 
-	// Parse page token if provided
-	offset := 0
-	if req.GetPageToken() != "" {
-		var err error
-		offset, err = parseInt32PageToken(req.GetPageToken())
-		if err != nil {
-			return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
-				pbErrors.FieldViolation("page_token", err),
-			})
-		}
+	offset, err := pageOffset(req)
+	if err != nil {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("page_token", err),
+		})
 	}
 
 	// Query compositions
@@ -256,17 +247,16 @@ func (server *Server) listCompositions(ctx context.Context, req *pb.ListComposit
 	// Convert to proto
 	var protoCompositions []*pb.Composition
 	for _, comp := range compositions {
-		protoCompositions = append(protoCompositions, pbx.CompositionDbToProto(server.storage, artDb, comp))
+		out, err := server.compositionToProto(ctx, artDb, comp)
+		if err != nil {
+			return nil, err
+		}
+		protoCompositions = append(protoCompositions, out)
 	}
 
-	// Create response
 	response := &pb.ListCompositionsResponse{
-		Compositions: protoCompositions,
-	}
-
-	// Set next page token if there are more results
-	if hasNextPage {
-		response.NextPageToken = createPageToken(offset + pageSize)
+		Compositions:  protoCompositions,
+		NextPageToken: encodeNextPageToken(req, int32(pageSize), hasNextPage),
 	}
 
 	return response, nil
@@ -333,14 +323,14 @@ func (server *Server) deleteComposition(ctx context.Context, req *pb.DeleteCompo
 	}
 
 	if compositionDb.GcodeURL.Valid {
-		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.GcodeURL.String)
+		err = server.storage.DeletePrivate(ctx, compositionDb.GcodeURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.GcodeURL.String).Msg("Failed to delete gcode file")
 		}
 	}
 
 	if compositionDb.PathlistURL.Valid {
-		err = server.storage.GetPublicStorage().Delete(ctx, compositionDb.PathlistURL.String)
+		err = server.storage.DeletePrivate(ctx, compositionDb.PathlistURL.String)
 		if err != nil {
 			log.Error().Err(err).Str("key", compositionDb.PathlistURL.String).Msg("Failed to delete pathlist file")
 		}
@@ -379,5 +369,39 @@ func (server *Server) enqueueCompositionForProcessing(ctx context.Context, compo
 		Str("queue", queueName).
 		Msg("Composition enqueued for processing")
 
+	return nil
+}
+
+func (server *Server) compositionToProto(ctx context.Context, artDb *models.Art, composition *models.Composition) (*pb.Composition, error) {
+	out := pbx.CompositionDbToProto(server.storage, artDb, composition)
+	if err := server.signCompositionDownloads(ctx, out); err != nil {
+		return nil, pbErrors.InternalError("failed to sign composition downloads", err)
+	}
+	return out, nil
+}
+
+func (server *Server) signCompositionDownloads(ctx context.Context, c *pb.Composition) error {
+	if c == nil || server.storage == nil {
+		return nil
+	}
+	priv := server.storage.GetPrivateStorage()
+	if priv == nil {
+		return nil
+	}
+	opts := &storage.SignedURLOptions{Method: "GET", Expiry: 15 * time.Minute}
+	if c.GcodeUrl != "" && !strings.HasPrefix(c.GcodeUrl, "http") {
+		url, err := priv.SignedURL(ctx, c.GcodeUrl, opts)
+		if err != nil {
+			return err
+		}
+		c.GcodeUrl = url
+	}
+	if c.PathlistUrl != "" && !strings.HasPrefix(c.PathlistUrl, "http") {
+		url, err := priv.SignedURL(ctx, c.PathlistUrl, opts)
+		if err != nil {
+			return err
+		}
+		c.PathlistUrl = url
+	}
 	return nil
 }

@@ -59,14 +59,12 @@ func (s *ArtService) GetArt(ctx context.Context, userID, artID string) (*pb.Art,
 }
 
 // ListArts gets a list of arts for the authenticated user
-func (s *ArtService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
-	// Create the request payload with parent field
+func (s *ArtService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy string) (*pb.ListArtsResponse, error) {
 	req := connect.NewRequest(&pb.ListArtsRequest{
-		Parent:         resource.BuildUserResourceName(userID),
-		PageSize:       int32(pageSize),
-		PageToken:      pageToken,
-		OrderBy:        orderBy,
-		OrderDirection: orderDirection,
+		Parent:    resource.BuildUserResourceName(userID),
+		PageSize:  int32(pageSize),
+		PageToken: pageToken,
+		OrderBy:   orderBy,
 	})
 
 	// Make the API call through the authenticated client

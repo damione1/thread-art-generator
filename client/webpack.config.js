@@ -6,8 +6,9 @@ module.exports = (env, argv) => {
   return {
     entry: {
       main: './src/js/main.js',
-      'firebase-auth': './src/js/firebase-auth.js',
-      'art-upload': './src/ts/art-upload.ts'
+      'art-upload': './src/ts/art-upload.ts',
+      'status-poll': './src/ts/status-poll.ts',
+      'password-auth': './src/ts/password-auth.ts',
     },
     output: {
       filename: '[name].js',
@@ -36,6 +37,12 @@ module.exports = (env, argv) => {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
+          },
+          rpc: {
+            test: /[\\/]src[\\/](ts[\\/]rpc\.ts|gen[\\/])/,
+            name: 'rpc',
+            chunks: 'all',
+            priority: 10,
           },
         },
       },

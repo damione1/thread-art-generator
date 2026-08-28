@@ -93,13 +93,12 @@ func TestResolveIdentityCookie(t *testing.T) {
 	require.Equal(t, "user-uuid", legacy)
 }
 
-func TestResolveIdentityBearerPassthrough(t *testing.T) {
+func TestResolveIdentityBearerRejected(t *testing.T) {
 	h := make(http.Header)
-	h.Set("Authorization", "Bearer paseto-still-elsewhere")
-	ctx, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/CreateArt", h, nil, nil)
-	require.NoError(t, err)
-	_, ok := auth.IdentityFromContext(ctx)
-	require.False(t, ok)
+	h.Set("Authorization", "Bearer leftover-paseto")
+	_, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/CreateArt", h, nil, nil)
+	require.Error(t, err)
+	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }
 
 func TestResolveIdentityMissingAuth(t *testing.T) {
@@ -113,21 +112,11 @@ func TestSkipIdentity(t *testing.T) {
 	require.True(t, skipIdentity("/grpc.health.v1.Health/Watch"))
 	require.True(t, skipIdentity("/connectrpc.health.v1.Health"))
 	require.False(t, skipIdentity("/pb.ArtGeneratorService/CreateArt"))
-	require.True(t, skipIdentity("/pb.ArtGeneratorService/SyncUserFromFirebase"))
-	require.False(t, skipIdentity("/pb.ArtGeneratorService/GetMediaUploadUrl"))
-	require.False(t, skipIdentity("/pb.ArtGeneratorService/GetMediaDownloadUrl"))
-	require.False(t, skipIdentity("/pb.FirebaseFunctionsService/ConfirmArtImageUploadFromFunction"))
+	require.False(t, skipIdentity("/pb.ArtGeneratorService/GetArt"))
 }
 
 func TestResolveIdentityHealthSkip(t *testing.T) {
 	ctx, err := resolveIdentity(context.Background(), "/grpc.health.v1.Health/Check", http.Header{}, nil, nil)
-	require.NoError(t, err)
-	_, ok := auth.IdentityFromContext(ctx)
-	require.False(t, ok)
-}
-
-func TestResolveIdentityWhitelistedWithoutAuth(t *testing.T) {
-	ctx, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/SyncUserFromFirebase", http.Header{}, nil, nil)
 	require.NoError(t, err)
 	_, ok := auth.IdentityFromContext(ctx)
 	require.False(t, ok)

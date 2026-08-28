@@ -41,17 +41,6 @@ func (s *Server) GetCurrentUser(ctx context.Context, req *connect.Request[pb.Get
 	return connect.NewResponse(user), nil
 }
 
-func (s *Server) SyncUserFromFirebase(ctx context.Context, req *connect.Request[pb.SyncUserFromFirebaseRequest]) (*connect.Response[pb.User], error) {
-	if !s.validateInternalAPIKeyFromHeaders(req.Header()) {
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid internal API key"))
-	}
-	user, err := s.syncUserFromFirebase(ctx, req.Msg)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(user), nil
-}
-
 func (s *Server) CreateArt(ctx context.Context, req *connect.Request[pb.CreateArtRequest]) (*connect.Response[pb.Art], error) {
 	art, err := s.createArt(ctx, req.Msg)
 	if err != nil {

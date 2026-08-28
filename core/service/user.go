@@ -12,7 +12,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/bufbuild/protovalidate-go"
-	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
@@ -137,64 +136,6 @@ func (server *Server) getCurrentUser(ctx context.Context, req *pb.GetCurrentUser
 	if err != nil {
 		return nil, err
 	}
-
-	return pbx.DbUserToProto(user), nil
-}
-
-// SyncUserFromFirebase creates or updates a user from Firebase Authentication data
-// This endpoint is called by Firebase Cloud Functions when a user is created/updated
-func (server *Server) syncUserFromFirebase(ctx context.Context, req *pb.SyncUserFromFirebaseRequest) (*pb.User, error) {
-	// Note: Internal API key validation is now handled by the Connect adapter
-
-	// Validate the request
-	if err := protovalidate.Validate(req); err != nil {
-		return nil, pbErrors.ConvertProtoValidateError(err)
-	}
-
-	log.Info().
-		Str("firebase_uid", req.FirebaseUid).
-		Str("email", req.Email).
-		Str("display_name", req.DisplayName).
-		Msg("SyncUserFromFirebase: Syncing user from Firebase")
-
-	// Check if user already exists (idempotency)
-	existingUser, err := server.getUserFromFirebaseUID(ctx, req.FirebaseUid)
-	if err == nil && existingUser != nil {
-		log.Info().
-			Str("firebase_uid", req.FirebaseUid).
-			Str("user_id", existingUser.ID).
-			Msg("SyncUserFromFirebase: User already exists, returning existing user")
-		return pbx.DbUserToProto(existingUser), nil
-	}
-
-	// Parse display name into first and last names
-	firstName, lastName := server.parseDisplayName(req.DisplayName)
-
-	// Create new user in PostgreSQL
-	user, err := server.createUserFromFirebaseClaims(
-		ctx,
-		req.FirebaseUid,
-		req.Email,
-		firstName+" "+lastName, // Full name for compatibility
-		req.PhotoUrl,
-	)
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			violations := []*errdetails.BadRequest_FieldViolation{
-				pbErrors.FieldViolation("firebase_uid", errors.New("user with this Firebase UID already exists")),
-			}
-			return nil, pbErrors.InvalidArgumentError(violations)
-		}
-		log.Error().Err(err).
-			Str("firebase_uid", req.FirebaseUid).
-			Msg("SyncUserFromFirebase: Failed to create user")
-		return nil, pbErrors.InternalError("failed to create user", err)
-	}
-
-	log.Info().
-		Str("firebase_uid", req.FirebaseUid).
-		Str("user_id", user.ID).
-		Msg("SyncUserFromFirebase: Successfully created new user")
 
 	return pbx.DbUserToProto(user), nil
 }
