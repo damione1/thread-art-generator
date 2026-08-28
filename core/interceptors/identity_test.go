@@ -121,3 +121,28 @@ func TestResolveIdentityHealthSkip(t *testing.T) {
 	_, ok := auth.IdentityFromContext(ctx)
 	require.False(t, ok)
 }
+
+func TestResolveIdentityServiceWithoutVerifier(t *testing.T) {
+	h := make(http.Header)
+	h.Set("Authorization", "Service whatever")
+	_, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/CreateArt", h, nil, nil)
+	require.Error(t, err)
+	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}
+
+func TestResolveIdentityServiceBeatsCookie(t *testing.T) {
+	svc, err := auth.NewHMACServiceAuth(strings.Repeat("k", 32))
+	require.NoError(t, err)
+	hdr, err := svc.Sign("worker-1")
+	require.NoError(t, err)
+
+	h := make(http.Header)
+	h.Set("Authorization", hdr)
+	ctx, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/CreateArt", h,
+		&fakeSessions{sess: auth.Session{UserID: "user-uuid", Email: "a@b.c"}}, svc)
+	require.NoError(t, err)
+	id, ok := auth.IdentityFromContext(ctx)
+	require.True(t, ok)
+	require.Equal(t, "worker-1", id.UserID)
+	require.Equal(t, auth.PrincipalService, id.Kind)
+}

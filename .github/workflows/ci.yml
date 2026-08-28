@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [feature/rebuild, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: bufbuild/buf-action@v1
+        with:
+          input: proto
+          setup_only: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: buf lint
+        run: buf lint proto
+      - name: buf breaking
+        run: |
+          # Rebuild already broke FILE vs master (dropped Functions RPCs).
+          # Gate new proto edits against the PR base, or HEAD~1 on branch pushes.
+          # After rebuild lands on master, switch against to '.git#branch=master,subdir=proto'.
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            AGAINST=".git#branch=${GITHUB_BASE_REF},subdir=proto"
+          else
+            AGAINST=".git#ref=HEAD~1,subdir=proto"
+          fi
+          buf breaking proto --against "$AGAINST"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: go test
+        run: make test

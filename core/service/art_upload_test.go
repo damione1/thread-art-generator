@@ -119,3 +119,34 @@ func TestPresignAndHeadWithMemoryBucket(t *testing.T) {
 	require.NoError(t, b.Put(ctx, key, bytes.NewReader([]byte("jpeg-bytes")), storage.PutOptions{ContentType: "image/jpeg"}))
 	require.NoError(t, headUploadedOriginal(ctx, b, key))
 }
+
+func TestHeadUploadedOriginalRejectsNonImage(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	b := storage.NewMemoryBucket()
+	require.NoError(t, b.Put(ctx, "k", bytes.NewReader([]byte("%PDF")), storage.PutOptions{ContentType: "application/pdf"}))
+	err := headUploadedOriginal(ctx, b, "k")
+	require.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
+	require.Contains(t, err.Error(), "not an image")
+}
+
+func TestSignCompositionDownloadsPresignsKeys(t *testing.T) {
+	t.Parallel()
+	s := &Server{bucket: storage.NewMemoryBucket()}
+	c := &pb.Composition{
+		GcodeUrl:    "users/u/arts/a/compositions/c/gcode",
+		PathlistUrl: "users/u/arts/a/compositions/c/pathlist",
+		PreviewUrl:  "http://localhost:9000/thread-art/preview.png",
+	}
+	require.NoError(t, s.signCompositionDownloads(context.Background(), c))
+	require.Contains(t, c.GcodeUrl, "memory.local/get/")
+	require.Contains(t, c.PathlistUrl, "memory.local/get/")
+	require.Equal(t, "http://localhost:9000/thread-art/preview.png", c.PreviewUrl)
+}
+
+func TestSignCompositionDownloadsNilSafe(t *testing.T) {
+	t.Parallel()
+	s := &Server{}
+	require.NoError(t, s.signCompositionDownloads(context.Background(), nil))
+	require.NoError(t, s.signCompositionDownloads(context.Background(), &pb.Composition{}))
+}

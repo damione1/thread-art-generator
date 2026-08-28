@@ -704,3 +704,8 @@ Ported onto `feature/rebuild`:
 
 One S3 `Bucket` (`NewBucket` + `BucketConfigFromUtil`). Queue is Postgres only. Deleted `functions/`, `firebase.json`, DualBucket/BlobStorage/url_generator, PASETO/cache, Firebase BFF middleware, leftover TS gen (`functions_pb`/`storage_pb`). Migration `000015_drop_firebase_uid`. Compose: MinIO only, no RabbitMQ / Firebase emu. `.env.sample` is Postgres + MinIO + cookie/HMAC. README matches. `grep firebase/paseto --include='*.go'` empty outside this journal.
 
+### 2026-08-28 ~19:20 EDT | progress | Phase F — tests + proto CI, smart-router frozen out
+
+Upload helpers (`presign`/`head`/`validate`) + interceptor (cookie vs Service HMAC vs bare Bearer) covered without Postgres. `.github/workflows/ci.yml`: `buf lint` + `buf breaking` (PR base / `HEAD~1` until rebuild is master) + `make test`. Smart-router / hybrid stay on `feature/routing-improvment` — not copied, not revived here.
+
+
