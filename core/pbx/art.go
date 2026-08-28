@@ -39,12 +39,12 @@ func ArtDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, a
 	artPb.Name = resource.BuildArtResourceName(art.AuthorID, art.ID)
 
 	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) {
-		imageKey := resource.BuildArtResourceName(art.AuthorID, art.ImageID.String)
+		imageKey := resource.ArtImageObjectKey(art.AuthorID, art.ID, art.ImageID.String)
 
 		// Use public URL generator for CDN caching - art images should be publicly accessible
 		publicURLGenerator := storage.NewPublicURLGenerator(dualStorage.GetPublicStorage())
 		imageURL := storage.GenerateImageURL(ctx, publicURLGenerator, imageKey, storage.DefaultURLOptions())
-		
+
 		artPb.ImageUrl = imageURL
 	}
 

@@ -41,15 +41,12 @@ func (a *ConnectAdapter) GetUser(ctx context.Context, req *connect.Request[pb.Ge
 
 // ListUsers implements the Connect handler interface
 func (a *ConnectAdapter) ListUsers(ctx context.Context, req *connect.Request[pb.ListUsersRequest]) (*connect.Response[pb.ListUsersResponse], error) {
-	// Create a new ListUsersResponse since we don't have a direct implementation
-	response := &pb.ListUsersResponse{}
-	return connect.NewResponse(response), nil
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("pb.ArtGeneratorService.ListUsers is not implemented"))
 }
 
 // DeleteUser implements the Connect handler interface
 func (a *ConnectAdapter) DeleteUser(ctx context.Context, req *connect.Request[pb.DeleteUserRequest]) (*connect.Response[emptypb.Empty], error) {
-	// Since we don't have a direct implementation, just return an empty response
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("pb.ArtGeneratorService.DeleteUser is not implemented"))
 }
 
 // GetCurrentUser implements the Connect handler interface
@@ -67,7 +64,7 @@ func (a *ConnectAdapter) SyncUserFromFirebase(ctx context.Context, req *connect.
 	if !a.server.validateInternalAPIKeyFromHeaders(req.Header()) {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid internal API key"))
 	}
-	
+
 	user, err := a.server.SyncUserFromFirebase(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -132,6 +129,22 @@ func (a *ConnectAdapter) GetArtUploadUrl(ctx context.Context, req *connect.Reque
 // ConfirmArtImageUpload implements the Connect handler interface
 func (a *ConnectAdapter) ConfirmArtImageUpload(ctx context.Context, req *connect.Request[pb.ConfirmArtImageUploadRequest]) (*connect.Response[pb.Art], error) {
 	art, err := a.server.ConfirmArtImageUpload(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(art), nil
+}
+
+func (a *ConnectAdapter) StartArtUpload(ctx context.Context, req *connect.Request[pb.StartArtUploadRequest]) (*connect.Response[pb.StartArtUploadResponse], error) {
+	resp, err := a.server.StartArtUpload(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *ConnectAdapter) CompleteArtUpload(ctx context.Context, req *connect.Request[pb.CompleteArtUploadRequest]) (*connect.Response[pb.Art], error) {
+	art, err := a.server.CompleteArtUpload(ctx, req.Msg)
 	if err != nil {
 		return nil, err
 	}

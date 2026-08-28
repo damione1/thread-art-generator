@@ -65,6 +65,7 @@ def watch_frontend_assets():
       'client/styles/input.css',
       'client/package.json',
       'client/src/**/*.js',
+      'client/src/**/*.ts',
       'client/webpack.config.js',
     ],
     trigger_mode=TRIGGER_MODE_AUTO,
