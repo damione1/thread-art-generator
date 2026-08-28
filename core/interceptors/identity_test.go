@@ -114,11 +114,20 @@ func TestSkipIdentity(t *testing.T) {
 	require.True(t, skipIdentity("/connectrpc.health.v1.Health"))
 	require.False(t, skipIdentity("/pb.ArtGeneratorService/CreateArt"))
 	require.True(t, skipIdentity("/pb.ArtGeneratorService/SyncUserFromFirebase"))
+	require.True(t, skipIdentity("/pb.ArtGeneratorService/GetMediaUploadUrl"))
+	require.True(t, skipIdentity("/pb.ArtGeneratorService/GetMediaDownloadUrl"))
 	require.False(t, skipIdentity("/pb.FirebaseFunctionsService/ConfirmArtImageUploadFromFunction"))
 }
 
 func TestResolveIdentityHealthSkip(t *testing.T) {
 	ctx, err := resolveIdentity(context.Background(), "/grpc.health.v1.Health/Check", http.Header{}, nil, nil)
+	require.NoError(t, err)
+	_, ok := auth.IdentityFromContext(ctx)
+	require.False(t, ok)
+}
+
+func TestResolveIdentityWhitelistedWithoutAuth(t *testing.T) {
+	ctx, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/SyncUserFromFirebase", http.Header{}, nil, nil)
 	require.NoError(t, err)
 	_, ok := auth.IdentityFromContext(ctx)
 	require.False(t, ok)

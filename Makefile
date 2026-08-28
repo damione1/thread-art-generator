@@ -28,6 +28,10 @@ proto-clean:
 	@rm -rf api/openapi/
 	@echo "✅ Protocol buffer files cleaned"
 
+.PHONY: test
+test:
+	go test ./core/storage/ ./core/auth/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/
+
 .PHONY: psql
 psql:
 	@eval $$(grep -e "POSTGRES_USER\|POSTGRES_PASSWORD\|POSTGRES_DB" .env | sed 's/^/export /'); \
