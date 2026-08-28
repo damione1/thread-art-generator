@@ -395,10 +395,9 @@ func (server *Server) enqueueCompositionForProcessing(ctx context.Context, compo
 		return fmt.Errorf("failed to serialize composition processing message: %w", err)
 	}
 
-	// Get queue name from config
-	queueName := server.config.Queue.CompositionProcessing
-	if queueName == "" {
-		queueName = "composition-processing" // Default queue name
+	queueName := queue.TopicCompositionProcessing
+	if server.config.Queue.CompositionProcessing != "" {
+		queueName = server.config.Queue.CompositionProcessing
 	}
 
 	// Publish to queue

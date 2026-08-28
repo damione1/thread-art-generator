@@ -44,11 +44,17 @@ func NewServer(config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create dual bucket storage: %v", err)
 	}
 
-	// Initialize queue client if URL is provided
-	if config.Queue.URL != "" {
-		server.queueClient, err = queue.NewRabbitMQClient(config.Queue.URL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create queue client: %v", err)
+	switch config.QueueProvider {
+	case "rabbitmq":
+		if config.Queue.URL != "" {
+			server.queueClient, err = queue.NewRabbitMQClient(config.Queue.URL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create queue client: %v", err)
+			}
+		}
+	default:
+		if config.DB != nil {
+			server.queueClient = queue.NewPostgresQueue(config.DB, queue.PostgresOptions{})
 		}
 	}
 

@@ -23,8 +23,8 @@ import (
 
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/db/models"
-	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
+	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/Damione1/thread-art-generator/threadGenerator"
@@ -71,6 +71,41 @@ func initializeDualStorage(ctx context.Context, config util.Config) (*storage.Du
 }
 
 func startQueueProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
+	if config.QueueProvider == "rabbitmq" {
+		return startRabbitProcessing(ctx, config, dualStorage)
+	}
+	return startPostgresProcessing(ctx, config, dualStorage)
+}
+
+func startPostgresProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
+	if config.DB == nil {
+		return fmt.Errorf("postgres queue requires a database connection")
+	}
+	q := queue.NewPostgresQueue(config.DB, queue.PostgresOptions{})
+	defer q.Close()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	errCh := make(chan error, 1)
+	go func() {
+		log.Info().Str("queue", queue.TopicCompositionProcessing).Msg("🧵 Worker is waiting for postgres jobs")
+		err := q.Subscribe(ctx, queue.TopicCompositionProcessing, "worker", func(ctx context.Context, body []byte) error {
+			return processMessage(ctx, body, config.DB, dualStorage)
+		})
+		errCh <- err
+	}()
+
+	select {
+	case <-sigChan:
+		log.Info().Msg("Received termination signal, shutting down")
+		return nil
+	case err := <-errCh:
+		return err
+	}
+}
+
+func startRabbitProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
 	// Connect to RabbitMQ
 	queueURL := config.Queue.URL
 	if queueURL == "" {
@@ -235,10 +270,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer sourceFile.Close()
 
-	imageKey := pbx.GetResourceName([]pbx.Resource{
-		{Type: pbx.RessourceTypeUsers, ID: art.AuthorID},
-		{Type: pbx.RessourceTypeArts, ID: art.ImageID.String},
-	})
+	imageKey := resource.ArtImageObjectKey(art.AuthorID, art.ID, art.ImageID.String)
 
 	log.Info().
 		Str("imageKey", imageKey).
@@ -374,9 +406,9 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 
 	// Upload files to storage
 	uploadStartTime := time.Now()
-	previewKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/preview.png", art.AuthorID, art.ID, composition.ID)
-	gcodeKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/gcode.txt", art.AuthorID, art.ID, composition.ID)
-	pathsKey := fmt.Sprintf("users/%s/arts/%s/compositions/%s/paths.json", art.AuthorID, art.ID, composition.ID)
+	previewKey := resource.CompositionPreviewObjectKey(art.AuthorID, art.ID, composition.ID)
+	gcodeKey := resource.CompositionGcodeObjectKey(art.AuthorID, art.ID, composition.ID)
+	pathsKey := resource.CompositionPathlistObjectKey(art.AuthorID, art.ID, composition.ID)
 
 	// Upload preview image
 	previewFile, err = os.Open(previewPath)
