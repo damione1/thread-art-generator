@@ -634,3 +634,15 @@ New integration branch `feature/rebuild` off `master` (`c3a5547`). Smart-router 
 
 Ported onto master DualBucket: AWS SDK v2 `BlobStorage` wrapper (dropped gocloud at runtime), `StartArtUpload`/`CompleteArtUpload` (headers + Head), IdentityInterceptor before Firebase AuthMiddleware, h2c + reflect/health, PostgresQueue default, worker UUID object keys, BFF `/rpc` + `art-upload.ts`. Dual-run: `GetArtUploadUrl`/`ConfirmArtImageUpload` + RabbitMQ if `QUEUE_PROVIDER=rabbitmq`. Session `user_id` still Firebase UID; resource names already Postgres UUID.
 
+Stacked PRs merged into `feature/rebuild` (not master):
+- #94 S3 + proto-gen
+- #95 HMAC + IdentityInterceptor + Postgres queue
+- #96 h2c API + Postgres worker
+- #97 gRPC-Web upload island + `/rpc`
+
+### 2026-08-28 ~13:10 EDT | progress | CompleteArtUpload size cap
+
+`Head.Size` rejected above 10MB (same as the browser island). gocloud / aws-sdk-go v1 / rs/cors already gone from go.mod after tidy.
+
+Remaining for §12: Firebase Auth JS + emu + `FIREBASE_*` (Phase E), RabbitMQ dual-run, DualBucket → one bucket, session `user_id` still Firebase UID.
+

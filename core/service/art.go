@@ -653,6 +653,10 @@ func (server *Server) CompleteArtUpload(ctx context.Context, req *pb.CompleteArt
 	if info.ContentType != "" && !strings.HasPrefix(info.ContentType, "image/") {
 		return nil, pbErrors.FailedPreconditionError("uploaded object is not an image")
 	}
+	const maxArtImageBytes = 10 * 1024 * 1024
+	if info.Size > maxArtImageBytes {
+		return nil, pbErrors.FailedPreconditionError("uploaded object exceeds 10MB")
+	}
 	artDb.Status = models.ArtStatusEnumCOMPLETE
 	artDb.ImageID = null.StringFrom(artDb.ID)
 	_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(models.ArtColumns.Status, models.ArtColumns.ImageID))
