@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -140,4 +141,24 @@ func (m *CompositionProcessingMessage) ToJSON() ([]byte, error) {
 // FromJSON deserializes the message from JSON
 func (m *CompositionProcessingMessage) FromJSON(data []byte) error {
 	return json.Unmarshal(data, m)
+}
+
+// NewQueueClient creates a QueueClient. postgres is default; rabbitmq stays as fallback.
+func NewQueueClient(ctx context.Context, queueProvider string, config any) (QueueClient, error) {
+	switch queueProvider {
+	case "postgres":
+		db, ok := config.(*sql.DB)
+		if !ok {
+			return nil, fmt.Errorf("invalid config for postgres provider, expected *sql.DB")
+		}
+		return NewPostgresQueue(db, PostgresOptions{}), nil
+	case "rabbitmq":
+		url, ok := config.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid config for rabbitmq provider, expected string URL")
+		}
+		return NewRabbitMQClient(url)
+	default:
+		return nil, fmt.Errorf("unsupported queue provider: %s", queueProvider)
+	}
 }
