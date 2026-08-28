@@ -650,3 +650,18 @@ Remaining for §12: Firebase Auth JS + emu + `FIREBASE_*` (Phase E), RabbitMQ du
 
 Coverage for the helpers that landed without DB: `validateUploadedObject` (type + 10MB), object-key dual-run, BlobStorage GCS reject + Exists, IdentityInterceptor whitelist, QueueClient/Postgres options, ConnectAdapter ListUsers/DeleteUser unimplemented. `make test` runs that set. Start/Complete still need a fake Bucket + postgres for the full RPC.
 
+### 2026-08-28 ~13:30 EDT | progress | AIP parent/mask + drop ConnectAdapter
+
+`CreateArt`/`ListArts` honor `parent` vs Postgres UUID (403 if mismatch). `UpdateArt` applies einride `update_mask` (title only). `currentUser` prefers `auth.Identity` UUID then Firebase UID dual-run. `pbx.ArtDbToProto` / `CompositionDbToProto` concat public URL only — no signed-URL I/O. Errors are `*connect.Error` + errdetails.
+
+`ConnectAdapter` deleted. `cmd/api` mounts `*service.Server` on `NewArtGeneratorServiceHandler`. `ListUsers`/`DeleteUser` stay Unimplemented on Server.
+
+Start/Complete helpers (`presignArtOriginal`, `headUploadedOriginal`) tested against `storage.MemoryBucket` without DB.
+
+### 2026-08-28 ~13:30 EDT | progress | UUID sessions + password login
+
+AuthSync looks up/creates the Postgres user and stores **UUID** in `session_id`. BFF `SessionTransport` forwards Cookie (plus leftover Firebase Bearer). Email/password hits BFF `/auth/login` `/auth/signup` via `PGIdentities` + bcrypt; migration `000014_password_hash`. Google stays on Firebase JS dual-run.
+
+DualBucket now aliases private=public (one S3 bucket). `GetArtUploadUrl` / RabbitMQ still dual-run. Firebase AuthMiddleware still stacked after IdentityInterceptor. `grep firebase` is not empty. Opaque page tokens / `order_by` AIP-132 still open.
+
+

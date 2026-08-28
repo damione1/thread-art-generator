@@ -7,13 +7,16 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
 	mailService "github.com/Damione1/thread-art-generator/core/mail"
+	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -83,6 +86,26 @@ func (s *Server) Close() error {
 	}
 
 	return err
+}
+
+// currentUser resolves the Postgres user. Prefers auth.Identity UUID (cookie/HMAC),
+// then looks up by primary key, then Firebase UID for dual-run sessions.
+func (s *Server) currentUser(ctx context.Context) (*models.User, error) {
+	authID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+	if id, found := auth.IdentityFromContext(ctx); found && id.UserID != "" {
+		authID = id.UserID
+	}
+	user, err := models.Users(models.UserWhere.ID.EQ(authID)).One(ctx, s.config.DB)
+	if err == nil {
+		return user, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, pbErrors.InternalError("failed to get user", err)
+	}
+	return s.getUserFromFirebaseUID(ctx, authID)
 }
 
 // getUserFromFirebaseUID is a helper method to get the internal user from Firebase UID

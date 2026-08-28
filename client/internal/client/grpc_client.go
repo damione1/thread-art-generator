@@ -59,10 +59,7 @@ func (c *APIClient) CheckSessionToken(r *http.Request) error {
 // NewAPIClient creates a new API client using Connect-RPC with Firebase authentication
 func NewAPIClient(baseURL string, sessionManager *auth.SCSSessionManager) *APIClient {
 	httpClient := &http.Client{
-		Transport: &FirebaseAuthTransport{
-			SessionManager: sessionManager,
-			Base:           http.DefaultTransport,
-		},
+		Transport: NewSessionTransport(sessionManager),
 	}
 
 	connectClient := pbconnect.NewArtGeneratorServiceClient(

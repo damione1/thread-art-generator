@@ -66,6 +66,7 @@ func (s *SCSSessionManager) GetSessionManager() *scs.SessionManager {
 func (s *SCSSessionManager) CreateSession(w http.ResponseWriter, r *http.Request, userID string, userInfo SessionUserInfo, idToken string, tokenExpiry time.Time) error {
 	// Store user ID
 	s.sessionManager.Put(r.Context(), sessionKeyUserID, userID)
+	s.sessionManager.Put(r.Context(), "email", userInfo.Email)
 
 	// Store user info as JSON
 	userInfoJSON, err := json.Marshal(userInfo)

@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 
+	"connectrpc.com/connect"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
-	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
@@ -19,24 +19,15 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // CreateComposition creates a new composition for an art
-func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompositionRequest) (*pb.Composition, error) {
+func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompositionRequest) (*pb.Composition, error) {
 	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("CreateComposition: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	// Validate the request
@@ -112,22 +103,15 @@ func (server *Server) CreateComposition(ctx context.Context, req *pb.CreateCompo
 	}
 
 	// Return the created composition
-	return pbx.CompositionDbToProto(ctx, server.storage, artDb, compositionDb), nil
+	return pbx.CompositionDbToProto(server.storage, artDb, compositionDb), nil
 }
 
 // GetComposition retrieves a composition by ID
-func (server *Server) GetComposition(ctx context.Context, req *pb.GetCompositionRequest) (*pb.Composition, error) {
+func (server *Server) getComposition(ctx context.Context, req *pb.GetCompositionRequest) (*pb.Composition, error) {
 	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetComposition: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	// Validate the request
@@ -173,29 +157,22 @@ func (server *Server) GetComposition(ctx context.Context, req *pb.GetComposition
 	artDb := compositionDb.R.Art
 
 	// Return the composition
-	return pbx.CompositionDbToProto(ctx, server.storage, artDb, compositionDb), nil
+	return pbx.CompositionDbToProto(server.storage, artDb, compositionDb), nil
 }
 
 // UpdateComposition updates an existing composition
-func (server *Server) UpdateComposition(ctx context.Context, req *pb.UpdateCompositionRequest) (*pb.Composition, error) {
+func (server *Server) updateComposition(ctx context.Context, req *pb.UpdateCompositionRequest) (*pb.Composition, error) {
 	// Since compositions are processed asynchronously and their config shouldn't change
 	// after they're created, we don't allow updates to compositions for now.
-	return nil, status.Error(codes.Unimplemented, "updating compositions is not supported")
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("updating compositions is not supported"))
 }
 
 // ListCompositions lists all compositions for an art
-func (server *Server) ListCompositions(ctx context.Context, req *pb.ListCompositionsRequest) (*pb.ListCompositionsResponse, error) {
+func (server *Server) listCompositions(ctx context.Context, req *pb.ListCompositionsRequest) (*pb.ListCompositionsResponse, error) {
 	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ListCompositions: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	// Validate the request
@@ -279,7 +256,7 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 	// Convert to proto
 	var protoCompositions []*pb.Composition
 	for _, comp := range compositions {
-		protoCompositions = append(protoCompositions, pbx.CompositionDbToProto(ctx, server.storage, artDb, comp))
+		protoCompositions = append(protoCompositions, pbx.CompositionDbToProto(server.storage, artDb, comp))
 	}
 
 	// Create response
@@ -296,18 +273,11 @@ func (server *Server) ListCompositions(ctx context.Context, req *pb.ListComposit
 }
 
 // DeleteComposition deletes a composition
-func (server *Server) DeleteComposition(ctx context.Context, req *pb.DeleteCompositionRequest) (*emptypb.Empty, error) {
+func (server *Server) deleteComposition(ctx context.Context, req *pb.DeleteCompositionRequest) (*emptypb.Empty, error) {
 	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("DeleteComposition: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	// Validate the request

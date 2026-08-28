@@ -8,7 +8,6 @@ import (
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
-	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/resource"
@@ -29,7 +28,7 @@ const (
 	xForwardedForHeader        = "x-forwarded-for"
 )
 
-func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+func (server *Server) updateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
@@ -44,7 +43,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	user, ok := userResource.(*resource.User)
+	target, ok := userResource.(*resource.User)
 	if !ok {
 		violations := []*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("user.name", errors.New("invalid user resource name")),
@@ -52,17 +51,15 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	// Get user ID from context using the same key used in auth interceptor
-	userIdFromContext, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	current, err := server.currentUser(ctx)
+	if err != nil {
+		return nil, err
 	}
-
-	if user.ID != userIdFromContext {
+	if target.ID != current.ID {
 		return nil, pbErrors.PermissionDeniedError("cannot update other user's info")
 	}
 
-	userDb, err := models.Users(models.UserWhere.ID.EQ(user.ID)).One(ctx, server.config.DB)
+	userDb, err := models.Users(models.UserWhere.ID.EQ(current.ID)).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, pbErrors.NotFoundError("user not found")
@@ -106,7 +103,7 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	return pbx.DbUserToProto(userDb), nil
 }
 
-func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+func (server *Server) getUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
 	userResource, err := resource.ParseResourceName(req.GetName())
 	if err != nil {
 		violations := []*errdetails.BadRequest_FieldViolation{
@@ -123,40 +120,22 @@ func (server *Server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 		return nil, pbErrors.InvalidArgumentError(violations)
 	}
 
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get user from database - user should already exist from auth sync
-	userDb, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	current, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetUser failed to get user - user should have been created during auth sync")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
-	// Ensure the current user has permission to access the requested user
-	if user.ID != userDb.ID {
+	if user.ID != current.ID {
 		return nil, pbErrors.PermissionDeniedError("cannot get other user's info")
 	}
 
-	return pbx.DbUserToProto(userDb), nil
+	return pbx.DbUserToProto(current), nil
 }
 
-// GetCurrentUser retrieves the current authenticated user based on the context
-func (server *Server) GetCurrentUser(ctx context.Context, req *pb.GetCurrentUserRequest) (*pb.User, error) {
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.UnauthenticatedError("user not authenticated")
-	}
-
-	// Get user from database - user should already exist from auth sync
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+func (server *Server) getCurrentUser(ctx context.Context, req *pb.GetCurrentUserRequest) (*pb.User, error) {
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetCurrentUser failed to get user - user should have been created during auth sync")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	return pbx.DbUserToProto(user), nil
@@ -164,7 +143,7 @@ func (server *Server) GetCurrentUser(ctx context.Context, req *pb.GetCurrentUser
 
 // SyncUserFromFirebase creates or updates a user from Firebase Authentication data
 // This endpoint is called by Firebase Cloud Functions when a user is created/updated
-func (server *Server) SyncUserFromFirebase(ctx context.Context, req *pb.SyncUserFromFirebaseRequest) (*pb.User, error) {
+func (server *Server) syncUserFromFirebase(ctx context.Context, req *pb.SyncUserFromFirebaseRequest) (*pb.User, error) {
 	// Note: Internal API key validation is now handled by the Connect adapter
 
 	// Validate the request

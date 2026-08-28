@@ -75,10 +75,7 @@ func main() {
 
 	// Create HTTP client with auth transport (updated for SCS session manager)
 	httpClient := &http.Client{
-		Transport: &client.FirebaseAuthTransport{
-			SessionManager: sessionManager,
-			Base:           http.DefaultTransport,
-		},
+		Transport: client.NewSessionTransport(sessionManager),
 	}
 
 	// Create connect client directly
@@ -108,6 +105,7 @@ func main() {
 
 	// Create Firebase auth handler with all services
 	authHandler := handlers.NewFirebaseAuthHandlerWithServices(firebaseAuth, sessionManager, generatorService, db)
+	passwordAuth := handlers.NewPasswordAuthHandler(&coreauth.PGIdentities{DB: db}, sessionManager)
 	pageHandler := handlers.NewPageHandler(generatorService, &config)
 	artHandler := handlers.NewArtHandler(generatorService)
 	compositionHandler := handlers.NewCompositionHandler(generatorService)
@@ -117,6 +115,7 @@ func main() {
 
 	// Global middleware - updated for Firebase and SCS sessions
 	r.Use(sessionManager.GetSessionManager().LoadAndSave)
+	r.Use(client.IncomingCookieMiddleware)
 	r.Use(middleware.FirebaseAuthMiddleware(sessionManager))
 	r.Use(middleware.FirebaseConfigMiddleware(&config)) // Add Firebase config to context for authenticated users
 	r.Use(middleware.APIAuthMiddleware(sessionManager))
@@ -130,6 +129,8 @@ func main() {
 		// Firebase Auth routes
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/sync", authHandler.AuthSync)
+			r.Post("/login", passwordAuth.Login)
+			r.Post("/signup", passwordAuth.Signup)
 			r.Post("/logout", authHandler.Logout)
 			r.Get("/logout", authHandler.Logout) // Support GET for logout links
 			r.Get("/status", authHandler.Status)
