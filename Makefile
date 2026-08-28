@@ -30,7 +30,7 @@ proto-clean:
 
 .PHONY: test
 test:
-	go test ./core/storage/ ./core/auth/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/
+	go test ./core/storage/ ./core/auth/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/ ./core/pbx/
 
 .PHONY: psql
 psql:

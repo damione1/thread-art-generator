@@ -74,8 +74,7 @@ func runConnectServer(config util.Config) {
 		interceptors.AuthMiddleware(authService),
 	)
 
-	adapter := service.NewConnectAdapter(server)
-	path, handler := pbconnect.NewArtGeneratorServiceHandler(adapter, interceptorChain)
+	path, handler := pbconnect.NewArtGeneratorServiceHandler(server, interceptorChain)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

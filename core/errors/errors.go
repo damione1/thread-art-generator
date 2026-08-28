@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/bufbuild/protovalidate-go"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Error message constants
@@ -35,84 +34,71 @@ func FieldViolation(field string, err error) *errdetails.BadRequest_FieldViolati
 	}
 }
 
-// InvalidArgumentError creates a gRPC InvalidArgument error with field violations
+func withBadRequest(code connect.Code, message string, violations []*errdetails.BadRequest_FieldViolation) error {
+	cerr := connect.NewError(code, errors.New(message))
+	if len(violations) == 0 {
+		return cerr
+	}
+	detail, err := connect.NewErrorDetail(&errdetails.BadRequest{FieldViolations: violations})
+	if err != nil {
+		return cerr
+	}
+	cerr.AddDetail(detail)
+	return cerr
+}
+
+// InvalidArgumentError creates an InvalidArgument error with field violations
 func InvalidArgumentError(violations []*errdetails.BadRequest_FieldViolation) error {
-	badRequest := &errdetails.BadRequest{FieldViolations: violations}
-	statusInvalid := status.New(codes.InvalidArgument, "invalid parameters")
-
-	statusDetails, err := statusInvalid.WithDetails(badRequest)
-	if err != nil {
-		return statusInvalid.Err()
-	}
-
-	return statusDetails.Err()
+	return withBadRequest(connect.CodeInvalidArgument, "invalid parameters", violations)
 }
 
-// UnauthenticatedError creates a gRPC Unauthenticated error
+// UnauthenticatedError creates an Unauthenticated error
 func UnauthenticatedError(message string) error {
-	st := status.New(codes.Unauthenticated, message)
-	return st.Err()
+	return connect.NewError(connect.CodeUnauthenticated, errors.New(message))
 }
 
-// PermissionDeniedError creates a gRPC PermissionDenied error
+// PermissionDeniedError creates a PermissionDenied error
 func PermissionDeniedError(message string) error {
-	st := status.New(codes.PermissionDenied, message)
-	return st.Err()
+	return connect.NewError(connect.CodePermissionDenied, errors.New(message))
 }
 
-// InternalError creates a gRPC Internal error
+// InternalError creates an Internal error
 func InternalError(message string, err error) error {
-	st := status.New(codes.Internal, message)
-
-	if err != nil {
-		// Add error details
-		errorInfo := &errdetails.ErrorInfo{
-			Reason: "INTERNAL_ERROR",
-			Metadata: map[string]string{
-				"error": err.Error(),
-			},
-		}
-
-		statusWithDetails, detailErr := st.WithDetails(errorInfo)
-		if detailErr != nil {
-			return st.Err()
-		}
-		return statusWithDetails.Err()
+	cerr := connect.NewError(connect.CodeInternal, errors.New(message))
+	if err == nil {
+		return cerr
 	}
-
-	return st.Err()
+	detail, dErr := connect.NewErrorDetail(&errdetails.ErrorInfo{
+		Reason: "INTERNAL_ERROR",
+		Metadata: map[string]string{
+			"error": err.Error(),
+		},
+	})
+	if dErr != nil {
+		return cerr
+	}
+	cerr.AddDetail(detail)
+	return cerr
 }
 
-// NotFoundError creates a gRPC NotFound error
+// NotFoundError creates a NotFound error
 func NotFoundError(message string) error {
-	st := status.New(codes.NotFound, message)
-	return st.Err()
+	return connect.NewError(connect.CodeNotFound, errors.New(message))
 }
 
-// AlreadyExistsError creates a gRPC AlreadyExists error
+// AlreadyExistsError creates an AlreadyExists error
 func AlreadyExistsError(message string, field string) error {
-	st := status.New(codes.AlreadyExists, message)
-
-	if field != "" {
-		violation := FieldViolation(field, errors.New(message))
-		badRequest := &errdetails.BadRequest{
-			FieldViolations: []*errdetails.BadRequest_FieldViolation{violation},
-		}
-
-		statusWithDetails, detailErr := st.WithDetails(badRequest)
-		if detailErr != nil {
-			return st.Err()
-		}
-		return statusWithDetails.Err()
+	if field == "" {
+		return connect.NewError(connect.CodeAlreadyExists, errors.New(message))
 	}
-
-	return st.Err()
+	return withBadRequest(connect.CodeAlreadyExists, message, []*errdetails.BadRequest_FieldViolation{
+		FieldViolation(field, errors.New(message)),
+	})
 }
 
-// FailedPreconditionError creates a gRPC FailedPrecondition error
+// FailedPreconditionError creates a FailedPrecondition error
 func FailedPreconditionError(message string) error {
-	st := status.New(codes.FailedPrecondition, message)
-	return st.Err()
+	return connect.NewError(connect.CodeFailedPrecondition, errors.New(message))
 }
 
 // FormatValidationError formats a validation error with the standard prefix
@@ -130,19 +116,19 @@ func NewFieldValidationError(field, message string) error {
 	return fmt.Errorf("%s: (%s: %s)", ErrValidationPrefix, field, message)
 }
 
-// NewNotFoundError creates a new not found error with the standard gRPC status
+// NewNotFoundError creates a new not found error
 func NewNotFoundError(message string) error {
-	return status.Errorf(codes.NotFound, "%s", message)
+	return NotFoundError(message)
 }
 
-// NewInternalError creates a new internal error with the standard gRPC status
+// NewInternalError creates a new internal error
 func NewInternalError(message string, err error) error {
-	return status.Errorf(codes.Internal, "%s: %v", message, err)
+	return InternalError(message, err)
 }
 
-// NewUnauthenticatedError creates a new unauthenticated error with the standard gRPC status
+// NewUnauthenticatedError creates a new unauthenticated error
 func NewUnauthenticatedError(message string) error {
-	return status.Errorf(codes.Unauthenticated, "%s", message)
+	return UnauthenticatedError(message)
 }
 
 // IsValidationError checks if an error is a validation error
@@ -150,53 +136,36 @@ func IsValidationError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return errors.Is(err, errors.New(ErrValidationPrefix)) ||
-		strings.Contains(fmt.Sprint(err), ErrValidationPrefix)
+	return strings.Contains(fmt.Sprint(err), ErrValidationPrefix)
+}
+
+func hasCode(err error, code connect.Code) bool {
+	return err != nil && connect.CodeOf(err) == code
 }
 
 // IsNotFoundError checks if an error is a not found error
 func IsNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-	s, ok := status.FromError(err)
-	return ok && s.Code() == codes.NotFound
+	return hasCode(err, connect.CodeNotFound)
 }
 
 // IsUnauthenticatedError checks if an error is an unauthenticated error
 func IsUnauthenticatedError(err error) bool {
-	if err == nil {
-		return false
-	}
-	s, ok := status.FromError(err)
-	return ok && s.Code() == codes.Unauthenticated
+	return hasCode(err, connect.CodeUnauthenticated)
 }
 
 // IsPermissionDeniedError checks if an error is a permission denied error
 func IsPermissionDeniedError(err error) bool {
-	if err == nil {
-		return false
-	}
-	s, ok := status.FromError(err)
-	return ok && s.Code() == codes.PermissionDenied
+	return hasCode(err, connect.CodePermissionDenied)
 }
 
 // IsInternalError checks if an error is an internal error
 func IsInternalError(err error) bool {
-	if err == nil {
-		return false
-	}
-	s, ok := status.FromError(err)
-	return ok && s.Code() == codes.Internal
+	return hasCode(err, connect.CodeInternal)
 }
 
 // IsInvalidArgumentError checks if an error is an invalid argument error
 func IsInvalidArgumentError(err error) bool {
-	if err == nil {
-		return false
-	}
-	s, ok := status.FromError(err)
-	return ok && s.Code() == codes.InvalidArgument
+	return hasCode(err, connect.CodeInvalidArgument)
 }
 
 // ExtractFieldViolations extracts field violations from an error
@@ -204,18 +173,19 @@ func ExtractFieldViolations(err error) []*errdetails.BadRequest_FieldViolation {
 	if err == nil {
 		return nil
 	}
-
-	st, ok := status.FromError(err)
-	if !ok {
+	var ce *connect.Error
+	if !errors.As(err, &ce) {
 		return nil
 	}
-
-	for _, detail := range st.Details() {
-		if badRequest, ok := detail.(*errdetails.BadRequest); ok {
+	for _, d := range ce.Details() {
+		msg, valErr := d.Value()
+		if valErr != nil {
+			continue
+		}
+		if badRequest, ok := msg.(*errdetails.BadRequest); ok {
 			return badRequest.GetFieldViolations()
 		}
 	}
-
 	return nil
 }
 
@@ -241,28 +211,22 @@ func GetFieldViolationMessage(err error, field string) string {
 	return ""
 }
 
-// ConvertProtoValidateError converts a protovalidate error to a gRPC InvalidArgumentError
+// ConvertProtoValidateError converts a protovalidate error to an InvalidArgumentError
 func ConvertProtoValidateError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	// Check if it's a protovalidate.ValidationError
 	validationErr, ok := err.(*protovalidate.ValidationError)
 	if !ok {
-		// If not, return a generic error
 		return InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			FieldViolation("", errors.New("validation failed")),
 		})
 	}
 
-	// Convert violations to field violations
 	fieldViolations := make([]*errdetails.BadRequest_FieldViolation, 0, len(validationErr.Violations))
-
 	for _, violation := range validationErr.Violations {
-		// Convert field path to a string format that matches frontend field names
 		fieldPath := extractFieldName(violation)
-
 		fieldViolations = append(fieldViolations, &errdetails.BadRequest_FieldViolation{
 			Field:       fieldPath,
 			Description: violation.Proto.GetMessage(),
@@ -272,22 +236,17 @@ func ConvertProtoValidateError(err error) error {
 	return InvalidArgumentError(fieldViolations)
 }
 
-// extractFieldName extracts the field name from a violation in a format suitable for frontend
 func extractFieldName(violation *protovalidate.Violation) string {
 	if violation == nil || violation.FieldDescriptor == nil {
 		return ""
 	}
 
-	// Get the field name from the descriptor
 	fieldName := string(violation.FieldDescriptor.Name())
-
-	// Convert from snake_case to camelCase for frontend fields
 	parts := strings.Split(fieldName, "_")
 	for i := 1; i < len(parts); i++ {
 		if len(parts[i]) > 0 {
 			parts[i] = strings.ToUpper(string(parts[i][0])) + parts[i][1:]
 		}
 	}
-
 	return strings.Join(parts, "")
 }

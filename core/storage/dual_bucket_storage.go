@@ -34,26 +34,9 @@ func NewDualBucketStorage(ctx context.Context, config util.StorageConfig) (*Dual
 		return nil, fmt.Errorf("failed to create public storage: %w", err)
 	}
 
-	// Create private bucket storage
-	privateStorage, err := NewBlobStorage(ctx, BlobStorageConfig{
-		Provider:         StorageProvider(config.Provider),
-		Bucket:           config.PrivateBucket,
-		Region:           config.Region,
-		InternalEndpoint: config.InternalEndpoint,
-		ExternalEndpoint: config.ExternalEndpoint,
-		UseSSL:           config.UseSSL,
-		ForceExternalSSL: config.ForceExternalSSL,
-		AccessKey:        config.AccessKey,
-		SecretKey:        config.SecretKey,
-		GCPProjectID:     config.GCPProjectID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create private storage: %w", err)
-	}
-
 	return &DualBucketStorage{
 		publicStorage:  publicStorage,
-		privateStorage: privateStorage,
+		privateStorage: publicStorage,
 		config:         config,
 	}, nil
 }
@@ -97,7 +80,7 @@ func (d *DualBucketStorage) Close() error {
 	if d.privateStorage != nil {
 		err2 = d.privateStorage.Close()
 	}
-	
+
 	if err1 != nil {
 		return err1
 	}

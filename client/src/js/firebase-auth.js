@@ -5,8 +5,6 @@ import { initializeApp } from "firebase/app";
 import {
   getAuth,
   connectAuthEmulator,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
@@ -237,17 +235,24 @@ class FirebaseAuthManager {
     }
 
     try {
-      this.justSignedIn = true; // Mark as fresh sign-in
-      const result = await signInWithEmailAndPassword(
-        this.auth,
-        email,
-        password
-      );
-      console.log("Email sign in successful:", result.user.uid);
+      this.justSignedIn = true;
+      const response = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        this.justSignedIn = false;
+        this.showError(data.message || "Sign in failed");
+        return;
+      }
+      window.location.href = "/dashboard";
     } catch (error) {
-      this.justSignedIn = false; // Reset on error
+      this.justSignedIn = false;
       console.error("Email sign in error:", error);
-      this.handleAuthError(error);
+      this.showError("Sign in failed");
     }
   }
 
@@ -270,8 +275,8 @@ class FirebaseAuthManager {
       return;
     }
 
-    if (password.length < 6) {
-      this.showError("Password must be at least 6 characters long");
+    if (password.length < 8) {
+      this.showError("Password must be at least 8 characters long");
       return;
     }
 
@@ -281,17 +286,24 @@ class FirebaseAuthManager {
     }
 
     try {
-      this.justSignedIn = true; // Mark as fresh sign-in
-      const result = await createUserWithEmailAndPassword(
-        this.auth,
-        email,
-        password
-      );
-      console.log("Email sign up successful:", result.user.uid);
+      this.justSignedIn = true;
+      const response = await fetch("/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        this.justSignedIn = false;
+        this.showError(data.message || "Sign up failed");
+        return;
+      }
+      window.location.href = "/dashboard";
     } catch (error) {
-      this.justSignedIn = false; // Reset on error
+      this.justSignedIn = false;
       console.error("Email sign up error:", error);
-      this.handleAuthError(error);
+      this.showError("Sign up failed");
     }
   }
 

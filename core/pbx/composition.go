@@ -1,7 +1,6 @@
 package pbx
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
@@ -11,9 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// CompositionDbToProto converts a database composition model to a proto composition
-func CompositionDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, artDb *models.Art, composition *models.Composition) *pb.Composition {
-	// Map status from database enum to proto enum
+func CompositionDbToProto(dualStorage *storage.DualBucketStorage, artDb *models.Art, composition *models.Composition) *pb.Composition {
 	var status pb.CompositionStatus
 	switch composition.Status {
 	case models.CompositionStatusEnumPENDING:
@@ -28,7 +25,6 @@ func CompositionDbToProto(ctx context.Context, dualStorage *storage.DualBucketSt
 		status = pb.CompositionStatus_COMPOSITION_STATUS_UNSPECIFIED
 	}
 
-	// Create proto composition with basic fields
 	compositionPb := &pb.Composition{
 		NailsQuantity:     int32(composition.NailsQuantity),
 		ImgSize:           int32(composition.ImgSize),
@@ -43,35 +39,24 @@ func CompositionDbToProto(ctx context.Context, dualStorage *storage.DualBucketSt
 		UpdateTime:        timestamppb.New(composition.UpdatedAt),
 	}
 
-	// Set the resource name using the new builder
 	compositionPb.Name = resource.BuildCompositionResourceName(artDb.AuthorID, artDb.ID, composition.ID)
 
-	// Set optional result fields if they exist using public URL generator for CDN caching
-	if dualStorage != nil {
-		publicURLGenerator := storage.NewPublicURLGenerator(dualStorage.GetPublicStorage())
-		urlOptions := storage.DefaultURLOptions()
-
-		if composition.PreviewURL.Valid {
-			compositionPb.PreviewUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.PreviewURL.String, urlOptions)
-		}
-
-		if composition.GcodeURL.Valid {
-			compositionPb.GcodeUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.GcodeURL.String, urlOptions)
-		}
-
-		if composition.PathlistURL.Valid {
-			compositionPb.PathlistUrl = storage.GenerateImageURL(ctx, publicURLGenerator, composition.PathlistURL.String, urlOptions)
-		}
+	if composition.PreviewURL.Valid {
+		compositionPb.PreviewUrl = publicURLFromStorage(dualStorage, composition.PreviewURL.String)
+	}
+	if composition.GcodeURL.Valid {
+		compositionPb.GcodeUrl = publicURLFromStorage(dualStorage, composition.GcodeURL.String)
+	}
+	if composition.PathlistURL.Valid {
+		compositionPb.PathlistUrl = publicURLFromStorage(dualStorage, composition.PathlistURL.String)
 	}
 
 	if composition.ThreadLength.Valid {
 		compositionPb.ThreadLength = int32(composition.ThreadLength.Int)
 	}
-
 	if composition.TotalLines.Valid {
 		compositionPb.TotalLines = int32(composition.TotalLines.Int)
 	}
-
 	if composition.ErrorMessage.Valid {
 		compositionPb.ErrorMessage = composition.ErrorMessage.String
 	}
@@ -79,7 +64,6 @@ func CompositionDbToProto(ctx context.Context, dualStorage *storage.DualBucketSt
 	return compositionPb
 }
 
-// ProtoCompositionToDb converts a proto composition to a database composition model
 func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 	compositionDb := &models.Composition{
 		NailsQuantity:     int(comp.GetNailsQuantity()),
@@ -92,7 +76,6 @@ func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 		PhysicalRadius:    float64(comp.GetPhysicalRadius()),
 	}
 
-	// Extract resource IDs from the name if it exists
 	if comp.GetName() != "" {
 		compositionResource, err := resource.ParseResourceName(comp.GetName())
 		if err == nil {
@@ -105,8 +88,6 @@ func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 	return compositionDb
 }
 
-// ParseCompositionResourceName parses a composition resource name into user ID, art ID, and composition ID
-// Deprecated: Use resource.ParseResourceName instead
 func ParseCompositionResourceName(resourceName string) (string, string, string, error) {
 	compositionResource, err := resource.ParseResourceName(resourceName)
 	if err != nil {

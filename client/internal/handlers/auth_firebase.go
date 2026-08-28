@@ -1,16 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
-
+	"strings"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	coreauth "github.com/Damione1/thread-art-generator/core/auth"
-
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -95,19 +96,15 @@ func (h *FirebaseAuthHandler) AuthSync(w http.ResponseWriter, r *http.Request) {
 		Str("name", userInfo.Name).
 		Msg("Firebase token validated successfully")
 
-	// Use Firebase UID directly as session user ID
-	// User creation is handled asynchronously by Firebase Cloud Function
-	internalUserID := userInfo.ID
+	internalUserID, err := h.ensureUser(r.Context(), userInfo)
+	if err != nil {
+		log.Error().Err(err).Str("firebase_uid", userInfo.ID).Msg("Failed to resolve user for session")
+		h.sendErrorResponse(w, "Failed to create user", http.StatusInternalServerError)
+		return
+	}
 
-	log.Info().
-		Str("firebase_uid", userInfo.ID).
-		Str("email", userInfo.Email).
-		Str("name", userInfo.Name).
-		Msg("Firebase token validated successfully - user creation handled by Cloud Function")
-
-	// Create session data
 	sessionUserInfo := auth.SessionUserInfo{
-		ID:        userInfo.ID,
+		ID:        internalUserID,
 		Name:      userInfo.Name,
 		Email:     userInfo.Email,
 		Picture:   userInfo.Picture,
@@ -292,7 +289,51 @@ func (h *FirebaseAuthHandler) Status(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// Note: User creation is now handled by the API interceptor when first API call is made
+// ensureUser maps a Firebase UID to the Postgres UUID, creating the row if missing.
+func (h *FirebaseAuthHandler) ensureUser(ctx context.Context, info *coreauth.UserInfo) (string, error) {
+	if h.db == nil {
+		return info.ID, nil
+	}
+	var id string
+	err := h.db.QueryRowContext(ctx, `SELECT id FROM users WHERE firebase_uid = $1`, info.ID).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", err
+	}
+
+	first := strings.TrimSpace(info.FirstName)
+	last := strings.TrimSpace(info.LastName)
+	if first == "" {
+		first = "User"
+		if name := strings.TrimSpace(info.Name); name != "" {
+			parts := strings.SplitN(name, " ", 2)
+			first = parts[0]
+			if len(parts) > 1 {
+				last = parts[1]
+			}
+		}
+	}
+
+	id = uuid.New().String()
+	err = h.db.QueryRowContext(ctx, `
+		INSERT INTO users (id, email, firebase_uid, first_name, last_name, avatar_id, active, role)
+		VALUES ($1, NULLIF($2, ''), $3, $4, NULLIF($5, ''), NULLIF($6, ''), true, 'user')
+		ON CONFLICT (firebase_uid) DO UPDATE SET email = COALESCE(EXCLUDED.email, users.email)
+		RETURNING id
+	`, id, info.Email, info.ID, first, last, info.Picture).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if info.Email != "" {
+		if scanErr := h.db.QueryRowContext(ctx, `SELECT id FROM users WHERE lower(email) = lower($1)`, info.Email).Scan(&id); scanErr == nil {
+			_, _ = h.db.ExecContext(ctx, `UPDATE users SET firebase_uid = $1 WHERE id = $2 AND firebase_uid IS NULL`, info.ID, id)
+			return id, nil
+		}
+	}
+	return "", err
+}
 
 // sendErrorResponse sends a JSON error response
 func (h *FirebaseAuthHandler) sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
