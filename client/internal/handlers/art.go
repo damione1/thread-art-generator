@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
@@ -56,7 +54,7 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art using internal user ID
@@ -86,114 +84,6 @@ func (h *ArtHandler) ViewArtPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render art page")
 	}
-}
-
-// UploadRequest represents the upload request body
-type UploadRequest struct {
-	ContentType string `json:"content_type"`
-	FileSize    int64  `json:"file_size"`
-}
-
-// GetArtUploadUrl handles getting a signed upload URL for an art
-func (h *ArtHandler) GetArtUploadUrl(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (contains Firebase UID)
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Extract art ID from URL parameter
-	artID := chi.URLParam(r, "artId")
-	if artID == "" {
-		http.Error(w, "Invalid art ID", http.StatusBadRequest)
-		return
-	}
-
-	// Parse request body for content type and file size
-	var uploadReq UploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&uploadReq); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Get internal user ID by calling GetCurrentUser API
-	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for GetArtUploadUrl")
-		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the user resource name to extract internal user ID
-	userResource, err := resource.ParseResourceName(currentUser.ID)
-	if err != nil {
-		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
-		return
-	}
-	
-	internalUserID := userResource.(*resource.User).ID
-
-	// Get upload URL using internal user ID with validation parameters
-	uploadResponse, err := h.generatorService.GetArtUploadUrl(r.Context(), internalUserID, artID, uploadReq.ContentType, uploadReq.FileSize)
-	if err != nil {
-		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get upload URL")
-		http.Error(w, "Failed to get upload URL", http.StatusInternalServerError)
-		return
-	}
-
-	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"upload_url":      uploadResponse.GetUploadUrl(),
-		"expiration_time": uploadResponse.GetExpirationTime().AsTime(),
-	})
-}
-
-// ConfirmArtImageUpload handles confirming that an image has been uploaded
-func (h *ArtHandler) ConfirmArtImageUpload(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (contains Firebase UID)
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Extract art ID from URL parameter
-	artID := chi.URLParam(r, "artId")
-	if artID == "" {
-		http.Error(w, "Invalid art ID", http.StatusBadRequest)
-		return
-	}
-
-	// Get internal user ID by calling GetCurrentUser API
-	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for ConfirmArtImageUpload")
-		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the user resource name to extract internal user ID
-	userResource, err := resource.ParseResourceName(currentUser.ID)
-	if err != nil {
-		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
-		return
-	}
-	
-	internalUserID := userResource.(*resource.User).ID
-
-	// Confirm upload - construct the full resource name as expected by the service
-	// Following Google AIP resource naming: users/{internal_user_id}/arts/{art_id}
-	resourceName := resource.BuildArtResourceName(internalUserID, artID)
-
-	art, err := h.generatorService.ConfirmArtImageUpload(r.Context(), resourceName)
-	if err != nil {
-		log.Error().Err(err).Str("art_id", artID).Str("resource_name", resourceName).Msg("Failed to confirm upload")
-		http.Error(w, "Failed to confirm upload", http.StatusInternalServerError)
-		return
-	}
-
-	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"status":  art.GetStatus().String(),
-	})
 }
 
 // NewArtPage renders the art creation form

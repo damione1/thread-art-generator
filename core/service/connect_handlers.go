@@ -92,22 +92,6 @@ func (s *Server) DeleteArt(ctx context.Context, req *connect.Request[pb.DeleteAr
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
-func (s *Server) GetArtUploadUrl(ctx context.Context, req *connect.Request[pb.GetArtUploadUrlRequest]) (*connect.Response[pb.GetArtUploadUrlResponse], error) {
-	resp, err := s.getArtUploadUrl(ctx, req.Msg)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (s *Server) ConfirmArtImageUpload(ctx context.Context, req *connect.Request[pb.ConfirmArtImageUploadRequest]) (*connect.Response[pb.Art], error) {
-	art, err := s.confirmArtImageUpload(ctx, req.Msg)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(art), nil
-}
-
 func (s *Server) StartArtUpload(ctx context.Context, req *connect.Request[pb.StartArtUploadRequest]) (*connect.Response[pb.StartArtUploadResponse], error) {
 	resp, err := s.startArtUpload(ctx, req.Msg)
 	if err != nil {

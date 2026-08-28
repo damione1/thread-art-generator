@@ -81,16 +81,23 @@ func startPostgresProcessing(ctx context.Context, config util.Config, dualStorag
 	if config.DB == nil {
 		return fmt.Errorf("postgres queue requires a database connection")
 	}
-	q := queue.NewPostgresQueue(config.DB, queue.PostgresOptions{})
+	q := queue.NewPostgresQueue(config.DB, queue.PostgresOptions{
+		VisibilityTimeout: 45 * time.Minute,
+	})
 	defer q.Close()
+
+	consumer := "worker"
+	if h, err := os.Hostname(); err == nil && h != "" {
+		consumer = h
+	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info().Str("queue", queue.TopicCompositionProcessing).Msg("🧵 Worker is waiting for postgres jobs")
-		err := q.Subscribe(ctx, queue.TopicCompositionProcessing, "worker", func(ctx context.Context, body []byte) error {
+		log.Info().Str("queue", queue.TopicCompositionProcessing).Str("consumer", consumer).Msg("🧵 Worker is waiting for postgres jobs")
+		err := q.Subscribe(ctx, queue.TopicCompositionProcessing, consumer, func(ctx context.Context, body []byte) error {
 			return processMessage(ctx, body, config.DB, dualStorage)
 		})
 		errCh <- err

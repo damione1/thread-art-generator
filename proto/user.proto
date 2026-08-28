@@ -93,7 +93,7 @@ message ListUsersRequest {
     // PageToken is the token to retrieve the next page of results.
     string page_token = 1;
     // PageSize is the number of users to return in a single page.
-    int32 page_size = 2 [(buf.validate.field).int32 = {gt: 0, lte: 100}];
+    int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
 }
 
 message ListUsersResponse {

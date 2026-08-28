@@ -31,3 +31,13 @@ func TestInvalidArgumentFieldViolations(t *testing.T) {
 	require.True(t, HasFieldViolation(err, "parent"))
 	require.Equal(t, "invalid resource name", GetFieldViolationMessage(err, "parent"))
 }
+
+func TestParseConnectErrorExtractsFieldViolations(t *testing.T) {
+	t.Parallel()
+	err := InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+		FieldViolation("title", errors.New("title is required")),
+	})
+	got := NewErrorParser().ParseConnectError(err)
+	require.Equal(t, ErrorTypeValidation, got.Type)
+	require.Equal(t, []string{"title is required"}, got.Fields["title"])
+}

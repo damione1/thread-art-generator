@@ -62,6 +62,7 @@ func runConnectServer(config util.Config) {
 	sm.Cookie.Name = "session_id"
 	sm.Cookie.HttpOnly = true
 	sm.Cookie.SameSite = http.SameSiteLaxMode
+	sm.Cookie.Secure = config.Environment != "" && config.Environment != "development"
 	sm.Lifetime = 24 * time.Hour
 	sessions, err := auth.NewSCSSessions(sm)
 	if err != nil {

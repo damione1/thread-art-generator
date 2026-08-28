@@ -26,6 +26,8 @@ services:
       STORAGE_FORCE_EXTERNAL_SSL: ${STORAGE_FORCE_EXTERNAL_SSL}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_PUBLIC_BUCKET: ${STORAGE_PUBLIC_BUCKET}
+      STORAGE_PRIVATE_BUCKET: ${STORAGE_PRIVATE_BUCKET}
       # Queue configuration
       RABBITMQ_URL: ${RABBITMQ_URL}
       QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
@@ -33,7 +35,7 @@ services:
       SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
     depends_on:
       - db
-      - rabbitmq
+      - minio
 
   # Worker service for processing compositions
   worker:
@@ -52,13 +54,15 @@ services:
       STORAGE_FORCE_EXTERNAL_SSL: ${STORAGE_FORCE_EXTERNAL_SSL}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_PUBLIC_BUCKET: ${STORAGE_PUBLIC_BUCKET}
+      STORAGE_PRIVATE_BUCKET: ${STORAGE_PRIVATE_BUCKET}
       # Queue configuration
       RABBITMQ_URL: ${RABBITMQ_URL}
       QUEUE_COMPOSITION_PROCESSING: ${QUEUE_COMPOSITION_PROCESSING}
       QUEUE_PROVIDER: ${QUEUE_PROVIDER:-postgres}
     depends_on:
       - db
-      - rabbitmq
+      - minio
       - api
     restart: unless-stopped
 

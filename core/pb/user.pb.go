@@ -489,7 +489,7 @@ const file_user_proto_rawDesc = "" +
 	"\x10ListUsersRequest\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x01 \x01(\tR\tpageToken\x12&\n" +
-	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d \x00R\bpageSize\"[\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\"[\n" +
 	"\x11ListUsersResponse\x12\x1e\n" +
 	"\x05users\x18\x01 \x03(\v2\b.pb.UserR\x05users\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xd3\x01\n" +
