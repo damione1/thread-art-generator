@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -139,6 +141,8 @@ func main() {
 		// Auth pages
 		r.Get("/login", pageHandler.LoginPage)
 		r.Get("/signup", pageHandler.SignupPage)
+
+		mountRPCProxy(r, config.ApiURL)
 	})
 
 	// Protected routes
@@ -219,4 +223,28 @@ func main() {
 	}
 
 	log.Info().Msg("Server gracefully stopped")
+}
+
+func mountRPCProxy(r chi.Router, apiURLRaw string) {
+	if apiURLRaw == "" {
+		apiURLRaw = "http://api:9090"
+	}
+	apiURL, err := url.Parse(apiURLRaw)
+	if err != nil {
+		log.Error().Err(err).Str("apiURL", apiURLRaw).Msg("invalid ApiURL, /rpc proxy not mounted")
+		return
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(apiURL)
+	proxy.FlushInterval = -1
+	director := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		director(req)
+		req.URL.Host = apiURL.Host
+		req.URL.Scheme = apiURL.Scheme
+		req.Host = apiURL.Host
+	}
+
+	r.Mount("/rpc", http.StripPrefix("/rpc", proxy))
+	log.Info().Str("apiURL", apiURL.String()).Msg("/rpc reverse proxy mounted")
 }

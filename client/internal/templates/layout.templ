@@ -11,6 +11,9 @@ templ Layout(data *PageData) {
 			<title>{ data.GetPageTitle() }</title>
 			<script src="/static/js/vendors.js"></script>
 			<script src="/static/js/main.js" defer></script>
+			if data.PageType == "art" {
+				<script src="/static/js/art-upload.js"></script>
+			}
 			<!-- Include a CSRF token for authenticated users -->
 			if data.IsLoggedIn {
 				<meta name="csrf-token" id="csrf-token" content="auth-token-exists"/>

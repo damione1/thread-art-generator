@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
@@ -12,6 +14,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/resource"
+	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -19,14 +22,12 @@ import (
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"gocloud.dev/blob"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
 
 func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
 	// Get Firebase UID from context
@@ -457,7 +458,7 @@ func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadU
 	imageKey := resource.BuildArtResourceName(artDb.AuthorID, imageID)
 
 	// Generate a secure signed URL with 1-minute expiration and content validation
-	opts := &blob.SignedURLOptions{
+	opts := &storage.SignedURLOptions{
 		Expiry:      time.Minute, // 1-minute expiration for security
 		Method:      "PUT",
 		ContentType: req.GetContentType(), // Include content type for validation
@@ -559,5 +560,104 @@ func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.Confirm
 		return nil, pbErrors.InternalError("failed to update art status", err)
 	}
 
+	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
+}
+
+func flattenPresignHeaders(h http.Header) map[string]string {
+	out := make(map[string]string, len(h))
+	for k, vals := range h {
+		if len(vals) > 0 {
+			out[k] = vals[0]
+		}
+	}
+	return out
+}
+
+func (server *Server) loadOwnedArt(ctx context.Context, name, action string) (*models.Art, *models.User, error) {
+	firebaseUID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		return nil, nil, pbErrors.PermissionDeniedError("user not authenticated")
+	}
+	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	if err != nil {
+		return nil, nil, err
+	}
+	parsed, err := resource.ParseResourceName(name)
+	if err != nil {
+		return nil, nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
+		})
+	}
+	artRes, ok := parsed.(*resource.Art)
+	if !ok {
+		return nil, nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
+		})
+	}
+	if artRes.UserID != user.ID {
+		return nil, nil, pbErrors.PermissionDeniedError("only the author can " + action)
+	}
+	artDb, err := models.Arts(
+		models.ArtWhere.ID.EQ(artRes.ArtID),
+		models.ArtWhere.AuthorID.EQ(user.ID),
+	).One(ctx, server.config.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, pbErrors.NotFoundError("art not found")
+		}
+		return nil, nil, pbErrors.InternalError("failed to get art", err)
+	}
+	return artDb, user, nil
+}
+
+func (server *Server) StartArtUpload(ctx context.Context, req *pb.StartArtUploadRequest) (*pb.StartArtUploadResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
+	}
+	artDb, user, err := server.loadOwnedArt(ctx, req.GetName(), "upload")
+	if err != nil {
+		return nil, err
+	}
+	if artDb.Status != models.ArtStatusEnumPENDING_IMAGE {
+		return nil, pbErrors.FailedPreconditionError("art is not awaiting an image")
+	}
+	key := resource.ArtOriginalObjectKey(user.ID, artDb.ID)
+	presign, err := server.storage.GetPublicStorage().Bucket().PresignPut(ctx, key, storage.PresignPutOptions{
+		ContentType: req.GetContentType(),
+		TTL:         10 * time.Minute,
+	})
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to presign upload", err)
+	}
+	return &pb.StartArtUploadResponse{
+		UploadUrl: presign.URL,
+		Method:    presign.Method,
+		Headers:   flattenPresignHeaders(presign.Headers),
+		ExpiresAt: timestamppb.New(presign.Expires),
+	}, nil
+}
+
+func (server *Server) CompleteArtUpload(ctx context.Context, req *pb.CompleteArtUploadRequest) (*pb.Art, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
+	}
+	artDb, user, err := server.loadOwnedArt(ctx, req.GetName(), "complete upload")
+	if err != nil {
+		return nil, err
+	}
+	key := resource.ArtOriginalObjectKey(user.ID, artDb.ID)
+	info, err := server.storage.GetPublicStorage().Bucket().Head(ctx, key)
+	if err != nil {
+		return nil, pbErrors.FailedPreconditionError("image not found in storage, upload first")
+	}
+	if info.ContentType != "" && !strings.HasPrefix(info.ContentType, "image/") {
+		return nil, pbErrors.FailedPreconditionError("uploaded object is not an image")
+	}
+	artDb.Status = models.ArtStatusEnumCOMPLETE
+	artDb.ImageID = null.StringFrom(artDb.ID)
+	_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(models.ArtColumns.Status, models.ArtColumns.ImageID))
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to update art status", err)
+	}
 	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
 }

@@ -107,6 +107,7 @@ func shouldSkipAuthRequirement(path string) bool {
 		"/static/",
 		"/gallery", // Gallery should be publicly accessible
 		"/about",   // About page should be publicly accessible
+		"/rpc",     // gRPC-Web proxy; IdentityInterceptor is the gate
 	}
 
 	for _, publicPath := range publicPaths {
