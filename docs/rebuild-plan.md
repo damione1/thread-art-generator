@@ -664,4 +664,9 @@ AuthSync looks up/creates the Postgres user and stores **UUID** in `session_id`.
 
 DualBucket now aliases private=public (one S3 bucket). `GetArtUploadUrl` / RabbitMQ still dual-run. Firebase AuthMiddleware still stacked after IdentityInterceptor. `grep firebase` is not empty. Opaque page tokens / `order_by` AIP-132 still open.
 
+### 2026-08-28 ~13:45 EDT | discovery | currentUser UUID parse
+
+`users.id` is UUID. Lookup by Firebase UID as PK raises `22P02`, so the dual-run fallback never ran and legacy sessions would Internal. `currentUser` now parses UUID first; `PrincipalService` is refused on user RPCs. AuthSync no longer links an existing password row by email.
+
+
 
