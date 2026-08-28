@@ -503,7 +503,8 @@ const file_user_proto_rawDesc = "" +
 	"\x1fsync_user.firebase_uid.required\x12\x18Firebase UID is required\x1a\x0fthis.size() > 0R\vfirebaseUid\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1b\n" +
-	"\tphoto_url\x18\x04 \x01(\tR\bphotoUrlB2Z0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
+	"\tphoto_url\x18\x04 \x01(\tR\bphotoUrlBm\n" +
+	"\x06com.pbB\tUserProtoP\x01Z0github.com/Damione1/thread-art-generator/core/pb\xa2\x02\x03PXX\xaa\x02\x02Pb\xca\x02\x02Pb\xe2\x02\x0ePb\\GPBMetadata\xea\x02\x02Pbb\x06proto3"
 
 var (
 	file_user_proto_rawDescOnce sync.Once

@@ -7,7 +7,6 @@ import (
 
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/rs/zerolog/log"
-	"gocloud.dev/blob"
 )
 
 // Cache entry that includes the URL and its expiration time
@@ -37,7 +36,7 @@ func GetOrCreateSignedImageURL(ctx context.Context, bucket *storage.BlobStorage,
 	}
 
 	// Generate a new signed URL
-	imageUrl, err := bucket.SignedURL(ctx, imageID, &blob.SignedURLOptions{Method: "GET", Expiry: time.Duration(expiry) * time.Minute})
+	imageUrl, err := bucket.SignedURL(ctx, imageID, &storage.SignedURLOptions{Method: "GET", Expiry: time.Duration(expiry) * time.Minute})
 	if err != nil {
 		return "", err
 	}

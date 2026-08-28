@@ -1,19 +1,21 @@
-version: v1
+version: v2
+managed:
+  enabled: true
+  disable:
+    - module: buf.build/googleapis/googleapis
+    - module: buf.build/bufbuild/protovalidate
+    - module: buf.build/grpc-ecosystem/grpc-gateway
+  override:
+    - file_option: go_package_prefix
+      value: github.com/Damione1/thread-art-generator/core/pb
 plugins:
-  # Go outputs
-  - name: go
+  - remote: buf.build/protocolbuffers/go:v1.36.6
     out: ../core/pb
     opt: paths=source_relative
-  - name: connect-go
+  - remote: buf.build/connectrpc/go:v1.17.0
     out: ../core/pb
     opt: paths=source_relative
-  # TypeScript outputs
-  - name: es
-    out: ../web/src/lib/pb
-    opt: target=ts,import_extension=none
-  - name: connect-es
-    out: ../web/src/lib/pb
-    opt: target=ts,import_extension=none
-  # OpenAPI generation
-  - name: openapiv2
-    out: ../api/openapi
+  - remote: buf.build/bufbuild/es:v2.10.0
+    out: ../client/src/gen
+    opt: target=ts
+    include_imports: true

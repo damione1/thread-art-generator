@@ -52,6 +52,30 @@ func BuildArtResourceName(userID, artID string) string {
 	return fmt.Sprintf("users/%s/arts/%s", userID, artID)
 }
 
+func ArtOriginalObjectKey(userID, artID string) string {
+	return fmt.Sprintf("users/%s/arts/%s/original", userID, artID)
+}
+
+// ArtImageObjectKey is dual-run: new uploads live at /original (ImageID == artID).
+func ArtImageObjectKey(userID, artID, imageID string) string {
+	if imageID == "" || imageID == artID {
+		return ArtOriginalObjectKey(userID, artID)
+	}
+	return BuildArtResourceName(userID, imageID)
+}
+
+func CompositionPreviewObjectKey(userID, artID, compositionID string) string {
+	return fmt.Sprintf("users/%s/arts/%s/compositions/%s/preview", userID, artID, compositionID)
+}
+
+func CompositionGcodeObjectKey(userID, artID, compositionID string) string {
+	return fmt.Sprintf("users/%s/arts/%s/compositions/%s/gcode", userID, artID, compositionID)
+}
+
+func CompositionPathlistObjectKey(userID, artID, compositionID string) string {
+	return fmt.Sprintf("users/%s/arts/%s/compositions/%s/pathlist", userID, artID, compositionID)
+}
+
 func BuildCompositionResourceName(userID, artID, compositionID string) string {
 	return fmt.Sprintf("users/%s/arts/%s/compositions/%s", userID, artID, compositionID)
 }
