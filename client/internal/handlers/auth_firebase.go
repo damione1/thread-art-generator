@@ -326,12 +326,6 @@ func (h *FirebaseAuthHandler) ensureUser(ctx context.Context, info *coreauth.Use
 	if err == nil {
 		return id, nil
 	}
-	if info.Email != "" {
-		if scanErr := h.db.QueryRowContext(ctx, `SELECT id FROM users WHERE lower(email) = lower($1)`, info.Email).Scan(&id); scanErr == nil {
-			_, _ = h.db.ExecContext(ctx, `UPDATE users SET firebase_uid = $1 WHERE id = $2 AND firebase_uid IS NULL`, info.ID, id)
-			return id, nil
-		}
-	}
 	return "", err
 }
 

@@ -96,7 +96,13 @@ func (s *Server) currentUser(ctx context.Context) (*models.User, error) {
 		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 	if id, found := auth.IdentityFromContext(ctx); found && id.UserID != "" {
+		if id.Kind == auth.PrincipalService {
+			return nil, pbErrors.PermissionDeniedError("service credentials cannot act as a user")
+		}
 		authID = id.UserID
+	}
+	if !isPostgresUserID(authID) {
+		return s.getUserFromFirebaseUID(ctx, authID)
 	}
 	user, err := models.Users(models.UserWhere.ID.EQ(authID)).One(ctx, s.config.DB)
 	if err == nil {
@@ -120,6 +126,11 @@ func (s *Server) getUserFromFirebaseUID(ctx context.Context, firebaseUID string)
 		return nil, pbErrors.InternalError("failed to get user", err)
 	}
 	return user, nil
+}
+
+func isPostgresUserID(id string) bool {
+	_, err := uuid.Parse(id)
+	return err == nil
 }
 
 // createUserFromFirebaseClaims creates a new user record from Firebase auth claims
