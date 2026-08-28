@@ -126,62 +126,21 @@ func (server *Server) listArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		return nil, err
 	}
 
-	pageSize := int(req.GetPageSize())
-
-	const (
-		maxPageSize     = 1000
-		defaultPageSize = 100
-	)
-
-	switch {
-	case pageSize < 0:
+	if req.GetPageSize() < 0 {
 		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("page_size", errors.New("page size is negative")),
 		})
-	case pageSize == 0:
-		pageSize = defaultPageSize
-	case pageSize > maxPageSize:
-		pageSize = maxPageSize
+	}
+	pageSize := int(clampPageSize(req.GetPageSize(), 100, 100))
+
+	offset, err := pageOffset(req)
+	if err != nil {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("page_token", err),
+		})
 	}
 
-	// Parse page token to get offset
-	offset := 0
-	if req.GetPageToken() != "" {
-		var err error
-		offset, err = parseInt32PageToken(req.GetPageToken())
-		if err != nil {
-			return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
-				pbErrors.FieldViolation("page_token", err),
-			})
-		}
-	}
-
-	// Determine order_by and order_direction
-	orderBy := req.GetOrderBy()
-	if orderBy == "" {
-		orderBy = "create_time"
-	}
-	orderDirection := req.GetOrderDirection()
-	if orderDirection == "" {
-		orderDirection = "desc"
-	}
-
-	// Map proto field to DB column
-	var orderColumn string
-	switch orderBy {
-	case "create_time":
-		orderColumn = models.ArtColumns.CreatedAt
-	case "update_time":
-		orderColumn = models.ArtColumns.UpdatedAt
-	default:
-		orderColumn = models.ArtColumns.CreatedAt
-	}
-
-	// Validate direction
-	dir := "DESC"
-	if orderDirection == "asc" {
-		dir = "ASC"
-	}
+	orderColumn, dir := parseOrderBy(req.GetOrderBy())
 
 	// Build query mods using internal user ID
 	queryMods := []qm.QueryMod{
@@ -210,39 +169,29 @@ func (server *Server) listArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 		artPbs = append(artPbs, pbx.ArtDbToProto(artDb, server.storage))
 	}
 
-	// Create next page token if there are more results
-	nextPageToken := ""
-	if hasNextPage {
-		nextPageToken = createPageToken(offset + pageSize)
-	}
-
 	return &pb.ListArtsResponse{
 		Arts:          artPbs,
-		NextPageToken: nextPageToken,
+		NextPageToken: encodeNextPageToken(req, int32(pageSize), hasNextPage),
 	}, nil
 }
 
-// parseInt32PageToken converts a string page token to an integer offset
-func parseInt32PageToken(token string) (int, error) {
-	// For simplicity, we're just converting the string to int
-	// In a production system, you might want to use a more secure approach
-	// such as signed or encrypted tokens
-	var offset int
-	_, err := fmt.Sscanf(token, "%d", &offset)
-	if err != nil {
-		return 0, err
+func parseOrderBy(orderBy string) (column, dir string) {
+	column = models.ArtColumns.CreatedAt
+	dir = "DESC"
+	fields := strings.Fields(strings.TrimSpace(orderBy))
+	if len(fields) == 0 {
+		return column, dir
 	}
-	if offset < 0 {
-		return 0, fmt.Errorf("offset cannot be negative")
+	switch fields[0] {
+	case "update_time":
+		column = models.ArtColumns.UpdatedAt
+	default:
+		column = models.ArtColumns.CreatedAt
 	}
-	return offset, nil
-}
-
-// createPageToken creates a page token from an integer offset
-func createPageToken(offset int) string {
-	// For simplicity, we're just converting the int to string
-	// In a production system, you might want to use a more secure approach
-	return fmt.Sprintf("%d", offset)
+	if len(fields) > 1 && strings.EqualFold(fields[1], "asc") {
+		dir = "ASC"
+	}
+	return column, dir
 }
 
 func (server *Server) getArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Art, error) {

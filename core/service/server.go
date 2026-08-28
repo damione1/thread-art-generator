@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/db/models"
@@ -17,9 +15,6 @@ import (
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 type Server struct {
@@ -40,25 +35,14 @@ func NewServer(config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create mail service. %v", err)
 	}
 
-	// Initialize dual bucket storage system
 	ctx := context.Background()
 	server.storage, err = storage.NewDualBucketStorage(ctx, config.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dual bucket storage: %v", err)
 	}
 
-	switch config.QueueProvider {
-	case "rabbitmq":
-		if config.Queue.URL != "" {
-			server.queueClient, err = queue.NewRabbitMQClient(config.Queue.URL)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create queue client: %v", err)
-			}
-		}
-	default:
-		if config.DB != nil {
-			server.queueClient = queue.NewPostgresQueue(config.DB, queue.PostgresOptions{})
-		}
+	if config.DB != nil {
+		server.queueClient = queue.NewPostgresQueue(config.DB, queue.PostgresOptions{})
 	}
 
 	return server, nil
@@ -88,8 +72,7 @@ func (s *Server) Close() error {
 	return err
 }
 
-// currentUser resolves the Postgres user. Prefers auth.Identity UUID (cookie/HMAC),
-// then looks up by primary key, then Firebase UID for dual-run sessions.
+// currentUser resolves the Postgres user from cookie/HMAC identity (UUID only).
 func (s *Server) currentUser(ctx context.Context) (*models.User, error) {
 	authID, ok := middleware.UserIDFromContext(ctx)
 	if !ok {
@@ -102,126 +85,19 @@ func (s *Server) currentUser(ctx context.Context) (*models.User, error) {
 		authID = id.UserID
 	}
 	if !isPostgresUserID(authID) {
-		return s.getUserFromFirebaseUID(ctx, authID)
+		return nil, pbErrors.PermissionDeniedError("user not authenticated")
 	}
 	user, err := models.Users(models.UserWhere.ID.EQ(authID)).One(ctx, s.config.DB)
 	if err == nil {
 		return user, nil
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return nil, pbErrors.InternalError("failed to get user", err)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, pbErrors.NotFoundError("user not found")
 	}
-	return s.getUserFromFirebaseUID(ctx, authID)
-}
-
-// getUserFromFirebaseUID is a helper method to get the internal user from Firebase UID
-func (s *Server) getUserFromFirebaseUID(ctx context.Context, firebaseUID string) (*models.User, error) {
-	user, err := models.Users(
-		models.UserWhere.FirebaseUID.EQ(null.StringFrom(firebaseUID)),
-	).One(ctx, s.config.DB)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, pbErrors.NotFoundError("user not found")
-		}
-		return nil, pbErrors.InternalError("failed to get user", err)
-	}
-	return user, nil
+	return nil, pbErrors.InternalError("failed to get user", err)
 }
 
 func isPostgresUserID(id string) bool {
 	_, err := uuid.Parse(id)
 	return err == nil
-}
-
-// createUserFromFirebaseClaims creates a new user record from Firebase auth claims
-func (s *Server) createUserFromFirebaseClaims(ctx context.Context, firebaseUID, email, name, picture string) (*models.User, error) {
-	// Parse name into first/last name components
-	firstName := "User"
-	var lastName null.String
-
-	if name != "" {
-		nameParts := strings.SplitN(name, " ", 2)
-		if len(nameParts) > 0 {
-			firstName = nameParts[0]
-		}
-		if len(nameParts) > 1 {
-			lastName = null.StringFrom(nameParts[1])
-		}
-	}
-
-	// Create new user model with UUID primary key
-	userDb := &models.User{
-		ID:          uuid.New().String(), // Use UUID for primary key
-		FirebaseUID: null.StringFrom(firebaseUID),
-		Active:      true,
-		Role:        models.RoleEnumUser,
-		FirstName:   firstName,
-		LastName:    lastName,
-	}
-
-	// Set optional fields
-	if email != "" {
-		userDb.Email = null.StringFrom(email)
-	}
-
-	if picture != "" {
-		userDb.AvatarID = null.StringFrom(picture)
-	}
-
-	// Insert user into database
-	if err := userDb.Insert(ctx, s.config.DB, boil.Infer()); err != nil {
-		return nil, fmt.Errorf("failed to create user: %v", err)
-	}
-
-	return userDb, nil
-}
-
-// validateInternalAPIKeyFromHeaders validates the internal API key from Connect-RPC HTTP headers
-func (s *Server) validateInternalAPIKeyFromHeaders(headers http.Header) bool {
-	// Get authorization header
-	authHeader := headers.Get("Authorization")
-	if authHeader == "" {
-		log.Debug().Msg("No Authorization header found for internal API key validation")
-		return false
-	}
-
-	// Extract Bearer token
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		log.Debug().Str("auth_header", authHeader).Msg("Authorization header doesn't start with 'Bearer '")
-		return false
-	}
-
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	expectedToken := s.config.InternalAPIKey
-
-	// Validate token (must be non-empty and match)
-	isValid := token != "" && expectedToken != "" && token == expectedToken
-
-	if !isValid {
-		log.Warn().Msg("Internal API key validation failed")
-	} else {
-		log.Debug().Msg("Internal API key validation successful")
-	}
-
-	return isValid
-}
-
-// parseDisplayName parses a display name into first and last names
-func (s *Server) parseDisplayName(displayName string) (firstName, lastName string) {
-	if displayName == "" {
-		return "User", ""
-	}
-
-	parts := strings.SplitN(strings.TrimSpace(displayName), " ", 2)
-	firstName = parts[0]
-	if len(parts) > 1 {
-		lastName = parts[1]
-	}
-
-	// Ensure first name is not empty
-	if firstName == "" {
-		firstName = "User"
-	}
-
-	return firstName, lastName
 }

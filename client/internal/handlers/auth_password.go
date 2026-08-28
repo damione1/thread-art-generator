@@ -86,6 +86,60 @@ func (h *PasswordAuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	writeAuthJSON(w, http.StatusOK, true, "Authentication successful")
 }
 
+func (h *PasswordAuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed. Use POST or GET.", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := h.sessionManager.GetUserID(r)
+	acceptsJSON := r.Header.Get("Accept") == "application/json" || r.Header.Get("Content-Type") == "application/json"
+	isAjaxRequest := r.Header.Get("X-Requested-With") == "XMLHttpRequest"
+	wantsJSON := acceptsJSON || isAjaxRequest || r.Method == http.MethodPost
+
+	if err := h.sessionManager.DestroySession(w, r); err != nil {
+		log.Error().Err(err).Str("user_id", userID).Msg("Failed to destroy session during logout")
+		if wantsJSON {
+			writeAuthJSON(w, http.StatusInternalServerError, false, "Logout failed due to server error")
+		} else {
+			http.Redirect(w, r, "/?logout=error", http.StatusSeeOther)
+		}
+		return
+	}
+
+	if wantsJSON {
+		writeAuthJSON(w, http.StatusOK, true, "Logout successful")
+		return
+	}
+	http.Redirect(w, r, "/?logout=success", http.StatusSeeOther)
+}
+
+func (h *PasswordAuthHandler) Status(w http.ResponseWriter, r *http.Request) {
+	userID := h.sessionManager.GetUserID(r)
+	if userID == "" {
+		writeAuthJSON(w, http.StatusOK, false, "Not authenticated")
+		return
+	}
+	sessionData, err := h.sessionManager.GetSession(r)
+	if err != nil {
+		writeAuthJSON(w, http.StatusOK, false, "Invalid session")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(AuthSyncResponse{
+		Success: true,
+		Message: "Authenticated",
+		User: &UserProfile{
+			ID:        userID,
+			Name:      sessionData.UserInfo.Name,
+			Email:     sessionData.UserInfo.Email,
+			Picture:   sessionData.UserInfo.Picture,
+			FirstName: sessionData.UserInfo.FirstName,
+			LastName:  sessionData.UserInfo.LastName,
+		},
+	})
+}
+
 func (h *PasswordAuthHandler) issueSession(w http.ResponseWriter, r *http.Request, identity coreauth.Identity) error {
 	info := auth.SessionUserInfo{
 		ID:    identity.UserID,
@@ -121,4 +175,19 @@ func writeAuthJSON(w http.ResponseWriter, status int, success bool, message stri
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(AuthSyncResponse{Success: success, Message: message})
+}
+
+type AuthSyncResponse struct {
+	Success bool         `json:"success"`
+	Message string       `json:"message,omitempty"`
+	User    *UserProfile `json:"user,omitempty"`
+}
+
+type UserProfile struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Picture   string `json:"picture"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }

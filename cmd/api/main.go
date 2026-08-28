@@ -45,15 +45,9 @@ func runConnectServer(config util.Config) {
 	defer server.Close()
 	log.Print("🍩 Server created")
 
-	authService, err := createAuthService(config)
+	hmacAuth, err := auth.NewHMACServiceAuth(config.ServiceHMACSecret)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize auth service")
-	}
-
-	var hmacAuth auth.ServiceAuth
-	hmacAuth, err = auth.NewHMACServiceAuth(config.ServiceHMACSecret)
-	if err != nil {
-		log.Warn().Err(err).Msg("HMAC service auth disabled (secret too short); cookie/Firebase still work")
+		log.Warn().Err(err).Msg("HMAC service auth disabled (secret too short)")
 		hmacAuth = nil
 	}
 
@@ -72,7 +66,6 @@ func runConnectServer(config util.Config) {
 	interceptorChain := connect.WithInterceptors(
 		interceptors.ConnectLogger(),
 		interceptors.IdentityInterceptor(sessions, hmacAuth),
-		interceptors.AuthMiddleware(authService),
 	)
 
 	path, handler := pbconnect.NewArtGeneratorServiceHandler(server, interceptorChain)
@@ -110,13 +103,4 @@ func runConnectServer(config util.Config) {
 		Protocols:         protocols,
 	}
 	log.Fatal().Err(srv.ListenAndServe()).Msg("failed to listen")
-}
-
-func createAuthService(config util.Config) (auth.AuthService, error) {
-	firebaseConfig := auth.FirebaseConfiguration{
-		ProjectID:    config.Firebase.ProjectID,
-		EmulatorHost: config.Firebase.EmulatorHost,
-	}
-
-	return auth.NewFirebaseAuthService(firebaseConfig)
 }

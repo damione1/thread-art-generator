@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
@@ -305,68 +304,6 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render composition detail page")
-	}
-}
-
-// GetCompositionStatus returns the composition status for HTMX polling
-func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http.Request) {
-	// Extract IDs from URL path
-	// URL format: /dashboard/arts/{artId}/composition/{compositionId}/status
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 6 {
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-
-	artID := pathParts[2]
-	compositionID := pathParts[4]
-
-	// Get user from context
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Get internal user ID
-	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for GetCompositionStatus")
-		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the user resource name to extract internal user ID
-	userResource, err := resource.ParseResourceName(currentUser.ID)
-	if err != nil {
-		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
-		return
-	}
-
-	internalUserID := userResource.(*resource.User).ID
-
-	// Get the art and composition
-	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
-	if err != nil {
-		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art for status")
-		http.Error(w, "Art not found", http.StatusNotFound)
-		return
-	}
-
-	composition, err := h.generatorService.GetComposition(r.Context(), internalUserID, artID, compositionID)
-	if err != nil {
-		log.Error().Err(err).
-			Str("internal_user_id", internalUserID).
-			Str("art_id", artID).
-			Str("composition_id", compositionID).
-			Msg("Failed to get composition for status")
-		http.Error(w, "Composition not found", http.StatusNotFound)
-		return
-	}
-
-	// Render the entire composition detail page for HTMX to swap
-	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("Composition - %s - ThreadArt", art.GetTitle()), "composition")
-	err = templates.CompositionDetailPage(pageData, art, composition).Render(r.Context(), w)
-	if err != nil {
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
-		log.Error().Err(err).Msg("Failed to render composition status update")
 	}
 }
 

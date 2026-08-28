@@ -1,16 +1,7 @@
-import { Code, ConnectError, createClient } from '@connectrpc/connect';
-import { createGrpcWebTransport } from '@connectrpc/connect-web';
-import { ArtGeneratorService } from '../gen/services_pb';
+import { Code, ConnectError } from '@connectrpc/connect';
+import { createArtClient } from './rpc';
 
-const artClient = createClient(
-  ArtGeneratorService,
-  createGrpcWebTransport({
-    baseUrl: '/rpc',
-    useBinaryFormat: true,
-    // connect-web v2 dropped `credentials`; fetch override is the equivalent
-    fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
-  }),
-);
+const artClient = createArtClient();
 
 export interface ArtUploadConfig {
   artId: string;

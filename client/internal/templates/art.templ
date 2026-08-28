@@ -128,12 +128,7 @@ templ ArtPage(data *PageData, art *pb.Art, compositions []*pb.Composition) {
 			}
 			<!-- Auto-refresh while image URL is empty -->
 			if art.GetImageUrl() == "" {
-				<div
-					hx-get={ "/dashboard/arts/" + extractArtID(art.GetName()) }
-					hx-trigger="every 3s"
-					hx-swap="outerHTML"
-					hx-target="closest body"
-				></div>
+				<div data-poll-art={ art.GetName() }></div>
 			}
 		</div>
 	}

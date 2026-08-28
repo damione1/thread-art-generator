@@ -223,23 +223,24 @@ local_resource(
 # FIREBASE EMULATOR CONFIGURATION
 # ================================================
 
-# Build Firebase Functions using make target
+# Firebase emulator leftover in functions/. Cookie auth is the live path.
 local_resource(
   'firebase-functions-build',
   cmd='make firebase-build',
   labels=['firebase'],
   deps=['functions/src/**/*.ts', 'functions/package.json', 'functions/tsconfig.json', '.env'],
-  trigger_mode=TRIGGER_MODE_AUTO,
+  trigger_mode=TRIGGER_MODE_MANUAL,
+  auto_init=False,
 )
 
-# Firebase Emulator Suite (Auth + Functions + UI) for local development
 local_resource(
   'firebase-emulator',
   serve_cmd='make firebase-start',
   serve_dir='.',
   labels=['firebase'],
   resource_deps=['firebase-functions-build'],
-  auto_init=True,
+  auto_init=False,
+  trigger_mode=TRIGGER_MODE_MANUAL,
   readiness_probe=probe(
     http_get=http_get_action(port=9099, path='/'),
     initial_delay_secs=10,

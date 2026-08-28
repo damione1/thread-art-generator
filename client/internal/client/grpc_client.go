@@ -77,42 +77,19 @@ func NewAPIClient(baseURL string, sessionManager *auth.SCSSessionManager) *APICl
 
 // GetCurrentUser fetches the current user from the API using Connect-RPC
 func (c *APIClient) GetCurrentUser(ctx context.Context, req *http.Request) (*auth.APIUser, error) {
-	var ctxWithSession context.Context
-
-	// Check if we already have a session in the context
-	if ctx.Value("session") != nil {
-		ctxWithSession = ctx // Use the context as is
-	} else if req != nil {
-		// Get Firebase ID token from SCS session
-		idToken := c.sessionManager.GetIDToken(req)
-		if idToken == "" {
-			return nil, fmt.Errorf("not authenticated: no Firebase ID token")
-		}
-		// Create a context with the token for the FirebaseAuthTransport
-		ctxWithSession = context.WithValue(ctx, "firebase_token", idToken)
-	} else {
-		return nil, fmt.Errorf("neither context contains session nor request provided")
-	}
-
-	// Create the Connect request
 	connectReq := connect.NewRequest(&pb.GetCurrentUserRequest{})
-
-	// Call the Connect-RPC endpoint
-	resp, err := c.connectClient.GetCurrentUser(ctxWithSession, connectReq)
+	resp, err := c.connectClient.GetCurrentUser(ctx, connectReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current user: %w", err)
 	}
 
-	// Convert the response to our APIUser type
-	user := &auth.APIUser{
+	return &auth.APIUser{
 		ID:        resp.Msg.GetName(),
 		FirstName: resp.Msg.GetFirstName(),
 		LastName:  resp.Msg.GetLastName(),
 		Email:     resp.Msg.GetEmail(),
 		Avatar:    resp.Msg.GetAvatar(),
-	}
-
-	return user, nil
+	}, nil
 }
 
 // GetInternalUser fetches the current user from the API and returns our internal User type

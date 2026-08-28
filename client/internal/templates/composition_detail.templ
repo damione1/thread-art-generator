@@ -40,12 +40,7 @@ templ CompositionDetailPage(data *PageData, art *pb.Art, composition *pb.Composi
 			<!-- Auto-refresh for pending/processing status -->
 			if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PENDING ||
 			   composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING {
-				<div
-					hx-get={ "/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/" + extractCompositionID(composition.GetName()) + "/status" }
-					hx-trigger="every 2s"
-					hx-swap="outerHTML"
-					hx-target="closest body"
-				></div>
+				<div data-poll-composition={ composition.GetName() }></div>
 			}
 		</div>
 	}

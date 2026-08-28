@@ -5,7 +5,6 @@ import (
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
-	"github.com/Damione1/thread-art-generator/client/internal/types"
 	"github.com/Damione1/thread-art-generator/core/pb"
 )
 
@@ -22,10 +21,6 @@ type PageData struct {
 	// Authentication state
 	IsLoggedIn bool
 
-	// Optional Firebase configuration for auth pages
-	FirebaseConfig *types.FirebaseConfig
-
-	// Meta information and SEO
 	Meta map[string]string
 
 	// Page-specific data (can hold any data specific to the page)
@@ -67,11 +62,6 @@ func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
 	user, _ := middleware.UserFromContext(r.Context())
 	pageData.WithUser(user)
 
-	// Get Firebase config from context (set by middleware)
-	if firebaseConfig, ok := middleware.FirebaseConfigFromContext(r.Context()); ok {
-		pageData.WithFirebaseConfig(firebaseConfig)
-	}
-
 	return pageData
 }
 
@@ -79,12 +69,6 @@ func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
 func (pd *PageData) WithUser(user *auth.UserInfo) *PageData {
 	pd.User = user
 	pd.IsLoggedIn = user != nil
-	return pd
-}
-
-// WithFirebaseConfig adds Firebase configuration to the page data
-func (pd *PageData) WithFirebaseConfig(config *types.FirebaseConfig) *PageData {
-	pd.FirebaseConfig = config
 	return pd
 }
 

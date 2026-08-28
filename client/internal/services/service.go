@@ -61,8 +61,8 @@ func (s *GeneratorService) GetArt(ctx context.Context, userID, artID string) (*p
 	return s.ArtService.GetArt(ctx, userID, artID)
 }
 
-func (s *GeneratorService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
-	return s.ArtService.ListArts(ctx, userID, pageSize, pageToken, orderBy, orderDirection)
+func (s *GeneratorService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy string) (*pb.ListArtsResponse, error) {
+	return s.ArtService.ListArts(ctx, userID, pageSize, pageToken, orderBy)
 }
 
 // Composition domain methods - delegate to CompositionService

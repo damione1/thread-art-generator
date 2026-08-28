@@ -4,7 +4,6 @@
 // Import dependencies
 import 'htmx.org';
 import Alpine from 'alpinejs';
-import './firebase-auth.js';
 
 // Initialize Alpine.js
 window.Alpine = Alpine;
@@ -12,7 +11,7 @@ Alpine.start();
 
 // Configure HTMX when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Main.js loaded: HTMX, Alpine.js, and Firebase auth initialized');
+    console.log('Main.js loaded: HTMX and Alpine.js initialized');
     
     // Check if HTMX is available before configuring
     if (typeof htmx !== 'undefined') {

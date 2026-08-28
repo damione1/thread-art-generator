@@ -680,6 +680,15 @@ The user-facing field-error stack already exists: `StandardError` + `errdetails.
 
 One emit path: `InvalidArgumentError` / `InternalError` / `NotFoundError` / … `ConvertProtoValidateError` now uses protovalidate `FieldPathString` (`art.title`, `composition.nails_quantity`). `InternalError` logs the cause and puts **no** ErrorInfo/SQL on the wire. `FromConnectError` uses `errors.As` (unwrap). `FormFields` expands proto path + last segment + snake/camel so templates match HTML names. Internal is shown as a generic `_form` message. Dead `ErrorParser` / example dual-API deleted.
 
+### 2026-08-28 ~14:40 EDT | progress | Cookie-only auth + Connect islands + AIP leftovers
+
+Points 1–4 of the proto-contract cut (no SPA). Schema stays sacred; the browser frame is templ + HTMX forms + `/rpc` islands.
+
+1. **Auth unique.** `IdentityInterceptor` is the only API gate (cookie or `Authorization: Service …`). Bare Bearer → 401. Dropped `AuthMiddleware` / Firebase / PASETO stack, `SessionTransport` Firebase Bearer, `/auth/sync`, `SyncUserFromFirebase`, Google buttons, `firebase-auth.js`. Email/password stays on BFF `/auth/login|signup` + cookie. `currentUser` is UUID-only. Tilt firebase emu `auto_init=False`. Leftover: `functions/`.
+2. **`/rpc` islands.** Art/composition status polls are Connect unary (`status-poll.ts`), not HTMX body swap. CreateArt / CreateComposition stay HTMX forms.
+3. **Codec.** Shared `rpc.ts` uses `createConnectTransport` (`useBinaryFormat`, `credentials: 'include'`). `art-upload.ts` shares it.
+4. **Contract leftovers.** Opaque einride page tokens. `order_by` AIP-132 (`create_time desc`), dropped `order_direction`. DualBucket wires `STORAGE_PRIVATE_BUCKET` when it differs; worker puts gcode/pathlist private; `pbx` keeps keys; service `PresignGet`s. Queue is Postgres only (Rabbit dual-run out of `NewServer` / worker). HMAC service creds unchanged.
+
 
 
 

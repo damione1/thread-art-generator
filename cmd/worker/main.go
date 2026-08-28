@@ -15,7 +15,6 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/null/v8"
@@ -49,32 +48,22 @@ func main() {
 		log.Fatal().Err(err).Msg("👋 Failed to connect to database")
 	}
 
-	// Create context with cancel for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Initialize dual bucket storage
 	storage, err := initializeDualStorage(ctx, config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize storage")
 	}
 	defer storage.Close()
 
-	// Connect to RabbitMQ and start processing
-	if err := startQueueProcessing(ctx, config, storage); err != nil {
+	if err := startPostgresProcessing(ctx, config, storage); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start queue processing")
 	}
 }
 
 func initializeDualStorage(ctx context.Context, config util.Config) (*storage.DualBucketStorage, error) {
 	return storage.NewDualBucketStorage(ctx, config.Storage)
-}
-
-func startQueueProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
-	if config.QueueProvider == "rabbitmq" {
-		return startRabbitProcessing(ctx, config, dualStorage)
-	}
-	return startPostgresProcessing(ctx, config, dualStorage)
 }
 
 func startPostgresProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
@@ -110,109 +99,6 @@ func startPostgresProcessing(ctx context.Context, config util.Config, dualStorag
 	case err := <-errCh:
 		return err
 	}
-}
-
-func startRabbitProcessing(ctx context.Context, config util.Config, dualStorage *storage.DualBucketStorage) error {
-	// Connect to RabbitMQ
-	queueURL := config.Queue.URL
-	if queueURL == "" {
-		queueURL = "amqp://guest:guest@rabbitmq:5672/"
-	}
-
-	conn, err := amqp.Dial(queueURL)
-	if err != nil {
-		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
-	}
-	defer conn.Close()
-
-	ch, err := conn.Channel()
-	if err != nil {
-		return fmt.Errorf("failed to open a channel: %w", err)
-	}
-	defer ch.Close()
-
-	// Get queue name from config
-	queueName := config.Queue.CompositionProcessing
-	if queueName == "" {
-		queueName = "composition-processing"
-	}
-
-	// Declare queue
-	q, err := ch.QueueDeclare(
-		queueName, // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
-	)
-	if err != nil {
-		return fmt.Errorf("failed to declare a queue: %w", err)
-	}
-
-	// Set QoS
-	err = ch.Qos(
-		1,     // prefetch count
-		0,     // prefetch size
-		false, // global
-	)
-	if err != nil {
-		return fmt.Errorf("failed to set QoS: %w", err)
-	}
-
-	// Consume messages
-	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register a consumer: %w", err)
-	}
-
-	// Set up signal handling for graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Process messages
-	go func() {
-		for d := range msgs {
-			log.Info().Int("size", len(d.Body)).Msg("Received a message")
-
-			// Process message
-			err := processMessage(ctx, d.Body, config.DB, dualStorage)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to process message")
-
-				// Nack the message with requeue
-				err = d.Nack(false, true)
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to nack message")
-				}
-
-				// Wait a bit before continuing to avoid rapid requeuing
-				time.Sleep(5 * time.Second)
-				continue
-			}
-
-			// Ack the message
-			err = d.Ack(false)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to ack message")
-			}
-		}
-	}()
-
-	log.Info().Str("queue", queueName).Msg("🧵 Worker is waiting for messages")
-
-	// Wait for termination signal
-	<-sigChan
-	log.Info().Msg("Received termination signal, shutting down")
-	return nil
 }
 
 // processMessage processes a single message from the queue
@@ -441,7 +327,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer gcodeFile.Close()
 
-	err = dualStorage.GetPublicStorage().Upload(ctx, gcodeKey, gcodeFile, "text/plain")
+	err = dualStorage.UploadPrivate(ctx, gcodeKey, gcodeFile, "text/plain")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload gcode file: %v", err))
 		return fmt.Errorf("failed to upload gcode file: %w", err)
@@ -457,7 +343,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, dualStorage *s
 	}
 	defer pathsFile.Close()
 
-	err = dualStorage.GetPublicStorage().Upload(ctx, pathsKey, pathsFile, "application/json")
+	err = dualStorage.UploadPrivate(ctx, pathsKey, pathsFile, "application/json")
 	if err != nil {
 		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to upload paths file: %v", err))
 		return fmt.Errorf("failed to upload paths file: %w", err)
