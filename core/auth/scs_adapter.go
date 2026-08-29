@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	scsUserIDKey = "user_id"
-	scsEmailKey  = "email"
+	scsUserIDKey  = "user_id"
+	scsEmailKey   = "email"
+	scsVersionKey = "session_version"
 )
 
 // ErrNoSession is returned when Load/LoadFromCookie finds no user id.
@@ -47,6 +48,11 @@ func (s *SCSSessions) Issue(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 	s.sm.Put(ctx, scsUserIDKey, sess.UserID)
 	s.sm.Put(ctx, scsEmailKey, sess.Email)
+	ver := sess.SessionVersion
+	if ver <= 0 {
+		ver = 1
+	}
+	s.sm.Put(ctx, scsVersionKey, ver)
 	if !sess.ExpiresAt.IsZero() {
 		s.sm.SetDeadline(ctx, sess.ExpiresAt)
 	}
@@ -72,9 +78,10 @@ func (s *SCSSessions) LoadFromCookie(ctx context.Context, r *http.Request) (Sess
 		return Session{}, ErrNoSession
 	}
 	return Session{
-		UserID:    userID,
-		Email:     s.sm.GetString(ctx, scsEmailKey),
-		ExpiresAt: s.sm.Deadline(ctx),
+		UserID:         userID,
+		Email:          s.sm.GetString(ctx, scsEmailKey),
+		ExpiresAt:      s.sm.Deadline(ctx),
+		SessionVersion: s.sm.GetInt(ctx, scsVersionKey),
 	}, nil
 }
 

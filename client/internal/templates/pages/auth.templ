@@ -176,6 +176,7 @@ templ ForgotPasswordPage(data *templates.PageData) {
 					</div>
 				}
 				<form id="forgot-password-form" method="POST" action="/auth/forgot-password" class="mt-8 space-y-6">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<input
 						id="forgot-email"
 						name="email"
@@ -221,6 +222,7 @@ templ ResetPasswordPage(data *templates.PageData) {
 					</div>
 				}
 				<form id="reset-password-form" method="POST" class="mt-8 space-y-6">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<input type="hidden" name="token" value={ data.Meta["token"] }/>
 					<div class="rounded-md shadow-sm -space-y-px">
 						<input
@@ -269,6 +271,7 @@ templ CheckEmailPage(data *templates.PageData) {
 				</p>
 				<p class="text-sm text-gray-500">In local dev, open Mailhog at localhost:8025.</p>
 				<form id="resend-verification-form" method="POST" action="/auth/resend-verification" class="space-y-4 text-left">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<input
 						name="email"
 						type="email"

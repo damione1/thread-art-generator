@@ -2,7 +2,7 @@ services:
   api:
     image: api-image
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -60,7 +60,7 @@ services:
   client:
     image: frontend-image
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       - FRONTEND_PORT=8080
       - API_URL=${API_URL:-http://api:9090}
@@ -92,7 +92,7 @@ services:
   db:
     image: postgres:latest
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -111,8 +111,8 @@ services:
     container_name: minio
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
@@ -127,8 +127,8 @@ services:
   mailhog:
     image: mailhog/mailhog:v1.0.1
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
     logging:
       driver: json-file
       options:
@@ -155,7 +155,7 @@ services:
           sleep 1
         done
         mc mb --ignore-existing local/thread-art
-        mc anonymous set download local/thread-art
+        mc anonymous set none local/thread-art
         mc cors set local/thread-art /cors.xml || true
 
 volumes:

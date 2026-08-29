@@ -10,19 +10,24 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	pages "github.com/Damione1/thread-art-generator/client/internal/templates/pages"
 	coreauth "github.com/Damione1/thread-art-generator/core/auth"
+	"github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/rs/zerolog/log"
 )
 
 type SettingsHandler struct {
 	identities     coreauth.Identities
 	passwords      coreauth.Passwords
+	tokens         coreauth.Tokens
+	emails         *mail.Emails
 	sessionManager *auth.SCSSessionManager
 }
 
-func NewSettingsHandler(identities coreauth.Identities, sessionManager *auth.SCSSessionManager) *SettingsHandler {
+func NewSettingsHandler(identities coreauth.Identities, tokens coreauth.Tokens, emails *mail.Emails, sessionManager *auth.SCSSessionManager) *SettingsHandler {
 	return &SettingsHandler{
 		identities:     identities,
 		passwords:      coreauth.Argon2idPasswords{},
+		tokens:         tokens,
+		emails:         emails,
 		sessionManager: sessionManager,
 	}
 }
@@ -76,18 +81,13 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.identities.UpdateProfile(r.Context(), user.ID, first, last, email); err != nil {
-		if errors.Is(err, coreauth.ErrEmailTaken) {
-			h.renderSettings(w, r, user, "", "", &templates.SettingsPageData{
-				FirstName: first,
-				LastName:  last,
-				Email:     email,
-				FieldErrors: map[string][]string{
-					"email": {"This email is already in use"},
-				},
-			})
-			return
-		}
+	identity, _, err := h.identities.ByID(r.Context(), user.ID)
+	if err != nil {
+		h.renderSettings(w, r, user, "", "Failed to load account", nil)
+		return
+	}
+
+	if err := h.identities.UpdateProfile(r.Context(), user.ID, first, last, identity.Email); err != nil {
 		log.Error().Err(err).Str("user_id", user.ID).Msg("update profile failed")
 		h.renderSettings(w, r, user, "", "Failed to update profile", &templates.SettingsPageData{
 			FirstName: first,
@@ -97,11 +97,87 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	identity, _, err := h.identities.ByID(r.Context(), user.ID)
-	if err == nil {
-		_ = h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity))
+	saved := "profile"
+	if email != strings.ToLower(strings.TrimSpace(identity.Email)) {
+		if err := h.requestEmailChange(r, identity, email); err != nil {
+			if errors.Is(err, coreauth.ErrEmailTaken) {
+				h.renderSettings(w, r, user, "", "", &templates.SettingsPageData{
+					FirstName: first,
+					LastName:  last,
+					Email:     email,
+					FieldErrors: map[string][]string{
+						"email": {"This email is already in use"},
+					},
+				})
+				return
+			}
+			log.Error().Err(err).Str("user_id", user.ID).Msg("email change request failed")
+			h.renderSettings(w, r, user, "", "Profile saved, but we could not send the confirmation email", &templates.SettingsPageData{
+				FirstName: first,
+				LastName:  last,
+				Email:     identity.Email,
+			})
+			return
+		}
+		saved = "email"
 	}
-	http.Redirect(w, r, "/settings?saved=profile", http.StatusSeeOther)
+
+	identity, _, err = h.identities.ByID(r.Context(), user.ID)
+	if err == nil {
+		_ = h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity), identity.SessionVersion)
+	}
+	http.Redirect(w, r, "/settings?saved="+saved, http.StatusSeeOther)
+}
+
+func (h *SettingsHandler) requestEmailChange(r *http.Request, identity coreauth.Identity, newEmail string) error {
+	if _, _, err := h.identities.ByEmail(r.Context(), newEmail); err == nil {
+		return coreauth.ErrEmailTaken
+	} else if !errors.Is(err, coreauth.ErrIdentityNotFound) {
+		return err
+	}
+	token, err := h.tokens.IssueWithPayload(r.Context(), identity.UserID, coreauth.TokenEmailChange, coreauth.EmailChangeTTL, newEmail)
+	if err != nil {
+		return err
+	}
+	return h.emails.SendEmailChange(r.Context(), mail.Address{
+		Name:  strings.TrimSpace(identity.FirstName + " " + identity.LastName),
+		Email: newEmail,
+	}, token)
+}
+
+func (h *SettingsHandler) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimSpace(r.URL.Query().Get("token"))
+	if token == "" {
+		http.Redirect(w, r, "/settings?error=missing_token", http.StatusSeeOther)
+		return
+	}
+	userID, newEmail, err := h.tokens.ConsumeWithPayload(r.Context(), token, coreauth.TokenEmailChange)
+	if err != nil || newEmail == "" {
+		http.Redirect(w, r, "/login?error=invalid_token", http.StatusSeeOther)
+		return
+	}
+	identity, _, err := h.identities.ByID(r.Context(), userID)
+	if err != nil {
+		http.Redirect(w, r, "/login?error=invalid_token", http.StatusSeeOther)
+		return
+	}
+	if err := h.identities.UpdateProfile(r.Context(), userID, identity.FirstName, identity.LastName, newEmail); err != nil {
+		if errors.Is(err, coreauth.ErrEmailTaken) {
+			http.Redirect(w, r, "/settings?error=email_taken", http.StatusSeeOther)
+			return
+		}
+		log.Error().Err(err).Str("user_id", userID).Msg("confirm email change failed")
+		http.Redirect(w, r, "/settings?error=email_change", http.StatusSeeOther)
+		return
+	}
+	ver, err := h.identities.BumpSessionVersion(r.Context(), userID)
+	if err != nil {
+		ver = identity.SessionVersion + 1
+	}
+	identity.Email = newEmail
+	identity.SessionVersion = ver
+	_ = h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity), ver)
+	http.Redirect(w, r, "/settings?saved=email-confirmed", http.StatusSeeOther)
 }
 
 func (h *SettingsHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
@@ -118,8 +194,8 @@ func (h *SettingsHandler) UpdatePassword(w http.ResponseWriter, r *http.Request)
 	if current == "" {
 		fieldErrors["current_password"] = []string{"Current password is required"}
 	}
-	if len(next) < 8 {
-		fieldErrors["new_password"] = []string{"Password must be at least 8 characters"}
+	if err := coreauth.ValidatePasswordLength(next); err != nil {
+		fieldErrors["new_password"] = []string{err.Error()}
 	}
 	if next != confirm {
 		fieldErrors["confirm_password"] = []string{"Passwords do not match"}
@@ -154,6 +230,13 @@ func (h *SettingsHandler) UpdatePassword(w http.ResponseWriter, r *http.Request)
 		h.renderSettings(w, r, user, "", "Failed to update password", nil)
 		return
 	}
+	ver, err := h.identities.BumpSessionVersion(r.Context(), user.ID)
+	if err != nil {
+		log.Warn().Err(err).Str("user_id", user.ID).Msg("password session bump failed")
+		ver = identity.SessionVersion + 1
+	}
+	identity.SessionVersion = ver
+	_ = h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity), ver)
 	http.Redirect(w, r, "/settings?saved=password", http.StatusSeeOther)
 }
 

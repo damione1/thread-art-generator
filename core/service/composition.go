@@ -14,6 +14,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/resource"
+	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/friendsofgo/errors"
 	"github.com/google/uuid"
@@ -379,19 +380,26 @@ func (server *Server) signCompositionDownloads(ctx context.Context, c *pb.Compos
 	if c == nil || server.bucket == nil {
 		return nil
 	}
-	if c.GcodeUrl != "" && !strings.HasPrefix(c.GcodeUrl, "http") {
-		url, err := server.bucket.PresignGet(ctx, c.GcodeUrl, 15*time.Minute)
-		if err != nil {
-			return err
-		}
-		c.GcodeUrl = url
+	if err := presignIfKey(ctx, server.bucket, &c.PreviewUrl); err != nil {
+		return err
 	}
-	if c.PathlistUrl != "" && !strings.HasPrefix(c.PathlistUrl, "http") {
-		url, err := server.bucket.PresignGet(ctx, c.PathlistUrl, 15*time.Minute)
-		if err != nil {
-			return err
-		}
-		c.PathlistUrl = url
+	if err := presignIfKey(ctx, server.bucket, &c.GcodeUrl); err != nil {
+		return err
 	}
+	if err := presignIfKey(ctx, server.bucket, &c.PathlistUrl); err != nil {
+		return err
+	}
+	return nil
+}
+
+func presignIfKey(ctx context.Context, bucket storage.Bucket, url *string) error {
+	if bucket == nil || url == nil || *url == "" || strings.HasPrefix(*url, "http") {
+		return nil
+	}
+	signed, err := bucket.PresignGet(ctx, *url, 15*time.Minute)
+	if err != nil {
+		return err
+	}
+	*url = signed
 	return nil
 }

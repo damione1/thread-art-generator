@@ -82,13 +82,14 @@ func TestIdentityInterceptorTamperedService(t *testing.T) {
 
 func TestResolveIdentityCookie(t *testing.T) {
 	ctx, err := resolveIdentity(context.Background(), "/pb.ArtGeneratorService/CreateArt", http.Header{},
-		&fakeSessions{sess: auth.Session{UserID: "user-uuid", Email: "a@b.c"}}, nil)
+		&fakeSessions{sess: auth.Session{UserID: "user-uuid", Email: "a@b.c", SessionVersion: 3}}, nil)
 	require.NoError(t, err)
 	id, ok := auth.IdentityFromContext(ctx)
 	require.True(t, ok)
 	require.Equal(t, "user-uuid", id.UserID)
 	require.Equal(t, "a@b.c", id.Email)
 	require.Equal(t, auth.PrincipalUser, id.Kind)
+	require.Equal(t, 3, id.SessionVersion)
 	legacy, _ := ctx.Value(middleware.AuthKey).(string)
 	require.Equal(t, "user-uuid", legacy)
 }

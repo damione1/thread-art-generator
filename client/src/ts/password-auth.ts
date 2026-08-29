@@ -26,13 +26,18 @@ function showSuccess(message: string): void {
   box.classList.remove('hidden');
 }
 
+function csrfHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+  return { ...extra, ...(csrf ? { 'X-CSRF-Token': csrf } : {}) };
+}
+
 async function postAuth(url: string, body: Record<string, string>): Promise<AuthResponse> {
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
+    headers: csrfHeaders({
       'Content-Type': 'application/json',
       Accept: 'application/json',
-    },
+    }),
     credentials: 'include',
     body: JSON.stringify(body),
   });

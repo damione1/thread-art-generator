@@ -29,39 +29,72 @@ func TestFlattenPresignHeadersTakesFirstValue(t *testing.T) {
 
 func TestValidateUploadedObject(t *testing.T) {
 	t.Parallel()
+	jpeg := []byte{0xff, 0xd8, 0xff, 0xe0}
+	png := append([]byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}, 0, 0)
+	gif := []byte("GIF89a....")
+	webp := []byte("RIFF....WEBP....")
 	tests := []struct {
 		name    string
 		info    *storage.ObjectInfo
+		magic   []byte
 		wantMsg string
 	}{
 		{name: "nil", wantMsg: "image not found"},
 		{
 			name:    "not image",
 			info:    &storage.ObjectInfo{ContentType: "application/pdf", Size: 100},
-			wantMsg: "not an image",
+			magic:   []byte("%PDF"),
+			wantMsg: "not an allowed image type",
+		},
+		{
+			name:    "svg rejected",
+			info:    &storage.ObjectInfo{ContentType: "image/svg+xml", Size: 100},
+			magic:   []byte("<svg"),
+			wantMsg: "not an allowed image type",
+		},
+		{
+			name:    "empty content type",
+			info:    &storage.ObjectInfo{ContentType: "", Size: 1},
+			magic:   jpeg,
+			wantMsg: "missing a content type",
 		},
 		{
 			name:    "too large",
 			info:    &storage.ObjectInfo{ContentType: "image/jpeg", Size: maxArtImageBytes + 1},
+			magic:   jpeg,
 			wantMsg: "exceeds 10MB",
 		},
 		{
-			name: "empty content type allowed",
-			info: &storage.ObjectInfo{ContentType: "", Size: 1},
+			name:    "magic mismatch",
+			info:    &storage.ObjectInfo{ContentType: "image/jpeg", Size: 12},
+			magic:   png,
+			wantMsg: "does not match",
 		},
 		{
-			name: "jpeg at cap",
-			info: &storage.ObjectInfo{ContentType: "image/jpeg", Size: maxArtImageBytes},
+			name:  "jpeg at cap",
+			info:  &storage.ObjectInfo{ContentType: "image/jpeg", Size: maxArtImageBytes},
+			magic: jpeg,
 		},
 		{
-			name: "png",
-			info: &storage.ObjectInfo{ContentType: "image/png", Size: 2048},
+			name:  "png",
+			info:  &storage.ObjectInfo{ContentType: "image/png", Size: 2048},
+			magic: png,
+		},
+		{
+			name:  "gif",
+			info:  &storage.ObjectInfo{ContentType: "image/gif", Size: 2048},
+			magic: gif,
+		},
+		{
+			name:  "webp",
+			info:  &storage.ObjectInfo{ContentType: "image/webp", Size: 2048},
+			magic: webp,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validateUploadedObject(tt.info)
+			err := validateUploadedObject(tt.info, tt.magic)
 			if tt.wantMsg == "" {
 				require.NoError(t, err)
 				return
@@ -71,6 +104,16 @@ func TestValidateUploadedObject(t *testing.T) {
 			require.Contains(t, err.Error(), tt.wantMsg)
 		})
 	}
+}
+
+func TestRequireAllowedImageContentType(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, requireAllowedImageContentType("image/jpeg"))
+	require.NoError(t, requireAllowedImageContentType("image/png; charset=binary"))
+	err := requireAllowedImageContentType("")
+	require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+	err = requireAllowedImageContentType("application/pdf")
+	require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
 
 func TestRequireParentIdentity(t *testing.T) {
@@ -113,11 +156,12 @@ func TestPresignAndHeadWithMemoryBucket(t *testing.T) {
 	require.Equal(t, "image/jpeg", resp.Headers["Content-Type"])
 	require.Contains(t, resp.UploadUrl, key)
 
-	err = headUploadedOriginal(ctx, b, key)
+	err = inspectUploadedOriginal(ctx, b, key)
 	require.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
 
-	require.NoError(t, b.Put(ctx, key, bytes.NewReader([]byte("jpeg-bytes")), storage.PutOptions{ContentType: "image/jpeg"}))
-	require.NoError(t, headUploadedOriginal(ctx, b, key))
+	jpeg := []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10}
+	require.NoError(t, b.Put(ctx, key, bytes.NewReader(jpeg), storage.PutOptions{ContentType: "image/jpeg"}))
+	require.NoError(t, inspectUploadedOriginal(ctx, b, key))
 }
 
 func TestHeadUploadedOriginalRejectsNonImage(t *testing.T) {
@@ -125,9 +169,19 @@ func TestHeadUploadedOriginalRejectsNonImage(t *testing.T) {
 	ctx := context.Background()
 	b := storage.NewMemoryBucket()
 	require.NoError(t, b.Put(ctx, "k", bytes.NewReader([]byte("%PDF")), storage.PutOptions{ContentType: "application/pdf"}))
-	err := headUploadedOriginal(ctx, b, "k")
+	err := inspectUploadedOriginal(ctx, b, "k")
 	require.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
-	require.Contains(t, err.Error(), "not an image")
+	require.Contains(t, err.Error(), "not an allowed image type")
+}
+
+func TestInspectUploadedOriginalRejectsMagicMismatch(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	b := storage.NewMemoryBucket()
+	require.NoError(t, b.Put(ctx, "k", bytes.NewReader([]byte("%PDF-1.4")), storage.PutOptions{ContentType: "image/jpeg"}))
+	err := inspectUploadedOriginal(ctx, b, "k")
+	require.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
+	require.Contains(t, err.Error(), "does not match")
 }
 
 func TestSignCompositionDownloadsPresignsKeys(t *testing.T) {
@@ -136,12 +190,20 @@ func TestSignCompositionDownloadsPresignsKeys(t *testing.T) {
 	c := &pb.Composition{
 		GcodeUrl:    "users/u/arts/a/compositions/c/gcode",
 		PathlistUrl: "users/u/arts/a/compositions/c/pathlist",
-		PreviewUrl:  "http://localhost:9000/thread-art/preview.png",
+		PreviewUrl:  "users/u/arts/a/compositions/c/preview",
 	}
 	require.NoError(t, s.signCompositionDownloads(context.Background(), c))
 	require.Contains(t, c.GcodeUrl, "memory.local/get/")
 	require.Contains(t, c.PathlistUrl, "memory.local/get/")
-	require.Equal(t, "http://localhost:9000/thread-art/preview.png", c.PreviewUrl)
+	require.Contains(t, c.PreviewUrl, "memory.local/get/")
+}
+
+func TestSignArtDownloadsPresignsKey(t *testing.T) {
+	t.Parallel()
+	s := &Server{bucket: storage.NewMemoryBucket()}
+	art := &pb.Art{ImageUrl: "users/u/arts/a/original"}
+	require.NoError(t, s.signArtDownloads(context.Background(), art))
+	require.Contains(t, art.ImageUrl, "memory.local/get/")
 }
 
 func TestSignCompositionDownloadsNilSafe(t *testing.T) {

@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,6 +21,8 @@ import (
 const (
 	sessionKeyUserID   = "user_id"
 	sessionKeyUserInfo = "user_info"
+	sessionKeyCSRF     = "csrf_token"
+	sessionKeyVersion  = "session_version"
 )
 
 type SCSSessionManager struct {
@@ -40,6 +44,7 @@ type SessionData struct {
 	UserID    string    `json:"user_id"`
 	UserInfo  UserInfo  `json:"user_info"`
 	ExpiresAt time.Time `json:"expires_at"`
+	Version   int       `json:"version"`
 }
 
 func NewSCSSessionManager(db *sql.DB) (*SCSSessionManager, error) {
@@ -61,7 +66,7 @@ func configureSessionCookie(sessionManager *scs.SessionManager) {
 	sessionManager.Lifetime = 24 * time.Hour
 	sessionManager.Cookie.Name = "session_id"
 	sessionManager.Cookie.HttpOnly = true
-	sessionManager.Cookie.Secure = os.Getenv("ENVIRONMENT") != "" && os.Getenv("ENVIRONMENT") != "development"
+	sessionManager.Cookie.Secure = !util.IsDevelopment(os.Getenv("ENVIRONMENT"))
 	sessionManager.Cookie.SameSite = http.SameSiteLaxMode
 }
 
@@ -96,12 +101,16 @@ func (s *SCSSessionManager) GetSessionManager() *scs.SessionManager {
 	return s.sessionManager
 }
 
-func (s *SCSSessionManager) CreateSession(w http.ResponseWriter, r *http.Request, userID string, userInfo SessionUserInfo) error {
+func (s *SCSSessionManager) CreateSession(w http.ResponseWriter, r *http.Request, userID string, userInfo SessionUserInfo, sessionVersion int) error {
 	if err := s.sessionManager.RenewToken(r.Context()); err != nil {
 		return fmt.Errorf("failed to renew session token: %w", err)
 	}
+	if sessionVersion <= 0 {
+		sessionVersion = 1
+	}
 	s.sessionManager.Put(r.Context(), sessionKeyUserID, userID)
 	s.sessionManager.Put(r.Context(), "email", userInfo.Email)
+	s.sessionManager.Put(r.Context(), sessionKeyVersion, sessionVersion)
 
 	userInfoJSON, err := json.Marshal(userInfo)
 	if err != nil {
@@ -112,6 +121,7 @@ func (s *SCSSessionManager) CreateSession(w http.ResponseWriter, r *http.Request
 	log.Info().
 		Str("user_id", userID).
 		Str("user_email", userInfo.Email).
+		Int("session_version", sessionVersion).
 		Msg("Created new session")
 	return nil
 }
@@ -144,7 +154,21 @@ func (s *SCSSessionManager) GetSession(r *http.Request) (*SessionData, error) {
 		UserID:    userID,
 		UserInfo:  userInfo,
 		ExpiresAt: time.Now().Add(s.sessionManager.Lifetime),
+		Version:   s.sessionManager.GetInt(r.Context(), sessionKeyVersion),
 	}, nil
+}
+
+func (s *SCSSessionManager) EnsureCSRFToken(r *http.Request) (string, error) {
+	if existing := s.sessionManager.GetString(r.Context(), sessionKeyCSRF); existing != "" {
+		return existing, nil
+	}
+	var b [32]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", fmt.Errorf("generate csrf token: %w", err)
+	}
+	token := base64.RawURLEncoding.EncodeToString(b[:])
+	s.sessionManager.Put(r.Context(), sessionKeyCSRF, token)
+	return token, nil
 }
 
 func (s *SCSSessionManager) GetUserID(r *http.Request) string {

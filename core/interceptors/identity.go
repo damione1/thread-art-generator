@@ -48,10 +48,11 @@ func resolveIdentity(ctx context.Context, procedure string, header http.Header, 
 		sess, err := sessions.LoadFromCookie(ctx, &http.Request{Header: header})
 		if err == nil && sess.UserID != "" {
 			return attachIdentity(ctx, auth.Identity{
-				UserID: sess.UserID,
-				Email:  sess.Email,
-				Kind:   auth.PrincipalUser,
-			}), nil
+			UserID:         sess.UserID,
+			Email:          sess.Email,
+			Kind:           auth.PrincipalUser,
+			SessionVersion: sess.SessionVersion,
+		}), nil
 		}
 	}
 

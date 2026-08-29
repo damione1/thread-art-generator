@@ -9,9 +9,10 @@ import (
 // Session is the browser identity grant. Transported as an httpOnly cookie.
 // Orthogonal to S3 presigns and to service HMAC.
 type Session struct {
-	UserID    string
-	Email     string
-	ExpiresAt time.Time
+	UserID         string
+	Email          string
+	ExpiresAt      time.Time
+	SessionVersion int
 }
 
 // Sessions issues and loads sessions. Implementation: SCS + postgresstore.
@@ -37,4 +38,5 @@ type Identities interface {
 	UpdatePassword(ctx context.Context, userID, passwordHash string) error
 	UpdateProfile(ctx context.Context, userID, first, last, email string) error
 	SetActive(ctx context.Context, userID string, active bool) error
+	BumpSessionVersion(ctx context.Context, userID string) (int, error)
 }
