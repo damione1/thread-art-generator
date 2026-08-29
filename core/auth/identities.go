@@ -79,7 +79,11 @@ func (p *PGIdentities) Create(ctx context.Context, email, passwordHash, first, l
 		return Identity{}, errors.New("email is required")
 	}
 	if first == "" {
-		first = "User"
+		if at := strings.IndexByte(email, '@'); at > 0 {
+			first = email[:at]
+		} else {
+			first = "User"
+		}
 	}
 	id := uuid.New().String()
 	_, err := p.DB.ExecContext(ctx, `

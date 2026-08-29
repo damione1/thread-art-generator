@@ -38,11 +38,15 @@ func (s *UserService) GetCurrentUser(ctx context.Context, _ *http.Request) (*aut
 		return nil, fmt.Errorf("failed to get current user: %s", standardErr.Message)
 	}
 
+	first := resp.Msg.GetFirstName()
+	last := resp.Msg.GetLastName()
+	email := resp.Msg.GetEmail()
 	return &auth.UserInfo{
 		ID:        resp.Msg.GetName(),
-		FirstName: resp.Msg.GetFirstName(),
-		LastName:  resp.Msg.GetLastName(),
-		Email:     resp.Msg.GetEmail(),
+		FirstName: first,
+		LastName:  last,
+		Email:     email,
+		Name:      auth.DisplayName(first, last, email),
 		Picture:   resp.Msg.GetAvatar(),
 	}, nil
 }

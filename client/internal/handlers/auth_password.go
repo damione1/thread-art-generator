@@ -315,14 +315,7 @@ func (h *PasswordAuthHandler) Status(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PasswordAuthHandler) issueSession(w http.ResponseWriter, r *http.Request, identity coreauth.Identity) error {
-	info := auth.SessionUserInfo{
-		ID:        identity.UserID,
-		Email:     identity.Email,
-		Name:      displayName(identity),
-		FirstName: identity.FirstName,
-		LastName:  identity.LastName,
-	}
-	return h.sessionManager.CreateSession(w, r, identity.UserID, info)
+	return h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity))
 }
 
 func displayName(identity coreauth.Identity) string {

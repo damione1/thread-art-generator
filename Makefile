@@ -29,8 +29,8 @@ proto-clean:
 	@echo "✅ Protocol buffer files cleaned"
 
 .PHONY: test
-test:
-	go test ./core/storage/ ./core/auth/ ./core/mail/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/ ./core/pbx/
+test: generate-templ
+	go test ./core/storage/ ./core/auth/ ./core/mail/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/ ./core/pbx/ ./client/internal/auth/ ./client/internal/middleware/ ./client/internal/templates/ ./client/internal/handlers/
 
 .PHONY: psql
 psql:

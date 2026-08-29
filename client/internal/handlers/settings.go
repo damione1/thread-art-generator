@@ -99,13 +99,7 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 
 	identity, _, err := h.identities.ByID(r.Context(), user.ID)
 	if err == nil {
-		_ = h.sessionManager.CreateSession(w, r, identity.UserID, auth.SessionUserInfo{
-			ID:        identity.UserID,
-			Email:     identity.Email,
-			Name:      strings.TrimSpace(identity.FirstName + " " + identity.LastName),
-			FirstName: identity.FirstName,
-			LastName:  identity.LastName,
-		})
+		_ = h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity))
 	}
 	http.Redirect(w, r, "/settings?saved=profile", http.StatusSeeOther)
 }
