@@ -65,11 +65,7 @@ services:
       - FRONTEND_PORT=8080
       - API_URL=${API_URL:-http://api:9090}
       - FRONTEND_URL=${FRONTEND_URL}
-      - REDIS_ADDR=redis:6379
-      - COOKIE_HASH_KEY=${COOKIE_HASH_KEY:-ADefaultHashKeyFor32BytesSecureHashing}
-      - COOKIE_BLOCK_KEY=${COOKIE_BLOCK_KEY:-ADefaultBlockKeyShould32BytesLength}
       - ENVIRONMENT=${ENVIRONMENT:-development}
-      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
@@ -84,7 +80,6 @@ services:
       - ./build/frontend:/app/frontend
     depends_on:
       - api
-      - redis
       - mailhog
     restart: unless-stopped
     healthcheck:
@@ -93,21 +88,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-      - ./Infra/redis/redis.conf:/usr/local/etc/redis/redis.conf
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   db:
     image: postgres:latest
@@ -180,7 +160,6 @@ services:
 
 volumes:
   threadmachine:
-  redis_data:
   minio_data:
 
 networks:

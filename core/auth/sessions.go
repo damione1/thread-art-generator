@@ -14,7 +14,7 @@ type Session struct {
 	ExpiresAt time.Time
 }
 
-// Sessions issues and loads sessions. Implementation: SCS + Redis.
+// Sessions issues and loads sessions. Implementation: SCS + postgresstore.
 type Sessions interface {
 	Issue(ctx context.Context, w http.ResponseWriter, r *http.Request, s Session) error
 	Load(ctx context.Context, r *http.Request) (Session, error)

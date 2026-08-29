@@ -296,12 +296,6 @@ dc_resource(
 )
 
 dc_resource(
-  'redis',
-  labels=['cache'],
-  auto_init=True,
-)
-
-dc_resource(
   'mailhog',
   labels=['mail'],
   auto_init=True,
