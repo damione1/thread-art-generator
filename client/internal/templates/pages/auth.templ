@@ -39,7 +39,8 @@ templ LoginPage(data *templates.PageData) {
 		@authSplit(data) {
 			<h1 class="display text-[32px]">Welcome back</h1>
 			<p class="hint mt-2.5 text-[13.5px]">Sign in to your projects and compositions.</p>
-			<form id="email-signin-form" class="flex flex-col gap-[18px] mt-8">
+			<form id="email-signin-form" method="POST" action="/auth/login" class="flex flex-col gap-[18px] mt-8">
+				@templates.CSRFInput()
 				<div class="field">
 					<label for="email-address" class="label">Email</label>
 					<input
@@ -81,6 +82,12 @@ templ LoginPage(data *templates.PageData) {
 			<p class="hint text-center text-[11.5px] mt-11">
 				By signing in you agree to the terms and the privacy notice.
 			</p>
+			if data.Meta["error"] != "" {
+				<div class="note note-error mt-4">{ data.Meta["error"] }</div>
+			}
+			if data.Meta["ok"] != "" {
+				<div class="note note-ok mt-4">{ data.Meta["ok"] }</div>
+			}
 			<div id="auth-error" class="hidden note note-error mt-4">
 				<p id="auth-error-message"></p>
 			</div>
@@ -93,7 +100,8 @@ templ SignupPage(data *templates.PageData) {
 		@authSplit(data) {
 			<h1 class="display text-[32px]">Create your account</h1>
 			<p class="hint mt-2.5 text-[13.5px]">One account holds your projects, your compositions and your exports.</p>
-			<form id="email-signup-form" class="flex flex-col gap-[18px] mt-8">
+			<form id="email-signup-form" method="POST" action="/auth/signup" class="flex flex-col gap-[18px] mt-8">
+				@templates.CSRFInput()
 				<div class="grid grid-cols-2 gap-3.5">
 					<div class="field">
 						<label for="signup-first-name" class="label">First name</label>
@@ -180,7 +188,7 @@ templ ForgotPasswordPage(data *templates.PageData) {
 				</div>
 			}
 			<form id="forgot-password-form" method="POST" action="/auth/forgot-password" class="flex flex-col gap-[18px] mt-8">
-				<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+				@templates.CSRFInput()
 				<div class="field">
 					<label for="forgot-email" class="label">Email</label>
 					<input
@@ -218,8 +226,8 @@ templ ResetPasswordPage(data *templates.PageData) {
 			if data.Meta["error"] != "" {
 				<div class="note note-error mt-5">{ data.Meta["error"] }</div>
 			}
-			<form id="reset-password-form" method="POST" class="flex flex-col gap-[18px] mt-8">
-				<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+			<form id="reset-password-form" method="POST" action="/reset-password" class="flex flex-col gap-[18px] mt-8">
+				@templates.CSRFInput()
 				<input type="hidden" name="token" value={ data.Meta["token"] }/>
 				<div class="field">
 					<label for="reset-password" class="label">New password</label>
@@ -269,8 +277,11 @@ templ CheckEmailPage(data *templates.PageData) {
 				<p class="hint text-[13.5px]">In local dev, open Mailhog at localhost:8025.</p>
 			</div>
 			<div class="note mt-6">Nothing after a few minutes? Look in spam, or send it again below.</div>
+			if data.Meta["sent"] == "1" {
+				<div class="note note-ok mt-4">If that email exists, we sent another confirmation link.</div>
+			}
 			<form id="resend-verification-form" method="POST" action="/auth/resend-verification" class="flex gap-2.5 mt-4">
-				<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+				@templates.CSRFInput()
 				<input
 					name="email"
 					type="email"

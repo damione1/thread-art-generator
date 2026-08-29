@@ -98,6 +98,10 @@ templ Spinner(class string) {
 	@Icon("spinner", "animate-spin "+class)
 }
 
+templ CSRFInput() {
+	<input type="hidden" name="csrf_token" value={ CSRFToken(ctx) }/>
+}
+
 // Logo renders the wordmark: a hoop of nails with a few chords across it.
 templ Logo(withText bool) {
 	<span class="inline-flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-ink">
@@ -248,7 +252,10 @@ templ UserMenu(user *auth.UserInfo) {
 			<a href="/dashboard" class="block px-4 py-2 text-[13px] text-ink-muted hover:bg-surface-raised hover:text-ink">Projects</a>
 			<a href="/settings" class="block px-4 py-2 text-[13px] text-ink-muted hover:bg-surface-raised hover:text-ink">Account</a>
 			<div class="my-1.5 border-t border-line"></div>
-			<a href="#" onclick="logout(); return false;" class="block px-4 py-2 text-[13px] text-danger hover:bg-danger/10">Sign out</a>
+			<form method="POST" action="/auth/logout">
+				@CSRFInput()
+				<button type="submit" class="block w-full text-left px-4 py-2 text-[13px] text-danger hover:bg-danger/10 bg-transparent border-0 cursor-pointer">Sign out</button>
+			</form>
 		</div>
 	</div>
 }

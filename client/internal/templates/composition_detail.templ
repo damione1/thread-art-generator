@@ -29,7 +29,7 @@ templ CompositionDetailPage(data *PageData, art *pb.Art, composition *pb.Composi
 				<div class="flex gap-2.5">
 					<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new?from=" + extractCompositionID(composition.GetName())) } class="btn btn-sm">Duplicate settings</a>
 					if composition.GetGcodeUrl() != "" {
-						<a href={ templ.SafeURL(composition.GetGcodeUrl()) } download class="btn btn-primary btn-sm">Download G-code</a>
+						<a href={ templ.SafeURL(composition.GetGcodeUrl()) } target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">Download G-code</a>
 					}
 				</div>
 			</div>
@@ -149,7 +149,7 @@ templ DownloadRow(icon, name, url, iconClass string) {
 	<div class="flex items-center gap-3.5 px-[18px] py-[15px] border border-line rounded-2xl bg-surface">
 		@Icon(icon, "w-[18px] h-[18px] shrink-0 "+iconClass)
 		<div class="flex-1 min-w-0 text-[13.5px] font-medium">{ name }</div>
-		<a href={ templ.SafeURL(url) } download class="btn btn-sm">Download</a>
+		<a href={ templ.SafeURL(url) } target="_blank" rel="noopener noreferrer" class="btn btn-sm">Download</a>
 	</div>
 }
 

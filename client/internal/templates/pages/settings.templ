@@ -31,7 +31,7 @@ templ SettingsPage(data *templates.PageData) {
 						<h2 class="text-[17px] font-semibold tracking-[-0.01em]">Profile</h2>
 						<p class="hint mt-[7px] text-[13px] leading-[1.55]">The name shown on the pieces you publish to the gallery.</p>
 						<form method="POST" action="/settings/profile" class="mt-[22px]">
-							<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+							@templates.CSRFInput()
 							<div class="grid grid-cols-1 sm:grid-cols-2 gap-[18px]">
 								<div class="field">
 									<label for="first_name" class="label">First name</label>
@@ -83,7 +83,7 @@ templ SettingsPage(data *templates.PageData) {
 						<h2 class="text-[17px] font-semibold tracking-[-0.01em]">Password</h2>
 						<p class="hint mt-[7px] text-[13px] leading-[1.55]">Choose a new password. You will need your current password to confirm the change.</p>
 						<form method="POST" action="/settings/password" class="mt-[22px]">
-							<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+							@templates.CSRFInput()
 							<div class="grid grid-cols-1 sm:grid-cols-2 gap-[18px]">
 								<div class="field sm:col-span-2">
 									<label for="current_password" class="label">Current password</label>

@@ -108,6 +108,49 @@ func TestCSRFFormField(t *testing.T) {
 	require.Equal(t, http.StatusOK, postRec.Code)
 }
 
+func TestCSRFFormFieldWithoutOrigin(t *testing.T) {
+	sm := auth.NewInMemorySessionManager()
+	var token string
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token = CSRFFromContext(r.Context())
+		w.WriteHeader(http.StatusOK)
+	})
+	h := sm.GetSessionManager().LoadAndSave(CSRFMiddleware(sm, "http://localhost:8080")(inner))
+
+	getRec := httptest.NewRecorder()
+	h.ServeHTTP(getRec, httptest.NewRequest(http.MethodGet, "/", nil))
+	cookie := getRec.Result().Cookies()[0]
+
+	post := httptest.NewRequest(http.MethodPost, "/auth/logout", strings.NewReader("csrf_token="+token))
+	post.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	post.AddCookie(cookie)
+	postRec := httptest.NewRecorder()
+	h.ServeHTTP(postRec, post)
+	require.Equal(t, http.StatusOK, postRec.Code)
+}
+
+func TestCSRFRejectsCrossSiteFetchSite(t *testing.T) {
+	sm := auth.NewInMemorySessionManager()
+	var token string
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token = CSRFFromContext(r.Context())
+		w.WriteHeader(http.StatusOK)
+	})
+	h := sm.GetSessionManager().LoadAndSave(CSRFMiddleware(sm, "http://localhost:8080")(inner))
+
+	getRec := httptest.NewRecorder()
+	h.ServeHTTP(getRec, httptest.NewRequest(http.MethodGet, "/", nil))
+	cookie := getRec.Result().Cookies()[0]
+
+	post := httptest.NewRequest(http.MethodPost, "/auth/logout", strings.NewReader("csrf_token="+token))
+	post.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	post.Header.Set("Sec-Fetch-Site", "cross-site")
+	post.AddCookie(cookie)
+	postRec := httptest.NewRecorder()
+	h.ServeHTTP(postRec, post)
+	require.Equal(t, http.StatusForbidden, postRec.Code)
+}
+
 func csrfTestHandler(sm *auth.SCSSessionManager) http.Handler {
 	return sm.GetSessionManager().LoadAndSave(CSRFMiddleware(sm, "http://localhost:8080")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

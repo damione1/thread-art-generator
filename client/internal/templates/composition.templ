@@ -85,10 +85,14 @@ templ NewCompositionPage(data *PageData, art *pb.Art, formData *CompositionFormD
 // CompositionForm renders the composition creation form
 templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 	<form
+		method="POST"
+		action={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new") }
 		hx-post={ "/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new" }
+		hx-swap="outerHTML"
 		hx-indicator="#submit-spinner"
 		class="card p-0"
 	>
+		@CSRFInput()
 		if len(formData.Errors["_form"]) > 0 {
 			<div class="px-[26px] pt-[22px]">
 				@ErrorAlert(formData.Errors["_form"])

@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"unicode"
@@ -9,6 +10,11 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 )
+
+// CSRFToken is the per-session token from middleware, for forms and the meta tag.
+func CSRFToken(ctx context.Context) string {
+	return middleware.CSRFFromContext(ctx)
+}
 
 // PageData represents the centralized data structure for all templates
 // This follows the View Model pattern recommended in Templ documentation

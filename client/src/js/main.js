@@ -1,57 +1,26 @@
-// Main JavaScript Entry Point — HTMX and Alpine.js. 
-
-// Import dependencies
-import 'htmx.org';
+import htmx from 'htmx.org';
 import Alpine from 'alpinejs';
 
-// Initialize Alpine.js
+window.htmx = htmx;
 window.Alpine = Alpine;
 
-window.logout = async function logout() {
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  await fetch('/auth/logout', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
-    },
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function bindHtmxCsrf() {
+  document.body.addEventListener('htmx:configRequest', (evt) => {
+    const csrf = csrfToken();
+    if (csrf) {
+      evt.detail.headers['X-CSRF-Token'] = csrf;
+    }
   });
-  window.location.href = '/';
-};
+}
+
+if (document.body) {
+  bindHtmxCsrf();
+} else {
+  document.addEventListener('DOMContentLoaded', bindHtmxCsrf);
+}
 
 Alpine.start();
-
-// Configure HTMX when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Main.js loaded: HTMX and Alpine.js initialized');
-    
-    // Check if HTMX is available before configuring
-    if (typeof htmx !== 'undefined') {
-        // Initialize headers object if it doesn't exist
-        if (!htmx.config.headers) {
-            htmx.config.headers = {};
-        }
-
-        // Add CSRF token to all HTMX requests for authentication
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        if (csrfToken) {
-            htmx.config.headers['X-CSRF-Token'] = csrfToken;
-        }
-
-        // Add event listener for all HTMX requests
-        htmx.on('htmx:configRequest', function(evt) {
-            // Ensure headers object exists
-            if (!evt.detail.headers) {
-                evt.detail.headers = {};
-            }
-
-            // Set CSRF token if not already present
-            if (csrfToken && !evt.detail.headers['X-CSRF-Token']) {
-                evt.detail.headers['X-CSRF-Token'] = csrfToken;
-            }
-        });
-    } else {
-        console.warn('HTMX not loaded - some interactive features may not work');
-    }
-});

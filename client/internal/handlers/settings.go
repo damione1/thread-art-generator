@@ -48,6 +48,9 @@ func (h *SettingsHandler) Page(w http.ResponseWriter, r *http.Request) {
 			Email:     identity.Email,
 			Saved:     r.URL.Query().Get("saved"),
 		})
+	if msg := settingsErrorMessage(r.URL.Query().Get("error")); msg != "" {
+		pageData = pageData.WithError(msg)
+	}
 	if err := pages.SettingsPage(pageData).Render(r.Context(), w); err != nil {
 		log.Error().Err(err).Msg("Failed to render settings page")
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
@@ -238,6 +241,19 @@ func (h *SettingsHandler) UpdatePassword(w http.ResponseWriter, r *http.Request)
 	identity.SessionVersion = ver
 	_ = h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity), ver)
 	http.Redirect(w, r, "/settings?saved=password", http.StatusSeeOther)
+}
+
+func settingsErrorMessage(code string) string {
+	switch code {
+	case "missing_token":
+		return "That confirmation link is missing a token."
+	case "email_taken":
+		return "That email is already in use."
+	case "email_change":
+		return "Could not update your email. Try again."
+	default:
+		return ""
+	}
 }
 
 func (h *SettingsHandler) renderSettings(w http.ResponseWriter, r *http.Request, user *auth.UserInfo, saved, errMsg string, data *templates.SettingsPageData) {

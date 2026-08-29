@@ -454,10 +454,13 @@ templ NewArtPage(data *PageData, formData *services.ArtFormData) {
 // formData: Form data containing values and validation errors
 templ NewArtForm(formData *services.ArtFormData) {
 	<form
+		method="POST"
+		action="/dashboard/arts/new"
 		hx-post="/dashboard/arts/new"
 		hx-swap="outerHTML"
 		hx-indicator="#submit-spinner"
 	>
+		@CSRFInput()
 		@ErrorAlert(formData.Errors["_form"])
 		{{ titleClass := "input" }}
 		{{ if HasFieldErr(formData.Errors, "art.title") {

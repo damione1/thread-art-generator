@@ -341,10 +341,18 @@ func (h *PasswordAuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	userID := h.sessionManager.GetUserID(r)
 	if err := h.sessionManager.DestroySession(w, r); err != nil {
 		log.Error().Err(err).Str("user_id", userID).Msg("Failed to destroy session during logout")
-		writeAuthJSON(w, http.StatusInternalServerError, false, "Logout failed due to server error")
+		if wantsAuthJSON(r) {
+			writeAuthJSON(w, http.StatusInternalServerError, false, "Logout failed due to server error")
+			return
+		}
+		http.Error(w, "Logout failed", http.StatusInternalServerError)
 		return
 	}
-	writeAuthJSON(w, http.StatusOK, true, "Logout successful")
+	if wantsAuthJSON(r) {
+		writeAuthJSON(w, http.StatusOK, true, "Logout successful")
+		return
+	}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (h *PasswordAuthHandler) Status(w http.ResponseWriter, r *http.Request) {

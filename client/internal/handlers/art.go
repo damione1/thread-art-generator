@@ -146,32 +146,32 @@ func (h *ArtHandler) CreateArt(w http.ResponseWriter, r *http.Request) {
 	art, fieldErrors, err := h.generatorService.CreateArt(r.Context(), createArtRequest)
 	if err != nil {
 		formData.Errors = fieldErrors
-		renderErr := templates.NewArtForm(formData).Render(r.Context(), w)
+		if isHTMX(r) {
+			renderErr := templates.NewArtForm(formData).Render(r.Context(), w)
+			if renderErr != nil {
+				http.Error(w, "Error rendering template", http.StatusInternalServerError)
+				log.Error().Err(renderErr).Msg("Failed to render new art form with errors")
+			}
+			return
+		}
+		pageData := templates.NewPageDataFromRequest(r, "Create New Art - ThreadArt", "new-art")
+		renderErr := templates.NewArtPage(pageData, formData).Render(r.Context(), w)
 		if renderErr != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
-			log.Error().Err(renderErr).Msg("Failed to render new art form with errors")
+			log.Error().Err(renderErr).Msg("Failed to render new art page with errors")
 		}
 		return
 	}
 
-	// Art created successfully - parse resource name properly
 	artResource, err := resource.ParseResourceName(art.GetName())
 	if err != nil {
-		// Fallback to dashboard if we can't parse
-		w.Header().Set("HX-Redirect", "/dashboard")
-		w.WriteHeader(http.StatusOK)
+		redirect(w, r, "/dashboard")
 		return
 	}
 
 	if parsedArt, ok := artResource.(*resource.Art); ok {
-		// Redirect to the art page
-		w.Header().Set("HX-Redirect", "/dashboard/arts/"+parsedArt.ArtID)
-		w.WriteHeader(http.StatusOK)
-	} else {
-		// Fallback to dashboard if wrong type
-		w.Header().Set("HX-Redirect", "/dashboard")
-		w.WriteHeader(http.StatusOK)
+		redirect(w, r, "/dashboard/arts/"+parsedArt.ArtID)
+		return
 	}
+	redirect(w, r, "/dashboard")
 }
-
-// 

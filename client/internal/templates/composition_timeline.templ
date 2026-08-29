@@ -96,6 +96,7 @@ templ CompositionCard(userID, artID string, composition *pb.Composition, number 
 						type="button"
 						class="btn btn-danger btn-sm"
 						hx-delete={ "/dashboard/arts/" + artID + "/composition/" + extractCompositionID(composition.GetName()) }
+						hx-headers={ `{"X-CSRF-Token": "` + CSRFToken(ctx) + `"}` }
 						hx-confirm="Delete this failed composition?"
 						hx-target="closest [data-composition-row]"
 						hx-swap="outerHTML"

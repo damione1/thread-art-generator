@@ -24,12 +24,7 @@ func NewPageHandler(generatorService *services.GeneratorService) *PageHandler {
 
 // HomePage renders the home page
 func (h *PageHandler) HomePage(w http.ResponseWriter, r *http.Request) {
-	// Get user from context if authenticated
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Create page data using the new structure
-	pageData := templates.NewPageData("ThreadArt - Create Beautiful Thread Art", "home").
-		WithUser(user)
+	pageData := templates.NewPageDataFromRequest(r, "ThreadArt - Create Beautiful Thread Art", "home")
 
 	err := pages.HomePage(pageData).Render(r.Context(), w)
 	if err != nil {
@@ -150,8 +145,18 @@ func (h *PageHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pageData := templates.NewPageData("Login - ThreadArt", "login").
-		WithUser(user)
+	pageData := templates.NewPageDataFromRequest(r, "Login - ThreadArt", "login")
+	switch r.URL.Query().Get("error") {
+	case "missing_token":
+		pageData = pageData.WithMeta("error", "That confirmation link is missing a token.")
+	case "invalid_token":
+		pageData = pageData.WithMeta("error", "That confirmation link is invalid or expired.")
+	case "verify_failed":
+		pageData = pageData.WithMeta("error", "Could not activate your account. Try again.")
+	}
+	if r.URL.Query().Get("verified") == "1" {
+		pageData = pageData.WithMeta("ok", "Account confirmed. You can sign in.")
+	}
 
 	err := pages.LoginPage(pageData).Render(r.Context(), w)
 	if err != nil {
@@ -168,8 +173,7 @@ func (h *PageHandler) SignupPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pageData := templates.NewPageData("Sign Up - ThreadArt", "signup").
-		WithUser(user)
+	pageData := templates.NewPageDataFromRequest(r, "Sign Up - ThreadArt", "signup")
 
 	err := pages.SignupPage(pageData).Render(r.Context(), w)
 	if err != nil {
@@ -184,7 +188,7 @@ func (h *PageHandler) ForgotPasswordPage(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
 		return
 	}
-	pageData := templates.NewPageData("Forgot password - ThreadArt", "forgot")
+	pageData := templates.NewPageDataFromRequest(r, "Forgot password - ThreadArt", "forgot")
 	if r.URL.Query().Get("sent") == "1" {
 		pageData = pageData.WithMeta("sent", "1")
 	}
@@ -205,7 +209,7 @@ func (h *PageHandler) ResetPasswordPage(w http.ResponseWriter, r *http.Request) 
 		http.Redirect(w, r, "/forgot-password", http.StatusSeeOther)
 		return
 	}
-	pageData := templates.NewPageData("Reset password - ThreadArt", "reset").
+	pageData := templates.NewPageDataFromRequest(r, "Reset password - ThreadArt", "reset").
 		WithMeta("token", token)
 	if errMsg := r.URL.Query().Get("error"); errMsg != "" {
 		pageData = pageData.WithMeta("error", errMsg)
@@ -217,7 +221,10 @@ func (h *PageHandler) ResetPasswordPage(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *PageHandler) CheckEmailPage(w http.ResponseWriter, r *http.Request) {
-	pageData := templates.NewPageData("Check your email - ThreadArt", "check-email")
+	pageData := templates.NewPageDataFromRequest(r, "Check your email - ThreadArt", "check-email")
+	if r.URL.Query().Get("sent") == "1" {
+		pageData = pageData.WithMeta("sent", "1")
+	}
 	if err := pages.CheckEmailPage(pageData).Render(r.Context(), w); err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render check email page")

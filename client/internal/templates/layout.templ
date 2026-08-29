@@ -22,7 +22,7 @@ templ Layout(data *PageData) {
 				<script src="/static/js/password-auth.js"></script>
 			}
 			<meta name="referrer" content="no-referrer"/>
-			<meta name="csrf-token" id="csrf-token" content={ data.CSRFToken }/>
+			<meta name="csrf-token" id="csrf-token" content={ CSRFToken(ctx) }/>
 			<link rel="preconnect" href="https://fonts.googleapis.com"/>
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 			<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet" referrerpolicy="no-referrer"/>
@@ -52,7 +52,7 @@ templ BareLayout(data *PageData) {
 			<script src="/static/js/main.js" defer></script>
 			<script src="/static/js/password-auth.js"></script>
 			<meta name="referrer" content="no-referrer"/>
-			<meta name="csrf-token" id="csrf-token" content={ data.CSRFToken }/>
+			<meta name="csrf-token" id="csrf-token" content={ CSRFToken(ctx) }/>
 			<link rel="preconnect" href="https://fonts.googleapis.com"/>
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 			<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet" referrerpolicy="no-referrer"/>
