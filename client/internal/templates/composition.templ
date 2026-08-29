@@ -2,10 +2,9 @@ package templates
 
 import (
 	"fmt"
+	"math"
+
 	"github.com/Damione1/thread-art-generator/core/pb"
-	"github.com/axzilla/templui/component/button"
-	"github.com/axzilla/templui/component/form"
-	"github.com/axzilla/templui/component/slider"
 )
 
 // CompositionFormData represents the form data for creating compositions
@@ -22,42 +21,64 @@ type CompositionFormData struct {
 	Success           bool
 }
 
+// nailSpacingMM returns the arc distance between two adjacent nails, in
+// millimetres, for the given hoop radius and nail count.
+func nailSpacingMM(radius float32, nails int32) float64 {
+	if nails <= 0 {
+		return 0
+	}
+	return 2 * math.Pi * float64(radius) / float64(nails)
+}
+
+// errClass returns "input-error" when the named field has a validation error.
+func errClass(errs map[string][]string, field string) string {
+	if HasFieldErr(errs, field) {
+		return "input-error"
+	}
+	return ""
+}
+
 // NewCompositionPage renders the composition creation form
 templ NewCompositionPage(data *PageData, art *pb.Art, formData *CompositionFormData) {
 	@Layout(data) {
-		@slider.Script()
-		<div class="max-w-7xl mx-auto px-4 py-8">
-			<div class="mb-6">
-				<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
-					@MaterialIcon("arrow_back", "h-5 w-5")
-					Back to Art
-				</a>
-				<h1 class="text-3xl font-bold text-slate-200">Create Composition</h1>
-				<p class="text-slate-400 mt-2">Configure thread art parameters for "{ art.GetTitle() }"</p>
+		@Shell() {
+			<div class="pt-[34px] flex items-center gap-2.5 text-[12.5px] text-ink-faint">
+				<a href="/dashboard" class="hover:text-ink-muted transition-colors">Projects</a>
+				<span>/</span>
+				<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="hover:text-ink-muted transition-colors">{ art.GetTitle() }</a>
+				<span>/</span>
+				<span class="text-ink-muted">New composition</span>
 			</div>
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-				<!-- Art Preview -->
-				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
-					<h2 class="text-xl font-semibold text-slate-200 mb-4">Current Art</h2>
-					<div class="flex justify-center">
-						<img
-							src={ art.GetImageUrl() }
-							alt={ art.GetTitle() }
-							class="w-full max-w-md aspect-square object-cover rounded-full ring-2 ring-primary-500/30 shadow-lg"
-						/>
+			<h1 class="display text-[36px] leading-[1.05] mt-3.5">New composition</h1>
+			<p class="hint mt-2.5 text-[13.5px]">Eight numbers decide what the thread does. Every run is kept, so try more than one.</p>
+			<div class="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-12 items-start py-[30px] pb-10">
+				<aside>
+					<div class="disc">
+						<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
+						@NailRing("")
 					</div>
-					<div class="mt-4">
-						<h3 class="text-lg font-medium text-slate-200">{ art.GetTitle() }</h3>
-						<p class="text-sm text-slate-400 mt-1">This image will be used to generate your thread art composition</p>
+					<div class="card mt-6 px-[22px] pt-[22px] pb-[18px]">
+						<h3 class="text-[13px] font-semibold">The hoop, as configured</h3>
+						<svg viewBox="0 0 100 100" class="w-full mt-3.5" aria-hidden="true">
+							<circle cx="50" cy="50" r="41" fill="none" stroke="#C79A4B" stroke-width="2.2" stroke-dasharray=".45 2.6" stroke-linecap="round" opacity=".7"></circle>
+							<g stroke="#EDEDEE" stroke-opacity=".34" stroke-width=".55" fill="none">
+								<path d="M50 9 L18.7 76.5 M50 9 L84.6 71.5 M50 9 L9.5 62 M18.7 76.5 L88 40 M84.6 71.5 L14 33"></path>
+							</g>
+							<path d="M50 9 A41 41 0 0 1 64.9 12.8" fill="none" stroke="#E0B463" stroke-width="1.1"></path>
+							<circle cx="50" cy="9" r="2.4" fill="#E0B463"></circle>
+							<circle cx="64.9" cy="12.8" r="1.8" fill="#E0B463" opacity=".65"></circle>
+						</svg>
+						<div class="mt-2">
+							<div class="kv"><span class="kv-k">Nails</span><span class="kv-v">{ fmt.Sprint(formData.NailsQuantity) }</span></div>
+							<div class="kv"><span class="kv-k">Hoop radius</span><span class="kv-v">{ fmt.Sprintf("%.1f mm", formData.PhysicalRadius) }</span></div>
+							<div class="kv"><span class="kv-k">Spacing between nails</span><span class="kv-v">{ fmt.Sprintf("%.1f mm", nailSpacingMM(formData.PhysicalRadius, formData.NailsQuantity)) }</span></div>
+						</div>
 					</div>
-				</div>
-				<!-- Composition Form -->
-				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
-					<h2 class="text-xl font-semibold text-slate-200 mb-6">Composition Parameters</h2>
-					@CompositionForm(art, formData)
-				</div>
+					<p class="hint mt-3">Rendering runs in the background and takes a few minutes. You can close this page.</p>
+				</aside>
+				@CompositionForm(art, formData)
 			</div>
-		</div>
+		}
 	}
 }
 
@@ -66,270 +87,207 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 	<form
 		hx-post={ "/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new" }
 		hx-indicator="#submit-spinner"
-		class="space-y-6"
+		class="card p-0"
 	>
-		@ErrorAlert(formData.Errors["_form"])
-		<!-- Nails Quantity -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "nails_quantity",
-			}) {
-				Number of Nails
-			}
-			<input
-				id="nails_quantity"
-				type="number"
-				name="nails_quantity"
-				value={ fmt.Sprint(formData.NailsQuantity) }
-				min="1"
-				max="1000"
-				required
-				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
-			/>
-			@form.Description() {
-				Number of nails placed evenly around the circle perimeter. More nails create finer detail but increase processing time. Typical range: 200-500 for good balance.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.nails_quantity") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
+		if len(formData.Errors["_form"]) > 0 {
+			<div class="px-[26px] pt-[22px]">
+				@ErrorAlert(formData.Errors["_form"])
+			</div>
 		}
-		<!-- Image Size -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "img_size",
-			}) {
-				Image Size (pixels)
-			}
-			<input
-				id="img_size"
-				type="number"
-				name="img_size"
-				value={ fmt.Sprint(formData.ImgSize) }
-				min="1"
-				max="5000"
-				required
-				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
-			/>
-			@form.Description() {
-				Internal processing resolution. Higher values capture more detail but dramatically increase processing time. 800px is optimal for most images.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.img_size") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
-		}
-		<!-- Max Paths -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "max_paths",
-			}) {
-				Maximum Paths
-			}
-			<input
-				id="max_paths"
-				type="number"
-				name="max_paths"
-				value={ fmt.Sprint(formData.MaxPaths) }
-				min="1"
-				max="20000"
-				required
-				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
-			/>
-			@form.Description() {
-				Maximum thread connections to draw. The algorithm stops when no improvement is found or this limit is reached. More paths = darker, more detailed result.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.max_paths") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
-		}
-		<!-- Starting Nail -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "starting_nail",
-			}) {
-				Starting Nail Position
-			}
-			<input
-				id="starting_nail"
-				type="number"
-				name="starting_nail"
-				value={ fmt.Sprint(formData.StartingNail) }
-				min="0"
-				required
-				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
-			/>
-			@form.Description() {
-				Starting nail position (0 = top of circle, increases clockwise). Different starting points can affect the final pattern slightly.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.starting_nail") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
-		}
-		<!-- Minimum Difference -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "minimum_difference",
-			}) {
-				Minimum Nail Difference
-			}
-			@slider.Slider() {
-				<div class="flex justify-between items-center mb-2">
-					<span class="text-sm text-slate-400">Thread separation</span>
-					<div class="flex items-center">
-						@slider.Value(slider.ValueProps{
-							For:   "minimum_difference",
-							Class: "text-sm font-medium text-slate-200",
-						})
-						<span class="text-sm text-slate-400 ml-1">nails</span>
+		<div class="px-[26px] pt-[26px] pb-1.5">
+			<div class="flex items-baseline gap-3 mb-5">
+				<h3 class="text-sm font-semibold">The hoop</h3>
+				<span class="text-[12.5px] text-ink-faint">Physical geometry of the frame</span>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-7 gap-y-[22px] pb-6">
+				<!-- Number of nails -->
+				<div class="field">
+					<label class="label" for="nails_quantity">Number of nails</label>
+					<div class="relative">
+						<input
+							id="nails_quantity"
+							type="number"
+							name="nails_quantity"
+							value={ fmt.Sprint(formData.NailsQuantity) }
+							min="1"
+							max="1000"
+							required
+							class={ "input input-num pr-14 " + errClass(formData.Errors, "composition.nails_quantity") }
+						/>
+						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-faint">nails</span>
 					</div>
+					<p class="hint">Evenly spaced around the rim. 200–500 is the usual range; more nails means finer detail and a longer render.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.nails_quantity") {
+						<p class="msg-error">{ err }</p>
+					}
 				</div>
-				@slider.Input(slider.Props{
-					ID:    "minimum_difference",
-					Name:  "minimum_difference",
-					Value: int(formData.MinimumDifference),
-					Min:   1,
-					Max:   200,
-					Step:  1,
-				})
-			}
-			@form.Description() {
-				Prevents threads from connecting to nearby nails, avoiding tangled threads. Higher values create longer, cleaner lines but may miss fine details.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.minimum_difference") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
-		}
-		<!-- Brightness Factor -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "brightness_factor",
-			}) {
-				Brightness Factor
-			}
-			@slider.Slider() {
-				<div class="flex justify-between items-center mb-2">
-					<span class="text-sm text-slate-400">Thread brightness</span>
-					@slider.Value(slider.ValueProps{
-						For:   "brightness_factor",
-						Class: "text-sm font-medium text-slate-200",
-					})
+				<!-- Starting nail -->
+				<div class="field">
+					<label class="label" for="starting_nail">Starting nail</label>
+					<input
+						id="starting_nail"
+						type="number"
+						name="starting_nail"
+						value={ fmt.Sprint(formData.StartingNail) }
+						min="0"
+						required
+						class={ "input input-num " + errClass(formData.Errors, "composition.starting_nail") }
+					/>
+					<p class="hint">Nail 0 sits at the top and numbering runs clockwise. Changing it shifts the pattern slightly.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.starting_nail") {
+						<p class="msg-error">{ err }</p>
+					}
 				</div>
-				@slider.Input(slider.Props{
-					ID:    "brightness_factor",
-					Name:  "brightness_factor",
-					Value: int(formData.BrightnessFactor),
-					Min:   1,
-					Max:   255,
-					Step:  1,
-				})
-			}
-			@form.Description() {
-				Controls how much each thread darkens the image during processing. Higher values create bolder, more visible threads but may oversaturate dark areas.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.brightness_factor") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
-		}
-		<!-- Image Contrast -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "image_contrast",
-			}) {
-				Image Contrast
-			}
-			@slider.Slider() {
-				<div class="flex justify-between items-center mb-2">
-					<span class="text-sm text-slate-400">Contrast adjustment</span>
-					<div class="flex items-center">
-						@slider.Value(slider.ValueProps{
-							For:   "image_contrast",
-							Class: "text-sm font-medium text-slate-200",
-						})
-						<span class="text-sm text-slate-400 ml-1">x</span>
+				<!-- Minimum gap -->
+				<div class="field" x-data={ "{v: " + fmt.Sprint(formData.MinimumDifference) + "}" }>
+					<label class="label" for="minimum_difference">Minimum gap</label>
+					<div class="flex items-baseline justify-between gap-3">
+						<span class="hint">Nails skipped before the thread may return</span>
+						<span class="font-mono text-[13px] text-ink" x-text="v"></span>
 					</div>
+					<input
+						id="minimum_difference"
+						type="range"
+						name="minimum_difference"
+						class="slider"
+						min="1"
+						max="200"
+						step="1"
+						value={ fmt.Sprint(formData.MinimumDifference) }
+						x-model.number="v"
+					/>
+					<p class="hint">Stops the thread bunching at the rim. Higher values give longer, cleaner lines and lose fine detail.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.minimum_difference") {
+						<p class="msg-error">{ err }</p>
+					}
 				</div>
-				@slider.Input(slider.Props{
-					ID:    "image_contrast",
-					Name:  "image_contrast",
-					Value: int(formData.ImageContrast * 10), // Scale for slider
-					Min:   1,
-					Max:   100,
-					Step:  1,
-				})
-			}
-			@form.Description() {
-				Enhances image contrast before processing. Higher values emphasize edges and details but may lose subtle gradations. 40 works well for most photos.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.image_contrast") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
-		}
-		<!-- Physical Radius -->
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "physical_radius",
-			}) {
-				Physical Radius (mm)
-			}
-			<input
-				id="physical_radius"
-				type="number"
-				name="physical_radius"
-				value={ fmt.Sprintf("%.1f", formData.PhysicalRadius) }
-				min="0.1"
-				step="0.1"
-				required
-				class="flex h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
-			/>
-			@form.Description() {
-				Actual size of your physical frame in millimeters. Used to calculate G-code coordinates and thread length. Default 609.6mm = 24 inches.
-			}
-			for _, err := range FieldMsgs(formData.Errors, "composition.physical_radius") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
-			}
-		}
-		<!-- Submit Button -->
-		<div class="flex justify-end mt-6">
-			@button.Button(button.Props{
-				Type:    "submit",
-				Variant: button.VariantDefault,
-			}) {
+				<!-- Hoop radius -->
+				<div class="field">
+					<label class="label" for="physical_radius">Hoop radius</label>
+					<div class="relative">
+						<input
+							id="physical_radius"
+							type="number"
+							name="physical_radius"
+							value={ fmt.Sprintf("%.1f", formData.PhysicalRadius) }
+							min="0.1"
+							step="0.1"
+							required
+							class={ "input input-num pr-10 " + errClass(formData.Errors, "composition.physical_radius") }
+						/>
+						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-faint">mm</span>
+					</div>
+					<p class="hint">Your real frame, used for the G-code coordinates and the thread length. 609.6 mm is a 24-inch hoop.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.physical_radius") {
+						<p class="msg-error">{ err }</p>
+					}
+				</div>
+			</div>
+		</div>
+		<div class="px-[26px] pt-[26px] pb-1.5 border-t border-line">
+			<div class="flex items-baseline gap-3 mb-5">
+				<h3 class="text-sm font-semibold">The render</h3>
+				<span class="text-[12.5px] text-ink-faint">How the solver reads your photograph</span>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-7 gap-y-[22px] pb-6">
+				<!-- Working resolution -->
+				<div class="field">
+					<label class="label" for="img_size">Working resolution</label>
+					<div class="relative">
+						<input
+							id="img_size"
+							type="number"
+							name="img_size"
+							value={ fmt.Sprint(formData.ImgSize) }
+							min="1"
+							max="5000"
+							required
+							class={ "input input-num pr-10 " + errClass(formData.Errors, "composition.img_size") }
+						/>
+						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-faint">px</span>
+					</div>
+					<p class="hint">Internal size the image is solved at. 800 px suits most photographs; above 1 200 px the render time climbs sharply.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.img_size") {
+						<p class="msg-error">{ err }</p>
+					}
+				</div>
+				<!-- Path budget -->
+				<div class="field">
+					<label class="label" for="max_paths">Path budget</label>
+					<div class="relative">
+						<input
+							id="max_paths"
+							type="number"
+							name="max_paths"
+							value={ fmt.Sprint(formData.MaxPaths) }
+							min="1"
+							max="20000"
+							required
+							class={ "input input-num pr-14 " + errClass(formData.Errors, "composition.max_paths") }
+						/>
+						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-faint">paths</span>
+					</div>
+					<p class="hint">The solver stops early when no line improves the image, so this is a ceiling rather than a target.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.max_paths") {
+						<p class="msg-error">{ err }</p>
+					}
+				</div>
+				<!-- Thread weight -->
+				<div class="field" x-data={ "{v: " + fmt.Sprint(formData.BrightnessFactor) + "}" }>
+					<label class="label" for="brightness_factor">Thread weight</label>
+					<div class="flex items-baseline justify-between gap-3">
+						<span class="hint">How much each line darkens the image</span>
+						<span class="font-mono text-[13px] text-ink" x-text="v"></span>
+					</div>
+					<input
+						id="brightness_factor"
+						type="range"
+						name="brightness_factor"
+						class="slider"
+						min="1"
+						max="255"
+						step="1"
+						value={ fmt.Sprint(formData.BrightnessFactor) }
+						x-model.number="v"
+					/>
+					<p class="hint">Raise it for bolder thread on a light photograph; lower it when dark areas turn into a solid mass.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.brightness_factor") {
+						<p class="msg-error">{ err }</p>
+					}
+				</div>
+				<!-- Contrast -->
+				<div class="field" x-data={ "{v: " + fmt.Sprint(int(formData.ImageContrast*10)) + "}" }>
+					<label class="label" for="image_contrast">Contrast</label>
+					<div class="flex items-baseline justify-between gap-3">
+						<span class="hint">Applied before solving</span>
+						<span class="font-mono text-[13px] text-ink" x-text="(v/10).toFixed(1) + '×'"></span>
+					</div>
+					<input
+						id="image_contrast"
+						type="range"
+						name="image_contrast"
+						class="slider"
+						min="1"
+						max="100"
+						step="1"
+						value={ fmt.Sprint(int(formData.ImageContrast * 10)) }
+						x-model.number="v"
+					/>
+					<p class="hint">Pushes edges apart before the first line is drawn. 4.0 works for most photographs.</p>
+					for _, err := range FieldMsgs(formData.Errors, "composition.image_contrast") {
+						<p class="msg-error">{ err }</p>
+					}
+				</div>
+			</div>
+		</div>
+		<div class="flex items-center justify-end gap-2.5 px-[26px] py-5 border-t border-line bg-surface-sunken rounded-b-card">
+			<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="btn">Cancel</a>
+			<button type="submit" class="btn btn-primary">
 				<span id="submit-spinner" class="htmx-indicator">
-					@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
+					@Spinner("w-4 h-4")
 				</span>
-				Create Composition
-			}
+				Render composition
+			</button>
 		</div>
 	</form>
 }
@@ -338,28 +296,14 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 templ CompositionStatusBadge(status pb.CompositionStatus) {
 	switch status {
 		case pb.CompositionStatus_COMPOSITION_STATUS_PENDING:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-yellow-900/30 text-yellow-400 text-sm">
-				@MaterialIcon("pending_actions", "")
-				Pending
-			</div>
+			<span class="badge"><span class="badge-dot"></span>Pending</span>
 		case pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-sm">
-				@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
-				Processing
-			</div>
+			<span class="badge badge-run"><span class="badge-dot"></span>Rendering</span>
 		case pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-green-900/30 text-green-400 text-sm">
-				@MaterialIcon("check_circle", "")
-				Complete
-			</div>
+			<span class="badge badge-ok"><span class="badge-dot"></span>Complete</span>
 		case pb.CompositionStatus_COMPOSITION_STATUS_FAILED:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-red-900/30 text-red-400 text-sm">
-				@MaterialIcon("error", "")
-				Failed
-			</div>
+			<span class="badge badge-error"><span class="badge-dot"></span>Failed</span>
 		default:
-			<div class="px-2 py-1 rounded bg-gray-900/30 text-gray-400 text-sm">
-				Unknown
-			</div>
+			<span class="badge">Unknown</span>
 	}
 }

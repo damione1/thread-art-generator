@@ -148,8 +148,9 @@
   .disc {
     @apply relative w-full aspect-square rounded-full overflow-hidden bg-surface-sunken;
   }
-  .disc > img,
-  .disc > svg {
+  /* Only the artwork fills the disc. Overlays (the nail ring, a status
+     icon, a spinner) position themselves. */
+  .disc > img {
     @apply absolute inset-0 w-full h-full object-cover;
   }
 

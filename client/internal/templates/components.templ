@@ -255,7 +255,6 @@ templ Navigation(isLoggedIn bool) {
 	<nav class="hidden md:flex items-center gap-1">
 		if isLoggedIn {
 			<a href="/dashboard" class="px-3 py-[7px] rounded-full text-[13.5px] text-ink-muted hover:text-ink hover:bg-surface-raised transition-colors">Projects</a>
-			<a href="/dashboard/arts/new" class="px-3 py-[7px] rounded-full text-[13.5px] text-ink-muted hover:text-ink hover:bg-surface-raised transition-colors md:hidden lg:inline-block">New project</a>
 		} else {
 			<a href="/#how" class="px-3 py-[7px] rounded-full text-[13.5px] text-ink-muted hover:text-ink hover:bg-surface-raised transition-colors">How it works</a>
 			<a href="/#compositions" class="px-3 py-[7px] rounded-full text-[13.5px] text-ink-muted hover:text-ink hover:bg-surface-raised transition-colors">Compositions</a>
