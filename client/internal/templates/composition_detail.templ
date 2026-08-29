@@ -2,229 +2,165 @@ package templates
 
 import (
 	"fmt"
+
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/axzilla/templui/component/alert"
-	"github.com/axzilla/templui/component/button"
-	"github.com/axzilla/templui/component/spinner"
 )
 
 // CompositionDetailPage renders the composition detail page
 templ CompositionDetailPage(data *PageData, art *pb.Art, composition *pb.Composition) {
 	@Layout(data) {
-		<div class="max-w-7xl mx-auto px-4 py-8">
-			<div class="mb-6">
-				<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
-					@MaterialIcon("arrow_back", "h-5 w-5")
-					Back to Art
-				</a>
-				<h1 class="text-3xl font-bold text-slate-200">Composition Details</h1>
-				<p class="text-slate-400 mt-2">For "{ art.GetTitle() }"</p>
+		@Shell() {
+			<div class="pt-[34px] flex items-center gap-2.5 text-[12.5px] text-ink-faint">
+				<a href="/dashboard" class="hover:text-ink-muted transition-colors">Projects</a>
+				<span>/</span>
+				<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName())) } class="hover:text-ink-muted transition-colors">{ art.GetTitle() }</a>
+				<span>/</span>
+				<span class="text-ink-muted">Composition</span>
 			</div>
-			<!-- Status Alert -->
-			<div class="mb-6">
-				@CompositionStatusAlert(composition)
+			<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mt-3.5 pb-[26px] border-b border-line">
+				<div>
+					<h1 class="display text-[36px] leading-[1.05]">Composition</h1>
+					<div class="flex flex-wrap items-center gap-3.5 mt-3.5">
+						@CompositionStatusBadge(composition.GetStatus())
+						<span class="font-mono text-xs text-ink-faint">{ compositionTimestampLabel(composition) }</span>
+					</div>
+				</div>
+				<div class="flex gap-2.5">
+					<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new?from=" + extractCompositionID(composition.GetName())) } class="btn btn-sm">Duplicate settings</a>
+					if composition.GetGcodeUrl() != "" {
+						<a href={ templ.SafeURL(composition.GetGcodeUrl()) } target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">Download G-code</a>
+					}
+				</div>
 			</div>
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-				<!-- Composition Parameters -->
-				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
-					<h2 class="text-xl font-semibold text-slate-200 mb-4">Parameters</h2>
-					@CompositionParameters(composition)
-				</div>
-				<!-- Results/Preview -->
-				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
-					<h2 class="text-xl font-semibold text-slate-200 mb-4">Results</h2>
-					@CompositionResults(composition)
-				</div>
+			<div class="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12 items-start py-[34px] pb-16">
+				@CompositionPreviewPane(composition)
+				@CompositionAside(composition)
 			</div>
 			<!-- Auto-refresh for pending/processing status -->
 			if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PENDING ||
-			   composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING {
+				composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING {
 				<div data-poll-composition={ composition.GetName() }></div>
 			}
-		</div>
+		}
 	}
 }
 
-// CompositionStatusAlert shows the current status of the composition
-templ CompositionStatusAlert(composition *pb.Composition) {
-	switch composition.GetStatus() {
-		case pb.CompositionStatus_COMPOSITION_STATUS_PENDING:
-			@alert.Alert(alert.Props{}) {
-				<div class="flex items-center gap-3">
-					@spinner.Spinner(spinner.Props{
-						Size: spinner.SizeSm,
-					})
-					@alert.Title() {
-						Pending
+// CompositionPreviewPane renders the large disc preview and its caption,
+// adapted to whatever state the composition is currently in.
+templ CompositionPreviewPane(composition *pb.Composition) {
+	<div>
+		switch composition.GetStatus() {
+			case pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE:
+				<div class="disc max-w-[620px] mx-auto">
+					if composition.GetPreviewUrl() != "" {
+						<img src={ composition.GetPreviewUrl() } alt="Thread art preview"/>
 					}
-					@alert.Description() {
-						Your composition is queued for processing.
+					@NailRing("")
+				</div>
+				<div class="flex items-center justify-between gap-4 mt-[18px] max-w-[620px] mx-auto">
+					<p class="hint">{ fmt.Sprintf("Preview rendered at %d px. The physical piece is %.0f mm across.", composition.GetImgSize(), composition.GetPhysicalRadius()*2) }</p>
+					if composition.GetPreviewUrl() != "" {
+						<a href={ templ.SafeURL(composition.GetPreviewUrl()) } target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Open full size</a>
 					}
 				</div>
-			}
-		case pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING:
-			@alert.Alert(alert.Props{}) {
-				<div class="flex items-center gap-3">
-					@spinner.Spinner(spinner.Props{
-						Size: spinner.SizeSm,
-					})
-					@alert.Title() {
-						Processing
-					}
-					@alert.Description() {
-						Your composition is being generated. This may take a few minutes.
-					}
+			case pb.CompositionStatus_COMPOSITION_STATUS_FAILED:
+				<div class="max-w-[620px] mx-auto card p-8 flex flex-col items-center text-center">
+					<div class="w-20 h-20 rounded-full bg-danger/[0.08] flex items-center justify-center">
+						@Icon("alert-circle", "w-7 h-7 text-danger")
+					</div>
+					<h2 class="text-[17px] font-semibold mt-5">This composition did not render</h2>
+					<p class="hint mt-2.5 max-w-[380px]">
+						if composition.GetErrorMessage() != "" {
+							{ composition.GetErrorMessage() }
+						} else {
+							The solver stopped before it finished. The settings are listed beside this, so you can adjust them and try again.
+						}
+					</p>
 				</div>
-			}
-		case pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE:
-			@alert.Alert(alert.Props{}) {
-				@alert.Title() {
-					@MaterialIcon("check_circle", "")
-					Complete
-				}
-				@alert.Description() {
-					Your composition has been successfully generated!
-				}
-			}
-		case pb.CompositionStatus_COMPOSITION_STATUS_FAILED:
-			@alert.Alert(alert.Props{Variant: alert.VariantDestructive}) {
-				@MaterialIcon("warning", "")
-				@alert.Title() {
-					Failed
-				}
-				@alert.Description() {
-					if composition.GetErrorMessage() != "" {
-						{ composition.GetErrorMessage() }
-					} else {
-						An error occurred while processing your composition.
-					}
-				}
-			}
-	}
-}
-
-// CompositionParameters displays the composition parameters
-templ CompositionParameters(composition *pb.Composition) {
-	<div class="space-y-4">
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Number of Nails</label>
-			<p class="text-slate-200">{ fmt.Sprint(composition.GetNailsQuantity()) }</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Image Size</label>
-			<p class="text-slate-200">{ fmt.Sprint(composition.GetImgSize()) } pixels</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Maximum Paths</label>
-			<p class="text-slate-200">{ fmt.Sprint(composition.GetMaxPaths()) }</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Starting Nail</label>
-			<p class="text-slate-200">{ fmt.Sprint(composition.GetStartingNail()) }</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Minimum Nail Difference</label>
-			<p class="text-slate-200">{ fmt.Sprint(composition.GetMinimumDifference()) }</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Brightness Factor</label>
-			<p class="text-slate-200">{ fmt.Sprint(composition.GetBrightnessFactor()) }</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Image Contrast</label>
-			<p class="text-slate-200">{ fmt.Sprintf("%.1fx", composition.GetImageContrast()) }</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Physical Radius</label>
-			<p class="text-slate-200">{ fmt.Sprintf("%.1f mm", composition.GetPhysicalRadius()) }</p>
-		</div>
-		<div>
-			<label class="block text-sm font-medium text-slate-300 mb-1">Created</label>
-			<p class="text-slate-200">{ composition.GetCreateTime().AsTime().Format("January 2, 2006 at 3:04 PM") }</p>
-		</div>
+			default:
+				<div class="max-w-[620px] mx-auto flex flex-col items-center">
+					<div class="disc max-w-[380px] flex items-center justify-center">
+						<svg class="absolute inset-0 w-full h-full" viewBox="0 0 1000 1000" aria-hidden="true">
+							<circle cx="500" cy="500" r="492" fill="none" stroke="#26262A" stroke-width="7"></circle>
+						</svg>
+						@Spinner("w-6 h-6 text-brass relative")
+					</div>
+					<p class="text-[13px] text-ink-muted mt-6">Drawing the thread path</p>
+					<p class="hint mt-2 max-w-[340px] text-center">This takes a few minutes. The page updates on its own when it is done, so you can close it.</p>
+				</div>
+		}
 	</div>
 }
 
-// CompositionResults displays the composition results
-templ CompositionResults(composition *pb.Composition) {
-	if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE {
-		<div class="space-y-6">
-			// Preview Image
-			if composition.GetPreviewUrl() != "" {
-				<div>
-					<h3 class="text-lg font-medium text-slate-200 mb-3">Preview</h3>
-					<img
-						src={ composition.GetPreviewUrl() }
-						alt="Thread art preview"
-						class="w-full rounded-lg shadow-lg"
-					/>
+// CompositionAside renders the stats, downloads and settings-used panels
+// to the right of the preview.
+templ CompositionAside(composition *pb.Composition) {
+	<aside>
+		if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE {
+			<div class="grid grid-cols-2 gap-px bg-line border border-line rounded-2xl overflow-hidden">
+				<div class="bg-surface px-5 py-[18px]">
+					<div class="font-mono text-[26px] tracking-[-0.01em] tabular">{ humanInt(composition.GetTotalLines()) }</div>
+					<div class="hint mt-1">lines drawn</div>
 				</div>
-			}
-			// Statistics
-			<div class="bg-dark-300 rounded-lg p-4 space-y-2">
-				<h3 class="text-lg font-medium text-slate-200 mb-3">Statistics</h3>
-				if composition.GetTotalLines() > 0 {
-					<div class="flex justify-between">
-						<span class="text-slate-400">Total Lines:</span>
-						<span class="text-slate-200">{ fmt.Sprint(composition.GetTotalLines()) }</span>
-					</div>
-				}
-				if composition.GetThreadLength() > 0 {
-					<div class="flex justify-between">
-						<span class="text-slate-400">Thread Length:</span>
-						<span class="text-slate-200">{ fmt.Sprintf("%.2f meters", float32(composition.GetThreadLength())/1000) }</span>
-					</div>
-				}
+				<div class="bg-surface px-5 py-[18px]">
+					<div class="font-mono text-[26px] tracking-[-0.01em] tabular">{ threadMetres(composition.GetThreadLength()) }</div>
+					<div class="hint mt-1">thread needed</div>
+				</div>
+				<div class="bg-surface px-5 py-[18px]">
+					<div class="font-mono text-[26px] tracking-[-0.01em] tabular">{ humanInt(composition.GetNailsQuantity()) }</div>
+					<div class="hint mt-1">nails on the hoop</div>
+				</div>
+				<div class="bg-surface px-5 py-[18px]">
+					<div class="font-mono text-[26px] tracking-[-0.01em] tabular">{ fmt.Sprintf("%.1f", composition.GetPhysicalRadius()) }</div>
+					<div class="hint mt-1">hoop radius, mm</div>
+				</div>
 			</div>
-			// Download Buttons
-			<div class="space-y-3">
-				<h3 class="text-lg font-medium text-slate-200 mb-3">Downloads</h3>
+			<h3 class="text-[15px] font-semibold mt-[30px] mb-3.5">Downloads</h3>
+			<div class="space-y-2.5">
 				if composition.GetGcodeUrl() != "" {
-					@button.Button(button.Props{
-						Class: "w-full",
-					}) {
-						<a href={ templ.SafeURL(composition.GetGcodeUrl()) } download class="flex items-center justify-center gap-2 w-full">
-							@MaterialIcon("download", "h-5 w-5")
-							Download G-Code
-						</a>
-					}
+					@DownloadRow("download", "G-code", composition.GetGcodeUrl(), "text-brass")
 				}
 				if composition.GetPathlistUrl() != "" {
-					@button.Button(button.Props{
-						Variant: button.VariantOutline,
-						Class:   "w-full",
-					}) {
-						<a href={ templ.SafeURL(composition.GetPathlistUrl()) } download class="flex items-center justify-center gap-2 w-full">
-							@MaterialIcon("description", "h-5 w-5")
-							Download Path List
-						</a>
-					}
+					@DownloadRow("file-text", "Path list", composition.GetPathlistUrl(), "text-ink-muted")
+				}
+				if composition.GetPreviewUrl() != "" {
+					@DownloadRow("image", "Preview image", composition.GetPreviewUrl(), "text-ink-muted")
 				}
 			</div>
+		}
+		<h3 class="text-[15px] font-semibold mt-[30px] mb-1.5">Settings used</h3>
+		<div class="card px-5">
+			<div class="kv"><span class="kv-k">Nails</span><span class="kv-v">{ fmt.Sprint(composition.GetNailsQuantity()) }</span></div>
+			<div class="kv"><span class="kv-k">Starting nail</span><span class="kv-v">{ fmt.Sprint(composition.GetStartingNail()) }</span></div>
+			<div class="kv"><span class="kv-k">Minimum gap</span><span class="kv-v">{ fmt.Sprint(composition.GetMinimumDifference()) }</span></div>
+			<div class="kv"><span class="kv-k">Hoop radius</span><span class="kv-v">{ fmt.Sprintf("%.1f mm", composition.GetPhysicalRadius()) }</span></div>
+			<div class="kv"><span class="kv-k">Working resolution</span><span class="kv-v">{ humanInt(composition.GetImgSize()) } px</span></div>
+			<div class="kv"><span class="kv-k">Path budget</span><span class="kv-v">{ humanInt(composition.GetMaxPaths()) }</span></div>
+			<div class="kv"><span class="kv-k">Thread weight</span><span class="kv-v">{ fmt.Sprint(composition.GetBrightnessFactor()) }</span></div>
+			<div class="kv"><span class="kv-k">Contrast</span><span class="kv-v">{ fmt.Sprintf("%.1f×", composition.GetImageContrast()) }</span></div>
 		</div>
-	} else if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PENDING ||
-	          composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_PROCESSING {
-		<div class="flex items-center justify-center h-64">
-			<div class="text-center">
-				@spinner.Spinner(spinner.Props{
-					Size:  spinner.SizeLg,
-					Class: "text-primary-400",
-				})
-				<p class="text-slate-400 mt-4">Waiting for results...</p>
-			</div>
-		</div>
-	} else if composition.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_FAILED {
-		<div class="flex items-center justify-center h-64">
-			<div class="text-center">
-				@MaterialIcon("error", "h-12 w-12 text-red-500 mx-auto mb-4")
-				<p class="text-slate-400">Processing failed</p>
-				if composition.GetErrorMessage() != "" {
-					<p class="text-sm text-red-400 mt-2">{ composition.GetErrorMessage() }</p>
-				}
-			</div>
-		</div>
+	</aside>
+}
+
+// DownloadRow renders one row in the downloads list: an icon, a label and a
+// download button. Only rendered by the caller when the URL is non-empty.
+templ DownloadRow(icon, name, url, iconClass string) {
+	<div class="flex items-center gap-3.5 px-[18px] py-[15px] border border-line rounded-2xl bg-surface">
+		@Icon(icon, "w-[18px] h-[18px] shrink-0 "+iconClass)
+		<div class="flex-1 min-w-0 text-[13.5px] font-medium">{ name }</div>
+		<a href={ templ.SafeURL(url) } target="_blank" rel="noopener noreferrer" class="btn btn-sm">Download</a>
+	</div>
+}
+
+// compositionTimestampLabel describes when the composition was created or
+// rendered, in the wording the mockup uses.
+func compositionTimestampLabel(c *pb.Composition) string {
+	t := c.GetCreateTime().AsTime().Format("2 Jan 2006 at 15:04")
+	if c.GetStatus() == pb.CompositionStatus_COMPOSITION_STATUS_COMPLETE {
+		return "rendered " + t
 	}
+	return "created " + t
 }
 
 // Helper function to extract composition ID from resource name

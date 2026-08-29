@@ -1,13 +1,11 @@
 package templates
 
 import (
+	"strconv"
+
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/axzilla/templui/component/button"
-	"github.com/axzilla/templui/component/form"
-	"github.com/axzilla/templui/component/input"
-	"github.com/axzilla/templui/component/spinner"
 )
 
 // extractArtID extracts the art ID from a resource name like "users/{user}/arts/{art}"
@@ -40,120 +38,213 @@ func extractUserID(resourceName string) string {
 	return art.UserID
 }
 
-// ArtPage renders the art details page with upload functionality
+// artStatusLabel is the mono status word shown in the details key/value list.
+func artStatusLabel(status pb.ArtStatus) string {
+	switch status {
+	case pb.ArtStatus_ART_STATUS_PENDING_IMAGE:
+		return "Draft"
+	case pb.ArtStatus_ART_STATUS_PROCESSING:
+		return "Processing"
+	case pb.ArtStatus_ART_STATUS_COMPLETE:
+		return "Complete"
+	case pb.ArtStatus_ART_STATUS_FAILED:
+		return "Failed"
+	case pb.ArtStatus_ART_STATUS_ARCHIVED:
+		return "Archived"
+	default:
+		return "Unknown"
+	}
+}
+
+// ArtPage renders the art details page: the naming/photograph wizard while
+// there is no image yet, or the project overview with its compositions once
+// there is one.
 // data: PageData containing user info and other template data
 // art: The art resource to display
 // compositions: List of compositions for this art (optional)
 templ ArtPage(data *PageData, art *pb.Art, compositions []*pb.Composition) {
 	@Layout(data) {
-		<div class="max-w-4xl mx-auto px-4 py-8">
-			<div class="mb-6">
-				<a href="/dashboard" class="text-primary-400 hover:text-primary-300 transition duration-300 flex items-center gap-2 mb-4">
-					@MaterialIcon("arrow_back", "h-5 w-5")
-					Back to Dashboard
-				</a>
-				<h1 class="text-3xl font-bold text-slate-200">{ art.GetTitle() }</h1>
-				<div class="flex items-center gap-4 mt-2">
-					<span class="text-sm text-slate-400">
-						Created { art.GetCreateTime().AsTime().Format("January 2, 2006") }
-					</span>
-					@ArtStatusBadge(art.GetStatus())
-				</div>
-			</div>
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-				<!-- Image Section -->
-				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
-					<h2 class="text-xl font-semibold text-slate-200 mb-4">Image</h2>
-					if art.GetStatus() == pb.ArtStatus_ART_STATUS_PENDING_IMAGE {
-						@ImageUploadDropzone(extractUserID(art.GetName()), extractArtID(art.GetName()))
-					} else if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE && art.GetImageUrl() != "" {
-						<div class="flex justify-center">
-							<div class="relative w-full max-w-md aspect-square">
-								<img
-									src={ art.GetImageUrl() }
-									alt={ art.GetTitle() }
-									class="w-full h-full object-cover rounded-full ring-2 ring-primary-500/30 shadow-lg"
-								/>
-							</div>
-						</div>
-					} else {
-						<div class="flex items-center justify-center h-64 bg-dark-300 rounded-lg">
-							<div class="text-center">
-								@MaterialIcon("image", "h-12 w-12 text-slate-500 mx-auto mb-2")
-								<p class="text-slate-400">No image available</p>
-							</div>
-						</div>
-					}
-				</div>
-				<!-- Details Section -->
-				<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
-					<h2 class="text-xl font-semibold text-slate-200 mb-4">Details</h2>
-					<div class="space-y-4">
-						<div>
-							<label class="block text-sm font-medium text-slate-300 mb-1">Title</label>
-							<p class="text-slate-200">{ art.GetTitle() }</p>
-						</div>
-						<div>
-							<label class="block text-sm font-medium text-slate-300 mb-1">Status</label>
-							<p class="text-slate-200">{ string(art.GetStatus()) }</p>
-						</div>
-						<div>
-							<label class="block text-sm font-medium text-slate-300 mb-1">Created</label>
-							<p class="text-slate-200">{ art.GetCreateTime().AsTime().Format("January 2, 2006 at 3:04 PM") }</p>
-						</div>
-						if art.GetUpdateTime() != nil {
-							<div>
-								<label class="block text-sm font-medium text-slate-300 mb-1">Last Updated</label>
-								<p class="text-slate-200">{ art.GetUpdateTime().AsTime().Format("January 2, 2006 at 3:04 PM") }</p>
-							</div>
-						}
-					</div>
-					// Show "Create Composition" button when art is complete and no compositions exist
-					if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE && (compositions == nil || len(compositions) == 0) {
-						<div class="mt-6">
-							@button.Button(button.Props{
-								Class: "w-full",
-							}) {
-								<a href={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new") } class="block w-full">
-									Create Composition
-								</a>
-							}
-						</div>
-					}
-				</div>
-			</div>
-			<!-- Composition Timeline -->
-			if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE {
-				<div class="mt-8">
-					@CompositionTimeline(extractUserID(art.GetName()), extractArtID(art.GetName()), compositions)
-				</div>
+		@Shell() {
+			if art.GetStatus() == pb.ArtStatus_ART_STATUS_PENDING_IMAGE {
+				@artUploadStep(art)
+			} else {
+				@artOverview(art, compositions)
 			}
 			<!-- Auto-refresh while image URL is empty -->
 			if art.GetImageUrl() == "" {
 				<div data-poll-art={ art.GetName() }></div>
 			}
+		}
+	}
+}
+
+// projectCrumb renders the "Projects / <current>" breadcrumb shared by the
+// naming, photograph and overview screens.
+templ projectCrumb(current string) {
+	<div class="pt-[34px] flex items-center gap-2.5 text-[12.5px] text-ink-faint">
+		<a href="/dashboard" class="hover:text-ink-muted transition-colors">Projects</a>
+		<span>/</span>
+		<span class="text-ink-muted">{ current }</span>
+	</div>
+}
+
+// wizardStepper renders the Name / Photograph / Composition step indicator.
+// wide makes the connecting bars fill the available width (the standalone
+// "name the project" screen); otherwise they are a fixed width, for use
+// inline next to a page title.
+templ wizardStepper(step int, wide bool) {
+	{{ barClass := "w-[120px] h-px bg-line mx-4" }}
+	{{ if wide {
+		barClass = "flex-1 h-px bg-line mx-4"
+	} }}
+	<div class="flex items-center">
+		@stepperItem(1, "Name", step)
+		<div class={ barClass }></div>
+		@stepperItem(2, "Photograph", step)
+		<div class={ barClass }></div>
+		@stepperItem(3, "Composition", step)
+	</div>
+}
+
+templ stepperItem(n int, label string, current int) {
+	if n < current {
+		<div class="flex items-center gap-2.5">
+			<span class="w-[26px] h-[26px] rounded-full bg-brass border border-brass flex items-center justify-center font-mono text-[11px] text-brass-ink">✓</span>
+			<span class="text-[12.5px] text-ink-faint">{ label }</span>
+		</div>
+	} else if n == current {
+		<div class="flex items-center gap-2.5">
+			<span class="w-[26px] h-[26px] rounded-full border border-brass text-brass flex items-center justify-center font-mono text-[11px]">{ strconv.Itoa(n) }</span>
+			<span class="text-[12.5px] text-ink">{ label }</span>
+		</div>
+	} else {
+		<div class="flex items-center gap-2.5">
+			<span class="w-[26px] h-[26px] rounded-full border border-line-strong text-ink-faint flex items-center justify-center font-mono text-[11px]">{ strconv.Itoa(n) }</span>
+			<span class="text-[12.5px] text-ink-faint">{ label }</span>
 		</div>
 	}
 }
 
-// ImageUploadDropzone renders a dropzone for image upload with circular crop
+// artUploadStep renders step 2 of the wizard: the dropzone plus tips,
+// matching Upload.dc.html. The upload behaviour itself lives in
+// ImageUploadDropzone / art-upload.ts and is untouched here.
+templ artUploadStep(art *pb.Art) {
+	@projectCrumb(art.GetTitle())
+	<div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 lg:gap-8 mt-3.5">
+		<h1 class="display text-[32px] sm:text-[36px] leading-[1.05] tracking-[-0.01em]">{ art.GetTitle() }</h1>
+		<div class="hidden lg:block">
+			@wizardStepper(2, false)
+		</div>
+		<p class="lg:hidden font-mono text-[11px] tracking-[0.14em] uppercase text-brass">Step 2 of 3 · Photograph</p>
+	</div>
+	<div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-10 items-start mt-[34px] pb-16">
+		@ImageUploadDropzone(extractUserID(art.GetName()), extractArtID(art.GetName()))
+		<aside class="card p-6">
+			<h4 class="kicker">Good source images</h4>
+			<div class="pt-3.5 pb-3.5 border-b border-line">
+				<h5 class="text-[13px] font-semibold">Strong light, few colours</h5>
+				<p class="hint mt-1.5">The solver works on brightness alone. A backlit face beats a busy interior.</p>
+			</div>
+			<div class="py-3.5 border-b border-line">
+				<h5 class="text-[13px] font-semibold">Subject near the centre</h5>
+				<p class="hint mt-1.5">Corners are cut away by the hoop. Leave a little room around the subject.</p>
+			</div>
+			<div class="pt-3.5">
+				<h5 class="text-[13px] font-semibold">Square-ish and sharp</h5>
+				<p class="hint mt-1.5">Anything under 1000 px will look soft once it is redrawn in thread.</p>
+			</div>
+		</aside>
+	</div>
+}
+
+// artOverview renders the project detail page once there is (or was being
+// processed) an image: the photograph disc, its details, and the
+// compositions timeline. Matches Art.dc.html.
+templ artOverview(art *pb.Art, compositions []*pb.Composition) {
+	{{ userID := extractUserID(art.GetName()) }}
+	{{ artID := extractArtID(art.GetName()) }}
+	@projectCrumb(art.GetTitle())
+	<div class="flex items-end justify-between gap-8 mt-3.5 pb-6 border-b border-line">
+		<div>
+			<h1 class="display text-[36px] leading-[1.05] tracking-[-0.01em]">{ art.GetTitle() }</h1>
+			<div class="flex items-center gap-3.5 mt-3.5">
+				@ArtStatusBadge(art.GetStatus())
+				if art.GetCreateTime() != nil {
+					<span class="font-mono text-xs text-ink-faint tabular">Created { art.GetCreateTime().AsTime().Format("2 Jan 2006") }</span>
+				}
+			</div>
+		</div>
+	</div>
+	<div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-10 items-start py-8 pb-[72px]">
+		<aside>
+			<div class="disc">
+				if art.GetImageUrl() != "" {
+					<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
+					@NailRing("")
+				} else if art.GetStatus() == pb.ArtStatus_ART_STATUS_PROCESSING {
+					<div class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+						@Spinner("w-6 h-6 text-brass")
+						<p class="text-xs text-ink-muted">Processing image</p>
+					</div>
+					<svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 1000" aria-hidden="true">
+						<circle cx="500" cy="500" r="492" fill="none" stroke="#26262A" stroke-width="7"></circle>
+					</svg>
+				} else {
+					<div class="absolute inset-0 flex flex-col items-center justify-center gap-2">
+						@Icon("image", "w-9 h-9 text-ink-faint")
+						<p class="hint">No image available</p>
+					</div>
+				}
+			</div>
+			<div class="card mt-[22px] px-5">
+				<div class="kv"><span class="kv-k">Status</span><span class="kv-v">{ artStatusLabel(art.GetStatus()) }</span></div>
+				if art.GetCreateTime() != nil {
+					<div class="kv"><span class="kv-k">Added</span><span class="kv-v">{ art.GetCreateTime().AsTime().Format("2 Jan 2006") }</span></div>
+				}
+				if art.GetUpdateTime() != nil {
+					<div class="kv"><span class="kv-k">Last updated</span><span class="kv-v">{ art.GetUpdateTime().AsTime().Format("2 Jan 2006") }</span></div>
+				}
+			</div>
+		</aside>
+		<section>
+			if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE {
+				@CompositionTimeline(userID, artID, compositions)
+			} else if art.GetStatus() == pb.ArtStatus_ART_STATUS_PROCESSING {
+				<div class="note">
+					@Icon("info", "w-[15px] h-[15px] mt-px")
+					<span>Compositions become available once the image finishes processing.</span>
+				</div>
+			} else if art.GetStatus() == pb.ArtStatus_ART_STATUS_FAILED {
+				<div class="note note-error">
+					@Icon("alert-circle", "w-[15px] h-[15px] mt-px")
+					<span>Image processing failed. Try creating the project again.</span>
+				</div>
+			}
+		</section>
+	</div>
+}
+
+// ImageUploadDropzone renders a dropzone for image upload with circular crop.
+// Every x-data/x-show/x-ref/id/@-binding below is read by
+// client/src/ts/art-upload.ts (createArtUpload) and must not change.
 templ ImageUploadDropzone(internalUserId, artId string) {
 	<div x-data={ "createArtUpload({ artId: '" + artId + "', internalUserId: '" + internalUserId + "' })" }>
 		<div
 			id="upload-dropzone"
-			class="border-2 border-dashed border-dark-400 rounded-lg p-8 text-center hover:border-primary-500 transition-colors duration-300 cursor-pointer"
+			class="border border-dashed border-line-strong rounded-[24px] p-6 sm:p-14 text-center hover:border-brass/60 transition-colors duration-300 cursor-pointer bg-surface"
 			@click="openPicker()"
 			@drop.prevent="handleDrop($event)"
 			@dragover.prevent="dragOver = true"
 			@dragleave.prevent="dragOver = false"
-			:class="{ 'border-primary-500 bg-primary-900/10': dragOver }"
+			:class="{ 'border-brass bg-brass/[0.06]': dragOver }"
 		>
-			<div x-show="!uploading && !uploaded && !error && !preparing && !cropping" class="space-y-4">
-				<div class="w-28 h-28 mx-auto rounded-full border-2 border-dashed border-dark-400 flex items-center justify-center">
-					@MaterialIcon("upload", "h-12 w-12 text-slate-400")
+			<div x-show="!uploading && !uploaded && !error && !preparing && !cropping" class="flex flex-col items-center">
+				<div class="relative w-[180px] h-[180px] sm:w-[230px] sm:h-[230px] rounded-full border border-dashed border-line-strong flex items-center justify-center">
+					@Icon("upload", "w-10 h-10 text-ink-muted")
+					@NailRing("opacity-45")
 				</div>
-				<h3 class="text-lg font-medium text-slate-200 mb-2">Upload Image</h3>
-				<p class="text-slate-400 mb-4">Thread art is circular. Next you'll frame and zoom your photo so it fits the hoop.</p>
+				<h3 class="text-[19px] font-semibold tracking-[-0.01em] mt-8">Drop a photograph here</h3>
+				<p class="hint mt-2.5 max-w-[380px] text-[13px]">Only what falls inside the circle is used, so you will frame the image in the next step. JPEG or PNG, 1000 × 1000 px or larger.</p>
 				<input
 					type="file"
 					id="file-input"
@@ -164,62 +255,47 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 				/>
 				<button
 					type="button"
-					class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300"
+					class="btn btn-primary mt-6"
 					@click.stop="openPicker()"
 				>
-					Select Image
+					Select an image
 				</button>
 			</div>
-			<div x-show="preparing" class="space-y-4" x-cloak>
-				<div class="flex justify-center">
-					@spinner.Spinner(spinner.Props{
-						Size:  spinner.SizeLg,
-						Color: "text-primary-500",
-					})
-				</div>
-				<p class="text-slate-300">Preparing image...</p>
+			<div x-show="preparing" class="flex flex-col items-center gap-4" x-cloak>
+				@Spinner("w-7 h-7 text-brass")
+				<p class="text-ink-muted text-sm">Preparing image…</p>
 			</div>
-			<div x-show="uploading && !cropping" class="space-y-4" x-cloak>
-				<div class="flex justify-center">
-					@spinner.Spinner(spinner.Props{
-						Size:  spinner.SizeLg,
-						Color: "text-primary-500",
-					})
+			<div x-show="uploading && !cropping" class="flex flex-col items-center gap-4" x-cloak>
+				@Spinner("w-7 h-7 text-brass")
+				<p class="text-ink-muted text-sm" x-text="uploadProgress < 100 ? 'Uploading image...' : 'Processing image...'"></p>
+				<div class="w-full max-w-xs bg-surface-high rounded-full h-[3px]">
+					<div class="bg-brass h-[3px] rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
 				</div>
-				<p class="text-slate-300" x-text="uploadProgress < 100 ? 'Uploading image...' : 'Processing image...'"></p>
-				<div class="w-full bg-dark-300 rounded-full h-2">
-					<div class="bg-primary-500 h-2 rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
-				</div>
-				<p class="text-sm text-slate-400" x-text="`${uploadProgress}% complete`"></p>
+				<p class="text-xs text-ink-faint font-mono tabular" x-text="`${uploadProgress}% complete`"></p>
 			</div>
-			<div x-show="uploaded" class="space-y-4" x-cloak>
-				@MaterialIcon("check_circle", "h-8 w-8 text-green-500 mx-auto")
-				<p class="text-green-400">Image uploaded successfully!</p>
-				<p class="text-sm text-slate-400">Processing your image and refreshing the page...</p>
-				<div class="flex justify-center">
-					@spinner.Spinner(spinner.Props{
-						Size:  spinner.SizeSm,
-						Color: "text-green-500",
-					})
-				</div>
+			<div x-show="uploaded" class="flex flex-col items-center gap-3" x-cloak>
+				@Icon("check-circle", "w-8 h-8 text-ok")
+				<p class="text-ok text-sm">Image uploaded successfully.</p>
+				<p class="hint">Processing your image and refreshing the page…</p>
+				@Spinner("w-4 h-4 text-ok")
 			</div>
-			<div x-show="error" class="space-y-4" x-cloak>
-				@MaterialIcon("error", "h-8 w-8 text-red-500 mx-auto")
-				<p class="text-red-400" x-text="errorMessage"></p>
-				<div class="flex space-x-2 justify-center">
+			<div x-show="error" class="flex flex-col items-center gap-4" x-cloak>
+				@Icon("alert-circle", "w-8 h-8 text-danger")
+				<p class="text-danger text-sm" x-text="errorMessage"></p>
+				<div class="flex gap-2.5 justify-center">
 					<button
 						type="button"
-						class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors duration-300"
+						class="btn btn-danger btn-sm"
 						@click.stop="resetUpload()"
 					>
-						Try Again
+						Try again
 					</button>
 					<button
 						type="button"
-						class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors duration-300"
+						class="btn btn-ghost btn-sm"
 						@click.stop="refreshPage()"
 					>
-						Refresh Page
+						Refresh page
 					</button>
 				</div>
 			</div>
@@ -234,25 +310,25 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 			aria-modal="true"
 			aria-label="Frame your image"
 		>
-			<div class="w-full max-w-lg bg-dark-200 rounded-2xl border border-dark-400/40 shadow-2xl shadow-black/40 overflow-hidden" @click.stop>
+			<div class="w-full max-w-lg bg-surface rounded-[24px] border border-line-strong shadow-2xl shadow-black/40 overflow-hidden" @click.stop>
 				<div class="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
 					<div>
-						<h3 class="text-lg font-semibold text-slate-100">Frame your image</h3>
-						<p class="text-sm text-slate-400 mt-1">Drag to pan, pinch or scroll to zoom. Only the circle is used for your thread art.</p>
+						<h3 class="text-[17px] font-semibold tracking-[-0.01em]">Frame your photograph</h3>
+						<p class="hint mt-1.5">Drag to pan, pinch or scroll to zoom. Only what sits inside the circle is used.</p>
 					</div>
 					<button
 						type="button"
-						class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-300/80 transition-colors"
+						class="btn btn-ghost btn-sm w-8 h-8 p-0 shrink-0"
 						@click="cancelCrop()"
 						:disabled="uploading"
 						aria-label="Close"
 					>
-						@MaterialIcon("close", "h-5 w-5")
+						@Icon("close", "w-[14px] h-[14px]")
 					</button>
 				</div>
 				<div class="px-5">
 					<div
-						class="relative mx-auto w-full aspect-square overflow-hidden bg-dark-500 select-none touch-none overscroll-none"
+						class="relative mx-auto w-full aspect-square rounded-[14px] overflow-hidden bg-ground select-none touch-none overscroll-none"
 						:class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
 						x-ref="viewport"
 						@pointerdown="onPointerDown($event)"
@@ -276,55 +352,55 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 									<circle cx="50" cy="50" r="50" fill="black"></circle>
 								</mask>
 							</defs>
-							<rect width="100" height="100" fill="rgba(17, 24, 39, 0.72)" mask="url(#thread-art-crop-mask)"></rect>
-							<circle cx="50" cy="50" r="49.6" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="0.45"></circle>
-							<circle cx="50" cy="50" r="49.6" fill="none" stroke="rgba(90,127,255,0.45)" stroke-width="0.2"></circle>
+							<rect width="100" height="100" fill="rgba(10, 10, 11, 0.74)" mask="url(#thread-art-crop-mask)"></rect>
+							<circle cx="50" cy="50" r="49.6" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.4"></circle>
+							<circle cx="50" cy="50" r="49.6" fill="none" stroke="#C79A4B" stroke-width="1.6" stroke-dasharray=".35 2.6" stroke-linecap="round" opacity=".8"></circle>
 						</svg>
 						<div
 							x-show="uploading"
-							class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-dark-100/70 backdrop-blur-[2px]"
+							class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-ground/70 backdrop-blur-[2px]"
 						>
-							@spinner.Spinner(spinner.Props{
-								Size:  spinner.SizeLg,
-								Color: "text-primary-500",
-							})
-							<p class="text-slate-200 text-sm">Uploading cropped image...</p>
-							<div class="w-2/3 bg-dark-300 rounded-full h-1.5">
-								<div class="bg-primary-500 h-1.5 rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
+							@Spinner("w-7 h-7 text-brass")
+							<p class="text-ink text-sm">Uploading cropped image…</p>
+							<div class="w-2/3 bg-surface-high rounded-full h-[3px]">
+								<div class="bg-brass h-[3px] rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
 							</div>
 						</div>
 					</div>
 				</div>
 				<div class="px-5 pt-4 pb-5 space-y-4">
-					<p x-show="cropError" x-cloak class="text-sm text-red-400" x-text="cropError"></p>
-					<div class="flex items-center gap-3">
-						@MaterialIcon("zoom_out", "text-slate-400")
+					<p x-show="cropError" x-cloak class="msg-error" x-text="cropError"></p>
+					<div class="flex items-center gap-3.5">
+						@Icon("zoom-out", "text-ink-faint")
 						<input
 							type="range"
 							min="1"
 							max="4"
 							step="0.01"
-							class="w-full h-2 bg-dark-300 rounded-lg appearance-none cursor-pointer accent-primary-500"
+							class="slider"
 							:value="zoomLevel"
 							@input="onZoomInput($event)"
 							:disabled="uploading"
 							aria-label="Zoom"
 						/>
-						@MaterialIcon("zoom_in", "text-slate-400")
+						@Icon("zoom-in", "text-ink-faint")
 					</div>
 					<div class="flex items-center justify-between gap-3">
-						<button
-							type="button"
-							class="px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-dark-300/80 transition-colors duration-300"
-							@click="fitToCover()"
-							:disabled="uploading"
-						>
-							Reset
-						</button>
-						<div class="flex gap-2">
+						<div class="flex items-center gap-3">
 							<button
 								type="button"
-								class="px-4 py-2 rounded-lg border border-dark-400 text-slate-300 hover:bg-dark-300/80 transition-colors duration-300"
+								class="btn btn-ghost btn-sm"
+								@click="fitToCover()"
+								:disabled="uploading"
+							>
+								Reset
+							</button>
+							<span class="font-mono text-[10.5px] text-ink-faint border border-line rounded px-1.5 py-0.5 hidden sm:inline">double-click to fit</span>
+						</div>
+						<div class="flex gap-2.5">
+							<button
+								type="button"
+								class="btn btn-sm"
 								@click="cancelCrop()"
 								:disabled="uploading"
 							>
@@ -332,7 +408,7 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 							</button>
 							<button
 								type="button"
-								class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300 disabled:opacity-60"
+								class="btn btn-primary btn-sm"
 								@click="confirmCrop()"
 								:disabled="uploading"
 							>
@@ -346,17 +422,31 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 	</div>
 }
 
-// NewArtPage renders the page to create a new art
+// NewArtPage renders step 1 of the wizard: naming the project.
 // data: PageData containing user info and other template data
 // formData: Form data with validation errors and previous input values
 templ NewArtPage(data *PageData, formData *services.ArtFormData) {
 	@Layout(data) {
-		<div class="max-w-4xl mx-auto px-4 py-8">
-			<h1 class="text-3xl font-bold text-slate-200 mb-6">Create New Art</h1>
-			<div class="bg-dark-200 rounded-lg shadow-lg p-6 border border-dark-400/30">
-				@NewArtForm(formData)
+		@Shell() {
+			<div class="max-w-[560px] mx-auto pb-16">
+				@projectCrumb("New project")
+				<div class="mt-[38px] mb-[34px]">
+					@wizardStepper(1, true)
+				</div>
+				<h1 class="display text-[34px] leading-[1.1] tracking-[-0.01em]">Name the project</h1>
+				<p class="hint mt-3 max-w-[440px] text-[13.5px]">A project holds one photograph and every composition you render from it. You can rename it later.</p>
+				<div class="card mt-7 p-[26px]">
+					@NewArtForm(formData)
+				</div>
+				<div class="flex gap-3.5 mt-[22px] px-5 py-[18px] border border-line rounded-2xl bg-surface">
+					@Icon("alert-circle", "w-[18px] h-[18px] text-brass shrink-0 mt-px")
+					<div>
+						<div class="text-[13px] font-medium">Next: the photograph</div>
+						<p class="hint mt-[5px]">Thread art is round. After the title you will crop your image inside the hoop, and only what falls inside the circle is used.</p>
+					</div>
+				</div>
 			</div>
-		</div>
+		}
 	}
 }
 
@@ -364,48 +454,44 @@ templ NewArtPage(data *PageData, formData *services.ArtFormData) {
 // formData: Form data containing values and validation errors
 templ NewArtForm(formData *services.ArtFormData) {
 	<form
+		method="POST"
+		action="/dashboard/arts/new"
 		hx-post="/dashboard/arts/new"
 		hx-swap="outerHTML"
 		hx-indicator="#submit-spinner"
-		class="space-y-6 w-full"
 	>
+		@CSRFInput()
 		@ErrorAlert(formData.Errors["_form"])
-		@form.Item() {
-			@form.Label(form.LabelProps{
-				For: "title",
-			}) {
-				Title
-			}
-			@input.Input(input.Props{
-				ID:          "title",
-				Type:        input.TypeText,
-				Name:        "title",
-				Placeholder: "Enter a title for your art",
-				Value:       formData.Title,
-				HasError:    HasFieldErr(formData.Errors, "art.title"),
-				Required:    true,
-			})
-			@form.Description() {
-				Enter a descriptive title for your thread art project
-			}
+		{{ titleClass := "input" }}
+		{{ if HasFieldErr(formData.Errors, "art.title") {
+			titleClass = "input input-error"
+		} }}
+		<div class="field">
+			<label class="label" for="title">Title</label>
+			<input
+				id="title"
+				type="text"
+				name="title"
+				placeholder="Enter a title for your art"
+				value={ formData.Title }
+				required
+				class={ titleClass }
+			/>
+			<p class="hint">Something you will recognise in a list of thirty.</p>
 			for _, err := range FieldMsgs(formData.Errors, "art.title") {
-				@form.Message(form.MessageProps{
-					Variant: form.MessageVariantError,
-				}) {
-					{ err }
-				}
+				<p class="msg-error">{ err }</p>
 			}
-		}
-		<div class="flex justify-end mt-6">
-			@button.Button(button.Props{
-				Type:    "submit",
-				Variant: button.VariantDefault,
-			}) {
-				<span id="submit-spinner" class="htmx-indicator -ml-1 mr-3">
-					@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
+		</div>
+		<hr class="border-line my-6"/>
+		<div class="flex justify-between items-center">
+			<a href="/dashboard" class="btn btn-ghost">Cancel</a>
+			<button type="submit" class="btn btn-primary">
+				<span id="submit-spinner" class="htmx-indicator">
+					@Icon("spinner", "animate-spin w-4 h-4")
 				</span>
-				Create Art
-			}
+				Continue
+				@Icon("arrow-right", "w-[13px] h-[13px]")
+			</button>
 		</div>
 	</form>
 }
@@ -414,28 +500,14 @@ templ NewArtForm(formData *services.ArtFormData) {
 templ ArtStatusBadge(status pb.ArtStatus) {
 	switch status {
 		case pb.ArtStatus_ART_STATUS_PENDING_IMAGE:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-yellow-900/30 text-yellow-400 text-sm">
-				@MaterialIcon("pending_actions", "")
-				Pending
-			</div>
+			<span class="badge"><span class="badge-dot"></span>Draft</span>
 		case pb.ArtStatus_ART_STATUS_PROCESSING:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-sm">
-				@MaterialIcon("refresh", "animate-spin -ml-1 mr-3 h-5 w-5 text-white")
-				Processing
-			</div>
+			<span class="badge badge-run"><span class="badge-dot"></span>Rendering</span>
 		case pb.ArtStatus_ART_STATUS_COMPLETE:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-green-900/30 text-green-400 text-sm">
-				@MaterialIcon("check_circle", "")
-				<span>Complete</span>
-			</div>
+			<span class="badge badge-ok"><span class="badge-dot"></span>Complete</span>
 		case pb.ArtStatus_ART_STATUS_FAILED:
-			<div class="flex items-center gap-2 px-2 py-1 rounded bg-red-900/30 text-red-400 text-sm">
-				@MaterialIcon("error", "")
-				<span>Failed</span>
-			</div>
+			<span class="badge badge-error"><span class="badge-dot"></span>Failed</span>
 		default:
-			<div class="px-2 py-1 rounded bg-gray-900/30 text-gray-400 text-sm">
-				<span>Unknown</span>
-			</div>
+			<span class="badge"><span class="badge-dot"></span>Unknown</span>
 	}
 }

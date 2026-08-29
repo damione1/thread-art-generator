@@ -2,301 +2,305 @@ package pages
 
 import "github.com/Damione1/thread-art-generator/client/internal/templates"
 
-templ LoginPage(data *templates.PageData) {
-	@templates.Layout(data) {
-		<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-			<div class="max-w-md w-full space-y-8">
-				<div>
-					<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-						Sign in to your account
-					</h2>
-					<p class="mt-2 text-center text-sm text-gray-600">
-						Or
-						<a href="/signup" class="font-medium text-indigo-600 hover:text-indigo-500">
-							create a new account
-						</a>
-					</p>
-				</div>
-				<form id="email-signin-form" class="mt-8 space-y-6">
-					<div class="rounded-md shadow-sm -space-y-px">
-						<div>
-							<label for="email-address" class="sr-only">Email address</label>
-							<input
-								id="email-address"
-								name="email"
-								type="email"
-								autocomplete="email"
-								required
-								class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-								placeholder="Email address"
-							/>
-						</div>
-						<div>
-							<label for="password" class="sr-only">Password</label>
-							<input
-								id="password"
-								name="password"
-								type="password"
-								autocomplete="current-password"
-								required
-								class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-								placeholder="Password"
-							/>
-						</div>
-					</div>
-					<button
-						type="submit"
-						class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-					>
-						Sign in
-					</button>
-					<p class="text-sm text-center">
-						<a href="/forgot-password" class="font-medium text-indigo-600 hover:text-indigo-500">
-							Forgot your password?
-						</a>
-					</p>
-				</form>
-				<div id="auth-error" class="hidden mt-4 p-4 border border-red-300 rounded-md bg-red-50">
-					<p id="auth-error-message" class="text-sm text-red-700"></p>
-				</div>
+// authSplit renders the shared split-screen shell used by every
+// authentication page: a left panel carrying the thread artwork and a line
+// of copy, and a right panel that centers the page's own form content.
+// Below lg the left panel is dropped and the form is centered on its own.
+templ authSplit(data *templates.PageData) {
+	<div class="min-h-screen lg:grid lg:grid-cols-2">
+		<div class="hidden lg:flex relative flex-col justify-between overflow-hidden border-r border-line p-11">
+			<div
+				class="disc absolute -right-[190px] top-1/2 w-[760px] h-[760px] -translate-y-1/2"
+				style="background:radial-gradient(circle at 50% 50%,#131316 0%,#0A0A0B 82%)"
+			>
+				<img src="/static/images/thread-crescent.svg" alt=""/>
+				@templates.NailRing("")
+			</div>
+			<a href="/" class="relative" aria-label="threadart home">
+				@templates.Logo(true)
+			</a>
+			<div class="relative">
+				<p class="display text-[26px] leading-[1.35] max-w-[330px]">
+					A single thread, wound between four hundred nails, holding a photograph.
+				</p>
+				<p class="hint mt-[18px] max-w-[330px]">Eclipse study · 450 nails · 2 118 m of cotton thread</p>
 			</div>
 		</div>
+		<div class="flex min-h-screen items-center justify-center px-6 py-11 sm:px-10 lg:min-h-0">
+			<div class="w-full max-w-[352px]">
+				{ children... }
+			</div>
+		</div>
+	</div>
+}
+
+templ LoginPage(data *templates.PageData) {
+	@templates.BareLayout(data) {
+		@authSplit(data) {
+			<h1 class="display text-[32px]">Welcome back</h1>
+			<p class="hint mt-2.5 text-[13.5px]">Sign in to your projects and compositions.</p>
+			<form id="email-signin-form" method="POST" action="/auth/login" class="flex flex-col gap-[18px] mt-8">
+				@templates.CSRFInput()
+				<div class="field">
+					<label for="email-address" class="label">Email</label>
+					<input
+						id="email-address"
+						name="email"
+						type="email"
+						autocomplete="email"
+						required
+						class="input"
+						placeholder="you@example.com"
+					/>
+				</div>
+				<div class="field">
+					<div class="flex items-baseline justify-between">
+						<label for="password" class="label">Password</label>
+						<a href="/forgot-password" class="text-brass text-[12.5px]">Forgot your password?</a>
+					</div>
+					<input
+						id="password"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						required
+						class="input"
+					/>
+				</div>
+				<button type="submit" class="btn btn-primary btn-block h-[44px] mt-1">
+					Sign in
+				</button>
+			</form>
+			<div class="flex items-center gap-3.5 my-[26px] text-ink-faint text-xs">
+				<span class="flex-1 h-px bg-line"></span>
+				or
+				<span class="flex-1 h-px bg-line"></span>
+			</div>
+			<p class="hint text-center text-[13px]">
+				New here? <a href="/signup" class="text-brass">Create an account</a>
+			</p>
+			<p class="hint text-center text-[11.5px] mt-11">
+				By signing in you agree to the terms and the privacy notice.
+			</p>
+			if data.Meta["error"] != "" {
+				<div class="note note-error mt-4">{ data.Meta["error"] }</div>
+			}
+			if data.Meta["ok"] != "" {
+				<div class="note note-ok mt-4">{ data.Meta["ok"] }</div>
+			}
+			<div id="auth-error" class="hidden note note-error mt-4">
+				<p id="auth-error-message"></p>
+			</div>
+		}
 	}
 }
 
 templ SignupPage(data *templates.PageData) {
-	@templates.Layout(data) {
-		<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-			<div class="max-w-md w-full space-y-8">
-				<div>
-					<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-						Create your account
-					</h2>
-					<p class="mt-2 text-center text-sm text-gray-600">
-						Or
-						<a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
-							sign in to your existing account
-						</a>
-					</p>
-				</div>
-				<form id="email-signup-form" class="mt-8 space-y-6">
-					<div class="rounded-md shadow-sm -space-y-px">
-						<div>
-							<label for="signup-first-name" class="sr-only">First name</label>
-							<input
-								id="signup-first-name"
-								name="first_name"
-								type="text"
-								autocomplete="given-name"
-								required
-								class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-								placeholder="First name"
-							/>
-						</div>
-						<div>
-							<label for="signup-last-name" class="sr-only">Last name</label>
-							<input
-								id="signup-last-name"
-								name="last_name"
-								type="text"
-								autocomplete="family-name"
-								class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-								placeholder="Last name"
-							/>
-						</div>
-						<div>
-							<label for="signup-email" class="sr-only">Email address</label>
-							<input
-								id="signup-email"
-								name="email"
-								type="email"
-								autocomplete="email"
-								required
-								class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-								placeholder="Email address"
-							/>
-						</div>
-						<div>
-							<label for="signup-password" class="sr-only">Password</label>
-							<input
-								id="signup-password"
-								name="password"
-								type="password"
-								autocomplete="new-password"
-								required
-								minlength="8"
-								class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-								placeholder="Password (min. 8 characters)"
-							/>
-						</div>
-						<div>
-							<label for="signup-confirm-password" class="sr-only">Confirm Password</label>
-							<input
-								id="signup-confirm-password"
-								name="confirmPassword"
-								type="password"
-								autocomplete="new-password"
-								required
-								minlength="8"
-								class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-								placeholder="Confirm password"
-							/>
-						</div>
+	@templates.BareLayout(data) {
+		@authSplit(data) {
+			<h1 class="display text-[32px]">Create your account</h1>
+			<p class="hint mt-2.5 text-[13.5px]">One account holds your projects, your compositions and your exports.</p>
+			<form id="email-signup-form" method="POST" action="/auth/signup" class="flex flex-col gap-[18px] mt-8">
+				@templates.CSRFInput()
+				<div class="grid grid-cols-2 gap-3.5">
+					<div class="field">
+						<label for="signup-first-name" class="label">First name</label>
+						<input
+							id="signup-first-name"
+							name="first_name"
+							type="text"
+							autocomplete="given-name"
+							required
+							class="input"
+						/>
 					</div>
-					<button
-						type="submit"
-						class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-					>
-						Create account
-					</button>
-				</form>
-				<div id="auth-error" class="hidden mt-4 p-4 border border-red-300 rounded-md bg-red-50">
-					<p id="auth-error-message" class="text-sm text-red-700"></p>
+					<div class="field">
+						<label for="signup-last-name" class="label">Last name</label>
+						<input
+							id="signup-last-name"
+							name="last_name"
+							type="text"
+							autocomplete="family-name"
+							class="input"
+							placeholder="Optional"
+						/>
+					</div>
 				</div>
+				<div class="field">
+					<label for="signup-email" class="label">Email</label>
+					<input
+						id="signup-email"
+						name="email"
+						type="email"
+						autocomplete="email"
+						required
+						class="input"
+						placeholder="you@example.com"
+					/>
+				</div>
+				<div class="field">
+					<label for="signup-password" class="label">Password</label>
+					<input
+						id="signup-password"
+						name="password"
+						type="password"
+						autocomplete="new-password"
+						required
+						minlength="8"
+						class="input"
+					/>
+					<p class="hint">At least 8 characters.</p>
+				</div>
+				<div class="field">
+					<label for="signup-confirm-password" class="label">Confirm password</label>
+					<input
+						id="signup-confirm-password"
+						name="confirmPassword"
+						type="password"
+						autocomplete="new-password"
+						required
+						minlength="8"
+						class="input"
+					/>
+				</div>
+				<button type="submit" class="btn btn-primary btn-block h-[44px] mt-1">
+					Create account
+				</button>
+			</form>
+			<p class="hint text-center text-[13px] mt-4">
+				Already have one? <a href="/login" class="text-brass">Sign in</a>
+			</p>
+			<div id="auth-error" class="hidden note note-error mt-4">
+				<p id="auth-error-message"></p>
 			</div>
-		</div>
+		}
 	}
 }
 
 templ ForgotPasswordPage(data *templates.PageData) {
-	@templates.Layout(data) {
-		<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-			<div class="max-w-md w-full space-y-8">
-				<div>
-					<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-						Reset your password
-					</h2>
-					<p class="mt-2 text-center text-sm text-gray-600">
-						We'll email you a reset link if that account exists.
-					</p>
+	@templates.BareLayout(data) {
+		@authSplit(data) {
+			<h1 class="display text-[32px]">Reset your password</h1>
+			<p class="hint mt-2.5 text-[13.5px]">We will email a link if an account exists for that address.</p>
+			if data.Meta["sent"] == "1" {
+				<div class="note note-ok mt-5">
+					If that email exists, we sent a reset link. In local dev, open Mailhog at localhost:8025.
 				</div>
-				if data.Meta["sent"] == "1" {
-					<div class="p-4 border border-green-300 rounded-md bg-green-50">
-						<p class="text-sm text-green-700">If that email exists, we sent a reset link. In local dev, open Mailhog at localhost:8025.</p>
-					</div>
-				}
-				<form id="forgot-password-form" method="POST" action="/auth/forgot-password" class="mt-8 space-y-6">
-					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+			}
+			<form id="forgot-password-form" method="POST" action="/auth/forgot-password" class="flex flex-col gap-[18px] mt-8">
+				@templates.CSRFInput()
+				<div class="field">
+					<label for="forgot-email" class="label">Email</label>
 					<input
 						id="forgot-email"
 						name="email"
 						type="email"
 						autocomplete="email"
 						required
-						class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-						placeholder="Email address"
+						class="input"
+						placeholder="you@example.com"
 					/>
-					<button
-						type="submit"
-						class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-					>
-						Send reset link
-					</button>
-				</form>
-				<div id="auth-error" class="hidden mt-4 p-4 border border-red-300 rounded-md bg-red-50">
-					<p id="auth-error-message" class="text-sm text-red-700"></p>
 				</div>
-				<div id="auth-success" class="hidden mt-4 p-4 border border-green-300 rounded-md bg-green-50">
-					<p id="auth-success-message" class="text-sm text-green-700"></p>
-				</div>
-				<p class="text-sm text-center">
-					<a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">Back to sign in</a>
-				</p>
+				<button type="submit" class="btn btn-primary btn-block h-[44px]">
+					Send the reset link
+				</button>
+			</form>
+			<div id="auth-error" class="hidden note note-error mt-4">
+				<p id="auth-error-message"></p>
 			</div>
-		</div>
+			<div id="auth-success" class="hidden note note-ok mt-4">
+				<p id="auth-success-message"></p>
+			</div>
+			<p class="hint text-center text-[13px] mt-4">
+				<a href="/login" class="text-brass">Back to sign in</a>
+			</p>
+		}
 	}
 }
 
 templ ResetPasswordPage(data *templates.PageData) {
-	@templates.Layout(data) {
-		<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-			<div class="max-w-md w-full space-y-8">
-				<div>
-					<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-						Choose a new password
-					</h2>
+	@templates.BareLayout(data) {
+		@authSplit(data) {
+			<h1 class="display text-[32px]">Choose a new password</h1>
+			<p class="hint mt-2.5 text-[13.5px]">You followed a reset link, so pick something you have not used here before.</p>
+			if data.Meta["error"] != "" {
+				<div class="note note-error mt-5">{ data.Meta["error"] }</div>
+			}
+			<form id="reset-password-form" method="POST" action="/reset-password" class="flex flex-col gap-[18px] mt-8">
+				@templates.CSRFInput()
+				<input type="hidden" name="token" value={ data.Meta["token"] }/>
+				<div class="field">
+					<label for="reset-password" class="label">New password</label>
+					<input
+						id="reset-password"
+						name="password"
+						type="password"
+						autocomplete="new-password"
+						required
+						minlength="8"
+						class="input"
+					/>
+					<p class="hint">At least 8 characters.</p>
 				</div>
-				if data.Meta["error"] != "" {
-					<div class="p-4 border border-red-300 rounded-md bg-red-50">
-						<p class="text-sm text-red-700">{ data.Meta["error"] }</p>
-					</div>
-				}
-				<form id="reset-password-form" method="POST" class="mt-8 space-y-6">
-					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
-					<input type="hidden" name="token" value={ data.Meta["token"] }/>
-					<div class="rounded-md shadow-sm -space-y-px">
-						<input
-							id="reset-password"
-							name="password"
-							type="password"
-							autocomplete="new-password"
-							required
-							minlength="8"
-							class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-							placeholder="New password (min. 8 characters)"
-						/>
-						<input
-							id="reset-confirm-password"
-							name="confirm_password"
-							type="password"
-							autocomplete="new-password"
-							required
-							minlength="8"
-							class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-							placeholder="Confirm password"
-						/>
-					</div>
-					<button
-						type="submit"
-						class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-					>
-						Update password
-					</button>
-				</form>
-				<div id="auth-error" class="hidden mt-4 p-4 border border-red-300 rounded-md bg-red-50">
-					<p id="auth-error-message" class="text-sm text-red-700"></p>
+				<div class="field">
+					<label for="reset-confirm-password" class="label">Confirm new password</label>
+					<input
+						id="reset-confirm-password"
+						name="confirm_password"
+						type="password"
+						autocomplete="new-password"
+						required
+						minlength="8"
+						class="input"
+					/>
 				</div>
+				<button type="submit" class="btn btn-primary btn-block h-[44px]">
+					Update password
+				</button>
+			</form>
+			<div id="auth-error" class="hidden note note-error mt-4">
+				<p id="auth-error-message"></p>
 			</div>
-		</div>
+		}
 	}
 }
 
 templ CheckEmailPage(data *templates.PageData) {
-	@templates.Layout(data) {
-		<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-			<div class="max-w-md w-full space-y-8 text-center">
-				<h2 class="mt-6 text-3xl font-extrabold text-gray-900">Check your email</h2>
-				<p class="text-sm text-gray-600">
-					We sent a confirmation link. Open it to activate your account.
-				</p>
-				<p class="text-sm text-gray-500">In local dev, open Mailhog at localhost:8025.</p>
-				<form id="resend-verification-form" method="POST" action="/auth/resend-verification" class="space-y-4 text-left">
-					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
-					<input
-						name="email"
-						type="email"
-						autocomplete="email"
-						required
-						class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-						placeholder="Email address"
-					/>
-					<button
-						type="submit"
-						class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-					>
-						Resend confirmation
-					</button>
-				</form>
-				<div id="auth-error" class="hidden mt-4 p-4 border border-red-300 rounded-md bg-red-50">
-					<p id="auth-error-message" class="text-sm text-red-700"></p>
+	@templates.BareLayout(data) {
+		@authSplit(data) {
+			<div class="flex flex-col items-center text-center">
+				<div class="w-[76px] h-[76px] rounded-full border border-dashed border-line-strong flex items-center justify-center">
+					@templates.Icon("mail", "w-[26px] h-[26px] text-brass")
 				</div>
-				<div id="auth-success" class="hidden mt-4 p-4 border border-green-300 rounded-md bg-green-50">
-					<p id="auth-success-message" class="text-sm text-green-700"></p>
-				</div>
-				<p class="text-sm">
-					<a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">Back to sign in</a>
-				</p>
+				<h1 class="display text-[32px] mt-6">Check your email</h1>
+				<p class="hint mt-2.5 text-[13.5px]">We sent a confirmation link. Open it to activate your account.</p>
+				<p class="hint text-[13.5px]">In local dev, open Mailhog at localhost:8025.</p>
 			</div>
-		</div>
+			<div class="note mt-6">Nothing after a few minutes? Look in spam, or send it again below.</div>
+			if data.Meta["sent"] == "1" {
+				<div class="note note-ok mt-4">If that email exists, we sent another confirmation link.</div>
+			}
+			<form id="resend-verification-form" method="POST" action="/auth/resend-verification" class="flex gap-2.5 mt-4">
+				@templates.CSRFInput()
+				<input
+					name="email"
+					type="email"
+					autocomplete="email"
+					required
+					class="input flex-1"
+					placeholder="you@example.com"
+				/>
+				<button type="submit" class="btn">Resend</button>
+			</form>
+			<div id="auth-error" class="hidden note note-error mt-4">
+				<p id="auth-error-message"></p>
+			</div>
+			<div id="auth-success" class="hidden note note-ok mt-4">
+				<p id="auth-success-message"></p>
+			</div>
+			<p class="hint text-center text-[13px] mt-4">
+				<a href="/login" class="text-brass">Back to sign in</a>
+			</p>
+		}
 	}
 }

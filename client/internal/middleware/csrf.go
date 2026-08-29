@@ -87,7 +87,15 @@ func originAllowed(r *http.Request, allowedOrigin string) bool {
 	if raw := r.Header.Get("Referer"); raw != "" {
 		return hostIn(raw, hosts)
 	}
-	return false
+	// Referrer-Policy: no-referrer strips Referer. Some clients also omit
+	// Origin on same-origin form POSTs. Sec-Fetch-Site still distinguishes
+	// cross-site; if it is absent the CSRF token is the remaining check.
+	switch r.Header.Get("Sec-Fetch-Site") {
+	case "cross-site":
+		return false
+	default:
+		return true
+	}
 }
 
 func allowedHosts(allowedOrigin, reqHost string) map[string]struct{} {

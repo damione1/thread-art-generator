@@ -13,6 +13,11 @@ web/coverage
 # web
 public/
 
+# design canvas: mockups, the thread-art generator and its scratch renders.
+# The approved artboards live in the published Claude Design canvas; the
+# committed source assets are under client/assets/.
+.design/
+
 # production
 web/build
 
@@ -54,3 +59,4 @@ plan.md
 # Tailwind compiled CSS
 client/public/css/tailwind.css
 
+.design/

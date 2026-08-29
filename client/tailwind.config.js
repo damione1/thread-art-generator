@@ -9,46 +9,48 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: "#f0f7ff",
-          100: "#e0f0ff",
-          200: "#c7e2ff",
-          300: "#a0cfff",
-          400: "#73b5fe",
-          500: "#5a7fff",
-          600: "#3e5df7",
-          700: "#3346e8",
-          800: "#2b3bcc",
-          900: "#283aa1",
-          950: "#1c2566",
+        ground: "#0A0A0B",
+        surface: {
+          DEFAULT: "#111113",
+          raised: "#17171A",
+          high: "#1D1D21",
+          sunken: "#0C0C0E",
         },
-        accent: {
-          purple: "#9333ea",
+        line: {
+          DEFAULT: "#232327",
+          strong: "#33333A",
         },
-        dark: {
-          100: "#111827",
-          200: "#1f2937",
-          300: "#374151",
-          400: "#4b5563",
-          500: "#6b7280",
+        ink: {
+          DEFAULT: "#F4F4F5",
+          muted: "#A2A2AA",
+          faint: "#6B6B74",
         },
+        brass: {
+          DEFAULT: "#C79A4B",
+          hover: "#E0B463",
+          ink: "#17130A",
+        },
+        thread: "#EDEDEE",
+        ok: "#7FB98A",
+        danger: "#D4756E",
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ['"Instrument Sans"', '"Helvetica Neue"', "Arial", "sans-serif"],
+        serif: ['"Instrument Serif"', '"Iowan Old Style"', '"Times New Roman"', "serif"],
+        mono: ['"JetBrains Mono"', "ui-monospace", '"SF Mono"', "Menlo", "monospace"],
       },
-      animation: {
-        "slow-pulse": "slow-pulse 8s ease-in-out infinite",
-        "spin-slow": "spin-slow 12s linear infinite",
+      borderRadius: {
+        card: "20px",
+        field: "10px",
       },
       keyframes: {
-        "slow-pulse": {
-          "0%, 100%": { opacity: "0.1", transform: "scale(1)" },
-          "50%": { opacity: "0.2", transform: "scale(1.05)" },
+        "fade-in": {
+          from: { opacity: "0", transform: "translateY(6px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
         },
-        "spin-slow": {
-          from: { transform: "rotate(0deg)" },
-          to: { transform: "rotate(360deg)" },
-        },
+      },
+      animation: {
+        "fade-in": "fade-in .25s ease-out both",
       },
     },
   },

@@ -134,3 +134,14 @@ func TestLogoutRejectsGET(t *testing.T) {
 	h.Logout(rec, httptest.NewRequest(http.MethodGet, "/auth/logout", nil))
 	require.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 }
+
+func TestLogoutRedirectsBrowser(t *testing.T) {
+	sm := auth.NewInMemorySessionManager()
+	h := NewPasswordAuthHandler(&fakeIdentities{}, nil, nil, sm)
+	handler := sm.GetSessionManager().LoadAndSave(http.HandlerFunc(h.Logout))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	handler.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusSeeOther, rec.Code)
+	require.Equal(t, "/", rec.Header().Get("Location"))
+}

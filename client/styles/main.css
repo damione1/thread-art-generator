@@ -1,0 +1,32 @@
+/* Styles that cannot be expressed as Tailwind utilities. */
+
+/* HTMX request indicator */
+.htmx-indicator {
+  display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline-flex;
+}
+
+/* Thin scrollbars on dark surfaces */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #33333a transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #26262a;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* Selection picks up the brass accent */
+::selection {
+  background: rgba(199, 154, 75, 0.3);
+  color: #f4f4f5;
+}

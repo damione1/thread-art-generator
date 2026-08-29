@@ -187,12 +187,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
 	if err != nil {
 		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art")
-		formData.Errors["_form"] = []string{"Failed to load art. Please try again."}
-		renderErr := templates.CompositionForm(art, formData).Render(r.Context(), w)
-		if renderErr != nil {
-			http.Error(w, "Error rendering template", http.StatusInternalServerError)
-			log.Error().Err(renderErr).Msg("Failed to render composition form with errors")
-		}
+		http.Error(w, "Art not found", http.StatusNotFound)
 		return
 	}
 
@@ -218,31 +213,35 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	composition, fieldErrors, err := h.generatorService.CreateComposition(r.Context(), createRequest)
 	if err != nil {
 		formData.Errors = fieldErrors
-		renderErr := templates.CompositionForm(art, formData).Render(r.Context(), w)
-		if renderErr != nil {
-			http.Error(w, "Error rendering template", http.StatusInternalServerError)
-			log.Error().Err(renderErr).Msg("Failed to render composition form with field errors")
-		}
+		renderCompositionFormError(w, r, art, formData)
 		return
 	}
 
-	// Composition created successfully - parse resource name to get composition ID
 	compositionResource, err := resource.ParseResourceName(composition.GetName())
 	if err != nil {
-		// Fallback to art page if we can't parse
-		w.Header().Set("HX-Redirect", "/dashboard/arts/"+artID)
-		w.WriteHeader(http.StatusOK)
+		redirect(w, r, "/dashboard/arts/"+artID)
 		return
 	}
 
 	if parsedComposition, ok := compositionResource.(*resource.Composition); ok {
-		// Redirect to the composition detail page
-		w.Header().Set("HX-Redirect", "/dashboard/arts/"+artID+"/composition/"+parsedComposition.CompositionID)
-		w.WriteHeader(http.StatusOK)
-	} else {
-		// Fallback to art page if wrong type
-		w.Header().Set("HX-Redirect", "/dashboard/arts/"+artID)
-		w.WriteHeader(http.StatusOK)
+		redirect(w, r, "/dashboard/arts/"+artID+"/composition/"+parsedComposition.CompositionID)
+		return
+	}
+	redirect(w, r, "/dashboard/arts/"+artID)
+}
+
+func renderCompositionFormError(w http.ResponseWriter, r *http.Request, art *pb.Art, formData *templates.CompositionFormData) {
+	if isHTMX(r) {
+		if err := templates.CompositionForm(art, formData).Render(r.Context(), w); err != nil {
+			http.Error(w, "Error rendering template", http.StatusInternalServerError)
+			log.Error().Err(err).Msg("Failed to render composition form with errors")
+		}
+		return
+	}
+	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("New Composition - %s - ThreadArt", art.GetTitle()), "composition")
+	if err := templates.NewCompositionPage(pageData, art, formData).Render(r.Context(), w); err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		log.Error().Err(err).Msg("Failed to render composition page with errors")
 	}
 }
 

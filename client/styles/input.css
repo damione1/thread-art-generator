@@ -3,24 +3,173 @@
 @tailwind utilities;
 
 @layer base {
-  /* Custom animations */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  html {
+    font-family: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
   }
 
-  /* Apply font globally */
-  html {
-    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  body {
+    @apply bg-ground text-ink antialiased;
   }
 
   [x-cloak] {
     display: none !important;
+  }
+
+  /* Numbers the solver measures are always tabular. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* --- buttons: pill, echoing the hoop --- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-5 rounded-full border border-line-strong
+           bg-transparent text-ink text-[13.5px] font-medium whitespace-nowrap
+           transition-colors duration-200 disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn:hover {
+    @apply border-ink-faint;
+  }
+  .btn-primary {
+    @apply bg-brass border-brass text-brass-ink font-semibold;
+  }
+  .btn-primary:hover {
+    @apply bg-brass-hover border-brass-hover text-brass-ink;
+  }
+  .btn-ghost {
+    @apply border-transparent text-ink-muted;
+  }
+  .btn-ghost:hover {
+    @apply bg-surface-raised text-ink border-transparent;
+  }
+  .btn-danger {
+    @apply border-transparent text-danger;
+  }
+  .btn-danger:hover {
+    @apply border-transparent text-danger bg-danger/10;
+  }
+  .btn-sm {
+    @apply h-8 px-3.5 text-[12.5px];
+  }
+  .btn-lg {
+    @apply h-[46px] px-7 text-[14.5px];
+  }
+  .btn-block {
+    @apply w-full;
+  }
+
+  /* --- fields --- */
+  .field {
+    @apply flex flex-col gap-[7px];
+  }
+  .label {
+    @apply text-[12.5px] font-medium text-ink-muted;
+  }
+  .input {
+    @apply block w-full h-10 px-[13px] rounded-field bg-surface-sunken border border-line
+           text-ink text-sm placeholder:text-ink-faint
+           focus:outline-none focus:border-brass focus:ring-[3px] focus:ring-brass/[0.13]
+           disabled:opacity-45 disabled:pointer-events-none;
+  }
+  .input-num {
+    @apply font-mono text-[13.5px] tabular;
+  }
+  .input-error {
+    @apply border-danger focus:border-danger focus:ring-danger/20;
+  }
+  .hint {
+    @apply text-xs leading-[1.45] text-ink-faint;
+  }
+  .msg-error {
+    @apply text-xs text-danger;
+  }
+
+  /* --- range slider --- */
+  .slider {
+    @apply w-full h-[3px] rounded-sm appearance-none bg-surface-high accent-brass cursor-pointer;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 15px;
+    width: 15px;
+    border-radius: 9999px;
+    background: #efe6d4;
+    border: 1px solid #8e6e2e;
+    margin-top: -6px;
+  }
+  .slider::-moz-range-thumb {
+    height: 15px;
+    width: 15px;
+    border-radius: 9999px;
+    background: #efe6d4;
+    border: 1px solid #8e6e2e;
+  }
+
+  /* --- surfaces --- */
+  .card {
+    @apply bg-surface border border-line rounded-card;
+  }
+  .hairline {
+    @apply border-t border-line;
+  }
+
+  /* --- status --- */
+  .badge {
+    @apply inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full border border-line-strong
+           bg-black/35 text-[11.5px] font-medium text-ink-muted;
+  }
+  .badge-dot {
+    @apply w-[5px] h-[5px] rounded-full bg-current;
+  }
+  .badge-ok {
+    @apply text-ok border-ok/35;
+  }
+  .badge-run {
+    @apply text-brass border-brass/40;
+  }
+  .badge-error {
+    @apply text-danger border-danger/35;
+  }
+
+  /* --- notes / alerts --- */
+  .note {
+    @apply flex gap-3 px-4 py-3.5 rounded-xl text-[12.5px] leading-relaxed
+           border border-line bg-surface-raised text-ink-muted;
+  }
+  .note-ok {
+    @apply border-ok/30 bg-ok/[0.07] text-ok;
+  }
+  .note-error {
+    @apply border-danger/30 bg-danger/[0.07] text-danger;
+  }
+
+  /* --- the circle: every piece of work is a disc --- */
+  .disc {
+    @apply relative w-full aspect-square rounded-full overflow-hidden bg-surface-sunken;
+  }
+  /* Only the artwork fills the disc. Overlays (the nail ring, a status
+     icon, a spinner) position themselves. */
+  .disc > img {
+    @apply absolute inset-0 w-full h-full object-cover;
+  }
+
+  /* --- key/value rows --- */
+  .kv {
+    @apply flex items-baseline justify-between gap-4 py-[11px] border-b border-line last:border-b-0;
+  }
+  .kv-k {
+    @apply text-[13px] text-ink-muted;
+  }
+  .kv-v {
+    @apply font-mono text-[13px] tabular text-ink;
+  }
+
+  /* --- typography helpers --- */
+  .kicker {
+    @apply font-mono text-[11px] tracking-[0.14em] uppercase text-brass;
+  }
+  .display {
+    @apply font-serif tracking-[-0.01em];
   }
 }

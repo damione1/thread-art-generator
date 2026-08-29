@@ -7,7 +7,8 @@
   ],
   "scripts": {
     "dev": "npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --watch",
-    "build": "npm run build:css && npm run build:js",
+    "build": "npm run build:assets && npm run build:css && npm run build:js",
+    "build:assets": "mkdir -p ./public/images ./public/css && cp -R ./assets/images/. ./public/images/ && cp ./styles/main.css ./public/css/main.css",
     "build:css": "mkdir -p ./public/css && npx tailwindcss -i ./styles/input.css -o ./public/css/tailwind.css --minify",
     "build:js": "webpack --mode=development",
     "dev:js": "webpack --mode=development --watch",
