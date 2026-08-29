@@ -102,6 +102,8 @@ func main() {
 		r.Get("/", pageHandler.HomePage)
 		r.Get("/login", pageHandler.LoginPage)
 		r.Get("/signup", pageHandler.SignupPage)
+		r.Post("/logout", passwordAuth.Logout)
+		r.Get("/logout", passwordAuth.Logout)
 
 		mountRPCProxy(r, config.ApiURL)
 	})

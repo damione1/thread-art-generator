@@ -2,6 +2,8 @@ package templates
 
 import (
 	"net/http"
+	"strings"
+	"unicode"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
@@ -140,27 +142,28 @@ func SafeUserDisplayName(user *auth.UserInfo) string {
 	if user == nil {
 		return "Guest"
 	}
-	if user.Name != "" {
-		return user.Name
+	fallback := user.Name
+	if fallback == "" {
+		fallback = user.Email
 	}
-	if user.Email != "" {
-		return user.Email
+	if name := auth.DisplayName(user.FirstName, user.LastName, fallback); name != "" {
+		return name
 	}
 	return "Unknown User"
 }
 
-// SafeUserInitials returns the first character of user name, email, or default placeholder
+// SafeUserInitials returns the first letter of the display name
 func SafeUserInitials(user *auth.UserInfo) string {
-	if user == nil {
+	name := SafeUserDisplayName(user)
+	if name == "" || name == "Guest" || name == "Unknown User" {
 		return "?"
 	}
-	if user.Name != "" && len([]rune(user.Name)) > 0 {
-		return string([]rune(user.Name)[0])
+	for _, r := range name {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			return strings.ToUpper(string(r))
+		}
 	}
-	if user.Email != "" && len([]rune(user.Email)) > 0 {
-		return string([]rune(user.Email)[0])
-	}
-	return "U"
+	return "?"
 }
 
 // GetUserDisplayName safely returns the user's display name with fallbacks

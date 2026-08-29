@@ -41,9 +41,11 @@ func (p *PGIdentities) ByEmail(ctx context.Context, email string) (Identity, str
 		return Identity{}, "", err
 	}
 	return Identity{
-		UserID: id,
-		Email:  email,
-		Kind:   PrincipalUser,
+		UserID:    id,
+		Email:     email,
+		FirstName: first,
+		LastName:  last.String,
+		Kind:      PrincipalUser,
 	}, hash, nil
 }
 
@@ -53,7 +55,11 @@ func (p *PGIdentities) Create(ctx context.Context, email, passwordHash, first, l
 		return Identity{}, errors.New("email is required")
 	}
 	if first == "" {
-		first = "User"
+		if at := strings.IndexByte(email, '@'); at > 0 {
+			first = email[:at]
+		} else {
+			first = "User"
+		}
 	}
 	id := uuid.New().String()
 	_, err := p.DB.ExecContext(ctx, `
@@ -64,8 +70,10 @@ func (p *PGIdentities) Create(ctx context.Context, email, passwordHash, first, l
 		return Identity{}, err
 	}
 	return Identity{
-		UserID: id,
-		Email:  email,
-		Kind:   PrincipalUser,
+		UserID:    id,
+		Email:     email,
+		FirstName: first,
+		LastName:  last,
+		Kind:      PrincipalUser,
 	}, nil
 }

@@ -95,6 +95,7 @@ func shouldSkipAuthRequirement(path string) bool {
 		"/",
 		"/login",
 		"/signup",
+		"/logout",
 		"/auth/",
 		"/health",
 		"/favicon.ico",
