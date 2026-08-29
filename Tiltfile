@@ -65,6 +65,7 @@ def watch_frontend_assets():
       'client/tailwind.config.js',
       'client/styles/input.css',
       'client/package.json',
+      'client/assets/**',
       'client/src/**/*.js',
       'client/src/**/*.ts',
       'client/webpack.config.js',
