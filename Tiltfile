@@ -64,6 +64,7 @@ def watch_frontend_assets():
     deps=[
       'client/tailwind.config.js',
       'client/styles/input.css',
+      'client/styles/main.css',
       'client/package.json',
       'client/assets/**',
       'client/src/**/*.js',
