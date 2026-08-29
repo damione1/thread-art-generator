@@ -23,22 +23,51 @@ templ Layout(data *PageData) {
 			}
 			<meta name="referrer" content="no-referrer"/>
 			<meta name="csrf-token" id="csrf-token" content={ data.CSRFToken }/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet" referrerpolicy="no-referrer"/>
 			<link rel="stylesheet" href="/static/css/tailwind.css"/>
 			<link rel="stylesheet" href="/static/css/main.css"/>
-			<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" referrerpolicy="no-referrer"/>
 		</head>
-		<body class="flex flex-col min-h-screen bg-gradient-to-br from-dark-200 via-dark-100 to-dark-200 text-slate-200 relative overflow-x-hidden">
-			<!-- Background animation -->
-			<div class="fixed inset-0 z-0 pointer-events-none">
-				<div class="absolute inset-0 bg-gradient-to-b from-primary-900/5 to-primary-950/10 animate-slow-pulse"></div>
-			</div>
-			<div class="flex-grow flex flex-col relative z-10 bg-gradient-to-b from-dark-100/50 via-dark-200/50 to-primary-950/30">
-				@Header(data.IsLoggedIn, data.User)
-				<main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-					{ children... }
-				</main>
-				@Footer()
-			</div>
+		<body class="min-h-screen flex flex-col bg-ground text-ink">
+			@Header(data.IsLoggedIn, data.User)
+			<main class="flex-grow w-full">
+				{ children... }
+			</main>
+			@Footer()
 		</body>
 	</html>
+}
+
+// BareLayout renders a page without the application chrome, for the
+// split-screen authentication screens.
+templ BareLayout(data *PageData) {
+	<!DOCTYPE html>
+	<html lang="en" class="dark">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ data.GetPageTitle() }</title>
+			<script src="/static/js/vendors.js"></script>
+			<script src="/static/js/main.js" defer></script>
+			<script src="/static/js/password-auth.js"></script>
+			<meta name="referrer" content="no-referrer"/>
+			<meta name="csrf-token" id="csrf-token" content={ data.CSRFToken }/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet" referrerpolicy="no-referrer"/>
+			<link rel="stylesheet" href="/static/css/tailwind.css"/>
+			<link rel="stylesheet" href="/static/css/main.css"/>
+		</head>
+		<body class="min-h-screen bg-ground text-ink">
+			{ children... }
+		</body>
+	</html>
+}
+
+// Shell wraps page content in the standard centred column.
+templ Shell() {
+	<div class="w-full max-w-[1320px] mx-auto px-6 sm:px-10 lg:px-[60px]">
+		{ children... }
+	</div>
 }

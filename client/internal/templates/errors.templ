@@ -7,60 +7,23 @@ import (
 // FieldError renders field-specific error messages
 templ FieldError(errorData *components.FormErrorData, field string) {
 	if errorData.HasFieldError(field) {
-		<div class="mt-1">
+		<div class="mt-1 space-y-1">
 			for _, err := range errorData.GetFieldErrors(field) {
-				<p class="text-sm text-red-600">{ err }</p>
+				<p class="msg-error">{ err }</p>
 			}
 		</div>
 	}
 }
 
-// GlobalError renders global error messages as toast notifications
+// GlobalError renders global error messages as a toast in the corner
 templ GlobalError(errorData *components.FormErrorData) {
 	if errorData.HasGlobalError() {
-		<div class="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg">
-			<div class="flex">
-				<div class="py-1">
-					@MaterialIcon("error", "fill-current h-6 w-6 text-red-500 mr-4")
-				</div>
-				<div>
-					<p class="font-bold">Error</p>
-					<p class="text-sm">{ errorData.GlobalError }</p>
-				</div>
-				<div class="ml-auto">
-					<button type="button" class="text-red-700 hover:text-red-900" onclick="this.parentElement.parentElement.parentElement.remove()">
-						@MaterialIcon("close", "fill-current h-6 w-6")
-					</button>
-				</div>
+		<div class="fixed top-5 right-5 z-50 max-w-sm note note-error shadow-2xl shadow-black/50" role="alert">
+			@Icon("alert-circle", "w-[15px] h-[15px] mt-px")
+			<div>
+				<p class="font-semibold">Something went wrong</p>
+				<p class="mt-1">{ errorData.GlobalError }</p>
 			</div>
 		</div>
 	}
-}
-
-// SuccessMessage renders success messages as toast notifications  
-templ SuccessMessage(message string) {
-	if message != "" {
-		<div class="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg">
-			<div class="flex">
-				<div class="py-1">
-					@MaterialIcon("check_circle", "fill-current h-6 w-6 text-green-500 mr-4")
-				</div>
-				<div>
-					<p class="font-bold">Success</p>
-					<p class="text-sm">{ message }</p>
-				</div>
-				<div class="ml-auto">
-					<button type="button" class="text-green-700 hover:text-green-900" onclick="this.parentElement.parentElement.parentElement.remove()">
-						@MaterialIcon("close", "fill-current h-6 w-6")
-					</button>
-				</div>
-			</div>
-		</div>
-	}
-}
-
-// FormFieldClasses returns CSS classes for form fields based on error state
-script FormFieldClasses(errorData *components.FormErrorData, field, baseClasses string) {
-	// This is a helper function that returns CSS classes based on validation state
-	// We'll implement this as a helper method in the updated components file
 }
