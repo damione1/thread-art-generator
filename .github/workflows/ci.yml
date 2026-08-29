@@ -23,12 +23,15 @@ jobs:
       - name: buf lint
         run: buf lint proto
       - name: buf breaking
+        # This PR is the contract cutover (dropped Firebase/upload RPCs vs current master).
+        # Skip FILE breaking here and on the merge push; later PRs into master are gated.
+        if: |
+          !(github.event_name == 'pull_request' && github.base_ref == 'master' && github.head_ref == 'feature/rebuild')
+          && !(github.event_name == 'push' && github.ref == 'refs/heads/master')
         run: |
-          # Rebuild already broke FILE vs master (dropped Functions RPCs).
-          # Gate new proto edits against the PR base, or HEAD~1 on branch pushes.
-          # After rebuild lands on master, switch against to '.git#branch=master,subdir=proto'.
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-            AGAINST=".git#branch=${GITHUB_BASE_REF},subdir=proto"
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
+            AGAINST=".git#ref=origin/${GITHUB_BASE_REF},subdir=proto"
           else
             AGAINST=".git#ref=HEAD~1,subdir=proto"
           fi
