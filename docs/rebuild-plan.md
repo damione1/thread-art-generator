@@ -57,7 +57,7 @@ Non-buts (volontaires) :
                     MinIO | R2 | S3   (même API S3)
 ```
 
-Réseau local : `docker-compose` = `db` + `minio` + `redis` + `api` + `worker` + `client`. Plus de Firebase emulator, plus de Java, plus de Pub/Sub emulator.
+Réseau local : `docker-compose` = `db` + `minio` + `api` + `worker` + `client`. Plus de Firebase emulator, plus de Java, plus de Pub/Sub emulator. Plus de Redis.
 
 Prod (jour 1 cloud) :
 
@@ -265,13 +265,13 @@ Trois jetons, trois jobs, zéro recouvrement :
 
 | Jeton | Quoi | Où |
 |---|---|---|
-| **Session cookie** httpOnly, Secure, SameSite=Lax, Redis store (SCS déjà là, Redis déjà dans compose, **non branché**) | Identité user browser ↔ API / BFF | `core/auth/session` |
+| **Session cookie** httpOnly, Secure, SameSite=Lax, Postgres store (`scs/postgresstore`) | Identité user browser ↔ API / BFF | `core/auth/session` |
 | **S3 presign** | Accès **un** objet, **une** méthode, TTL court | `core/storage` |
 | **Service HMAC** (`Authorization: Service <id>:<mac>`) | Worker / jobs internes | `core/auth/service` |
 
 Librairies :
 
-- Sessions : `alexedwards/scs/v2` + `scs/redisstore` (déjà deps). Fallback mémoire si Redis down en dev.
+- Sessions : `alexedwards/scs/v2` + `scs/postgresstore`. Fallback mémoire en tests.
 - Interceptor Connect : petit code maison (`IdentityInterceptor`). Pas `connectrpc.com/authn` obligatoire — wrapper 40 lignes.
 - Passwords : `core/util/password.go` (bcrypt) déjà là. Signup/login email sans Firebase.
 - Plus tard OIDC (Google) : interface `auth.FederatedProvider`, pas Firebase. Un seul provider impl.
@@ -350,7 +350,7 @@ P0 :
 - API pas exposée avec CORS `*`.
 - `CompleteArtUpload` / `StartArtUpload` : identity == resource user, status machine.
 - Presign : key **serveur**, Content-Type dans la signature, TTL court, `Head` au complete (taille, type).
-- Cookie : httpOnly, Secure (prod), SameSite, rotation, Redis.
+- Cookie : httpOnly, Secure (prod), SameSite, rotation, Postgres.
 - Timing-safe compare pour service HMAC (`subtle.ConstantTimeCompare`).
 - `http.Server` timeouts. Max body sur les RPC (pas sur le PUT S3).
 - Plus d’internal API key en Bearer générique sur des paths whitelistés. Service creds dédiés, procedures listées.
@@ -378,7 +378,7 @@ Tout nouveau comportement passe par une interface. Implémentations dans le mêm
 | Package | Interface | Impls |
 |---|---|---|
 | `core/storage` | `Bucket` | `s3` (MinIO/R2/AWS) |
-| `core/auth` | `Sessions`, `Passwords`, `Identities` | scs+redis, bcrypt, postgres |
+| `core/auth` | `Sessions`, `Passwords`, `Identities` | scs+postgres, bcrypt, postgres |
 | `core/auth` | `ServiceAuth` | hmac |
 | `core/auth` | `FederatedProvider` | none day 1, oidc later |
 | `core/queue` | `Queue` | postgres, (nats) |
@@ -411,7 +411,7 @@ Ne **pas** tout faire dans un seul PR. Ownership pour éviter les collisions age
 |---|---|---|
 | **B1 proto-gen** | `proto/buf.yaml`, `proto/buf.gen.yaml`, `Makefile` (cible proto), `Tiltfile` (proto-generate), delete `buf.gen.make.yaml` | proto métier, go services |
 | **B2 bucket** | `core/storage/**`, `docker-compose.yml` (service minio + env S3_*), tests storage | firebase_*.go consumers ailleurs : adapter l’interface, laisser un stub de compile |
-| **B3 identity** | `core/auth/**` (nouveau), `client/internal/auth/session*.go` vers Redis | paseto : marquer deprecated, ne plus appeler depuis api/main |
+| **B3 identity** | `core/auth/**` (nouveau), `client/internal/auth/session*.go` vers Postgres (`postgresstore`) | paseto : marquer deprecated, ne plus appeler depuis api/main |
 | **B4 queue-pg** | `core/queue/**`, migration `jobs` | ne pas casser pubsub tant que worker pas basculé |
 
 ### Phase C — API runtime
@@ -450,7 +450,7 @@ Ne **pas** tout faire dans un seul PR. Ownership pour éviter les collisions age
 - `make proto` no-diff, sans GOPATH plugins.
 - `grep -r firebase --include='*.go'` vide (sauf journal/plan).
 - `grep -r paseto --include='*.go'` vide.
-- Un `.env` : Postgres + MinIO + Redis + keys cookie/HMAC. Plus de `FIREBASE_*`.
+- Un `.env` : Postgres + MinIO + HMAC. Plus de `FIREBASE_*`. Plus de Redis.
 - Worker traite une composition E2E local.
 
 ---
@@ -707,5 +707,9 @@ One S3 `Bucket` (`NewBucket` + `BucketConfigFromUtil`). Queue is Postgres only. 
 ### 2026-08-28 ~19:20 EDT | progress | Phase F — tests + proto CI, smart-router frozen out
 
 Upload helpers (`presign`/`head`/`validate`) + interceptor (cookie vs Service HMAC vs bare Bearer) covered without Postgres. `.github/workflows/ci.yml`: `buf lint` + `buf breaking` (PR base / `HEAD~1` until rebuild is master) + `make test`. Smart-router / hybrid stay on `feature/routing-improvment` — not copied, not revived here.
+
+### 2026-08-28 ~20:55 EDT | progress | Drop Redis
+
+Redis was compose/Tilt dead infra: `REDIS_ADDR` unread, no Go client, sessions already `scs/postgresstore`, queue already Postgres `SKIP LOCKED`. Removed service, volume, `Infra/redis`, Tilt `dc_resource`, gorilla leftover `COOKIE_HASH_KEY`/`COOKIE_BLOCK_KEY`/`COOKIE_DOMAIN` (unread). Store stays Postgres.
 
 
