@@ -1,7 +1,8 @@
 package pages
 
 import (
-	"github.com/Damione1/thread-art-generator/client/internal/auth"
+	"strconv"
+
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
@@ -22,143 +23,186 @@ func extractArtID(resourceName string) string {
 	return art.ArtID
 }
 
-// DashboardPage renders the dashboard with sort controls
-// Uses the PageData view model pattern for consistent data handling
-templ DashboardPage(data *templates.PageData) {
-	@templates.Layout(data) {
-		<div class="space-y-8">
-			<div class="flex items-center justify-between">
-				<h1 class="text-3xl font-bold text-slate-100">Your Dashboard</h1>
-				<div class="flex space-x-2">
-					if data.GetDashboardData().Dir == "asc" {
-						<a href="/dashboard?sort=create_time&dir=desc" class="px-4 py-2 bg-dark-300 hover:bg-dark-200 rounded-lg text-sm font-medium flex items-center gap-2 transition duration-300 border border-dark-400 text-slate-300">
-							@templates.MaterialIcon("sort", "")
-							Sort ▼
-						</a>
-					} else {
-						<a href="/dashboard?sort=create_time&dir=asc" class="px-4 py-2 bg-dark-300 hover:bg-dark-200 rounded-lg text-sm font-medium flex items-center gap-2 transition duration-300 border border-dark-400 text-slate-300">
-							@templates.MaterialIcon("sort", "")
-							Sort ▲
-						</a>
-					}
-				</div>
-			</div>
-			if data.IsLoggedIn {
-				@WelcomeSection(data.User)
-				@ArtGrid(data.GetDashboardData().GetArts())
-			} else {
-				@UnauthenticatedMessage()
-			}
-		</div>
+// projectsKicker renders the small "N projects" count above the page title.
+func projectsKicker(n int) string {
+	switch n {
+	case 0:
+		return "No projects"
+	case 1:
+		return "1 project"
+	default:
+		return strconv.Itoa(n) + " projects"
 	}
 }
 
-// WelcomeSection renders the welcome section for authenticated users
-templ WelcomeSection(user *auth.UserInfo) {
-	<div class="bg-gradient-to-r from-dark-300 to-dark-400 p-6 rounded-xl shadow-lg mb-8 border border-dark-300/80 backdrop-blur-sm">
-		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-			<div>
-				<h2 class="text-xl font-semibold text-primary-400 mb-2">Welcome, { templates.SafeUserDisplayName(user) }!</h2>
-				<p class="text-slate-300">Manage your thread art projects and creations from this dashboard.</p>
-			</div>
-			<a href="/dashboard/arts/new" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-lg shadow-lg shadow-primary-900/20 transition duration-300 text-center text-sm font-medium flex items-center justify-center gap-2 whitespace-nowrap">
-				@templates.MaterialIcon("add", "h-5 w-5")
-				New Project
-			</a>
-		</div>
+// countByStatus tallies arts per status for the (non-filtering) status chips.
+func countByStatus(arts []*pb.Art) (complete, running, needsImage int) {
+	for _, art := range arts {
+		switch art.GetStatus() {
+		case pb.ArtStatus_ART_STATUS_COMPLETE:
+			complete++
+		case pb.ArtStatus_ART_STATUS_PROCESSING:
+			running++
+		case pb.ArtStatus_ART_STATUS_PENDING_IMAGE:
+			needsImage++
+		}
+	}
+	return
+}
+
+// artCardMeta renders the left-hand meta text on a project card.
+func artCardMeta(art *pb.Art) string {
+	if art.GetStatus() == pb.ArtStatus_ART_STATUS_PENDING_IMAGE {
+		return "No image yet"
+	}
+	if art.GetCreateTime() != nil {
+		return "Created " + art.GetCreateTime().AsTime().Format("Jan 2, 2006")
+	}
+	return ""
+}
+
+// DashboardPage renders the projects listing with sort controls.
+// Uses the PageData view model pattern for consistent data handling.
+templ DashboardPage(data *templates.PageData) {
+	@templates.Layout(data) {
+		@templates.Shell() {
+			if data.IsLoggedIn {
+				{{ arts := data.GetDashboardData().GetArts() }}
+				<div class="flex items-end justify-between gap-8 pt-11 pb-6">
+					<div>
+						<div class="kicker">{ projectsKicker(len(arts)) }</div>
+						<h1 class="display text-[38px] leading-none tracking-[-0.01em] mt-3">Projects</h1>
+					</div>
+					<div class="flex items-center gap-2.5">
+						@SortControl(data.GetDashboardData().Dir)
+						<a href="/dashboard/arts/new" class="btn btn-primary btn-sm">New project</a>
+					</div>
+				</div>
+				@StatusChips(arts)
+				@ArtGrid(arts)
+			} else {
+				@UnauthenticatedMessage()
+			}
+		}
+	}
+}
+
+// SortControl toggles the create_time sort direction. Same two links as
+// before; only the presentation changed.
+templ SortControl(dir string) {
+	if dir == "asc" {
+		<a href="/dashboard?sort=create_time&dir=desc" class="btn btn-sm">
+			Oldest first
+			@templates.Icon("chevron-down", "w-[11px] h-[11px]")
+		</a>
+	} else {
+		<a href="/dashboard?sort=create_time&dir=asc" class="btn btn-sm">
+			Newest first
+			@templates.Icon("chevron-down", "w-[11px] h-[11px]")
+		</a>
+	}
+}
+
+// StatusChips shows a read-only breakdown of the arts by status.
+// There is no server-side filter for these yet, so the chips are plain
+// counts rather than links: a link with a `status` query parameter would
+// visually invite filtering while the dashboard handler silently ignores it,
+// which is more misleading than not having the control.
+templ StatusChips(arts []*pb.Art) {
+	{{ complete, running, needsImage := countByStatus(arts) }}
+	<div class="flex flex-wrap gap-2 pt-1.5 pb-6 border-b border-line">
+		<span class="inline-flex items-center gap-1.5 h-[30px] px-3.5 rounded-full border border-line-strong bg-surface-raised text-[12.5px] text-ink">
+			All <span class="font-mono text-[11px] text-ink-faint">{ strconv.Itoa(len(arts)) }</span>
+		</span>
+		<span class="inline-flex items-center gap-1.5 h-[30px] px-3.5 rounded-full border border-line text-[12.5px] text-ink-muted">
+			Complete <span class="font-mono text-[11px] text-ink-faint">{ strconv.Itoa(complete) }</span>
+		</span>
+		<span class="inline-flex items-center gap-1.5 h-[30px] px-3.5 rounded-full border border-line text-[12.5px] text-ink-muted">
+			Rendering <span class="font-mono text-[11px] text-ink-faint">{ strconv.Itoa(running) }</span>
+		</span>
+		<span class="inline-flex items-center gap-1.5 h-[30px] px-3.5 rounded-full border border-line text-[12.5px] text-ink-muted">
+			Needs an image <span class="font-mono text-[11px] text-ink-faint">{ strconv.Itoa(needsImage) }</span>
+		</span>
 	</div>
 }
 
-// ArtGrid renders the grid of art projects
+// ArtGrid renders the grid of project discs: the "new project" card first,
+// then the user's arts, then the empty state if there are none.
 templ ArtGrid(arts []*pb.Art) {
-	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-		<!-- Create new art card -->
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 py-8 pb-16">
 		@NewArtCard()
-		<!-- Display user's arts -->
 		for _, art := range arts {
 			@ArtCard(art)
 		}
-		<!-- Show "No projects" message if the user has no arts -->
 		if len(arts) == 0 {
 			@NoProjectsCard()
 		}
 	</div>
 }
 
-// NewArtCard renders the "Create New Art" card
+// NewArtCard renders the dashed "start a project" card.
 templ NewArtCard() {
-	<div class="group bg-gradient-to-br from-dark-300 to-dark-400 p-6 rounded-xl shadow-lg flex flex-col items-center justify-center border border-dark-300/80 h-72 hover:border-primary-600/50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl relative overflow-hidden">
-		<!-- Background effect -->
-		<div class="absolute inset-0 bg-gradient-to-br from-primary-600/5 to-primary-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-		<div class="relative z-10 flex flex-col items-center">
-			<div class="w-16 h-16 rounded-full bg-dark-200 flex items-center justify-center mb-4 group-hover:bg-primary-900/30 transition-colors duration-300">
-				@templates.MaterialIcon("add", "text-primary-500")
-			</div>
-			<h3 class="text-xl font-medium text-slate-100 mb-2">Create New Art</h3>
-			<p class="text-slate-400 text-center mb-6">Upload an image to start a new thread art project</p>
-			<a href="/dashboard/arts/new" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300 shadow-lg shadow-primary-900/20">Get Started</a>
+	<a href="/dashboard/arts/new" class="border border-dashed border-line-strong rounded-[22px] p-[18px] pb-5 flex flex-col items-center justify-center text-center hover:border-ink-faint transition-colors">
+		<div class="w-[76%] aspect-square rounded-full border border-dashed border-line-strong flex items-center justify-center text-brass">
+			@templates.Icon("plus", "w-7 h-7")
 		</div>
-	</div>
+		<h3 class="text-[14.5px] font-semibold tracking-[-0.005em] mt-5">New project</h3>
+		<p class="hint mt-1.5 max-w-[180px]">Start from a photograph</p>
+	</a>
 }
 
-// ArtCard renders an individual art project card
+// ArtCard renders one project disc: the image (with its nail ring) when
+// there is one, an indeterminate ring while the image is processing, or a
+// dashed empty ring while no image has been uploaded yet.
 templ ArtCard(art *pb.Art) {
 	{{ artID := extractArtID(art.GetName()) }}
-	<a href={ templ.URL("/dashboard/arts/" + artID) } class="block bg-gradient-to-br from-dark-300 to-dark-400 rounded-xl shadow-lg border border-dark-300/80 overflow-hidden group hover:border-primary-600/50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl h-72">
-		<div class="h-2/3 bg-dark-500 relative">
+	<a href={ templ.URL("/dashboard/arts/" + artID) } class="block bg-surface border border-line rounded-[22px] p-[18px] pb-5 hover:border-line-strong transition-colors">
+		<div class="disc">
 			if art.GetImageUrl() != "" {
-				<img
-					src={ art.GetImageUrl() }
-					alt={ art.GetTitle() }
-					class="w-full h-full object-cover"
-				/>
+				<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
+				@templates.NailRing("")
+			} else if art.GetStatus() == pb.ArtStatus_ART_STATUS_PROCESSING {
+				<svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 1000" aria-hidden="true">
+					<circle cx="500" cy="500" r="492" fill="none" stroke="#26262A" stroke-width="7"></circle>
+				</svg>
 			} else {
-				<!-- Placeholder for project without image -->
-				<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-dark-400 to-dark-500">
-					<div class="w-36 h-36 rounded-full border border-primary-500/30 relative overflow-hidden">
-						<div
-							class="absolute inset-0"
-							style="background: repeating-radial-gradient(circle at center, transparent 20px, rgba(90, 127, 255, 0.1) 30px, transparent 40px)"
-						></div>
-					</div>
+				<div class="absolute inset-0 flex items-center justify-center">
+					@templates.Icon("upload", "w-8 h-8 text-ink-faint")
 				</div>
+				<svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 1000" aria-hidden="true">
+					<circle cx="500" cy="500" r="492" fill="none" stroke="#33333A" stroke-width="5" stroke-dasharray="14 16"></circle>
+				</svg>
 			}
-			<div class="absolute top-2 right-2">
-				@templates.ArtStatusBadge(art.GetStatus())
-			</div>
 		</div>
-		<div class="p-4">
-			<h3 class="font-medium text-slate-200 truncate">{ art.GetTitle() }</h3>
-			if art.GetCreateTime() != nil {
-				<p class="text-sm text-slate-400 mb-2">
-					Created { art.GetCreateTime().AsTime().Format("Jan 2, 2006") }
-				</p>
-			}
+		<h3 class="text-[14.5px] font-semibold tracking-[-0.005em] mt-[18px] truncate">{ art.GetTitle() }</h3>
+		<div class="flex items-center justify-between mt-[9px] gap-2">
+			<span class="font-mono text-[11.5px] text-ink-faint truncate">{ artCardMeta(art) }</span>
+			@templates.ArtStatusBadge(art.GetStatus())
 		</div>
 	</a>
 }
 
-// NoProjectsCard renders a message when user has no projects
+// NoProjectsCard renders the empty state shown alongside the "new project" card.
 templ NoProjectsCard() {
-	<div class="bg-gradient-to-br from-dark-300 to-dark-400 rounded-xl shadow-lg border border-dark-300/80 overflow-hidden group h-72 flex items-center justify-center">
-		<div class="text-center p-6">
-			@templates.MaterialIcon("inventory_2", "h-12 w-12 text-slate-500 mx-auto mb-4")
-			<h3 class="text-xl font-medium text-slate-300 mb-2">No projects yet</h3>
-			<p class="text-slate-400 mb-4">Create your first thread art project to get started</p>
-		</div>
+	<div class="border border-dashed border-line-strong rounded-[22px] p-8 flex flex-col items-center justify-center text-center">
+		<svg width="64" height="64" viewBox="0 0 100 100" aria-hidden="true">
+			<circle cx="50" cy="50" r="44" fill="none" stroke="#33333A" stroke-width="2" stroke-dasharray="6 9"></circle>
+			<path d="M50 38v24M38 50h24" stroke="#C79A4B" stroke-width="2" stroke-linecap="round"></path>
+		</svg>
+		<h3 class="text-[15px] font-semibold mt-4">No projects yet</h3>
+		<p class="hint mt-2 max-w-[220px]">A project starts with one photograph. Anything with strong light and a clear subject works best.</p>
+		<a href="/dashboard/arts/new" class="btn btn-primary btn-sm mt-4">New project</a>
 	</div>
 }
 
 // UnauthenticatedMessage renders a message for unauthenticated users
 templ UnauthenticatedMessage() {
-	<div class="bg-gradient-to-br from-dark-300 to-dark-400 p-8 rounded-xl shadow-lg border border-dark-300/80 flex flex-col items-center justify-center text-center">
-		<div class="w-16 h-16 rounded-full bg-dark-200 flex items-center justify-center mb-4">
-			@templates.MaterialIcon("lock", "h-8 w-8 text-primary-500/70")
+	<div class="card p-10 my-16 max-w-md mx-auto flex flex-col items-center text-center">
+		<div class="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center mb-4">
+			@templates.Icon("lock", "w-7 h-7 text-ink-faint")
 		</div>
-		<h2 class="text-xl font-semibold text-slate-100 mb-4">Account Required</h2>
-		<p class="text-slate-400 mb-6">Please log in to access your dashboard and manage your thread art projects.</p>
-		<a href="/login" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300 shadow-lg shadow-primary-900/20">
-			Log In
-		</a>
+		<h2 class="text-lg font-semibold mb-3">Account required</h2>
+		<p class="hint mb-6">Please log in to access your dashboard and manage your thread art projects.</p>
+		<a href="/login" class="btn btn-primary">Log in</a>
 	</div>
 }

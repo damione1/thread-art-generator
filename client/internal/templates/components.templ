@@ -93,53 +93,6 @@ templ Icon(name string, class string) {
 	</svg>
 }
 
-// MaterialIcon maps the legacy Material Symbol names onto the SVG icon set.
-// Kept so no page renders a missing glyph; prefer Icon in new markup.
-templ MaterialIcon(iconName string, customClasses string) {
-	switch iconName {
-		case "arrow_back":
-			@Icon("arrow-left", customClasses)
-		case "add":
-			@Icon("plus", customClasses)
-		case "check_circle":
-			@Icon("check-circle", customClasses)
-		case "error", "warning":
-			@Icon("alert-circle", customClasses)
-		case "pending_actions":
-			@Icon("info", customClasses)
-		case "refresh":
-			@Icon("spinner", customClasses)
-		case "description":
-			@Icon("file-text", customClasses)
-		case "download":
-			@Icon("download", customClasses)
-		case "image", "inventory_2":
-			@Icon("image", customClasses)
-		case "visibility":
-			@Icon("eye", customClasses)
-		case "content_copy":
-			@Icon("copy", customClasses)
-		case "delete":
-			@Icon("trash", customClasses)
-		case "close":
-			@Icon("close", customClasses)
-		case "upload":
-			@Icon("upload", customClasses)
-		case "zoom_in":
-			@Icon("zoom-in", customClasses)
-		case "zoom_out":
-			@Icon("zoom-out", customClasses)
-		case "lock":
-			@Icon("lock", customClasses)
-		case "expand_more":
-			@Icon("chevron-down", customClasses)
-		case "sort":
-			@Icon("sort", customClasses)
-		default:
-			@Icon("info", customClasses)
-	}
-}
-
 // Spinner renders the brass loading ring.
 templ Spinner(class string) {
 	@Icon("spinner", "animate-spin "+class)

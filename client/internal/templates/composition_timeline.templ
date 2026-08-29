@@ -13,7 +13,7 @@ templ CompositionTimeline(userID, artID string, compositions []*pb.Composition) 
 		<div class="flex items-baseline justify-between mb-4">
 			<h2 class="text-[16px] font-semibold">Compositions</h2>
 			if len(compositions) > 0 {
-				<a href={ templ.SafeURL("/dashboard/arts/" + artID + "/composition/new") } class="btn btn-ghost btn-sm">
+				<a href={ templ.SafeURL("/dashboard/arts/" + artID + "/composition/new") } class="btn btn-primary btn-sm">
 					@Icon("plus", "w-4 h-4")
 					New composition
 				</a>
