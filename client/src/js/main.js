@@ -8,7 +8,7 @@ import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
 window.logout = async function logout() {
-  await fetch('/logout', {
+  await fetch('/auth/logout', {
     method: 'POST',
     credentials: 'include',
     headers: { Accept: 'application/json' },
