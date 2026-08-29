@@ -44,6 +44,8 @@ type Composition struct {
 	ImageContrast float64 `boil:"image_contrast" json:"image_contrast" toml:"image_contrast" yaml:"image_contrast"`
 	// Physical radius of the final artwork in mm
 	PhysicalRadius float64 `boil:"physical_radius" json:"physical_radius" toml:"physical_radius" yaml:"physical_radius"`
+	// 1=Vrellis consecutive darkness, 2=L2 residual (StringArt/Birsak)
+	Algorithm int `boil:"algorithm" json:"algorithm" toml:"algorithm" yaml:"algorithm"`
 	// URL to the preview image of the composition result
 	PreviewURL null.String `boil:"preview_url" json:"preview_url,omitempty" toml:"preview_url" yaml:"preview_url,omitempty"`
 	// URL to download the GCode file
@@ -75,6 +77,7 @@ var CompositionColumns = struct {
 	BrightnessFactor  string
 	ImageContrast     string
 	PhysicalRadius    string
+	Algorithm         string
 	PreviewURL        string
 	GcodeURL          string
 	PathlistURL       string
@@ -95,6 +98,7 @@ var CompositionColumns = struct {
 	BrightnessFactor:  "brightness_factor",
 	ImageContrast:     "image_contrast",
 	PhysicalRadius:    "physical_radius",
+	Algorithm:         "algorithm",
 	PreviewURL:        "preview_url",
 	GcodeURL:          "gcode_url",
 	PathlistURL:       "pathlist_url",
@@ -117,6 +121,7 @@ var CompositionTableColumns = struct {
 	BrightnessFactor  string
 	ImageContrast     string
 	PhysicalRadius    string
+	Algorithm         string
 	PreviewURL        string
 	GcodeURL          string
 	PathlistURL       string
@@ -137,6 +142,7 @@ var CompositionTableColumns = struct {
 	BrightnessFactor:  "compositions.brightness_factor",
 	ImageContrast:     "compositions.image_contrast",
 	PhysicalRadius:    "compositions.physical_radius",
+	Algorithm:         "compositions.algorithm",
 	PreviewURL:        "compositions.preview_url",
 	GcodeURL:          "compositions.gcode_url",
 	PathlistURL:       "compositions.pathlist_url",
@@ -263,6 +269,7 @@ var CompositionWhere = struct {
 	BrightnessFactor  whereHelperint
 	ImageContrast     whereHelperfloat64
 	PhysicalRadius    whereHelperfloat64
+	Algorithm         whereHelperint
 	PreviewURL        whereHelpernull_String
 	GcodeURL          whereHelpernull_String
 	PathlistURL       whereHelpernull_String
@@ -283,6 +290,7 @@ var CompositionWhere = struct {
 	BrightnessFactor:  whereHelperint{field: "\"compositions\".\"brightness_factor\""},
 	ImageContrast:     whereHelperfloat64{field: "\"compositions\".\"image_contrast\""},
 	PhysicalRadius:    whereHelperfloat64{field: "\"compositions\".\"physical_radius\""},
+	Algorithm:         whereHelperint{field: "\"compositions\".\"algorithm\""},
 	PreviewURL:        whereHelpernull_String{field: "\"compositions\".\"preview_url\""},
 	GcodeURL:          whereHelpernull_String{field: "\"compositions\".\"gcode_url\""},
 	PathlistURL:       whereHelpernull_String{field: "\"compositions\".\"pathlist_url\""},
@@ -321,9 +329,9 @@ func (r *compositionR) GetArt() *Art {
 type compositionL struct{}
 
 var (
-	compositionAllColumns            = []string{"id", "art_id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at"}
+	compositionAllColumns            = []string{"id", "art_id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "algorithm", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at"}
 	compositionColumnsWithoutDefault = []string{"art_id"}
-	compositionColumnsWithDefault    = []string{"id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at"}
+	compositionColumnsWithDefault    = []string{"id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "algorithm", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at"}
 	compositionPrimaryKeyColumns     = []string{"id"}
 	compositionGeneratedColumns      = []string{}
 )

@@ -157,7 +157,7 @@ templ NewArtCard() {
 templ ArtCard(art *pb.Art) {
 	{{ artID := extractArtID(art.GetName()) }}
 	<a href={ templ.URL("/dashboard/arts/" + artID) } class="block bg-surface border border-line rounded-[22px] p-[18px] pb-5 hover:border-line-strong transition-colors">
-		<div class="disc">
+		<div class="disc disc-photo">
 			if art.GetImageUrl() != "" {
 				<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
 				@templates.NailRing("")

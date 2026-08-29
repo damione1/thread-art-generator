@@ -33,6 +33,7 @@ func CompositionDbToProto(_ string, artDb *models.Art, composition *models.Compo
 		BrightnessFactor:  int32(composition.BrightnessFactor),
 		ImageContrast:     float32(composition.ImageContrast),
 		PhysicalRadius:    float32(composition.PhysicalRadius),
+		Algorithm:         pb.CompositionAlgorithm(composition.Algorithm),
 		Status:            status,
 		CreateTime:        timestamppb.New(composition.CreatedAt),
 		UpdateTime:        timestamppb.New(composition.UpdatedAt),
@@ -73,6 +74,7 @@ func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 		BrightnessFactor:  int(comp.GetBrightnessFactor()),
 		ImageContrast:     float64(comp.GetImageContrast()),
 		PhysicalRadius:    float64(comp.GetPhysicalRadius()),
+		Algorithm:         int(comp.GetAlgorithm()),
 	}
 
 	if comp.GetName() != "" {

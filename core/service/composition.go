@@ -15,6 +15,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
+	"github.com/Damione1/thread-art-generator/threadGenerator"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/friendsofgo/errors"
 	"github.com/google/uuid"
@@ -35,6 +36,9 @@ func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompo
 	// Validate the request
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
+	}
+	if err := validateCompositionParams(req.GetComposition()); err != nil {
+		return nil, err
 	}
 
 	// Parse the art resource name to get the art ID
@@ -89,6 +93,7 @@ func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompo
 		BrightnessFactor:  int(req.GetComposition().GetBrightnessFactor()),
 		ImageContrast:     float64(req.GetComposition().GetImageContrast()),
 		PhysicalRadius:    float64(req.GetComposition().GetPhysicalRadius()),
+		Algorithm:         int(normalizeCompositionAlgorithm(req.GetComposition().GetAlgorithm())),
 	}
 
 	// Insert the composition
@@ -333,6 +338,29 @@ func (server *Server) deleteComposition(ctx context.Context, req *pb.DeleteCompo
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func normalizeCompositionAlgorithm(a pb.CompositionAlgorithm) pb.CompositionAlgorithm {
+	return pb.CompositionAlgorithm(threadGenerator.Lookup(threadGenerator.Kind(a)).ID())
+}
+
+func validateCompositionParams(comp *pb.Composition) error {
+	if comp == nil {
+		return nil
+	}
+	errs := threadGenerator.ValidateParams(
+		int(comp.GetNailsQuantity()),
+		int(comp.GetStartingNail()),
+		int(comp.GetMinimumDifference()),
+	)
+	if len(errs) == 0 {
+		return nil
+	}
+	violations := make([]*errdetails.BadRequest_FieldViolation, 0, len(errs))
+	for _, e := range errs {
+		violations = append(violations, pbErrors.FieldViolation("composition."+e.Field, errors.New(e.Message)))
+	}
+	return pbErrors.InvalidArgumentError(violations)
 }
 
 // Helper function to enqueue a composition for processing

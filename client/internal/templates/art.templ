@@ -177,7 +177,7 @@ templ artOverview(art *pb.Art, compositions []*pb.Composition) {
 	</div>
 	<div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-10 items-start py-8 pb-[72px]">
 		<aside>
-			<div class="disc">
+			<div class="disc disc-photo">
 				if art.GetImageUrl() != "" {
 					<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
 					@NailRing("")
@@ -244,7 +244,7 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 					@NailRing("opacity-45")
 				</div>
 				<h3 class="text-[19px] font-semibold tracking-[-0.01em] mt-8">Drop a photograph here</h3>
-				<p class="hint mt-2.5 max-w-[380px] text-[13px]">Only what falls inside the circle is used, so you will frame the image in the next step. JPEG or PNG, 1000 × 1000 px or larger.</p>
+				<p class="hint mt-2.5 max-w-[380px] text-[13px]">Crop a circle in black and white. Contrast is chosen later, per composition. JPEG or PNG, 1000 × 1000 px or larger.</p>
 				<input
 					type="file"
 					id="file-input"
@@ -314,7 +314,7 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 				<div class="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
 					<div>
 						<h3 class="text-[17px] font-semibold tracking-[-0.01em]">Frame your photograph</h3>
-						<p class="hint mt-1.5">Drag to pan, pinch or scroll to zoom. Only what sits inside the circle is used.</p>
+						<p class="hint mt-1.5">Black and white, as the solver sees it. Drag to pan, pinch or scroll to zoom. Contrast comes later, on each composition.</p>
 					</div>
 					<button
 						type="button"

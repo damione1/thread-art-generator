@@ -75,6 +75,17 @@ message Art {
     google.protobuf.Timestamp update_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Solver used to pick thread paths
+enum CompositionAlgorithm {
+    // Default unspecified; treated as Vrellis
+    COMPOSITION_ALGORITHM_UNSPECIFIED = 0;
+    // Consecutive greedy: darkest remaining Bresenham chord (classic Vrellis)
+    COMPOSITION_ALGORITHM_VRELLIS = 1;
+    // Global L2 residual greedy with Xiaolin Wu lines, then an Euler tour
+    // (Birsak / Exception1984 / bdring StringArt)
+    COMPOSITION_ALGORITHM_L2 = 2;
+}
+
 // Status of the composition
 enum CompositionStatus {
     // Default unspecified status
@@ -121,12 +132,12 @@ message Composition {
         (buf.validate.field).int32 = {gt: 0, lte: 20000}
     ];
 
-    // Starting nail position
+    // Starting nail index; must be less than nails_quantity
     int32 starting_nail = 7 [
         (buf.validate.field).int32 = {gte: 0}
     ];
 
-    // Minimum difference between connected nails
+    // Minimum nail index gap along the ring; must be less than nails_quantity / 2
     int32 minimum_difference = 8 [
         (buf.validate.field).int32 = {gt: 0, lte: 200}
     ];
@@ -136,7 +147,7 @@ message Composition {
         (buf.validate.field).int32 = {gt: 0, lte: 255}
     ];
 
-    // Image contrast adjustment
+    // Contrast adjustment in percent applied before solving (imaging.AdjustContrast, 1–100)
     float image_contrast = 10 [
         (buf.validate.field).float = {gt: 0, lte: 100}
     ];
@@ -176,7 +187,7 @@ message Composition {
         }
     ];
 
-    // Thread length in meters
+    // Thread length in millimetres
     int32 thread_length = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
 
     // Total number of lines
@@ -190,6 +201,9 @@ message Composition {
 
     // Last update time
     google.protobuf.Timestamp update_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Path-selection algorithm
+    CompositionAlgorithm algorithm = 20;
 }
 
 message CreateCompositionRequest {

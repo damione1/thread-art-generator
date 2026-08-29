@@ -10,6 +10,7 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/templates"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
+	"github.com/Damione1/thread-art-generator/threadGenerator"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -70,16 +71,17 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Initialize form data with default values
+	cfg := threadGenerator.DefaultConfig()
 	formData := &templates.CompositionFormData{
-		NailsQuantity:     300,
-		ImgSize:           1000,
-		MaxPaths:          3000,
-		StartingNail:      0,
-		MinimumDifference: 15,
-		BrightnessFactor:  128,
-		ImageContrast:     1.2,
-		PhysicalRadius:    200.0,
+		NailsQuantity:     int32(cfg.NailsQuantity),
+		ImgSize:           int32(cfg.ImgSize),
+		MaxPaths:          int32(cfg.MaxPaths),
+		StartingNail:      int32(cfg.StartingNail),
+		MinimumDifference: int32(cfg.MinimumDifference),
+		BrightnessFactor:  int32(cfg.BrightnessFactor),
+		ImageContrast:     float32(cfg.ImageContrast),
+		PhysicalRadius:    float32(cfg.PhysicalRadius),
+		Algorithm:         pb.CompositionAlgorithm_COMPOSITION_ALGORITHM_VRELLIS,
 		Errors:            make(map[string][]string),
 		Success:           false,
 	}
@@ -106,6 +108,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 			formData.BrightnessFactor = sourceComposition.GetBrightnessFactor()
 			formData.ImageContrast = sourceComposition.GetImageContrast()
 			formData.PhysicalRadius = sourceComposition.GetPhysicalRadius()
+			formData.Algorithm = sourceComposition.GetAlgorithm()
 		}
 	}
 
@@ -147,9 +150,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	brightnessFactor, _ := strconv.ParseInt(r.FormValue("brightness_factor"), 10, 32)
 	imageContrast, _ := strconv.ParseFloat(r.FormValue("image_contrast"), 32)
 	physicalRadius, _ := strconv.ParseFloat(r.FormValue("physical_radius"), 32)
-
-	// Note: image_contrast comes from slider scaled by 10
-	imageContrast = imageContrast / 10.0
+	algorithm := pb.CompositionAlgorithm(threadGenerator.LookupForm(r.FormValue("algorithm")).ID())
 
 	// Initialize form data
 	formData := &templates.CompositionFormData{
@@ -161,6 +162,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		BrightnessFactor:  int32(brightnessFactor),
 		ImageContrast:     float32(imageContrast),
 		PhysicalRadius:    float32(physicalRadius),
+		Algorithm:         algorithm,
 		Errors:            make(map[string][]string),
 		Success:           false,
 	}
@@ -206,6 +208,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 			BrightnessFactor:  formData.BrightnessFactor,
 			ImageContrast:     formData.ImageContrast,
 			PhysicalRadius:    formData.PhysicalRadius,
+			Algorithm:         formData.Algorithm,
 		},
 	}
 
@@ -232,7 +235,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 
 func renderCompositionFormError(w http.ResponseWriter, r *http.Request, art *pb.Art, formData *templates.CompositionFormData) {
 	if isHTMX(r) {
-		if err := templates.CompositionForm(art, formData).Render(r.Context(), w); err != nil {
+		if err := templates.CompositionEditor(art, formData).Render(r.Context(), w); err != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
 			log.Error().Err(err).Msg("Failed to render composition form with errors")
 		}
