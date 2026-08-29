@@ -67,12 +67,14 @@ templ ArtPage(data *PageData, art *pb.Art, compositions []*pb.Composition) {
 					if art.GetStatus() == pb.ArtStatus_ART_STATUS_PENDING_IMAGE {
 						@ImageUploadDropzone(extractUserID(art.GetName()), extractArtID(art.GetName()))
 					} else if art.GetStatus() == pb.ArtStatus_ART_STATUS_COMPLETE && art.GetImageUrl() != "" {
-						<div class="space-y-4">
-							<img
-								src={ art.GetImageUrl() }
-								alt={ art.GetTitle() }
-								class="w-full rounded-lg shadow-lg"
-							/>
+						<div class="flex justify-center">
+							<div class="relative w-full max-w-md aspect-square">
+								<img
+									src={ art.GetImageUrl() }
+									alt={ art.GetTitle() }
+									class="w-full h-full object-cover rounded-full ring-2 ring-primary-500/30 shadow-lg"
+								/>
+							</div>
 						</div>
 					} else {
 						<div class="flex items-center justify-center h-64 bg-dark-300 rounded-lg">
@@ -134,79 +136,211 @@ templ ArtPage(data *PageData, art *pb.Art, compositions []*pb.Composition) {
 	}
 }
 
-// ImageUploadDropzone renders a dropzone for image upload
+// ImageUploadDropzone renders a dropzone for image upload with circular crop
 templ ImageUploadDropzone(internalUserId, artId string) {
-	<div
-		id="upload-dropzone"
-		class="border-2 border-dashed border-dark-400 rounded-lg p-8 text-center hover:border-primary-500 transition-colors duration-300 cursor-pointer"
-		x-data={ "createArtUpload({ artId: '" + artId + "', internalUserId: '" + internalUserId + "' })" }
-		@drop.prevent="handleDrop($event)"
-		@dragover.prevent="dragOver = true"
-		@dragleave.prevent="dragOver = false"
-		:class="{ 'border-primary-500 bg-primary-900/10': dragOver }"
-	>
-		<div x-show="!uploading && !uploaded && !error" class="space-y-4">
-			@MaterialIcon("upload", "h-12 w-12 text-slate-400 mx-auto mb-4")
-			<h3 class="text-lg font-medium text-slate-200 mb-2">Upload Image</h3>
-			<p class="text-slate-400 mb-4">Drag and drop an image here, or click to select</p>
-			<input
-				type="file"
-				id="file-input"
-				class="hidden"
-				accept="image/*"
-				@change="handleFileSelect($event)"
-				x-ref="fileInput"
-			/>
-			<button
-				type="button"
-				class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300"
-				@click="$refs.fileInput.click()"
-			>
-				Select Image
-			</button>
-		</div>
-		<div x-show="uploading" class="space-y-4">
-			<div class="flex justify-center">
-				@spinner.Spinner(spinner.Props{
-					Size:  spinner.SizeLg,
-					Color: "text-primary-500",
-				})
-			</div>
-			<p class="text-slate-300" x-text="uploadProgress < 100 ? 'Uploading image...' : 'Processing image...'"></p>
-			<div class="w-full bg-dark-300 rounded-full h-2">
-				<div class="bg-primary-500 h-2 rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
-			</div>
-			<p class="text-sm text-slate-400" x-text="`${uploadProgress}% complete`"></p>
-		</div>
-		<div x-show="uploaded" class="space-y-4">
-			@MaterialIcon("check_circle", "h-8 w-8 text-green-500 mx-auto")
-			<p class="text-green-400">Image uploaded successfully!</p>
-			<p class="text-sm text-slate-400">Processing your image and refreshing the page...</p>
-			<div class="flex justify-center">
-				@spinner.Spinner(spinner.Props{
-					Size:  spinner.SizeSm,
-					Color: "text-green-500",
-				})
-			</div>
-		</div>
-		<div x-show="error" class="space-y-4">
-			@MaterialIcon("error", "h-8 w-8 text-red-500 mx-auto")
-			<p class="text-red-400" x-text="errorMessage"></p>
-			<div class="flex space-x-2 justify-center">
+	<div x-data={ "createArtUpload({ artId: '" + artId + "', internalUserId: '" + internalUserId + "' })" }>
+		<div
+			id="upload-dropzone"
+			class="border-2 border-dashed border-dark-400 rounded-lg p-8 text-center hover:border-primary-500 transition-colors duration-300 cursor-pointer"
+			@click="openPicker()"
+			@drop.prevent="handleDrop($event)"
+			@dragover.prevent="dragOver = true"
+			@dragleave.prevent="dragOver = false"
+			:class="{ 'border-primary-500 bg-primary-900/10': dragOver }"
+		>
+			<div x-show="!uploading && !uploaded && !error && !preparing && !cropping" class="space-y-4">
+				<div class="w-28 h-28 mx-auto rounded-full border-2 border-dashed border-dark-400 flex items-center justify-center">
+					@MaterialIcon("upload", "h-12 w-12 text-slate-400")
+				</div>
+				<h3 class="text-lg font-medium text-slate-200 mb-2">Upload Image</h3>
+				<p class="text-slate-400 mb-4">Thread art is circular. Next you'll frame and zoom your photo so it fits the hoop.</p>
+				<input
+					type="file"
+					id="file-input"
+					class="hidden"
+					accept="image/*"
+					@change="handleFileSelect($event)"
+					x-ref="fileInput"
+				/>
 				<button
 					type="button"
-					class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors duration-300"
-					@click="resetUpload()"
+					class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300"
+					@click.stop="openPicker()"
 				>
-					Try Again
+					Select Image
 				</button>
-				<button
-					type="button"
-					class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors duration-300"
-					@click="refreshPage()"
-				>
-					Refresh Page
-				</button>
+			</div>
+			<div x-show="preparing" class="space-y-4" x-cloak>
+				<div class="flex justify-center">
+					@spinner.Spinner(spinner.Props{
+						Size:  spinner.SizeLg,
+						Color: "text-primary-500",
+					})
+				</div>
+				<p class="text-slate-300">Preparing image...</p>
+			</div>
+			<div x-show="uploading && !cropping" class="space-y-4" x-cloak>
+				<div class="flex justify-center">
+					@spinner.Spinner(spinner.Props{
+						Size:  spinner.SizeLg,
+						Color: "text-primary-500",
+					})
+				</div>
+				<p class="text-slate-300" x-text="uploadProgress < 100 ? 'Uploading image...' : 'Processing image...'"></p>
+				<div class="w-full bg-dark-300 rounded-full h-2">
+					<div class="bg-primary-500 h-2 rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
+				</div>
+				<p class="text-sm text-slate-400" x-text="`${uploadProgress}% complete`"></p>
+			</div>
+			<div x-show="uploaded" class="space-y-4" x-cloak>
+				@MaterialIcon("check_circle", "h-8 w-8 text-green-500 mx-auto")
+				<p class="text-green-400">Image uploaded successfully!</p>
+				<p class="text-sm text-slate-400">Processing your image and refreshing the page...</p>
+				<div class="flex justify-center">
+					@spinner.Spinner(spinner.Props{
+						Size:  spinner.SizeSm,
+						Color: "text-green-500",
+					})
+				</div>
+			</div>
+			<div x-show="error" class="space-y-4" x-cloak>
+				@MaterialIcon("error", "h-8 w-8 text-red-500 mx-auto")
+				<p class="text-red-400" x-text="errorMessage"></p>
+				<div class="flex space-x-2 justify-center">
+					<button
+						type="button"
+						class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors duration-300"
+						@click.stop="resetUpload()"
+					>
+						Try Again
+					</button>
+					<button
+						type="button"
+						class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors duration-300"
+						@click.stop="refreshPage()"
+					>
+						Refresh Page
+					</button>
+				</div>
+			</div>
+		</div>
+		<div
+			x-show="cropping"
+			x-cloak
+			class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+			@click.self="cancelCrop()"
+			@resize.window="onResize()"
+			role="dialog"
+			aria-modal="true"
+			aria-label="Frame your image"
+		>
+			<div class="w-full max-w-lg bg-dark-200 rounded-2xl border border-dark-400/40 shadow-2xl shadow-black/40 overflow-hidden" @click.stop>
+				<div class="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
+					<div>
+						<h3 class="text-lg font-semibold text-slate-100">Frame your image</h3>
+						<p class="text-sm text-slate-400 mt-1">Drag to pan, pinch or scroll to zoom. Only the circle is used for your thread art.</p>
+					</div>
+					<button
+						type="button"
+						class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-300/80 transition-colors"
+						@click="cancelCrop()"
+						:disabled="uploading"
+						aria-label="Close"
+					>
+						@MaterialIcon("close", "h-5 w-5")
+					</button>
+				</div>
+				<div class="px-5">
+					<div
+						class="relative mx-auto w-full aspect-square overflow-hidden bg-dark-500 select-none touch-none overscroll-none"
+						:class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
+						x-ref="viewport"
+						@pointerdown="onPointerDown($event)"
+						@pointermove="onPointerMove($event)"
+						@pointerup="onPointerUp($event)"
+						@pointercancel="onPointerUp($event)"
+						@wheel.prevent="onWheel($event)"
+						@dblclick="fitToCover()"
+					>
+						<img
+							:src="previewUrl"
+							alt="Crop preview"
+							class="absolute max-w-none pointer-events-none"
+							:style="imageStyle"
+							draggable="false"
+						/>
+						<svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" aria-hidden="true">
+							<defs>
+								<mask id="thread-art-crop-mask">
+									<rect width="100" height="100" fill="white"></rect>
+									<circle cx="50" cy="50" r="50" fill="black"></circle>
+								</mask>
+							</defs>
+							<rect width="100" height="100" fill="rgba(17, 24, 39, 0.72)" mask="url(#thread-art-crop-mask)"></rect>
+							<circle cx="50" cy="50" r="49.6" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="0.45"></circle>
+							<circle cx="50" cy="50" r="49.6" fill="none" stroke="rgba(90,127,255,0.45)" stroke-width="0.2"></circle>
+						</svg>
+						<div
+							x-show="uploading"
+							class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-dark-100/70 backdrop-blur-[2px]"
+						>
+							@spinner.Spinner(spinner.Props{
+								Size:  spinner.SizeLg,
+								Color: "text-primary-500",
+							})
+							<p class="text-slate-200 text-sm">Uploading cropped image...</p>
+							<div class="w-2/3 bg-dark-300 rounded-full h-1.5">
+								<div class="bg-primary-500 h-1.5 rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="px-5 pt-4 pb-5 space-y-4">
+					<p x-show="cropError" x-cloak class="text-sm text-red-400" x-text="cropError"></p>
+					<div class="flex items-center gap-3">
+						@MaterialIcon("zoom_out", "text-slate-400")
+						<input
+							type="range"
+							min="1"
+							max="4"
+							step="0.01"
+							class="w-full h-2 bg-dark-300 rounded-lg appearance-none cursor-pointer accent-primary-500"
+							:value="zoomLevel"
+							@input="onZoomInput($event)"
+							:disabled="uploading"
+							aria-label="Zoom"
+						/>
+						@MaterialIcon("zoom_in", "text-slate-400")
+					</div>
+					<div class="flex items-center justify-between gap-3">
+						<button
+							type="button"
+							class="px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-dark-300/80 transition-colors duration-300"
+							@click="fitToCover()"
+							:disabled="uploading"
+						>
+							Reset
+						</button>
+						<div class="flex gap-2">
+							<button
+								type="button"
+								class="px-4 py-2 rounded-lg border border-dark-400 text-slate-300 hover:bg-dark-300/80 transition-colors duration-300"
+								@click="cancelCrop()"
+								:disabled="uploading"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors duration-300 disabled:opacity-60"
+								@click="confirmCrop()"
+								:disabled="uploading"
+							>
+								Use this crop
+							</button>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
