@@ -1,34 +1,43 @@
 package pbx
 
 import (
-	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/resource"
-	"github.com/Damione1/thread-art-generator/core/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func ArtDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, art *models.Art) *pb.Art {
-	// Map status from database enum to proto enum
-	var status pb.ArtStatus
+// PublicURL concatenates the public bucket base with an object key. No I/O.
+func PublicURL(publicBaseURL, key string) string {
+	base := strings.TrimRight(strings.TrimSpace(publicBaseURL), "/")
+	if base == "" || key == "" {
+		return ""
+	}
+	return base + "/" + strings.TrimLeft(key, "/")
+}
+
+func artStatus(art *models.Art) pb.ArtStatus {
 	switch art.Status {
 	case models.ArtStatusEnumPENDING_IMAGE:
-		status = pb.ArtStatus_ART_STATUS_PENDING_IMAGE
+		return pb.ArtStatus_ART_STATUS_PENDING_IMAGE
 	case models.ArtStatusEnumPROCESSING:
-		status = pb.ArtStatus_ART_STATUS_PROCESSING
+		return pb.ArtStatus_ART_STATUS_PROCESSING
 	case models.ArtStatusEnumCOMPLETE:
-		status = pb.ArtStatus_ART_STATUS_COMPLETE
+		return pb.ArtStatus_ART_STATUS_COMPLETE
 	case models.ArtStatusEnumFAILED:
-		status = pb.ArtStatus_ART_STATUS_FAILED
+		return pb.ArtStatus_ART_STATUS_FAILED
 	case models.ArtStatusEnumARCHIVED:
-		status = pb.ArtStatus_ART_STATUS_ARCHIVED
+		return pb.ArtStatus_ART_STATUS_ARCHIVED
 	default:
-		status = pb.ArtStatus_ART_STATUS_UNSPECIFIED
+		return pb.ArtStatus_ART_STATUS_UNSPECIFIED
 	}
+}
 
+func ArtDbToProto(art *models.Art, publicBaseURL string) *pb.Art {
+	status := artStatus(art)
 	artPb := &pb.Art{
 		Title:      art.Title,
 		Author:     resource.BuildUserResourceName(art.AuthorID),
@@ -38,14 +47,9 @@ func ArtDbToProto(ctx context.Context, dualStorage *storage.DualBucketStorage, a
 	}
 	artPb.Name = resource.BuildArtResourceName(art.AuthorID, art.ID)
 
-	if art.ImageID.Valid && (status == pb.ArtStatus_ART_STATUS_COMPLETE) {
-		imageKey := resource.BuildArtResourceName(art.AuthorID, art.ImageID.String)
-
-		// Use public URL generator for CDN caching - art images should be publicly accessible
-		publicURLGenerator := storage.NewPublicURLGenerator(dualStorage.GetPublicStorage())
-		imageURL := storage.GenerateImageURL(ctx, publicURLGenerator, imageKey, storage.DefaultURLOptions())
-		
-		artPb.ImageUrl = imageURL
+	if art.ImageID.Valid && status == pb.ArtStatus_ART_STATUS_COMPLETE {
+		key := resource.ArtImageObjectKey(art.AuthorID, art.ID, art.ImageID.String)
+		artPb.ImageUrl = PublicURL(publicBaseURL, key)
 	}
 
 	return artPb
@@ -77,8 +81,6 @@ func ProtoArtToDb(post *pb.Art) *models.Art {
 	return artDb
 }
 
-// ParseArtResourceName parses an art resource name and returns user ID and art ID
-// Deprecated: Use resource.ParseResourceName instead
 func ParseArtResourceName(resourceName string) (string, string, error) {
 	artResource, err := resource.ParseResourceName(resourceName)
 	if err != nil {

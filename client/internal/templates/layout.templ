@@ -11,7 +11,16 @@ templ Layout(data *PageData) {
 			<title>{ data.GetPageTitle() }</title>
 			<script src="/static/js/vendors.js"></script>
 			<script src="/static/js/main.js" defer></script>
-			<!-- Include a CSRF token for authenticated users -->
+			if data.PageType == "art" || data.PageType == "composition" {
+				<script src="/static/js/rpc.js"></script>
+				<script src="/static/js/status-poll.js"></script>
+			}
+			if data.PageType == "art" {
+				<script src="/static/js/art-upload.js"></script>
+			}
+			if data.PageType == "login" || data.PageType == "signup" {
+				<script src="/static/js/password-auth.js"></script>
+			}
 			if data.IsLoggedIn {
 				<meta name="csrf-token" id="csrf-token" content="auth-token-exists"/>
 			} else {
@@ -20,11 +29,6 @@ templ Layout(data *PageData) {
 			<link rel="stylesheet" href="/static/css/tailwind.css"/>
 			<link rel="stylesheet" href="/static/css/main.css"/>
 			<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
-			<!-- Include Firebase Auth and config -->
-			if data.IsLoggedIn && data.FirebaseConfig != nil {
-				@templ.JSONScript("firebase-config", data.FirebaseConfig)
-				<script type="module" src="/static/js/firebase-auth.js"></script>
-			}
 		</head>
 		<body class="flex flex-col min-h-screen bg-gradient-to-br from-dark-200 via-dark-100 to-dark-200 text-slate-200 relative overflow-x-hidden">
 			<!-- Background animation -->

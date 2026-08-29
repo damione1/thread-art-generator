@@ -29,7 +29,7 @@ var File_services_proto protoreflect.FileDescriptor
 const file_services_proto_rawDesc = "" +
 	"\n" +
 	"\x0eservices.proto\x12\x02pb\x1a\n" +
-	"user.proto\x1a\tart.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/descriptor.proto\x1a.protoc-gen-openapiv2/options/annotations.proto2\x83\x1c\n" +
+	"user.proto\x1a\tart.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/descriptor.proto\x1a.protoc-gen-openapiv2/options/annotations.proto2\xcd\x17\n" +
 	"\x13ArtGeneratorService\x12\xa5\x01\n" +
 	"\n" +
 	"UpdateUser\x12\x15.pb.UpdateUserRequest\x1a\b.pb.User\"v\x92AP\n" +
@@ -42,9 +42,7 @@ const file_services_proto_rawDesc = "" +
 	"DeleteUser\x12\x15.pb.DeleteUserRequest\x1a\x16.google.protobuf.Empty\"Z\x92A?\n" +
 	"\x05Users\x12\rDelete a user\x1a'Remove a specific user from the system.\x82\xd3\xe4\x93\x02\x12*\x10/v1/users/{name}\x12\xa7\x01\n" +
 	"\x0eGetCurrentUser\x12\x19.pb.GetCurrentUserRequest\x1a\b.pb.User\"p\x92AY\n" +
-	"\x05Users\x12\x14Get the current user\x1a:Retrieve information for the currently authenticated user.\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/users:me\x12\x88\x02\n" +
-	"\x14SyncUserFromFirebase\x12\x1f.pb.SyncUserFromFirebaseRequest\x1a\b.pb.User\"\xc4\x01\x92A\x9e\x01\n" +
-	"\x05Users\x12\"Sync user from Firebase (Internal)\x1aqInternal endpoint to sync user data from Firebase Authentication to PostgreSQL database. Used by Cloud Functions.\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/internal/users/sync\x12\x9b\x01\n" +
+	"\x05Users\x12\x14Get the current user\x1a:Retrieve information for the currently authenticated user.\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/users:me\x12\x9b\x01\n" +
 	"\tCreateArt\x12\x14.pb.CreateArtRequest\x1a\a.pb.Art\"o\x92A9\n" +
 	"\x04Arts\x12\x10Create a new art\x1a\x1fCreate a new art to the system.\xdaA\n" +
 	"parent,art\x82\xd3\xe4\x93\x02 :\x03art\"\x19/v1/{parent=users/*}/arts\x12\xa5\x01\n" +
@@ -55,11 +53,9 @@ const file_services_proto_rawDesc = "" +
 	"\bListArts\x12\x13.pb.ListArtsRequest\x1a\x14.pb.ListArtsResponse\"n\x92AA\n" +
 	"\x04Arts\x12\rList all arts\x1a*Retrieve a list of all arts in the system.\xdaA\x06parent\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/{parent=users/*}/arts\x12\xa3\x01\n" +
 	"\tDeleteArt\x12\x14.pb.DeleteArtRequest\x1a\x16.google.protobuf.Empty\"h\x92A=\n" +
-	"\x04Arts\x12\rDelete an art\x1a&Remove a specific art from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02\x1b*\x19/v1/{name=users/*/arts/*}\x12\xec\x01\n" +
-	"\x0fGetArtUploadUrl\x12\x1a.pb.GetArtUploadUrlRequest\x1a\x1b.pb.GetArtUploadUrlResponse\"\x9f\x01\x92Ag\n" +
-	"\x05Media\x12\x1cGet upload URL for art image\x1a@Generate a signed URL for uploading an image for a specific art.\xdaA\x04name\x82\xd3\xe4\x93\x02(\x12&/v1/{name=users/*/arts/*}:getUploadUrl\x12\xdd\x01\n" +
-	"\x15ConfirmArtImageUpload\x12 .pb.ConfirmArtImageUploadRequest\x1a\a.pb.Art\"\x98\x01\x92AW\n" +
-	"\x05Media\x12\x18Confirm art image upload\x1a4Mark an art resource as complete after image upload.\xdaA\x04name\x82\xd3\xe4\x93\x021:\x01*\",/v1/{name=users/*/arts/*}:confirmImageUpload\x12\xfb\x01\n" +
+	"\x04Arts\x12\rDelete an art\x1a&Remove a specific art from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02\x1b*\x19/v1/{name=users/*/arts/*}\x12]\n" +
+	"\x0eStartArtUpload\x12\x19.pb.StartArtUploadRequest\x1a\x1a.pb.StartArtUploadResponse\"\x14\xdaA\x11name,content_type\x12C\n" +
+	"\x11CompleteArtUpload\x12\x1c.pb.CompleteArtUploadRequest\x1a\a.pb.Art\"\a\xdaA\x04name\x12\xfb\x01\n" +
 	"\x11CreateComposition\x12\x1c.pb.CreateCompositionRequest\x1a\x0f.pb.Composition\"\xb6\x01\x92Aa\n" +
 	"\fCompositions\x12\x18Create a new composition\x1a7Create a new thread art composition for a specific art.\xdaA\x12parent,composition\x82\xd3\xe4\x93\x027:\vcomposition\"(/v1/{parent=users/*/arts/*}/compositions\x12\xd6\x01\n" +
 	"\x0eGetComposition\x12\x19.pb.GetCompositionRequest\x1a\x0f.pb.Composition\"\x97\x01\x92A]\n" +
@@ -69,7 +65,7 @@ const file_services_proto_rawDesc = "" +
 	"\x10ListCompositions\x12\x1b.pb.ListCompositionsRequest\x1a\x1c.pb.ListCompositionsResponse\"\x9a\x01\x92A^\n" +
 	"\fCompositions\x12\x15List all compositions\x1a7Retrieve a list of all compositions for a specific art.\xdaA\x06parent\x82\xd3\xe4\x93\x02*\x12(/v1/{parent=users/*/arts/*}/compositions\x12\xda\x01\n" +
 	"\x11DeleteComposition\x12\x1c.pb.DeleteCompositionRequest\x1a\x16.google.protobuf.Empty\"\x8e\x01\x92AT\n" +
-	"\fCompositions\x12\x14Delete a composition\x1a.Remove a specific composition from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02**(/v1/{name=users/*/arts/*/compositions/*}B\xcc\x04\x92A\x96\x04\x12\x84\x01\n" +
+	"\fCompositions\x12\x14Delete a composition\x1a.Remove a specific composition from the system.\xdaA\x04name\x82\xd3\xe4\x93\x02**(/v1/{name=users/*/arts/*/compositions/*}B\x8b\x05\x92A\x96\x04\x12\x84\x01\n" +
 	"\x18Thread art Generator API\"a\n" +
 	"\x0eDamien Goehrig\x12(github.com/Damione1/thread-art-generator\x1a%thread-art-generator@damiengoehrig.ca2\x050.0.1Z\xa0\x01\n" +
 	"\x9d\x01\n" +
@@ -81,35 +77,35 @@ const file_services_proto_rawDesc = "" +
 	"\x05Users\x12\x1dEndpoints for user managementj$\n" +
 	"\x04Arts\x12\x1cEndpoints for art managementj5\n" +
 	"\fCompositions\x12%Endpoints for thread art compositionsj'\n" +
-	"\x05Media\x12\x1eEndpoints for media managementZ0github.com/Damione1/thread-art-generator/core/pbb\x06proto3"
+	"\x05Media\x12\x1eEndpoints for media management\n" +
+	"\x06com.pbB\rServicesProtoP\x01Z0github.com/Damione1/thread-art-generator/core/pb\xa2\x02\x03PXX\xaa\x02\x02Pb\xca\x02\x02Pb\xe2\x02\x0ePb\\GPBMetadata\xea\x02\x02Pbb\x06proto3"
 
 var file_services_proto_goTypes = []any{
-	(*UpdateUserRequest)(nil),            // 0: pb.UpdateUserRequest
-	(*GetUserRequest)(nil),               // 1: pb.GetUserRequest
-	(*ListUsersRequest)(nil),             // 2: pb.ListUsersRequest
-	(*DeleteUserRequest)(nil),            // 3: pb.DeleteUserRequest
-	(*GetCurrentUserRequest)(nil),        // 4: pb.GetCurrentUserRequest
-	(*SyncUserFromFirebaseRequest)(nil),  // 5: pb.SyncUserFromFirebaseRequest
-	(*CreateArtRequest)(nil),             // 6: pb.CreateArtRequest
-	(*GetArtRequest)(nil),                // 7: pb.GetArtRequest
-	(*UpdateArtRequest)(nil),             // 8: pb.UpdateArtRequest
-	(*ListArtsRequest)(nil),              // 9: pb.ListArtsRequest
-	(*DeleteArtRequest)(nil),             // 10: pb.DeleteArtRequest
-	(*GetArtUploadUrlRequest)(nil),       // 11: pb.GetArtUploadUrlRequest
-	(*ConfirmArtImageUploadRequest)(nil), // 12: pb.ConfirmArtImageUploadRequest
-	(*CreateCompositionRequest)(nil),     // 13: pb.CreateCompositionRequest
-	(*GetCompositionRequest)(nil),        // 14: pb.GetCompositionRequest
-	(*UpdateCompositionRequest)(nil),     // 15: pb.UpdateCompositionRequest
-	(*ListCompositionsRequest)(nil),      // 16: pb.ListCompositionsRequest
-	(*DeleteCompositionRequest)(nil),     // 17: pb.DeleteCompositionRequest
-	(*User)(nil),                         // 18: pb.User
-	(*ListUsersResponse)(nil),            // 19: pb.ListUsersResponse
-	(*emptypb.Empty)(nil),                // 20: google.protobuf.Empty
-	(*Art)(nil),                          // 21: pb.Art
-	(*ListArtsResponse)(nil),             // 22: pb.ListArtsResponse
-	(*GetArtUploadUrlResponse)(nil),      // 23: pb.GetArtUploadUrlResponse
-	(*Composition)(nil),                  // 24: pb.Composition
-	(*ListCompositionsResponse)(nil),     // 25: pb.ListCompositionsResponse
+	(*UpdateUserRequest)(nil),        // 0: pb.UpdateUserRequest
+	(*GetUserRequest)(nil),           // 1: pb.GetUserRequest
+	(*ListUsersRequest)(nil),         // 2: pb.ListUsersRequest
+	(*DeleteUserRequest)(nil),        // 3: pb.DeleteUserRequest
+	(*GetCurrentUserRequest)(nil),    // 4: pb.GetCurrentUserRequest
+	(*CreateArtRequest)(nil),         // 5: pb.CreateArtRequest
+	(*GetArtRequest)(nil),            // 6: pb.GetArtRequest
+	(*UpdateArtRequest)(nil),         // 7: pb.UpdateArtRequest
+	(*ListArtsRequest)(nil),          // 8: pb.ListArtsRequest
+	(*DeleteArtRequest)(nil),         // 9: pb.DeleteArtRequest
+	(*StartArtUploadRequest)(nil),    // 10: pb.StartArtUploadRequest
+	(*CompleteArtUploadRequest)(nil), // 11: pb.CompleteArtUploadRequest
+	(*CreateCompositionRequest)(nil), // 12: pb.CreateCompositionRequest
+	(*GetCompositionRequest)(nil),    // 13: pb.GetCompositionRequest
+	(*UpdateCompositionRequest)(nil), // 14: pb.UpdateCompositionRequest
+	(*ListCompositionsRequest)(nil),  // 15: pb.ListCompositionsRequest
+	(*DeleteCompositionRequest)(nil), // 16: pb.DeleteCompositionRequest
+	(*User)(nil),                     // 17: pb.User
+	(*ListUsersResponse)(nil),        // 18: pb.ListUsersResponse
+	(*emptypb.Empty)(nil),            // 19: google.protobuf.Empty
+	(*Art)(nil),                      // 20: pb.Art
+	(*ListArtsResponse)(nil),         // 21: pb.ListArtsResponse
+	(*StartArtUploadResponse)(nil),   // 22: pb.StartArtUploadResponse
+	(*Composition)(nil),              // 23: pb.Composition
+	(*ListCompositionsResponse)(nil), // 24: pb.ListCompositionsResponse
 }
 var file_services_proto_depIdxs = []int32{
 	0,  // 0: pb.ArtGeneratorService.UpdateUser:input_type -> pb.UpdateUserRequest
@@ -117,39 +113,37 @@ var file_services_proto_depIdxs = []int32{
 	2,  // 2: pb.ArtGeneratorService.ListUsers:input_type -> pb.ListUsersRequest
 	3,  // 3: pb.ArtGeneratorService.DeleteUser:input_type -> pb.DeleteUserRequest
 	4,  // 4: pb.ArtGeneratorService.GetCurrentUser:input_type -> pb.GetCurrentUserRequest
-	5,  // 5: pb.ArtGeneratorService.SyncUserFromFirebase:input_type -> pb.SyncUserFromFirebaseRequest
-	6,  // 6: pb.ArtGeneratorService.CreateArt:input_type -> pb.CreateArtRequest
-	7,  // 7: pb.ArtGeneratorService.GetArt:input_type -> pb.GetArtRequest
-	8,  // 8: pb.ArtGeneratorService.UpdateArt:input_type -> pb.UpdateArtRequest
-	9,  // 9: pb.ArtGeneratorService.ListArts:input_type -> pb.ListArtsRequest
-	10, // 10: pb.ArtGeneratorService.DeleteArt:input_type -> pb.DeleteArtRequest
-	11, // 11: pb.ArtGeneratorService.GetArtUploadUrl:input_type -> pb.GetArtUploadUrlRequest
-	12, // 12: pb.ArtGeneratorService.ConfirmArtImageUpload:input_type -> pb.ConfirmArtImageUploadRequest
-	13, // 13: pb.ArtGeneratorService.CreateComposition:input_type -> pb.CreateCompositionRequest
-	14, // 14: pb.ArtGeneratorService.GetComposition:input_type -> pb.GetCompositionRequest
-	15, // 15: pb.ArtGeneratorService.UpdateComposition:input_type -> pb.UpdateCompositionRequest
-	16, // 16: pb.ArtGeneratorService.ListCompositions:input_type -> pb.ListCompositionsRequest
-	17, // 17: pb.ArtGeneratorService.DeleteComposition:input_type -> pb.DeleteCompositionRequest
-	18, // 18: pb.ArtGeneratorService.UpdateUser:output_type -> pb.User
-	18, // 19: pb.ArtGeneratorService.GetUser:output_type -> pb.User
-	19, // 20: pb.ArtGeneratorService.ListUsers:output_type -> pb.ListUsersResponse
-	20, // 21: pb.ArtGeneratorService.DeleteUser:output_type -> google.protobuf.Empty
-	18, // 22: pb.ArtGeneratorService.GetCurrentUser:output_type -> pb.User
-	18, // 23: pb.ArtGeneratorService.SyncUserFromFirebase:output_type -> pb.User
-	21, // 24: pb.ArtGeneratorService.CreateArt:output_type -> pb.Art
-	21, // 25: pb.ArtGeneratorService.GetArt:output_type -> pb.Art
-	21, // 26: pb.ArtGeneratorService.UpdateArt:output_type -> pb.Art
-	22, // 27: pb.ArtGeneratorService.ListArts:output_type -> pb.ListArtsResponse
-	20, // 28: pb.ArtGeneratorService.DeleteArt:output_type -> google.protobuf.Empty
-	23, // 29: pb.ArtGeneratorService.GetArtUploadUrl:output_type -> pb.GetArtUploadUrlResponse
-	21, // 30: pb.ArtGeneratorService.ConfirmArtImageUpload:output_type -> pb.Art
-	24, // 31: pb.ArtGeneratorService.CreateComposition:output_type -> pb.Composition
-	24, // 32: pb.ArtGeneratorService.GetComposition:output_type -> pb.Composition
-	24, // 33: pb.ArtGeneratorService.UpdateComposition:output_type -> pb.Composition
-	25, // 34: pb.ArtGeneratorService.ListCompositions:output_type -> pb.ListCompositionsResponse
-	20, // 35: pb.ArtGeneratorService.DeleteComposition:output_type -> google.protobuf.Empty
-	18, // [18:36] is the sub-list for method output_type
-	0,  // [0:18] is the sub-list for method input_type
+	5,  // 5: pb.ArtGeneratorService.CreateArt:input_type -> pb.CreateArtRequest
+	6,  // 6: pb.ArtGeneratorService.GetArt:input_type -> pb.GetArtRequest
+	7,  // 7: pb.ArtGeneratorService.UpdateArt:input_type -> pb.UpdateArtRequest
+	8,  // 8: pb.ArtGeneratorService.ListArts:input_type -> pb.ListArtsRequest
+	9,  // 9: pb.ArtGeneratorService.DeleteArt:input_type -> pb.DeleteArtRequest
+	10, // 10: pb.ArtGeneratorService.StartArtUpload:input_type -> pb.StartArtUploadRequest
+	11, // 11: pb.ArtGeneratorService.CompleteArtUpload:input_type -> pb.CompleteArtUploadRequest
+	12, // 12: pb.ArtGeneratorService.CreateComposition:input_type -> pb.CreateCompositionRequest
+	13, // 13: pb.ArtGeneratorService.GetComposition:input_type -> pb.GetCompositionRequest
+	14, // 14: pb.ArtGeneratorService.UpdateComposition:input_type -> pb.UpdateCompositionRequest
+	15, // 15: pb.ArtGeneratorService.ListCompositions:input_type -> pb.ListCompositionsRequest
+	16, // 16: pb.ArtGeneratorService.DeleteComposition:input_type -> pb.DeleteCompositionRequest
+	17, // 17: pb.ArtGeneratorService.UpdateUser:output_type -> pb.User
+	17, // 18: pb.ArtGeneratorService.GetUser:output_type -> pb.User
+	18, // 19: pb.ArtGeneratorService.ListUsers:output_type -> pb.ListUsersResponse
+	19, // 20: pb.ArtGeneratorService.DeleteUser:output_type -> google.protobuf.Empty
+	17, // 21: pb.ArtGeneratorService.GetCurrentUser:output_type -> pb.User
+	20, // 22: pb.ArtGeneratorService.CreateArt:output_type -> pb.Art
+	20, // 23: pb.ArtGeneratorService.GetArt:output_type -> pb.Art
+	20, // 24: pb.ArtGeneratorService.UpdateArt:output_type -> pb.Art
+	21, // 25: pb.ArtGeneratorService.ListArts:output_type -> pb.ListArtsResponse
+	19, // 26: pb.ArtGeneratorService.DeleteArt:output_type -> google.protobuf.Empty
+	22, // 27: pb.ArtGeneratorService.StartArtUpload:output_type -> pb.StartArtUploadResponse
+	20, // 28: pb.ArtGeneratorService.CompleteArtUpload:output_type -> pb.Art
+	23, // 29: pb.ArtGeneratorService.CreateComposition:output_type -> pb.Composition
+	23, // 30: pb.ArtGeneratorService.GetComposition:output_type -> pb.Composition
+	23, // 31: pb.ArtGeneratorService.UpdateComposition:output_type -> pb.Composition
+	24, // 32: pb.ArtGeneratorService.ListCompositions:output_type -> pb.ListCompositionsResponse
+	19, // 33: pb.ArtGeneratorService.DeleteComposition:output_type -> google.protobuf.Empty
+	17, // [17:34] is the sub-list for method output_type
+	0,  // [0:17] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

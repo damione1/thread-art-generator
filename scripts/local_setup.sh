@@ -103,12 +103,7 @@ function setup_env() {
     if [ ! -f "$PROJECT_ROOT/.env" ]; then
         echo "Creating .env file from template..."
         cp "$PROJECT_ROOT/.env.sample" "$PROJECT_ROOT/.env"
-
-        # Generate a symmetric key for tokens
-        TOKEN_SYMMETRIC_KEY=$(openssl rand -hex 16)
-        echo "TOKEN_SYMMETRIC_KEY=$TOKEN_SYMMETRIC_KEY" >> "$PROJECT_ROOT/.env"
-
-        echo -e "✅ .env file created with generated keys"
+        echo -e "✅ .env file created"
     else
         echo -e "✅ .env file already exists, skipping"
     fi
@@ -123,14 +118,14 @@ function setup_frontend() {
     GOPATH=$(go env GOPATH)
     GOBIN=$GOPATH/bin
 
-    # Install templ
-    echo -e "Installing templ..."
-    go install github.com/a-h/templ/cmd/templ@latest
+    TEMPL_VERSION=$(cd "$PROJECT_ROOT" && go list -m -f '{{.Version}}' github.com/a-h/templ)
+    echo -e "Installing templ ${TEMPL_VERSION} (go.mod)..."
+    go install "github.com/a-h/templ/cmd/templ@${TEMPL_VERSION}"
     if ! command_exists $GOBIN/templ; then
         echo -e "${RED}Failed to install templ${NC}"
         exit 1
     fi
-    echo -e "✅ templ installed successfully"
+    echo -e "✅ templ ${TEMPL_VERSION} installed successfully"
 
     # Install Tailwind CSS dependencies
     echo -e "Installing Tailwind CSS dependencies..."
@@ -152,7 +147,7 @@ function setup_frontend() {
 
     # Generate templ files
     echo -e "Generating templ templates..."
-    (cd "$PROJECT_ROOT/client" && $GOBIN/templ generate ./internal/templates)
+    (cd "$PROJECT_ROOT" && go run "github.com/a-h/templ/cmd/templ@${TEMPL_VERSION}" generate)
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to generate templ templates${NC}"
         exit 1

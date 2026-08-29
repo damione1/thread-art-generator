@@ -58,63 +58,13 @@ func (s *ArtService) GetArt(ctx context.Context, userID, artID string) (*pb.Art,
 	return resp.Msg, nil
 }
 
-// GetArtUploadUrl gets a signed URL for uploading an image to an art
-func (s *ArtService) GetArtUploadUrl(ctx context.Context, userID, artID, contentType string, fileSize int64) (*pb.GetArtUploadUrlResponse, error) {
-	artName := resource.BuildArtResourceName(userID, artID)
-
-	req := connect.NewRequest(&pb.GetArtUploadUrlRequest{
-		Name:        artName,
-		ContentType: contentType,
-		FileSize:    fileSize,
-	})
-
-	resp, err := s.client.GetArtUploadUrl(ctx, req)
-	if err != nil {
-		standardErr := s.parseErrorForLogging(err)
-		log.Error().
-			Err(err).
-			Str("art_name", artName).
-			Str("content_type", contentType).
-			Int64("file_size", fileSize).
-			Str("errorType", string(standardErr.Type)).
-			Str("message", standardErr.Message).
-			Msg("Failed to get art upload URL")
-		return nil, fmt.Errorf("failed to get art upload URL: %s", standardErr.Message)
-	}
-
-	return resp.Msg, nil
-}
-
-// ConfirmArtImageUpload confirms that an image has been uploaded for an art
-func (s *ArtService) ConfirmArtImageUpload(ctx context.Context, artName string) (*pb.Art, error) {
-	req := connect.NewRequest(&pb.ConfirmArtImageUploadRequest{
-		Name: artName,
-	})
-
-	resp, err := s.client.ConfirmArtImageUpload(ctx, req)
-	if err != nil {
-		standardErr := s.parseErrorForLogging(err)
-		log.Error().
-			Err(err).
-			Str("art_name", artName).
-			Str("errorType", string(standardErr.Type)).
-			Str("message", standardErr.Message).
-			Msg("Failed to confirm art image upload")
-		return nil, fmt.Errorf("failed to confirm art image upload: %s", standardErr.Message)
-	}
-
-	return resp.Msg, nil
-}
-
 // ListArts gets a list of arts for the authenticated user
-func (s *ArtService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
-	// Create the request payload with parent field
+func (s *ArtService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy string) (*pb.ListArtsResponse, error) {
 	req := connect.NewRequest(&pb.ListArtsRequest{
-		Parent:         resource.BuildUserResourceName(userID),
-		PageSize:       int32(pageSize),
-		PageToken:      pageToken,
-		OrderBy:        orderBy,
-		OrderDirection: orderDirection,
+		Parent:    resource.BuildUserResourceName(userID),
+		PageSize:  int32(pageSize),
+		PageToken: pageToken,
+		OrderBy:   orderBy,
 	})
 
 	// Make the API call through the authenticated client

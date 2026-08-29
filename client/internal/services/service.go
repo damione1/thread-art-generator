@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
-	"github.com/Damione1/thread-art-generator/client/internal/client"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 )
@@ -48,7 +47,7 @@ func NewGeneratorService(client pbconnect.ArtGeneratorServiceClient, sessionMana
 }
 
 // User domain methods - delegate to UserService
-func (s *GeneratorService) GetCurrentUser(ctx context.Context, r *http.Request) (*client.User, error) {
+func (s *GeneratorService) GetCurrentUser(ctx context.Context, r *http.Request) (*auth.UserInfo, error) {
 	return s.UserService.GetCurrentUser(ctx, r)
 }
 
@@ -61,16 +60,8 @@ func (s *GeneratorService) GetArt(ctx context.Context, userID, artID string) (*p
 	return s.ArtService.GetArt(ctx, userID, artID)
 }
 
-func (s *GeneratorService) GetArtUploadUrl(ctx context.Context, userID, artID, contentType string, fileSize int64) (*pb.GetArtUploadUrlResponse, error) {
-	return s.ArtService.GetArtUploadUrl(ctx, userID, artID, contentType, fileSize)
-}
-
-func (s *GeneratorService) ConfirmArtImageUpload(ctx context.Context, artName string) (*pb.Art, error) {
-	return s.ArtService.ConfirmArtImageUpload(ctx, artName)
-}
-
-func (s *GeneratorService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy, orderDirection string) (*pb.ListArtsResponse, error) {
-	return s.ArtService.ListArts(ctx, userID, pageSize, pageToken, orderBy, orderDirection)
+func (s *GeneratorService) ListArts(ctx context.Context, userID string, pageSize int, pageToken string, orderBy string) (*pb.ListArtsResponse, error) {
+	return s.ArtService.ListArts(ctx, userID, pageSize, pageToken, orderBy)
 }
 
 // Composition domain methods - delegate to CompositionService

@@ -17,30 +17,20 @@ setup:
 
 .PHONY: proto
 proto:
-	@echo "🔧 Generating protocol buffers..."
-	@echo "Checking for required tools..."
-	@test -f "$(shell go env GOPATH)/bin/protoc-gen-go" || (echo "❌ protoc-gen-go not found. Installing..." && go install google.golang.org/protobuf/cmd/protoc-gen-go@latest)
-	@test -f "$(shell go env GOPATH)/bin/protoc-gen-connect-go" || (echo "❌ protoc-gen-connect-go not found. Installing..." && go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest)
-	@test -f "$(shell go env GOPATH)/bin/protoc-gen-openapiv2" || (echo "❌ protoc-gen-openapiv2 not found. Installing..." && go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest)
-	@echo "✅ All tools available"
-	@echo "Creating output directories..."
-	@mkdir -p core/pb/pbconnect
-	@mkdir -p api/openapi
-	@echo "Generating Go and Connect-RPC files..."
-	@cd proto && PATH="$(shell go env GOPATH)/bin:$$PATH" buf generate --template buf.gen.make.yaml
-	@echo "✅ Protocol buffers generated successfully!"
-	@echo "📁 Generated files:"
-	@echo "   - Go types: core/pb/"
-	@echo "   - Connect-RPC: core/pb/pbconnect/"
-	@echo "   - OpenAPI: api/openapi/"
+	@command -v buf >/dev/null 2>&1 || { echo "❌ buf CLI not found on PATH. Install: https://buf.build/docs/installation"; exit 1; }
+	@cd proto && buf generate && buf lint
 
 .PHONY: proto-clean
 proto-clean:
 	@echo "🧹 Cleaning generated protocol buffer files..."
 	@rm -rf core/pb/*.pb.go
 	@rm -rf core/pb/pbconnect/
-	@rm -rf api/openapi/
+	@rm -rf client/src/gen/
 	@echo "✅ Protocol buffer files cleaned"
+
+.PHONY: test
+test:
+	go test ./core/storage/ ./core/auth/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/ ./core/pbx/
 
 .PHONY: psql
 psql:
@@ -88,28 +78,13 @@ generate-models:
 	@echo "✅ Database models generated successfully"
 	@echo "📁 Generated models in: core/db/models/"
 
+TEMPL_VERSION := $(shell go list -m -f '{{.Version}}' github.com/a-h/templ)
+
 .PHONY: generate-templ
 generate-templ:
-	@echo "🔄 Building npm packages..."
-	@cd client && npm install && npm run build
-	@echo "✅ Npm packages built successfully"
-	@echo "🔄 Generating Templ templates..."
-	@echo "Installing Templ if needed..."
-	@test -f "$(shell go env GOPATH)/bin/templ" || go install github.com/a-h/templ/cmd/templ@latest
-	@echo "Generating templates..."
-	@PATH="$(shell go env GOPATH)/bin:$$PATH" $(shell go env GOPATH)/bin/templ generate || { echo "❌ Template generation failed"; exit 1; }
+	@echo "🔄 Generating Templ templates ($(TEMPL_VERSION), matches go.mod)..."
+	@go run github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION) generate || { echo "❌ Template generation failed"; exit 1; }
 	@echo "✅ Templ templates generated successfully"
-
-.PHONY: firebase-build
-firebase-build:
-	@echo "🔧 Building Firebase Functions..."
-	@cd functions && npm install && npm run build
-	@echo "✅ Firebase Functions built successfully"
-
-.PHONY: firebase-start
-firebase-start: firebase-build
-	@echo "🚀 Starting Firebase Emulator Suite..."
-	@firebase emulators:start --only auth,functions,ui --project demo-thread-art-generator
 
 # This rule allows capturing arbitrary targets as arguments
 %:

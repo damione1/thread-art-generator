@@ -87,13 +87,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Number of nails placed evenly around the circle perimeter. More nails create finer detail but increase processing time. Typical range: 200-500 for good balance.
 			}
-			if len(formData.Errors["composition.nails_quantity"]) > 0 {
-				for _, err := range formData.Errors["composition.nails_quantity"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.nails_quantity") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}
@@ -117,13 +115,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Internal processing resolution. Higher values capture more detail but dramatically increase processing time. 800px is optimal for most images.
 			}
-			if len(formData.Errors["composition.img_size"]) > 0 {
-				for _, err := range formData.Errors["composition.img_size"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.img_size") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}
@@ -147,13 +143,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Maximum thread connections to draw. The algorithm stops when no improvement is found or this limit is reached. More paths = darker, more detailed result.
 			}
-			if len(formData.Errors["composition.max_paths"]) > 0 {
-				for _, err := range formData.Errors["composition.max_paths"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.max_paths") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}
@@ -176,13 +170,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Starting nail position (0 = top of circle, increases clockwise). Different starting points can affect the final pattern slightly.
 			}
-			if len(formData.Errors["composition.starting_nail"]) > 0 {
-				for _, err := range formData.Errors["composition.starting_nail"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.starting_nail") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}
@@ -216,13 +208,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Prevents threads from connecting to nearby nails, avoiding tangled threads. Higher values create longer, cleaner lines but may miss fine details.
 			}
-			if len(formData.Errors["composition.minimum_difference"]) > 0 {
-				for _, err := range formData.Errors["composition.minimum_difference"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.minimum_difference") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}
@@ -253,13 +243,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Controls how much each thread darkens the image during processing. Higher values create bolder, more visible threads but may oversaturate dark areas.
 			}
-			if len(formData.Errors["composition.brightness_factor"]) > 0 {
-				for _, err := range formData.Errors["composition.brightness_factor"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.brightness_factor") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}
@@ -293,13 +281,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Enhances image contrast before processing. Higher values emphasize edges and details but may lose subtle gradations. 40 works well for most photos.
 			}
-			if len(formData.Errors["composition.image_contrast"]) > 0 {
-				for _, err := range formData.Errors["composition.image_contrast"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.image_contrast") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}
@@ -323,13 +309,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			@form.Description() {
 				Actual size of your physical frame in millimeters. Used to calculate G-code coordinates and thread length. Default 609.6mm = 24 inches.
 			}
-			if len(formData.Errors["composition.physical_radius"]) > 0 {
-				for _, err := range formData.Errors["composition.physical_radius"] {
-					@form.Message(form.MessageProps{
-						Variant: form.MessageVariantError,
-					}) {
-						{ err }
-					}
+			for _, err := range FieldMsgs(formData.Errors, "composition.physical_radius") {
+				@form.Message(form.MessageProps{
+					Variant: form.MessageVariantError,
+				}) {
+					{ err }
 				}
 			}
 		}

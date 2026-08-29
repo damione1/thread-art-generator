@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
@@ -29,7 +28,7 @@ func NewCompositionHandler(generatorService *services.GeneratorService) *Composi
 
 // NewCompositionForm renders the composition creation form
 func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (contains Firebase UID)
+	// Get user from context (session user)
 	user, _ := middleware.UserFromContext(r.Context())
 
 	// Extract art ID from URL
@@ -42,7 +41,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 	// Get internal user ID by calling GetCurrentUser API
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for NewCompositionForm")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for NewCompositionForm")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
@@ -54,7 +53,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
@@ -169,7 +168,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	// Get internal user ID
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for CreateComposition")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for CreateComposition")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
@@ -181,7 +180,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art to verify it exists and is complete
@@ -218,24 +217,11 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	// Call service to create composition
 	composition, fieldErrors, err := h.generatorService.CreateComposition(r.Context(), createRequest)
 	if err != nil {
-		// If there are field validation errors
-		if fieldErrors != nil {
-			formData.Errors = fieldErrors
-			// Render form with errors
-			renderErr := templates.CompositionForm(art, formData).Render(r.Context(), w)
-			if renderErr != nil {
-				http.Error(w, "Error rendering template", http.StatusInternalServerError)
-				log.Error().Err(renderErr).Msg("Failed to render composition form with field errors")
-			}
-			return
-		}
-
-		// For other errors, display a general error
-		formData.Errors["_form"] = []string{"An error occurred while creating the composition. Please try again."}
+		formData.Errors = fieldErrors
 		renderErr := templates.CompositionForm(art, formData).Render(r.Context(), w)
 		if renderErr != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
-			log.Error().Err(renderErr).Msg("Failed to render composition form with general error")
+			log.Error().Err(renderErr).Msg("Failed to render composition form with field errors")
 		}
 		return
 	}
@@ -268,7 +254,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -277,7 +263,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	// Get internal user ID
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for ViewComposition")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for ViewComposition")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
@@ -289,7 +275,7 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Get the art
@@ -321,68 +307,6 @@ func (h *CompositionHandler) ViewComposition(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// GetCompositionStatus returns the composition status for HTMX polling
-func (h *CompositionHandler) GetCompositionStatus(w http.ResponseWriter, r *http.Request) {
-	// Extract IDs from URL path
-	// URL format: /dashboard/arts/{artId}/composition/{compositionId}/status
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 6 {
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-	
-	artID := pathParts[2]
-	compositionID := pathParts[4]
-	
-	// Get user from context
-	user, _ := middleware.UserFromContext(r.Context())
-
-	// Get internal user ID
-	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for GetCompositionStatus")
-		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the user resource name to extract internal user ID
-	userResource, err := resource.ParseResourceName(currentUser.ID)
-	if err != nil {
-		log.Error().Err(err).Str("user_resource_name", currentUser.ID).Msg("Failed to parse user resource name")
-		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
-		return
-	}
-	
-	internalUserID := userResource.(*resource.User).ID
-
-	// Get the art and composition
-	art, err := h.generatorService.GetArt(r.Context(), internalUserID, artID)
-	if err != nil {
-		log.Error().Err(err).Str("internal_user_id", internalUserID).Str("art_id", artID).Msg("Failed to get art for status")
-		http.Error(w, "Art not found", http.StatusNotFound)
-		return
-	}
-
-	composition, err := h.generatorService.GetComposition(r.Context(), internalUserID, artID, compositionID)
-	if err != nil {
-		log.Error().Err(err).
-			Str("internal_user_id", internalUserID).
-			Str("art_id", artID).
-			Str("composition_id", compositionID).
-			Msg("Failed to get composition for status")
-		http.Error(w, "Composition not found", http.StatusNotFound)
-		return
-	}
-
-	// Render the entire composition detail page for HTMX to swap
-	pageData := templates.NewPageDataFromRequest(r, fmt.Sprintf("Composition - %s - ThreadArt", art.GetTitle()), "composition")
-	err = templates.CompositionDetailPage(pageData, art, composition).Render(r.Context(), w)
-	if err != nil {
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
-		log.Error().Err(err).Msg("Failed to render composition status update")
-	}
-}
-
 // DeleteComposition handles deleting a composition
 func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
@@ -391,7 +315,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 	// Extract IDs from URL
 	artID := chi.URLParam(r, "artId")
 	compositionID := chi.URLParam(r, "compositionId")
-	
+
 	if artID == "" || compositionID == "" {
 		http.Error(w, "Invalid IDs", http.StatusBadRequest)
 		return
@@ -400,7 +324,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 	// Get internal user ID
 	currentUser, err := h.generatorService.GetCurrentUser(r.Context(), r)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", user.ID).Msg("Failed to get current user for DeleteComposition")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to get current user for DeleteComposition")
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
@@ -412,7 +336,7 @@ func (h *CompositionHandler) DeleteComposition(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Invalid user resource", http.StatusInternalServerError)
 		return
 	}
-	
+
 	internalUserID := userResource.(*resource.User).ID
 
 	// Build the composition resource name

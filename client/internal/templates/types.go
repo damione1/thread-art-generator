@@ -5,7 +5,6 @@ import (
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
-	"github.com/Damione1/thread-art-generator/client/internal/types"
 	"github.com/Damione1/thread-art-generator/core/pb"
 )
 
@@ -22,10 +21,6 @@ type PageData struct {
 	// Authentication state
 	IsLoggedIn bool
 
-	// Optional Firebase configuration for auth pages
-	FirebaseConfig *types.FirebaseConfig
-
-	// Meta information and SEO
 	Meta map[string]string
 
 	// Page-specific data (can hold any data specific to the page)
@@ -52,7 +47,7 @@ func NewPageData(title, pageType string) *PageData {
 	}
 }
 
-// NewPageDataFromRequest creates a new PageData with basic information and Firebase config from request context
+// NewPageDataFromRequest creates a new PageData with basic information from request context
 func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
 	pageData := &PageData{
 		Title:       title,
@@ -67,11 +62,6 @@ func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
 	user, _ := middleware.UserFromContext(r.Context())
 	pageData.WithUser(user)
 
-	// Get Firebase config from context (set by middleware)
-	if firebaseConfig, ok := middleware.FirebaseConfigFromContext(r.Context()); ok {
-		pageData.WithFirebaseConfig(firebaseConfig)
-	}
-
 	return pageData
 }
 
@@ -79,12 +69,6 @@ func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
 func (pd *PageData) WithUser(user *auth.UserInfo) *PageData {
 	pd.User = user
 	pd.IsLoggedIn = user != nil
-	return pd
-}
-
-// WithFirebaseConfig adds Firebase configuration to the page data
-func (pd *PageData) WithFirebaseConfig(config *types.FirebaseConfig) *PageData {
-	pd.FirebaseConfig = config
 	return pd
 }
 
@@ -131,15 +115,14 @@ func (pd *PageData) HasFieldErrors() bool {
 	return len(pd.FieldErrors) > 0
 }
 
-// GetFieldErrors returns errors for a specific field
+// GetFieldErrors returns errors for a specific field (proto path or HTML name)
 func (pd *PageData) GetFieldErrors(field string) []string {
-	return pd.FieldErrors[field]
+	return FieldMsgs(pd.FieldErrors, field)
 }
 
 // HasFieldError returns true if a specific field has errors
 func (pd *PageData) HasFieldError(field string) bool {
-	errors, exists := pd.FieldErrors[field]
-	return exists && len(errors) > 0
+	return HasFieldErr(pd.FieldErrors, field)
 }
 
 // GetPageTitle returns the full page title with fallback

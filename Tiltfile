@@ -45,6 +45,7 @@ def watch_templ_changes():
     deps=[
       'client/internal/templates/**/*.templ',
       'client/internal/components/**/*.templ',
+      'Makefile',
     ],
     ignore=[
       'client/internal/templates/**/*_templ.go',  # Ignore generated Go files
@@ -65,6 +66,7 @@ def watch_frontend_assets():
       'client/styles/input.css',
       'client/package.json',
       'client/src/**/*.js',
+      'client/src/**/*.ts',
       'client/webpack.config.js',
     ],
     trigger_mode=TRIGGER_MODE_AUTO,
@@ -130,8 +132,6 @@ local_resource(
   resource_deps=['proto-generate', 'templ-generate', 'frontend-assets-build'],
   ignore=[
     'client/internal/templates/**/*.templ',
-    'client/internal/templates/**/*_templ.go',
-    'client/internal/components/**/*_templ.go',
     'client/src/**/*.js',
     'client/styles/**',
     'client/public/**',
@@ -219,40 +219,6 @@ local_resource(
 
 
 # ================================================
-# FIREBASE EMULATOR CONFIGURATION
-# ================================================
-
-# Build Firebase Functions using make target
-local_resource(
-  'firebase-functions-build',
-  cmd='make firebase-build',
-  labels=['firebase'],
-  deps=['functions/src/**/*.ts', 'functions/package.json', 'functions/tsconfig.json', '.env'],
-  trigger_mode=TRIGGER_MODE_AUTO,
-)
-
-# Firebase Emulator Suite (Auth + Functions + UI) for local development
-local_resource(
-  'firebase-emulator',
-  serve_cmd='make firebase-start',
-  serve_dir='.',
-  labels=['firebase'],
-  resource_deps=['firebase-functions-build'],
-  auto_init=True,
-  readiness_probe=probe(
-    http_get=http_get_action(port=9099, path='/'),
-    initial_delay_secs=10,
-    timeout_secs=5,
-    period_secs=5,
-  ),
-  links=[
-    link('http://localhost:4000', 'Firebase Emulator UI'),
-    link('http://localhost:9099', 'Firebase Auth Emulator'),
-    link('http://localhost:5001', 'Firebase Functions Emulator'),
-  ]
-)
-
-# ================================================
 # SERVICE CONFIGURATION
 # ================================================
 
@@ -262,8 +228,9 @@ local_resource(
   cmd='make run-migrations',
   labels=['database'],
   resource_deps=['db'],
-  auto_init=False,
-  trigger_mode=TRIGGER_MODE_MANUAL,
+  deps=['core/db/migrations'],
+  auto_init=True,
+  trigger_mode=TRIGGER_MODE_AUTO,
 )
 
 local_resource(
@@ -285,25 +252,16 @@ dc_resource(
 )
 
 dc_resource(
-  'rabbitmq',
-  labels=['queue'],
-  auto_init=True,
-  links=[
-    link('http://localhost:15672', 'RabbitMQ Management (guest/guest)'),
-  ]
-)
-
-dc_resource(
   'worker',
   labels=['worker'],
-  resource_deps=['worker-build', 'rabbitmq', 'minio'],
+  resource_deps=['worker-build', 'run-migrations', 'minio'],
   auto_init=True,
 )
 
 dc_resource(
   'api',
   labels=['application'],
-  resource_deps=['api-build', 'db', 'rabbitmq', 'minio'],
+  resource_deps=['api-build', 'db', 'minio'],
   auto_init=True,
   links=[
     link('http://localhost:9090', 'Connect API'),
@@ -331,7 +289,7 @@ dc_resource(
 )
 
 dc_resource(
-  'minio-bucket-setup',
+  'minio-init',
   labels=['storage'],
   resource_deps=['minio'],
   auto_init=True,

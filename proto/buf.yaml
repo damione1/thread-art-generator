@@ -1,12 +1,23 @@
-version: v1
-name: github.com/damione1/thread-art-generator
+version: v2
+modules:
+  - path: .
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
+  # Required by existing OpenAPI annotations in .proto files (phase C/E can drop).
   - buf.build/grpc-ecosystem/grpc-gateway
+lint:
+  use:
+    - STANDARD
+  except:
+    # package is `pb` at proto/ root — AIP v1 rename is a contract change.
+    - PACKAGE_DIRECTORY_MATCH
+    - PACKAGE_VERSION_SUFFIX
+    # unused google/openapi imports; stripping them is a proto edit, not this stream.
+    - IMPORT_USED
+    # AIP-style unique *Request/*Response wrappers would rewrite the service contract.
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_RESPONSE_STANDARD_NAME
 breaking:
   use:
     - FILE
-lint:
-  use:
-    - DEFAULT

@@ -93,7 +93,7 @@ message ListUsersRequest {
     // PageToken is the token to retrieve the next page of results.
     string page_token = 1;
     // PageSize is the number of users to return in a single page.
-    int32 page_size = 2 [(buf.validate.field).int32 = {gt: 0, lte: 100}];
+    int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
 }
 
 message ListUsersResponse {
@@ -120,27 +120,4 @@ message DeleteUserRequest {
 // Following AIP principles of having a separate method for getting the current user.
 message GetCurrentUserRequest {
     // Intentionally empty - uses the authentication context to identify the user
-}
-
-// SyncUserFromFirebaseRequest is used by Firebase Cloud Functions to sync user data
-// from Firebase Authentication to the internal PostgreSQL database.
-message SyncUserFromFirebaseRequest {
-    // Firebase UID from Firebase Authentication
-    string firebase_uid = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (buf.validate.field).cel = {
-            id: "sync_user.firebase_uid.required",
-            message: "Firebase UID is required",
-            expression: "this.size() > 0"
-        }
-    ];
-
-    // Email address from Firebase user record
-    string email = 2;
-
-    // Display name from Firebase user record
-    string display_name = 3;
-
-    // Photo URL from Firebase user record
-    string photo_url = 4;
 }

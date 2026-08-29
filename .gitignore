@@ -37,11 +37,6 @@ yarn-error.log*
 web/next-env.d.ts
 next-env.d.ts
 
-# Firebase Functions
-functions/lib/
-functions/node_modules/
-.firebase/
-
 # Go
 *.jpg
 output/*
@@ -59,5 +54,3 @@ plan.md
 # Tailwind compiled CSS
 client/public/css/tailwind.css
 
-
-firebase-debug.log

@@ -1,0 +1,87 @@
+package interceptors
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"strings"
+
+	"connectrpc.com/connect"
+
+	"github.com/Damione1/thread-art-generator/core/auth"
+	"github.com/Damione1/thread-art-generator/core/middleware"
+)
+
+// IdentityInterceptor fills auth.Identity from Service HMAC or a session cookie.
+// Cookie is the user gate. Authorization: Service … is the worker gate.
+// Bare Bearer is rejected.
+func IdentityInterceptor(sessions auth.Sessions, services auth.ServiceAuth) connect.UnaryInterceptorFunc {
+	return func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			ctx, err := resolveIdentity(ctx, req.Spec().Procedure, req.Header(), sessions, services)
+			if err != nil {
+				return nil, err
+			}
+			return next(ctx, req)
+		}
+	}
+}
+
+func resolveIdentity(ctx context.Context, procedure string, header http.Header, sessions auth.Sessions, services auth.ServiceAuth) (context.Context, error) {
+	if skipIdentity(procedure) {
+		return ctx, nil
+	}
+
+	authz := header.Get("Authorization")
+	if isServiceAuthorization(authz) {
+		if services == nil {
+			return ctx, unauthenticated(auth.ErrInvalidServiceCred)
+		}
+		id, err := services.Authorize(ctx, authz)
+		if err != nil {
+			return ctx, unauthenticated(err)
+		}
+		return attachIdentity(ctx, id), nil
+	}
+
+	if sessions != nil {
+		sess, err := sessions.LoadFromCookie(ctx, &http.Request{Header: header})
+		if err == nil && sess.UserID != "" {
+			return attachIdentity(ctx, auth.Identity{
+				UserID: sess.UserID,
+				Email:  sess.Email,
+				Kind:   auth.PrincipalUser,
+			}), nil
+		}
+	}
+
+	return ctx, unauthenticated(errors.New("authorization token is not provided"))
+}
+
+func attachIdentity(ctx context.Context, id auth.Identity) context.Context {
+	ctx = auth.WithIdentity(ctx, id)
+	ctx = context.WithValue(ctx, middleware.AuthKey, id.UserID)
+	return ctx
+}
+
+func skipIdentity(procedure string) bool {
+	if strings.HasSuffix(procedure, "Health") {
+		return true
+	}
+	if i := strings.LastIndex(procedure, "/"); i > 0 && strings.HasSuffix(procedure[:i], "Health") {
+		return true
+	}
+	return false
+}
+
+func isServiceAuthorization(header string) bool {
+	scheme, _, ok := strings.Cut(header, " ")
+	return ok && strings.EqualFold(scheme, "Service")
+}
+
+func unauthenticated(err error) error {
+	if err == nil {
+		err = errors.New("unauthenticated")
+	}
+	return connect.NewError(connect.CodeUnauthenticated, err)
+}

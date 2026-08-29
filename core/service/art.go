@@ -4,62 +4,48 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
-	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/pb"
 	"github.com/Damione1/thread-art-generator/core/pbx"
 	"github.com/Damione1/thread-art-generator/core/resource"
+	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/bufbuild/protovalidate-go"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"gocloud.dev/blob"
+	"go.einride.tech/aip/fieldmask"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-
-func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
-	// Get Firebase UID from context
-	log.Info().Msgf("CreateArt: %s", req)
-
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+func (server *Server) createArt(ctx context.Context, req *pb.CreateArtRequest) (*pb.Art, error) {
+	user, err := server.currentUser(ctx)
+	if err != nil {
+		return nil, err
 	}
-	log.Info().Msgf("CreateArt Firebase UID: %s", firebaseUID)
 
 	if err := protovalidate.Validate(req); err != nil {
-		log.Info().Msgf("CreateArt protovalidate: %s", err)
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
-	log.Info().Msgf("CreateArt protovalidate: %s", req)
-
-	// Get user from database - user should already exist from auth sync
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("CreateArt failed to get user - user should have been created during auth sync")
-		return nil, pbErrors.InternalError("failed to get user", err)
+	if err := requireParentIdentity(req.GetParent(), user.ID); err != nil {
+		return nil, err
 	}
-	log.Info().Str("user_id", user.ID).Str("firebase_uid", firebaseUID).Str("email", user.Email.String).Msg("CreateArt found/created user")
 	if user.Role != models.RoleEnumUser {
-		log.Info().Msgf("CreateArt user is not a user")
 		return nil, pbErrors.PermissionDeniedError("only users can create art")
 	}
-	log.Info().Msgf("CreateArt user is a user")
 	artDb := &models.Art{
 		Title:    req.GetArt().GetTitle(),
 		AuthorID: user.ID,
-		Status:   models.ArtStatusEnumPENDING_IMAGE, // Set initial status as pending image
+		Status:   models.ArtStatusEnumPENDING_IMAGE,
 	}
 
 	err = artDb.Insert(ctx, server.config.DB, boil.Infer())
@@ -67,21 +53,13 @@ func (server *Server) CreateArt(ctx context.Context, req *pb.CreateArtRequest) (
 		return nil, pbErrors.InternalError("failed to insert art", err)
 	}
 
-	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
+	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
 }
 
-func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+func (server *Server) updateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("UpdateArt: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
@@ -121,88 +99,48 @@ func (server *Server) UpdateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
-	if req.GetArt().GetTitle() != "" {
-		artDb.Title = req.GetArt().GetTitle()
-	}
-
-	_, err = artDb.Update(ctx, server.config.DB, boil.Infer())
+	cols, err := applyArtUpdateMask(req.GetUpdateMask(), req.GetArt(), artDb)
 	if err != nil {
 		return nil, err
 	}
-
-	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
-}
-
-func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
+	if len(cols) > 0 {
+		_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(cols...))
+		if err != nil {
+			return nil, pbErrors.InternalError("failed to update art", err)
+		}
 	}
 
-	// Get user from database - user should already exist from auth sync
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
+}
+
+func (server *Server) listArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ListArts failed to get user - user should have been created during auth sync")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
-
-	pageSize := int(req.GetPageSize())
-
-	const (
-		maxPageSize     = 1000
-		defaultPageSize = 100
-	)
-
-	switch {
-	case pageSize < 0:
-		return nil, status.Errorf(codes.InvalidArgument, "page size is negative")
-	case pageSize == 0:
-		pageSize = defaultPageSize
-	case pageSize > maxPageSize:
-		pageSize = maxPageSize
+	if err := requireParentIdentity(req.GetParent(), user.ID); err != nil {
+		return nil, err
 	}
 
-	// Parse page token to get offset
-	offset := 0
-	if req.GetPageToken() != "" {
-		var err error
-		offset, err = parseInt32PageToken(req.GetPageToken())
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid page token: %v", err)
-		}
+	if req.GetPageSize() < 0 {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("page_size", errors.New("page size is negative")),
+		})
+	}
+	pageSize := int(clampPageSize(req.GetPageSize(), 100, 100))
+
+	offset, err := pageOffset(req)
+	if err != nil {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("page_token", err),
+		})
 	}
 
-	// Determine order_by and order_direction
-	orderBy := req.GetOrderBy()
-	if orderBy == "" {
-		orderBy = "create_time"
-	}
-	orderDirection := req.GetOrderDirection()
-	if orderDirection == "" {
-		orderDirection = "desc"
-	}
-
-	// Map proto field to DB column
-	var orderColumn string
-	switch orderBy {
-	case "create_time":
-		orderColumn = models.ArtColumns.CreatedAt
-	case "update_time":
-		orderColumn = models.ArtColumns.UpdatedAt
-	default:
-		orderColumn = models.ArtColumns.CreatedAt
-	}
-
-	// Validate direction
-	dir := "DESC"
-	if orderDirection == "asc" {
-		dir = "ASC"
-	}
+	orderColumn, dir := parseOrderBy(req.GetOrderBy())
 
 	// Build query mods using internal user ID
 	queryMods := []qm.QueryMod{
@@ -228,60 +166,42 @@ func (server *Server) ListArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 	// Convert the arts to protobuf format
 	artPbs := make([]*pb.Art, 0, len(arts))
 	for _, artDb := range arts {
-		artPbs = append(artPbs, pbx.ArtDbToProto(ctx, server.storage, artDb))
-	}
-
-	// Create next page token if there are more results
-	nextPageToken := ""
-	if hasNextPage {
-		nextPageToken = createPageToken(offset + pageSize)
+		artPbs = append(artPbs, pbx.ArtDbToProto(artDb, server.publicBaseURL))
 	}
 
 	return &pb.ListArtsResponse{
 		Arts:          artPbs,
-		NextPageToken: nextPageToken,
+		NextPageToken: encodeNextPageToken(req, int32(pageSize), hasNextPage),
 	}, nil
 }
 
-// parseInt32PageToken converts a string page token to an integer offset
-func parseInt32PageToken(token string) (int, error) {
-	// For simplicity, we're just converting the string to int
-	// In a production system, you might want to use a more secure approach
-	// such as signed or encrypted tokens
-	var offset int
-	_, err := fmt.Sscanf(token, "%d", &offset)
-	if err != nil {
-		return 0, err
+func parseOrderBy(orderBy string) (column, dir string) {
+	column = models.ArtColumns.CreatedAt
+	dir = "DESC"
+	fields := strings.Fields(strings.TrimSpace(orderBy))
+	if len(fields) == 0 {
+		return column, dir
 	}
-	if offset < 0 {
-		return 0, fmt.Errorf("offset cannot be negative")
+	switch fields[0] {
+	case "update_time":
+		column = models.ArtColumns.UpdatedAt
+	default:
+		column = models.ArtColumns.CreatedAt
 	}
-	return offset, nil
+	if len(fields) > 1 && strings.EqualFold(fields[1], "asc") {
+		dir = "ASC"
+	}
+	return column, dir
 }
 
-// createPageToken creates a page token from an integer offset
-func createPageToken(offset int) string {
-	// For simplicity, we're just converting the int to string
-	// In a production system, you might want to use a more secure approach
-	return fmt.Sprintf("%d", offset)
-}
-
-func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Art, error) {
+func (server *Server) getArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Art, error) {
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetArt: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	artResource, err := resource.ParseResourceName(req.GetName())
@@ -316,25 +236,17 @@ func (server *Server) GetArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
-	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
+	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
 }
 
-func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (*emptypb.Empty, error) {
+func (server *Server) deleteArt(ctx context.Context, req *pb.DeleteArtRequest) (*emptypb.Empty, error) {
 	if err := protovalidate.Validate(req); err != nil {
 		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
 
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("DeleteArt: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, err
 	}
 
 	artResource, err := resource.ParseResourceName(req.GetName())
@@ -376,8 +288,8 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 
 	// Delete the image from the bucket
 	if artDb.ImageID.Valid {
-		imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
-		err = server.storage.GetPublicStorage().Delete(ctx, imageKey)
+		imageKey := resource.ArtImageObjectKey(artDb.AuthorID, artDb.ID, artDb.ImageID.String)
+		err = server.bucket.Delete(ctx, imageKey)
 		if err != nil {
 			log.Error().Err(err).Msg(fmt.Sprintf("Failed to delete image %s", artDb.ImageID.String))
 			return &emptypb.Empty{}, nil // Don't return a public error if the image deletion fails
@@ -387,177 +299,182 @@ func (server *Server) DeleteArt(ctx context.Context, req *pb.DeleteArtRequest) (
 	return &emptypb.Empty{}, nil
 }
 
-// GetArtUploadUrl generates a signed URL for uploading an image for a specific art
-func (server *Server) GetArtUploadUrl(ctx context.Context, req *pb.GetArtUploadUrlRequest) (*pb.GetArtUploadUrlResponse, error) {
-	if err := protovalidate.Validate(req); err != nil {
-		return nil, pbErrors.ConvertProtoValidateError(err)
-	}
-
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
-
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
-	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("GetArtUploadUrl: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
-	}
-
-	artResource, err := resource.ParseResourceName(req.GetName())
-	if err != nil {
-		violations := []*errdetails.BadRequest_FieldViolation{
-			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
-		}
-		return nil, pbErrors.InvalidArgumentError(violations)
-	}
-
-	art, ok := artResource.(*resource.Art)
-	if !ok {
-		violations := []*errdetails.BadRequest_FieldViolation{
-			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
-		}
-		return nil, pbErrors.InvalidArgumentError(violations)
-	}
-
-	// Compare internal user ID with art's user ID from resource name
-	if art.UserID != user.ID {
-		return nil, pbErrors.PermissionDeniedError("only the author can get an upload URL for the art")
-	}
-
-	// Check if the art exists
-	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(art.ArtID),
-		models.ArtWhere.AuthorID.EQ(user.ID),
-	).One(ctx, server.config.DB)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("art not found")
-		}
-		return nil, pbErrors.InternalError("failed to get art", err)
-	}
-
-	// Generate a unique image ID if not exists
-	imageID := artDb.ImageID.String
-	if !artDb.ImageID.Valid {
-		imageID = uuid.New().String()
-
-		// Update the art with the new image ID
-		artDb.ImageID = null.StringFrom(imageID)
-
-		_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(models.ArtColumns.ImageID))
-		if err != nil {
-			return nil, pbErrors.InternalError("failed to update art with image ID", err)
+func flattenPresignHeaders(h http.Header) map[string]string {
+	out := make(map[string]string, len(h))
+	for k, vals := range h {
+		if len(vals) > 0 {
+			out[k] = vals[0]
 		}
 	}
-
-	// Create the image key using resource builder
-	imageKey := resource.BuildArtResourceName(artDb.AuthorID, imageID)
-
-	// Generate a secure signed URL with 1-minute expiration and content validation
-	opts := &blob.SignedURLOptions{
-		Expiry:      time.Minute, // 1-minute expiration for security
-		Method:      "PUT",
-		ContentType: req.GetContentType(), // Include content type for validation
-	}
-
-	signedURL, err := server.storage.GetPublicStorage().SignedURL(ctx, imageKey, opts)
-	if err != nil {
-		return nil, pbErrors.InternalError("failed to generate signed URL", err)
-	}
-
-	// Calculate expiration time
-	expirationTime := time.Now().Add(time.Minute)
-
-	log.Info().Msgf("Signed URL: %s", signedURL)
-
-	return &pb.GetArtUploadUrlResponse{
-		UploadUrl:      signedURL,
-		ExpirationTime: timestamppb.New(expirationTime),
-	}, nil
+	return out
 }
 
-// ConfirmArtImageUpload marks an art as complete after successful image upload
-func (server *Server) ConfirmArtImageUpload(ctx context.Context, req *pb.ConfirmArtImageUploadRequest) (*pb.Art, error) {
-	// Get Firebase UID from context
-	firebaseUID, ok := middleware.UserIDFromContext(ctx)
-	if !ok {
-		return nil, pbErrors.PermissionDeniedError("user not authenticated")
-	}
+const maxArtImageBytes = 10 * 1024 * 1024
 
-	// Get internal user from Firebase UID
-	user, err := server.getUserFromFirebaseUID(ctx, firebaseUID)
+func validateUploadedObject(info *storage.ObjectInfo) error {
+	if info == nil {
+		return pbErrors.FailedPreconditionError("image not found in storage, upload first")
+	}
+	if info.ContentType != "" && !strings.HasPrefix(info.ContentType, "image/") {
+		return pbErrors.FailedPreconditionError("uploaded object is not an image")
+	}
+	if info.Size > maxArtImageBytes {
+		return pbErrors.FailedPreconditionError("uploaded object exceeds 10MB")
+	}
+	return nil
+}
+
+func (server *Server) loadOwnedArt(ctx context.Context, name, action string) (*models.Art, *models.User, error) {
+	user, err := server.currentUser(ctx)
 	if err != nil {
-		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("ConfirmArtImageUpload: Failed to get user from Firebase UID")
-		return nil, pbErrors.InternalError("failed to get user", err)
+		return nil, nil, err
 	}
-
-	if err := protovalidate.Validate(req); err != nil {
-		return nil, pbErrors.ConvertProtoValidateError(err)
-	}
-
-	artResource, err := resource.ParseResourceName(req.GetName())
+	parsed, err := resource.ParseResourceName(name)
 	if err != nil {
-		violations := []*errdetails.BadRequest_FieldViolation{
+		return nil, nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid resource name")),
-		}
-		return nil, pbErrors.InvalidArgumentError(violations)
+		})
 	}
-
-	art, ok := artResource.(*resource.Art)
+	artRes, ok := parsed.(*resource.Art)
 	if !ok {
-		violations := []*errdetails.BadRequest_FieldViolation{
+		return nil, nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
 			pbErrors.FieldViolation("name", errors.New("invalid art resource name")),
-		}
-		return nil, pbErrors.InvalidArgumentError(violations)
+		})
 	}
-
-	// Compare internal user ID with art's user ID from resource name
-	if art.UserID != user.ID {
-		return nil, pbErrors.PermissionDeniedError("only the author can confirm image upload")
+	if artRes.UserID != user.ID {
+		return nil, nil, pbErrors.PermissionDeniedError("only the author can " + action)
 	}
-
-	// Get the art
 	artDb, err := models.Arts(
-		models.ArtWhere.ID.EQ(art.ArtID),
+		models.ArtWhere.ID.EQ(artRes.ArtID),
 		models.ArtWhere.AuthorID.EQ(user.ID),
 	).One(ctx, server.config.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, pbErrors.NotFoundError("art not found")
+			return nil, nil, pbErrors.NotFoundError("art not found")
 		}
-		return nil, pbErrors.InternalError("failed to get art", err)
+		return nil, nil, pbErrors.InternalError("failed to get art", err)
 	}
+	return artDb, user, nil
+}
 
-	// Make sure there's an image ID
-	if !artDb.ImageID.Valid {
-		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
-			pbErrors.FieldViolation("name", errors.New("art has no image ID, request upload URL first")),
-		})
+func (server *Server) startArtUpload(ctx context.Context, req *pb.StartArtUploadRequest) (*pb.StartArtUploadResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
 	}
-
-	// Verify the image exists in the bucket using resource builder
-	imageKey := resource.BuildArtResourceName(artDb.AuthorID, artDb.ImageID.String)
-
-	exists, err := server.storage.GetPublicStorage().Exists(ctx, imageKey)
+	artDb, user, err := server.loadOwnedArt(ctx, req.GetName(), "upload")
 	if err != nil {
-		return nil, pbErrors.InternalError("failed to verify image exists", err)
+		return nil, err
 	}
-
-	if !exists {
-		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
-			pbErrors.FieldViolation("name", errors.New("image not found in storage, upload the image first")),
-		})
+	if artDb.Status != models.ArtStatusEnumPENDING_IMAGE {
+		return nil, pbErrors.FailedPreconditionError("art is not awaiting an image")
 	}
+	key := resource.ArtOriginalObjectKey(user.ID, artDb.ID)
+	resp, err := presignArtOriginal(ctx, server.bucket, key, req.GetContentType())
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
 
-	// Update status to complete
+func (server *Server) completeArtUpload(ctx context.Context, req *pb.CompleteArtUploadRequest) (*pb.Art, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, pbErrors.ConvertProtoValidateError(err)
+	}
+	artDb, user, err := server.loadOwnedArt(ctx, req.GetName(), "complete upload")
+	if err != nil {
+		return nil, err
+	}
+	key := resource.ArtOriginalObjectKey(user.ID, artDb.ID)
+	if err := headUploadedOriginal(ctx, server.bucket, key); err != nil {
+		return nil, err
+	}
 	artDb.Status = models.ArtStatusEnumCOMPLETE
-	_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(models.ArtColumns.Status))
+	artDb.ImageID = null.StringFrom(artDb.ID)
+	_, err = artDb.Update(ctx, server.config.DB, boil.Whitelist(models.ArtColumns.Status, models.ArtColumns.ImageID))
 	if err != nil {
 		return nil, pbErrors.InternalError("failed to update art status", err)
 	}
+	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
+}
 
-	return pbx.ArtDbToProto(ctx, server.storage, artDb), nil
+func presignArtOriginal(ctx context.Context, bucket storage.Bucket, key, contentType string) (*pb.StartArtUploadResponse, error) {
+	presign, err := bucket.PresignPut(ctx, key, storage.PresignPutOptions{
+		ContentType: contentType,
+		TTL:         10 * time.Minute,
+	})
+	if err != nil {
+		return nil, pbErrors.InternalError("failed to presign upload", err)
+	}
+	return &pb.StartArtUploadResponse{
+		UploadUrl: presign.URL,
+		Method:    presign.Method,
+		Headers:   flattenPresignHeaders(presign.Headers),
+		ExpiresAt: timestamppb.New(presign.Expires),
+	}, nil
+}
+
+func headUploadedOriginal(ctx context.Context, bucket storage.Bucket, key string) error {
+	info, err := bucket.Head(ctx, key)
+	if err != nil {
+		return pbErrors.FailedPreconditionError("image not found in storage, upload first")
+	}
+	return validateUploadedObject(info)
+}
+
+func requireParentIdentity(parent, userID string) error {
+	res, err := resource.ParseResourceName(parent)
+	if err != nil {
+		return pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("parent", errors.New("invalid resource name")),
+		})
+	}
+	userRes, ok := res.(*resource.User)
+	if !ok {
+		return pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("parent", errors.New("invalid user resource name")),
+		})
+	}
+	if userRes.ID != userID {
+		return pbErrors.PermissionDeniedError("parent does not match authenticated user")
+	}
+	return nil
+}
+
+func applyArtUpdateMask(mask *fieldmaskpb.FieldMask, src *pb.Art, dst *models.Art) ([]string, error) {
+	if src == nil || dst == nil {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("art", errors.New("art is required")),
+		})
+	}
+	paths := mask.GetPaths()
+	if fieldmask.IsFullReplacement(mask) || len(paths) == 0 {
+		paths = []string{"title"}
+	} else if err := fieldmask.Validate(mask, src); err != nil {
+		return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+			pbErrors.FieldViolation("update_mask", err),
+		})
+	}
+
+	cols := make([]string, 0, 2)
+	seenTitle := false
+	for _, path := range paths {
+		switch path {
+		case "title":
+			if seenTitle {
+				continue
+			}
+			seenTitle = true
+			dst.Title = src.GetTitle()
+			cols = append(cols, models.ArtColumns.Title)
+		case "name", "image_url", "status", "author", "create_time", "update_time":
+			return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("update_mask", fmt.Errorf("field %q is not updatable", path)),
+			})
+		default:
+			return nil, pbErrors.InvalidArgumentError([]*errdetails.BadRequest_FieldViolation{
+				pbErrors.FieldViolation("update_mask", fmt.Errorf("unknown field %q", path)),
+			})
+		}
+	}
+	return cols, nil
 }
