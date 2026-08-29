@@ -36,6 +36,12 @@ func (e *Emails) SendPasswordReset(ctx context.Context, to Address, token string
 	return e.send(ctx, to, "Reset your ThreadArt password", resetText(name, link), resetHTML(name, link))
 }
 
+func (e *Emails) SendEmailChange(ctx context.Context, to Address, token string) error {
+	link := e.BaseURL + "/confirm-email?token=" + url.QueryEscape(token)
+	name := displayName(to)
+	return e.send(ctx, to, "Confirm your new ThreadArt email", emailChangeText(name, link), emailChangeHTML(name, link))
+}
+
 func (e *Emails) send(ctx context.Context, to Address, subject, text, html string) error {
 	if e == nil || e.Mailer == nil {
 		return fmt.Errorf("mail: emails sender is not configured")
@@ -83,6 +89,21 @@ func resetHTML(name, link string) string {
 		Action:    "Reset password",
 		Link:      link,
 		Foot:      "If you did not request a reset, you can ignore this email.",
+	})
+}
+
+func emailChangeText(name, link string) string {
+	return fmt.Sprintf("Hi %s,\n\nConfirm your new ThreadArt email by opening this link (valid 24 hours):\n%s\n\nIf you did not request this change, ignore this email.\n", name, link)
+}
+
+func emailChangeHTML(name, link string) string {
+	return renderHTML(htmlParams{
+		Preheader: "Confirm your new ThreadArt email",
+		Heading:   "Confirm your new email",
+		Body:      fmt.Sprintf("Hi %s, click the button below to confirm this email for your ThreadArt account. This link expires in 24 hours.", name),
+		Action:    "Confirm email",
+		Link:      link,
+		Foot:      "If you did not request this change, you can ignore this email.",
 	})
 }
 

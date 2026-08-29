@@ -33,7 +33,7 @@ func (p *PGIdentities) ByEmail(ctx context.Context, email string) (Identity, str
 		return Identity{}, "", ErrIdentityNotFound
 	}
 	return p.scanAccount(ctx, `
-		SELECT id, COALESCE(email, ''), COALESCE(password_hash, ''), first_name, last_name, active
+		SELECT id, COALESCE(email, ''), COALESCE(password_hash, ''), first_name, last_name, active, COALESCE(session_version, 1)
 		FROM users
 		WHERE lower(email) = $1
 	`, email)
@@ -44,7 +44,7 @@ func (p *PGIdentities) ByID(ctx context.Context, userID string) (Identity, strin
 		return Identity{}, "", ErrIdentityNotFound
 	}
 	return p.scanAccount(ctx, `
-		SELECT id, COALESCE(email, ''), COALESCE(password_hash, ''), first_name, last_name, active
+		SELECT id, COALESCE(email, ''), COALESCE(password_hash, ''), first_name, last_name, active, COALESCE(session_version, 1)
 		FROM users
 		WHERE id = $1
 	`, userID)
@@ -55,21 +55,26 @@ func (p *PGIdentities) scanAccount(ctx context.Context, query string, arg any) (
 		id, email, hash, first string
 		last                   sql.NullString
 		active                 bool
+		sessionVersion         int
 	)
-	err := p.DB.QueryRowContext(ctx, query, arg).Scan(&id, &email, &hash, &first, &last, &active)
+	err := p.DB.QueryRowContext(ctx, query, arg).Scan(&id, &email, &hash, &first, &last, &active, &sessionVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Identity{}, "", ErrIdentityNotFound
 	}
 	if err != nil {
 		return Identity{}, "", err
 	}
+	if sessionVersion <= 0 {
+		sessionVersion = 1
+	}
 	return Identity{
-		UserID:    id,
-		Email:     email,
-		FirstName: first,
-		LastName:  last.String,
-		Active:    active,
-		Kind:      PrincipalUser,
+		UserID:         id,
+		Email:          email,
+		FirstName:      first,
+		LastName:       last.String,
+		Active:         active,
+		Kind:           PrincipalUser,
+		SessionVersion: sessionVersion,
 	}, hash, nil
 }
 
@@ -97,13 +102,30 @@ func (p *PGIdentities) Create(ctx context.Context, email, passwordHash, first, l
 		return Identity{}, err
 	}
 	return Identity{
-		UserID:    id,
-		Email:     email,
-		FirstName: first,
-		LastName:  last,
-		Active:    false,
-		Kind:      PrincipalUser,
+		UserID:         id,
+		Email:          email,
+		FirstName:      first,
+		LastName:       last,
+		Active:         false,
+		Kind:           PrincipalUser,
+		SessionVersion: 1,
 	}, nil
+}
+
+func (p *PGIdentities) BumpSessionVersion(ctx context.Context, userID string) (int, error) {
+	var ver int
+	err := p.DB.QueryRowContext(ctx, `
+		UPDATE users SET session_version = session_version + 1, updated_at = NOW()
+		WHERE id = $1
+		RETURNING session_version
+	`, userID).Scan(&ver)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrIdentityNotFound
+	}
+	if err != nil {
+		return 0, err
+	}
+	return ver, nil
 }
 
 func (p *PGIdentities) UpdatePassword(ctx context.Context, userID, passwordHash string) error {

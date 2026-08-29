@@ -22,6 +22,7 @@ type PageData struct {
 
 	// Authentication state
 	IsLoggedIn bool
+	CSRFToken  string
 
 	Meta map[string]string
 
@@ -56,6 +57,7 @@ func NewPageDataFromRequest(r *http.Request, title, pageType string) *PageData {
 		PageType:    pageType,
 		User:        nil,
 		IsLoggedIn:  false,
+		CSRFToken:   middleware.CSRFFromContext(r.Context()),
 		Meta:        make(map[string]string),
 		FieldErrors: make(map[string][]string),
 	}

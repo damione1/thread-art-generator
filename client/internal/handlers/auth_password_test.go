@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
@@ -38,6 +39,17 @@ func (f *fakeIdentities) UpdateProfile(context.Context, string, string, string, 
 }
 
 func (f *fakeIdentities) SetActive(context.Context, string, bool) error { return f.err }
+
+func (f *fakeIdentities) BumpSessionVersion(_ context.Context, _ string) (int, error) {
+	if f.err != nil {
+		return 0, f.err
+	}
+	if f.identity.SessionVersion <= 0 {
+		f.identity.SessionVersion = 1
+	}
+	f.identity.SessionVersion++
+	return f.identity.SessionVersion, nil
+}
 
 func TestLoginHydratesSessionProfile(t *testing.T) {
 	sm := auth.NewInMemorySessionManager()
@@ -81,4 +93,44 @@ func TestLoginHydratesSessionProfile(t *testing.T) {
 	require.Equal(t, "Ada", got.User.FirstName)
 	require.Equal(t, "ada@example.com", got.User.Email)
 	require.NotEmpty(t, got.User.Picture)
+}
+
+func TestLoginUnknownEmailIsUnauthorized(t *testing.T) {
+	sm := auth.NewInMemorySessionManager()
+	h := NewPasswordAuthHandler(&fakeIdentities{err: coreauth.ErrIdentityNotFound}, nil, nil, sm)
+	mux := http.NewServeMux()
+	mux.Handle("/auth/login", sm.GetSessionManager().LoadAndSave(http.HandlerFunc(h.Login)))
+
+	body, _ := json.Marshal(map[string]string{"email": "missing@example.com", "password": "password12"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestSignupRejectsLongPassword(t *testing.T) {
+	sm := auth.NewInMemorySessionManager()
+	h := NewPasswordAuthHandler(&fakeIdentities{err: coreauth.ErrIdentityNotFound}, nil, nil, sm)
+	mux := http.NewServeMux()
+	mux.Handle("/auth/signup", sm.GetSessionManager().LoadAndSave(http.HandlerFunc(h.Signup)))
+
+	body, _ := json.Marshal(map[string]string{
+		"email":      "ada@example.com",
+		"password":   strings.Repeat("a", 129),
+		"first_name": "Ada",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/auth/signup", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestLogoutRejectsGET(t *testing.T) {
+	sm := auth.NewInMemorySessionManager()
+	h := NewPasswordAuthHandler(&fakeIdentities{}, nil, nil, sm)
+	rec := httptest.NewRecorder()
+	h.Logout(rec, httptest.NewRequest(http.MethodGet, "/auth/logout", nil))
+	require.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 }

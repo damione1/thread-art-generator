@@ -60,6 +60,34 @@ func TestGetSessionFallsBackToEmailKeys(t *testing.T) {
 	handler.ServeHTTP(httptest.NewRecorder(), req)
 }
 
+func TestCreateSessionStoresVersionAndCSRF(t *testing.T) {
+	sm := NewInMemorySessionManager()
+	var csrf string
+	handler := sm.GetSessionManager().LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login" {
+			require.NoError(t, sm.CreateSession(w, r, "user-1", UserInfoFromIdentity(coreauth.Identity{
+				UserID: "user-1", Email: "ada@example.com", FirstName: "Ada",
+			}), 4))
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		session, err := sm.GetSession(r)
+		require.NoError(t, err)
+		require.Equal(t, 4, session.Version)
+		var genErr error
+		csrf, genErr = sm.EnsureCSRFToken(r)
+		require.NoError(t, genErr)
+		require.NotEmpty(t, csrf)
+	}))
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/login", nil))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(rec.Result().Cookies()[0])
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+	require.NotEmpty(t, csrf)
+}
+
 func TestCreateSessionRoundTrip(t *testing.T) {
 	sm := NewInMemorySessionManager()
 	handler := sm.GetSessionManager().LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +97,7 @@ func TestCreateSessionRoundTrip(t *testing.T) {
 				Email:     "ada@example.com",
 				FirstName: "Ada",
 				LastName:  "Lovelace",
-			})))
+			}), 1))
 			w.WriteHeader(http.StatusOK)
 			return
 		}

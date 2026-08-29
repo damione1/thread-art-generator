@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +24,7 @@ func testRouter(t *testing.T) (*chi.Mux, *auth.SCSSessionManager) {
 	sm := auth.NewInMemorySessionManager()
 	r := chi.NewRouter()
 	r.Use(sm.GetSessionManager().LoadAndSave)
-	r.Use(SessionAuthMiddleware(sm))
+	r.Use(SessionAuthMiddleware(sm, nil))
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		user, ok := UserFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -39,7 +40,7 @@ func testRouter(t *testing.T) (*chi.Mux, *auth.SCSSessionManager) {
 			Email:     "ada@example.com",
 			FirstName: "Ada",
 			LastName:  "Lovelace",
-		})))
+		}), 1))
 		w.WriteHeader(http.StatusOK)
 	})
 	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
@@ -95,5 +96,33 @@ func TestShouldSkipAuthRequirement(t *testing.T) {
 	require.True(t, shouldSkipAuthRequirement("/logout"))
 	require.True(t, shouldSkipAuthRequirement("/forgot-password"))
 	require.True(t, shouldSkipAuthRequirement("/auth/login"))
+	require.True(t, shouldSkipAuthRequirement("/confirm-email"))
 	require.False(t, shouldSkipAuthRequirement("/dashboard"))
+}
+
+func TestSessionEpochMismatchLogsOut(t *testing.T) {
+	sm := auth.NewInMemorySessionManager()
+	r := chi.NewRouter()
+	r.Use(sm.GetSessionManager().LoadAndSave)
+	r.Use(SessionAuthMiddleware(sm, func(context.Context, string) (int, error) {
+		return 2, nil
+	}))
+	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.Post("/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, sm.CreateSession(w, r, "user-1", auth.UserInfoFromIdentity(coreauth.Identity{
+			UserID: "user-1", Email: "ada@example.com", FirstName: "Ada",
+		}), 1))
+		w.WriteHeader(http.StatusOK)
+	})
+
+	loginRec := httptest.NewRecorder()
+	r.ServeHTTP(loginRec, httptest.NewRequest(http.MethodPost, "/auth/login", nil))
+	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	req.AddCookie(loginRec.Result().Cookies()[0])
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+	require.Equal(t, "/login", rec.Header().Get("Location"))
 }

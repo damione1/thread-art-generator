@@ -23,7 +23,7 @@ func WithUser(ctx context.Context, user *auth.UserInfo) context.Context {
 
 // SessionAuthMiddleware gates HTML routes on the SCS cookie. Public paths still
 // pick up a user if a session exists. IdentityInterceptor is the API gate.
-func SessionAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Handler) http.Handler {
+func SessionAuthMiddleware(sessionManager *auth.SCSSessionManager, sessionVersion func(ctx context.Context, userID string) (int, error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			isPublicPath := shouldSkipAuthRequirement(r.URL.Path)
@@ -76,6 +76,33 @@ func SessionAuthMiddleware(sessionManager *auth.SCSSessionManager) func(http.Han
 				return
 			}
 
+			if sessionVersion != nil {
+				dbVer, verErr := sessionVersion(r.Context(), userID)
+				sessVer := sessionData.Version
+				if sessVer <= 0 {
+					sessVer = 1
+				}
+				if dbVer <= 0 {
+					dbVer = 1
+				}
+				if verErr != nil || sessVer != dbVer {
+					log.Info().
+						Err(verErr).
+						Str("request_id", reqID).
+						Str("user_id", userID).
+						Int("session_version", sessVer).
+						Int("db_version", dbVer).
+						Msg("Session epoch mismatch - destroying session")
+					sessionManager.DestroySession(w, r)
+					if isPublicPath {
+						next.ServeHTTP(w, r)
+						return
+					}
+					http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+					return
+				}
+			}
+
 			ctx := context.WithValue(r.Context(), userContextKey{}, &sessionData.UserInfo)
 
 			log.Debug().
@@ -98,6 +125,7 @@ func shouldSkipAuthRequirement(path string) bool {
 		"/forgot-password",
 		"/reset-password",
 		"/verify",
+		"/confirm-email",
 		"/check-email",
 		"/logout",
 		"/auth/",

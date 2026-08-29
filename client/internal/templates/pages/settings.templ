@@ -15,12 +15,19 @@ templ SettingsPage(data *templates.PageData) {
 			if data.GetSettingsData().Saved == "profile" {
 				@templates.SuccessAlert("Profile saved.")
 			}
+			if data.GetSettingsData().Saved == "email" {
+				@templates.SuccessAlert("Check your new inbox to confirm the email change.")
+			}
+			if data.GetSettingsData().Saved == "email-confirmed" {
+				@templates.SuccessAlert("Email updated.")
+			}
 			if data.GetSettingsData().Saved == "password" {
 				@templates.SuccessAlert("Password updated.")
 			}
 			<div class="bg-dark-200 rounded-xl shadow-lg p-6 border border-dark-400/30 space-y-6">
 				<h2 class="text-xl font-semibold text-slate-200">Profile</h2>
 				<form method="POST" action="/settings/profile" class="space-y-4">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<div>
 						<label for="first_name" class="block text-sm font-medium text-slate-300 mb-1">First name</label>
 						<input
@@ -67,6 +74,7 @@ templ SettingsPage(data *templates.PageData) {
 			<div class="bg-dark-200 rounded-xl shadow-lg p-6 border border-dark-400/30 space-y-6">
 				<h2 class="text-xl font-semibold text-slate-200">Password</h2>
 				<form method="POST" action="/settings/password" class="space-y-4">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<div>
 						<label for="current_password" class="block text-sm font-medium text-slate-300 mb-1">Current password</label>
 						<input

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -86,7 +86,7 @@ func main() {
 	identities := &coreauth.PGIdentities{DB: db}
 	tokens := &coreauth.PGTokens{DB: db, Clock: clock.Real{}}
 	passwordAuth := handlers.NewPasswordAuthHandler(identities, tokens, emails, sessionManager)
-	settingsHandler := handlers.NewSettingsHandler(identities, sessionManager)
+	settingsHandler := handlers.NewSettingsHandler(identities, tokens, emails, sessionManager)
 	pageHandler := handlers.NewPageHandler(generatorService)
 	artHandler := handlers.NewArtHandler(generatorService)
 	compositionHandler := handlers.NewCompositionHandler(generatorService)
@@ -95,7 +95,15 @@ func main() {
 
 	r.Use(sessionManager.GetSessionManager().LoadAndSave)
 	r.Use(client.IncomingCookieMiddleware)
-	r.Use(middleware.SessionAuthMiddleware(sessionManager))
+	r.Use(middleware.SecurityHeaders(config.FrontendUrl, config.Storage.PublicBaseURL, !util.IsDevelopment(config.Environment)))
+	r.Use(middleware.CSRFMiddleware(sessionManager, config.FrontendUrl))
+	r.Use(middleware.SessionAuthMiddleware(sessionManager, func(ctx context.Context, userID string) (int, error) {
+		id, _, err := identities.ByID(ctx, userID)
+		if err != nil {
+			return 0, err
+		}
+		return id.SessionVersion, nil
+	}))
 
 	r.Group(func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -106,15 +114,12 @@ func main() {
 			r.Post("/login", passwordAuth.Login)
 			r.Post("/signup", passwordAuth.Signup)
 			r.Post("/logout", passwordAuth.Logout)
-			r.Get("/logout", passwordAuth.Logout)
 			r.Get("/status", passwordAuth.Status)
 			r.Post("/forgot-password", passwordAuth.ForgotPassword)
 			r.Post("/reset-password", passwordAuth.ResetPassword)
 			r.Post("/resend-verification", passwordAuth.ResendVerification)
 		})
 		r.Post("/logout", passwordAuth.Logout)
-		r.Get("/logout", passwordAuth.Logout)
-
 		r.Get("/", pageHandler.HomePage)
 		r.Get("/login", pageHandler.LoginPage)
 		r.Get("/signup", pageHandler.SignupPage)
@@ -122,6 +127,7 @@ func main() {
 		r.Get("/reset-password", pageHandler.ResetPasswordPage)
 		r.Get("/check-email", pageHandler.CheckEmailPage)
 		r.Get("/verify", passwordAuth.Verify)
+		r.Get("/confirm-email", settingsHandler.ConfirmEmailChange)
 
 		mountRPCProxy(r, config.ApiURL)
 	})
@@ -150,16 +156,17 @@ func main() {
 		r.Route("/api", func(r chi.Router) {
 			r.Get("/user", func(w http.ResponseWriter, r *http.Request) {
 				user, ok := middleware.UserFromContext(r.Context())
-
 				w.Header().Set("Content-Type", "application/json")
 				if !ok || user == nil {
 					w.WriteHeader(http.StatusUnauthorized)
-					w.Write([]byte(`{"error":"Unauthorized"}`))
+					_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
 					return
 				}
-
-				fmt.Fprintf(w, `{"id":"%s","name":"%s","email":"%s"}`,
-					user.ID, user.Name, user.Email)
+				_ = json.NewEncoder(w).Encode(map[string]string{
+					"id":    user.ID,
+					"name":  user.Name,
+					"email": user.Email,
+				})
 			})
 		})
 	})

@@ -16,8 +16,9 @@ func TestSCSSessionsRoundTrip(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	require.NoError(t, s.Issue(req.Context(), rec, req, Session{
-		UserID: "user-uuid",
-		Email:  "a@b.c",
+		UserID:         "user-uuid",
+		Email:          "a@b.c",
+		SessionVersion: 5,
 	}))
 
 	cookies := rec.Result().Cookies()
@@ -29,6 +30,7 @@ func TestSCSSessionsRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "user-uuid", got.UserID)
 	require.Equal(t, "a@b.c", got.Email)
+	require.Equal(t, 5, got.SessionVersion)
 }
 
 func TestSCSSessionsMissingCookie(t *testing.T) {

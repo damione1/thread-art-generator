@@ -8,10 +8,14 @@ import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
 window.logout = async function logout() {
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
   await fetch('/auth/logout', {
     method: 'POST',
     credentials: 'include',
-    headers: { Accept: 'application/json' },
+    headers: {
+      Accept: 'application/json',
+      ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
+    },
   });
   window.location.href = '/';
 };

@@ -1,11 +1,22 @@
 package auth
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func TestValidatePasswordLength(t *testing.T) {
+	t.Parallel()
+	require.ErrorIs(t, ValidatePasswordLength("short"), ErrPasswordTooShort)
+	require.NoError(t, ValidatePasswordLength("password12"))
+	long := strings.Repeat("a", MaxPasswordLength+1)
+	require.ErrorIs(t, ValidatePasswordLength(long), ErrPasswordTooLong)
+	_, err := Argon2idPasswords{}.Hash(long)
+	require.ErrorIs(t, err, ErrPasswordTooLong)
+}
 
 func TestArgon2idPasswords(t *testing.T) {
 	p := Argon2idPasswords{}

@@ -5,12 +5,13 @@ import "context"
 // Identity is the authenticated principal on a request.
 // UserID is the public resource id (Postgres UUID).
 type Identity struct {
-	UserID    string
-	Email     string
-	FirstName string
-	LastName  string
-	Active    bool
-	Kind      PrincipalKind
+	UserID         string
+	Email          string
+	FirstName      string
+	LastName       string
+	Active         bool
+	Kind           PrincipalKind
+	SessionVersion int
 }
 
 // PrincipalKind distinguishes browser sessions from internal workers.

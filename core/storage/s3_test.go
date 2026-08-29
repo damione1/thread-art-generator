@@ -210,6 +210,14 @@ func TestPresignGetUsesSignerHost(t *testing.T) {
 	require.Contains(t, strings.ToLower(url), "x-amz-signature")
 }
 
+func TestRequireKeyRejectsTraversal(t *testing.T) {
+	t.Parallel()
+	require.ErrorIs(t, requireKey(""), ErrInvalidKey)
+	require.ErrorIs(t, requireKey("/abs"), ErrInvalidKey)
+	require.ErrorIs(t, requireKey("users/../secret"), ErrInvalidKey)
+	require.NoError(t, requireKey("users/u/arts/a/original"))
+}
+
 func TestReplayHeadersDropsHost(t *testing.T) {
 	t.Parallel()
 	signed := http.Header{}

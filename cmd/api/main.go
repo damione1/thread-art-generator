@@ -45,8 +45,12 @@ func runConnectServer(config util.Config) {
 
 	hmacAuth, err := auth.NewHMACServiceAuth(config.ServiceHMACSecret)
 	if err != nil {
-		log.Warn().Err(err).Msg("HMAC service auth disabled (secret too short)")
-		hmacAuth = nil
+		if util.IsDevelopment(config.Environment) {
+			log.Warn().Err(err).Msg("HMAC service auth disabled (secret too short)")
+			hmacAuth = nil
+		} else {
+			log.Fatal().Err(err).Msg("HMAC service auth required outside development")
+		}
 	}
 
 	sm := scs.New()
@@ -54,7 +58,7 @@ func runConnectServer(config util.Config) {
 	sm.Cookie.Name = "session_id"
 	sm.Cookie.HttpOnly = true
 	sm.Cookie.SameSite = http.SameSiteLaxMode
-	sm.Cookie.Secure = config.Environment != "" && config.Environment != "development"
+	sm.Cookie.Secure = !util.IsDevelopment(config.Environment)
 	sm.Lifetime = 24 * time.Hour
 	sessions, err := auth.NewSCSSessions(sm)
 	if err != nil {
@@ -75,9 +79,11 @@ func runConnectServer(config util.Config) {
 	})
 	mux.Handle(path, handler)
 
-	reflector := grpcreflect.NewStaticReflector(pbconnect.ArtGeneratorServiceName)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	if util.IsDevelopment(config.Environment) {
+		reflector := grpcreflect.NewStaticReflector(pbconnect.ArtGeneratorServiceName)
+		mux.Handle(grpcreflect.NewHandlerV1(reflector))
+		mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	}
 
 	checker := grpchealth.NewStaticChecker(pbconnect.ArtGeneratorServiceName)
 	mux.Handle(grpchealth.NewHandler(checker))

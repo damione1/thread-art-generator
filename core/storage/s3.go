@@ -289,7 +289,11 @@ func presignTTL(d time.Duration) time.Duration {
 }
 
 func requireKey(key string) error {
-	if strings.TrimSpace(key) == "" {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return ErrInvalidKey
+	}
+	if strings.HasPrefix(key, "/") || strings.Contains(key, "..") || strings.ContainsAny(key, "\\\x00") {
 		return ErrInvalidKey
 	}
 	return nil

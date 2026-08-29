@@ -21,14 +21,11 @@ templ Layout(data *PageData) {
 			if data.PageType == "login" || data.PageType == "signup" || data.PageType == "forgot" || data.PageType == "reset" || data.PageType == "check-email" {
 				<script src="/static/js/password-auth.js"></script>
 			}
-			if data.IsLoggedIn {
-				<meta name="csrf-token" id="csrf-token" content="auth-token-exists"/>
-			} else {
-				<meta name="csrf-token" id="csrf-token" content=""/>
-			}
+			<meta name="referrer" content="no-referrer"/>
+			<meta name="csrf-token" id="csrf-token" content={ data.CSRFToken }/>
 			<link rel="stylesheet" href="/static/css/tailwind.css"/>
 			<link rel="stylesheet" href="/static/css/main.css"/>
-			<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+			<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" referrerpolicy="no-referrer"/>
 		</head>
 		<body class="flex flex-col min-h-screen bg-gradient-to-br from-dark-200 via-dark-100 to-dark-200 text-slate-200 relative overflow-x-hidden">
 			<!-- Background animation -->

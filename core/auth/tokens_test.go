@@ -7,6 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestTokenPurposes(t *testing.T) {
+	t.Parallel()
+	require.Equal(t, TokenPurpose("email_change"), TokenEmailChange)
+	require.Equal(t, TokenPurpose("verify"), TokenVerify)
+	require.Equal(t, TokenPurpose("reset"), TokenReset)
+}
+
 func TestHashTokenStable(t *testing.T) {
 	t.Parallel()
 	a := HashToken("abc")

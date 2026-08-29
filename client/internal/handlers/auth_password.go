@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 
@@ -28,6 +29,7 @@ type PasswordAuthHandler struct {
 	tokens         coreauth.Tokens
 	emails         *mail.Emails
 	sessionManager *auth.SCSSessionManager
+	limiter        *coreauth.AuthLimiter
 }
 
 func NewPasswordAuthHandler(
@@ -42,6 +44,7 @@ func NewPasswordAuthHandler(
 		tokens:         tokens,
 		emails:         emails,
 		sessionManager: sessionManager,
+		limiter:        coreauth.DefaultAuthLimiter(),
 	}
 }
 
@@ -51,8 +54,13 @@ func (h *PasswordAuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		writeAuthJSON(w, http.StatusBadRequest, false, err.Error())
 		return
 	}
+	if !h.allowAuth(r, "login", req.Email) {
+		writeAuthJSON(w, http.StatusTooManyRequests, false, "too many attempts, try again later")
+		return
+	}
 	identity, hash, err := h.identities.ByEmail(r.Context(), req.Email)
 	if err != nil {
+		coreauth.Argon2idPasswords{}.CheckDummy(req.Password)
 		writeAuthJSON(w, http.StatusUnauthorized, false, "incorrect email or password")
 		return
 	}
@@ -78,8 +86,12 @@ func (h *PasswordAuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		writeAuthJSON(w, http.StatusBadRequest, false, err.Error())
 		return
 	}
-	if len(req.Password) < 8 {
-		writeAuthJSON(w, http.StatusBadRequest, false, "password must be at least 8 characters")
+	if !h.allowAuth(r, "signup", req.Email) {
+		writeAuthJSON(w, http.StatusTooManyRequests, false, "too many attempts, try again later")
+		return
+	}
+	if err := coreauth.ValidatePasswordLength(req.Password); err != nil {
+		writeAuthJSON(w, http.StatusBadRequest, false, err.Error())
 		return
 	}
 	if strings.TrimSpace(req.FirstName) == "" {
@@ -136,6 +148,10 @@ func (h *PasswordAuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Requ
 		writeAuthJSON(w, http.StatusBadRequest, false, err.Error())
 		return
 	}
+	if !h.allowAuth(r, "forgot", req.Email) {
+		writeAuthJSON(w, http.StatusTooManyRequests, false, "too many attempts, try again later")
+		return
+	}
 	const generic = "If that email exists, we sent a reset link"
 	identity, hash, err := h.identities.ByEmail(r.Context(), req.Email)
 	if err != nil || hash == "" {
@@ -173,8 +189,12 @@ func (h *PasswordAuthHandler) ResetPassword(w http.ResponseWriter, r *http.Reque
 		writeAuthJSON(w, http.StatusBadRequest, false, "reset token is required")
 		return
 	}
-	if len(req.Password) < 8 {
-		writeAuthJSON(w, http.StatusBadRequest, false, "password must be at least 8 characters")
+	if !h.allowAuth(r, "reset", req.Token) {
+		writeAuthJSON(w, http.StatusTooManyRequests, false, "too many attempts, try again later")
+		return
+	}
+	if err := coreauth.ValidatePasswordLength(req.Password); err != nil {
+		writeAuthJSON(w, http.StatusBadRequest, false, err.Error())
 		return
 	}
 	if req.ConfirmPassword != "" && req.ConfirmPassword != req.Password {
@@ -195,6 +215,9 @@ func (h *PasswordAuthHandler) ResetPassword(w http.ResponseWriter, r *http.Reque
 		log.Error().Err(err).Str("user_id", userID).Msg("reset password update failed")
 		writeAuthJSON(w, http.StatusInternalServerError, false, "failed to update password")
 		return
+	}
+	if _, err := h.identities.BumpSessionVersion(r.Context(), userID); err != nil {
+		log.Warn().Err(err).Str("user_id", userID).Msg("reset password session bump failed")
 	}
 	if err := h.identities.SetActive(r.Context(), userID, true); err != nil {
 		log.Warn().Err(err).Str("user_id", userID).Msg("reset password activate failed")
@@ -237,6 +260,10 @@ func (h *PasswordAuthHandler) ResendVerification(w http.ResponseWriter, r *http.
 		writeAuthJSON(w, http.StatusBadRequest, false, err.Error())
 		return
 	}
+	if !h.allowAuth(r, "resend", req.Email) {
+		writeAuthJSON(w, http.StatusTooManyRequests, false, "too many attempts, try again later")
+		return
+	}
 	const generic = "If that email exists, we sent a confirmation link"
 	identity, _, err := h.identities.ByEmail(r.Context(), req.Email)
 	if err != nil || identity.Active {
@@ -261,31 +288,18 @@ func (h *PasswordAuthHandler) sendVerify(r *http.Request, identity coreauth.Iden
 }
 
 func (h *PasswordAuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost && r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed. Use POST or GET.", http.StatusMethodNotAllowed)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed. Use POST.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	userID := h.sessionManager.GetUserID(r)
-	acceptsJSON := r.Header.Get("Accept") == "application/json" || r.Header.Get("Content-Type") == "application/json"
-	isAjaxRequest := r.Header.Get("X-Requested-With") == "XMLHttpRequest"
-	wantsJSON := acceptsJSON || isAjaxRequest || r.Method == http.MethodPost
-
 	if err := h.sessionManager.DestroySession(w, r); err != nil {
 		log.Error().Err(err).Str("user_id", userID).Msg("Failed to destroy session during logout")
-		if wantsJSON {
-			writeAuthJSON(w, http.StatusInternalServerError, false, "Logout failed due to server error")
-		} else {
-			http.Redirect(w, r, "/?logout=error", http.StatusSeeOther)
-		}
+		writeAuthJSON(w, http.StatusInternalServerError, false, "Logout failed due to server error")
 		return
 	}
-
-	if wantsJSON {
-		writeAuthJSON(w, http.StatusOK, true, "Logout successful")
-		return
-	}
-	http.Redirect(w, r, "/?logout=success", http.StatusSeeOther)
+	writeAuthJSON(w, http.StatusOK, true, "Logout successful")
 }
 
 func (h *PasswordAuthHandler) Status(w http.ResponseWriter, r *http.Request) {
@@ -315,7 +329,15 @@ func (h *PasswordAuthHandler) Status(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PasswordAuthHandler) issueSession(w http.ResponseWriter, r *http.Request, identity coreauth.Identity) error {
-	return h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity))
+	return h.sessionManager.CreateSession(w, r, identity.UserID, auth.UserInfoFromIdentity(identity), identity.SessionVersion)
+}
+
+func (h *PasswordAuthHandler) allowAuth(r *http.Request, action, key string) bool {
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil || ip == "" {
+		ip = r.RemoteAddr
+	}
+	return h.limiter.Allow(action + ":" + ip + ":" + strings.ToLower(strings.TrimSpace(key)))
 }
 
 func displayName(identity coreauth.Identity) string {

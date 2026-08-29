@@ -22,6 +22,15 @@ func TestApplyDefaultsStorage(t *testing.T) {
 	require.Equal(t, "http://localhost:8080", c.FrontendUrl)
 }
 
+func TestIsDevelopment(t *testing.T) {
+	t.Parallel()
+	require.True(t, IsDevelopment(""))
+	require.True(t, IsDevelopment("development"))
+	require.True(t, IsDevelopment("Development"))
+	require.False(t, IsDevelopment("production"))
+	require.False(t, IsDevelopment("staging"))
+}
+
 func TestApplyDefaultsDoesNotOverrideHMAC(t *testing.T) {
 	t.Parallel()
 	c := Config{ServiceHMACSecret: "explicit-hmac-secret-32-bytes!!"}

@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func CompositionDbToProto(publicBaseURL string, artDb *models.Art, composition *models.Composition) *pb.Composition {
+func CompositionDbToProto(_ string, artDb *models.Art, composition *models.Composition) *pb.Composition {
 	var status pb.CompositionStatus
 	switch composition.Status {
 	case models.CompositionStatusEnumPENDING:
@@ -41,7 +41,7 @@ func CompositionDbToProto(publicBaseURL string, artDb *models.Art, composition *
 	compositionPb.Name = resource.BuildCompositionResourceName(artDb.AuthorID, artDb.ID, composition.ID)
 
 	if composition.PreviewURL.Valid {
-		compositionPb.PreviewUrl = PublicURL(publicBaseURL, composition.PreviewURL.String)
+		compositionPb.PreviewUrl = composition.PreviewURL.String
 	}
 	if composition.GcodeURL.Valid {
 		compositionPb.GcodeUrl = composition.GcodeURL.String

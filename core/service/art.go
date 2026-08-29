@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/bufbuild/protovalidate-go"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/null/v8"
@@ -43,6 +45,7 @@ func (server *Server) createArt(ctx context.Context, req *pb.CreateArtRequest) (
 		return nil, pbErrors.PermissionDeniedError("only users can create art")
 	}
 	artDb := &models.Art{
+		ID:       uuid.New().String(),
 		Title:    req.GetArt().GetTitle(),
 		AuthorID: user.ID,
 		Status:   models.ArtStatusEnumPENDING_IMAGE,
@@ -53,7 +56,7 @@ func (server *Server) createArt(ctx context.Context, req *pb.CreateArtRequest) (
 		return nil, pbErrors.InternalError("failed to insert art", err)
 	}
 
-	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
+	return server.artToProto(ctx, artDb)
 }
 
 func (server *Server) updateArt(ctx context.Context, req *pb.UpdateArtRequest) (*pb.Art, error) {
@@ -110,7 +113,7 @@ func (server *Server) updateArt(ctx context.Context, req *pb.UpdateArtRequest) (
 		}
 	}
 
-	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
+	return server.artToProto(ctx, artDb)
 }
 
 func (server *Server) listArts(ctx context.Context, req *pb.ListArtsRequest) (*pb.ListArtsResponse, error) {
@@ -166,7 +169,11 @@ func (server *Server) listArts(ctx context.Context, req *pb.ListArtsRequest) (*p
 	// Convert the arts to protobuf format
 	artPbs := make([]*pb.Art, 0, len(arts))
 	for _, artDb := range arts {
-		artPbs = append(artPbs, pbx.ArtDbToProto(artDb, server.publicBaseURL))
+		out, err := server.artToProto(ctx, artDb)
+		if err != nil {
+			return nil, err
+		}
+		artPbs = append(artPbs, out)
 	}
 
 	return &pb.ListArtsResponse{
@@ -236,7 +243,7 @@ func (server *Server) getArt(ctx context.Context, req *pb.GetArtRequest) (*pb.Ar
 		return nil, pbErrors.InternalError("failed to get art", err)
 	}
 
-	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
+	return server.artToProto(ctx, artDb)
 }
 
 func (server *Server) deleteArt(ctx context.Context, req *pb.DeleteArtRequest) (*emptypb.Empty, error) {
@@ -310,18 +317,21 @@ func flattenPresignHeaders(h http.Header) map[string]string {
 }
 
 const maxArtImageBytes = 10 * 1024 * 1024
+const imageSniffBytes = 16
 
-func validateUploadedObject(info *storage.ObjectInfo) error {
-	if info == nil {
-		return pbErrors.FailedPreconditionError("image not found in storage, upload first")
+func (server *Server) artToProto(ctx context.Context, artDb *models.Art) (*pb.Art, error) {
+	out := pbx.ArtDbToProto(artDb, server.publicBaseURL)
+	if err := server.signArtDownloads(ctx, out); err != nil {
+		return nil, pbErrors.InternalError("failed to sign art image", err)
 	}
-	if info.ContentType != "" && !strings.HasPrefix(info.ContentType, "image/") {
-		return pbErrors.FailedPreconditionError("uploaded object is not an image")
+	return out, nil
+}
+
+func (server *Server) signArtDownloads(ctx context.Context, art *pb.Art) error {
+	if art == nil {
+		return nil
 	}
-	if info.Size > maxArtImageBytes {
-		return pbErrors.FailedPreconditionError("uploaded object exceeds 10MB")
-	}
-	return nil
+	return presignIfKey(ctx, server.bucket, &art.ImageUrl)
 }
 
 func (server *Server) loadOwnedArt(ctx context.Context, name, action string) (*models.Art, *models.User, error) {
@@ -368,6 +378,9 @@ func (server *Server) startArtUpload(ctx context.Context, req *pb.StartArtUpload
 	if artDb.Status != models.ArtStatusEnumPENDING_IMAGE {
 		return nil, pbErrors.FailedPreconditionError("art is not awaiting an image")
 	}
+	if err := requireAllowedImageContentType(req.GetContentType()); err != nil {
+		return nil, err
+	}
 	key := resource.ArtOriginalObjectKey(user.ID, artDb.ID)
 	resp, err := presignArtOriginal(ctx, server.bucket, key, req.GetContentType())
 	if err != nil {
@@ -385,7 +398,7 @@ func (server *Server) completeArtUpload(ctx context.Context, req *pb.CompleteArt
 		return nil, err
 	}
 	key := resource.ArtOriginalObjectKey(user.ID, artDb.ID)
-	if err := headUploadedOriginal(ctx, server.bucket, key); err != nil {
+	if err := inspectUploadedOriginal(ctx, server.bucket, key); err != nil {
 		return nil, err
 	}
 	artDb.Status = models.ArtStatusEnumCOMPLETE
@@ -394,7 +407,7 @@ func (server *Server) completeArtUpload(ctx context.Context, req *pb.CompleteArt
 	if err != nil {
 		return nil, pbErrors.InternalError("failed to update art status", err)
 	}
-	return pbx.ArtDbToProto(artDb, server.publicBaseURL), nil
+	return server.artToProto(ctx, artDb)
 }
 
 func presignArtOriginal(ctx context.Context, bucket storage.Bucket, key, contentType string) (*pb.StartArtUploadResponse, error) {
@@ -413,12 +426,24 @@ func presignArtOriginal(ctx context.Context, bucket storage.Bucket, key, content
 	}, nil
 }
 
-func headUploadedOriginal(ctx context.Context, bucket storage.Bucket, key string) error {
+func inspectUploadedOriginal(ctx context.Context, bucket storage.Bucket, key string) error {
 	info, err := bucket.Head(ctx, key)
 	if err != nil {
 		return pbErrors.FailedPreconditionError("image not found in storage, upload first")
 	}
-	return validateUploadedObject(info)
+	reader, _, err := bucket.Get(ctx, key)
+	if err != nil {
+		return pbErrors.FailedPreconditionError("image not found in storage, upload first")
+	}
+	defer reader.Close()
+	magic := make([]byte, imageSniffBytes)
+	n, _ := io.ReadFull(reader, magic)
+	if n > 0 {
+		magic = magic[:n]
+	} else {
+		magic = nil
+	}
+	return validateUploadedObject(info, magic)
 }
 
 func requireParentIdentity(parent, userID string) error {

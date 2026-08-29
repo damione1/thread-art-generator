@@ -16,11 +16,13 @@ import (
 )
 
 const (
-	TokenVerify TokenPurpose = "verify"
-	TokenReset  TokenPurpose = "reset"
+	TokenVerify      TokenPurpose = "verify"
+	TokenReset       TokenPurpose = "reset"
+	TokenEmailChange TokenPurpose = "email_change"
 
-	VerifyTTL = 24 * time.Hour
-	ResetTTL  = time.Hour
+	VerifyTTL      = 24 * time.Hour
+	ResetTTL       = time.Hour
+	EmailChangeTTL = 24 * time.Hour
 )
 
 // TokenPurpose is stored on email_tokens.purpose.
@@ -32,7 +34,9 @@ var ErrTokenInvalid = errors.New("invalid or expired token")
 // Tokens issues and consumes hashed email-action tokens.
 type Tokens interface {
 	Issue(ctx context.Context, userID string, purpose TokenPurpose, ttl time.Duration) (string, error)
+	IssueWithPayload(ctx context.Context, userID string, purpose TokenPurpose, ttl time.Duration, payload string) (string, error)
 	Consume(ctx context.Context, raw string, purpose TokenPurpose) (string, error)
+	ConsumeWithPayload(ctx context.Context, raw string, purpose TokenPurpose) (string, string, error)
 }
 
 // PGTokens stores SHA-256(token) in Postgres. Raw token is returned once.
@@ -51,6 +55,10 @@ func (p *PGTokens) now() time.Time {
 }
 
 func (p *PGTokens) Issue(ctx context.Context, userID string, purpose TokenPurpose, ttl time.Duration) (string, error) {
+	return p.IssueWithPayload(ctx, userID, purpose, ttl, "")
+}
+
+func (p *PGTokens) IssueWithPayload(ctx context.Context, userID string, purpose TokenPurpose, ttl time.Duration, payload string) (string, error) {
 	if userID == "" {
 		return "", errors.New("user id is required")
 	}
@@ -67,9 +75,9 @@ func (p *PGTokens) Issue(ctx context.Context, userID string, purpose TokenPurpos
 		return "", fmt.Errorf("invalidate prior tokens: %w", err)
 	}
 	_, err = p.DB.ExecContext(ctx, `
-		INSERT INTO email_tokens (id, user_id, purpose, token_hash, expiration, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, uuid.New().String(), userID, string(purpose), HashToken(raw), now.Add(ttl), now)
+		INSERT INTO email_tokens (id, user_id, purpose, token_hash, expiration, created_at, payload)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, uuid.New().String(), userID, string(purpose), HashToken(raw), now.Add(ttl), now, payload)
 	if err != nil {
 		return "", fmt.Errorf("insert token: %w", err)
 	}
@@ -77,24 +85,29 @@ func (p *PGTokens) Issue(ctx context.Context, userID string, purpose TokenPurpos
 }
 
 func (p *PGTokens) Consume(ctx context.Context, raw string, purpose TokenPurpose) (string, error) {
+	userID, _, err := p.ConsumeWithPayload(ctx, raw, purpose)
+	return userID, err
+}
+
+func (p *PGTokens) ConsumeWithPayload(ctx context.Context, raw string, purpose TokenPurpose) (string, string, error) {
 	if raw == "" {
-		return "", ErrTokenInvalid
+		return "", "", ErrTokenInvalid
 	}
 	now := p.now()
-	var userID string
+	var userID, payload string
 	err := p.DB.QueryRowContext(ctx, `
 		UPDATE email_tokens
 		SET used_at = $3
 		WHERE token_hash = $1 AND purpose = $2 AND used_at IS NULL AND expiration > $3
-		RETURNING user_id
-	`, HashToken(raw), string(purpose), now).Scan(&userID)
+		RETURNING user_id, COALESCE(payload, '')
+	`, HashToken(raw), string(purpose), now).Scan(&userID, &payload)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrTokenInvalid
+		return "", "", ErrTokenInvalid
 	}
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return userID, nil
+	return userID, payload, nil
 }
 
 func newRawToken() (string, error) {

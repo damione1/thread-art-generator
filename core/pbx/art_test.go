@@ -29,5 +29,5 @@ func TestArtDbToProtoNoIO(t *testing.T) {
 	require.Equal(t, "users/user-1/arts/art-1", got.Name)
 	require.Equal(t, "users/user-1", got.Author)
 	require.Equal(t, pb.ArtStatus_ART_STATUS_COMPLETE, got.Status)
-	require.Empty(t, got.ImageUrl)
+	require.Equal(t, "users/user-1/arts/art-1/original", got.ImageUrl)
 }

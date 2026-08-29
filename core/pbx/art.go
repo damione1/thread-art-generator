@@ -36,7 +36,7 @@ func artStatus(art *models.Art) pb.ArtStatus {
 	}
 }
 
-func ArtDbToProto(art *models.Art, publicBaseURL string) *pb.Art {
+func ArtDbToProto(art *models.Art, _ string) *pb.Art {
 	status := artStatus(art)
 	artPb := &pb.Art{
 		Title:      art.Title,
@@ -48,8 +48,8 @@ func ArtDbToProto(art *models.Art, publicBaseURL string) *pb.Art {
 	artPb.Name = resource.BuildArtResourceName(art.AuthorID, art.ID)
 
 	if art.ImageID.Valid && status == pb.ArtStatus_ART_STATUS_COMPLETE {
-		key := resource.ArtImageObjectKey(art.AuthorID, art.ID, art.ImageID.String)
-		artPb.ImageUrl = PublicURL(publicBaseURL, key)
+		// Object key only. The service presigns before the URL leaves the API.
+		artPb.ImageUrl = resource.ArtImageObjectKey(art.AuthorID, art.ID, art.ImageID.String)
 	}
 
 	return artPb
