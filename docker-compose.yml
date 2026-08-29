@@ -10,8 +10,14 @@ services:
       HTTP_SERVER_PORT: ${HTTP_SERVER_PORT:-9090}
       GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
       ENVIRONMENT: ${ENVIRONMENT}
-      SENDINBLUE_API_KEY: ${SENDINBLUE_API_KEY}
       FRONTEND_URL: ${FRONTEND_URL}
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-ThreadArt}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@threadart.local}
+      SMTP_TLS_MODE: ${SMTP_TLS_MODE:-none}
       SERVICE_HMAC_SECRET: ${SERVICE_HMAC_SECRET}
       S3_ENDPOINT: http://minio:9000
       S3_REGION: us-east-1
@@ -64,6 +70,13 @@ services:
       - COOKIE_BLOCK_KEY=${COOKIE_BLOCK_KEY:-ADefaultBlockKeyShould32BytesLength}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
+      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-ThreadArt}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-noreply@threadart.local}
+      - SMTP_TLS_MODE=${SMTP_TLS_MODE:-none}
     volumes:
       - ./client/internal:/app/client/internal
       - ./client/public:/app/client/public
@@ -72,6 +85,7 @@ services:
     depends_on:
       - api
       - redis
+      - mailhog
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "http://localhost:8080/health"]
@@ -129,6 +143,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
 
   minio-init:
     image: minio/mc

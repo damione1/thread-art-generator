@@ -19,27 +19,38 @@ type StorageConfig struct {
 	UseTLS         bool   `mapstructure:"S3_USE_TLS"`
 }
 
+// SMTPConfig is the outbound mail transport. Secrets: SMTP_USERNAME / SMTP_PASSWORD.
+type SMTPConfig struct {
+	Host     string `mapstructure:"SMTP_HOST"`
+	Port     int    `mapstructure:"SMTP_PORT"`
+	Username string `mapstructure:"SMTP_USERNAME"`
+	Password string `mapstructure:"SMTP_PASSWORD"`
+	FromName string `mapstructure:"SMTP_FROM_NAME"`
+	FromAddr string `mapstructure:"SMTP_FROM_ADDRESS"`
+	TLSMode  string `mapstructure:"SMTP_TLS_MODE"` // none | starttls | tls
+}
+
 // Config stores all configuration of the application.
 // The values are read by viper from a config file or environment variable.
 type Config struct {
-	Environment        string        `mapstructure:"ENVIRONMENT"`
-	GRPCServerPort     string        `mapstructure:"GRPC_SERVER_PORT"`
-	HTTPServerPort     string        `mapstructure:"HTTP_SERVER_PORT"`
-	FrontendPort       string        `mapstructure:"FRONTEND_PORT"`
-	ApiURL             string        `mapstructure:"API_URL"`
-	EmailSenderName    string        `mapstructure:"EMAIL_SENDER_NAME"`
-	EmailSenderAddress string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
-	EmailSenderPassword string       `mapstructure:"EMAIL_SENDER_PASSWORD"`
-	PostgresHost       string        `mapstructure:"POSTGRES_HOST"`
-	PostgresUser       string        `mapstructure:"POSTGRES_USER"`
-	PostgresPassword   string        `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDb         string        `mapstructure:"POSTGRES_DB"`
-	DB                 *sql.DB       `mapstructure:"-"`
-	AdminEmail         string        `mapstructure:"ADMIN_EMAIL"`
-	SendInBlueAPIKey   string        `mapstructure:"SENDINBLUE_API_KEY"`
-	FrontendUrl        string        `mapstructure:"FRONTEND_URL"`
-	Storage            StorageConfig `mapstructure:",squash"`
-	ServiceHMACSecret  string        `mapstructure:"SERVICE_HMAC_SECRET"`
+	Environment         string        `mapstructure:"ENVIRONMENT"`
+	GRPCServerPort      string        `mapstructure:"GRPC_SERVER_PORT"`
+	HTTPServerPort      string        `mapstructure:"HTTP_SERVER_PORT"`
+	FrontendPort        string        `mapstructure:"FRONTEND_PORT"`
+	ApiURL              string        `mapstructure:"API_URL"`
+	EmailSenderName     string        `mapstructure:"EMAIL_SENDER_NAME"`
+	EmailSenderAddress  string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
+	EmailSenderPassword string        `mapstructure:"EMAIL_SENDER_PASSWORD"`
+	PostgresHost        string        `mapstructure:"POSTGRES_HOST"`
+	PostgresUser        string        `mapstructure:"POSTGRES_USER"`
+	PostgresPassword    string        `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDb          string        `mapstructure:"POSTGRES_DB"`
+	DB                  *sql.DB       `mapstructure:"-"`
+	AdminEmail          string        `mapstructure:"ADMIN_EMAIL"`
+	FrontendUrl         string        `mapstructure:"FRONTEND_URL"`
+	Storage             StorageConfig `mapstructure:",squash"`
+	SMTP                SMTPConfig    `mapstructure:",squash"`
+	ServiceHMACSecret   string        `mapstructure:"SERVICE_HMAC_SECRET"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -60,7 +71,6 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("POSTGRES_PASSWORD")
 	viper.BindEnv("POSTGRES_DB")
 	viper.BindEnv("ADMIN_EMAIL")
-	viper.BindEnv("SENDINBLUE_API_KEY")
 	viper.BindEnv("FRONTEND_URL")
 	viper.BindEnv("S3_ENDPOINT")
 	viper.BindEnv("S3_REGION")
@@ -71,6 +81,13 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("S3_FORCE_PATH_STYLE")
 	viper.BindEnv("S3_USE_TLS")
 	viper.BindEnv("SERVICE_HMAC_SECRET")
+	viper.BindEnv("SMTP_HOST")
+	viper.BindEnv("SMTP_PORT")
+	viper.BindEnv("SMTP_USERNAME")
+	viper.BindEnv("SMTP_PASSWORD")
+	viper.BindEnv("SMTP_FROM_NAME")
+	viper.BindEnv("SMTP_FROM_ADDRESS")
+	viper.BindEnv("SMTP_TLS_MODE")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
@@ -99,6 +116,9 @@ func (c *Config) applyDefaults() {
 	if c.ApiURL == "" {
 		c.ApiURL = "http://api:9090"
 	}
+	if c.FrontendUrl == "" {
+		c.FrontendUrl = "http://localhost:8080"
+	}
 	if c.Storage.Bucket == "" {
 		c.Storage.Bucket = "thread-art"
 	}
@@ -107,6 +127,27 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Storage.PublicBaseURL == "" {
 		c.Storage.PublicBaseURL = "http://localhost:9000/thread-art"
+	}
+	if c.SMTP.Port == 0 {
+		c.SMTP.Port = 587
+	}
+	if c.SMTP.TLSMode == "" {
+		c.SMTP.TLSMode = "none"
+	}
+	if c.SMTP.FromName == "" {
+		c.SMTP.FromName = c.EmailSenderName
+	}
+	if c.SMTP.FromName == "" {
+		c.SMTP.FromName = "ThreadArt"
+	}
+	if c.SMTP.FromAddr == "" {
+		c.SMTP.FromAddr = c.EmailSenderAddress
+	}
+	if c.SMTP.FromAddr == "" {
+		c.SMTP.FromAddr = "noreply@localhost"
+	}
+	if c.SMTP.Password == "" {
+		c.SMTP.Password = c.EmailSenderPassword
 	}
 }
 

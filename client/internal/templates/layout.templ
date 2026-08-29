@@ -18,7 +18,7 @@ templ Layout(data *PageData) {
 			if data.PageType == "art" {
 				<script src="/static/js/art-upload.js"></script>
 			}
-			if data.PageType == "login" || data.PageType == "signup" {
+			if data.PageType == "login" || data.PageType == "signup" || data.PageType == "forgot" || data.PageType == "reset" || data.PageType == "check-email" {
 				<script src="/static/js/password-auth.js"></script>
 			}
 			if data.IsLoggedIn {

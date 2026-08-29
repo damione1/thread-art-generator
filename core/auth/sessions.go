@@ -32,5 +32,9 @@ type Passwords interface {
 // Identities looks up users for login/signup. Implementation: Postgres.
 type Identities interface {
 	ByEmail(ctx context.Context, email string) (Identity, string, error) // identity + password hash
+	ByID(ctx context.Context, userID string) (Identity, string, error)
 	Create(ctx context.Context, email, passwordHash, first, last string) (Identity, error)
+	UpdatePassword(ctx context.Context, userID, passwordHash string) error
+	UpdateProfile(ctx context.Context, userID, first, last, email string) error
+	SetActive(ctx context.Context, userID string, active bool) error
 }

@@ -177,3 +177,43 @@ func (h *PageHandler) SignupPage(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("Failed to render signup page")
 	}
 }
+
+func (h *PageHandler) ForgotPasswordPage(w http.ResponseWriter, r *http.Request) {
+	user, _ := middleware.UserFromContext(r.Context())
+	if user != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
+		return
+	}
+	pageData := templates.NewPageData("Forgot password - ThreadArt", "forgot")
+	if err := pages.ForgotPasswordPage(pageData).Render(r.Context(), w); err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		log.Error().Err(err).Msg("Failed to render forgot password page")
+	}
+}
+
+func (h *PageHandler) ResetPasswordPage(w http.ResponseWriter, r *http.Request) {
+	user, _ := middleware.UserFromContext(r.Context())
+	if user != nil {
+		http.Redirect(w, r, "/settings", http.StatusTemporaryRedirect)
+		return
+	}
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Redirect(w, r, "/forgot-password", http.StatusSeeOther)
+		return
+	}
+	pageData := templates.NewPageData("Reset password - ThreadArt", "reset").
+		WithMeta("token", token)
+	if err := pages.ResetPasswordPage(pageData).Render(r.Context(), w); err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		log.Error().Err(err).Msg("Failed to render reset password page")
+	}
+}
+
+func (h *PageHandler) CheckEmailPage(w http.ResponseWriter, r *http.Request) {
+	pageData := templates.NewPageData("Check your email - ThreadArt", "check-email")
+	if err := pages.CheckEmailPage(pageData).Render(r.Context(), w); err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		log.Error().Err(err).Msg("Failed to render check email page")
+	}
+}

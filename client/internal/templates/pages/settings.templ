@@ -1,0 +1,121 @@
+package pages
+
+import "github.com/Damione1/thread-art-generator/client/internal/templates"
+
+templ SettingsPage(data *templates.PageData) {
+	@templates.Layout(data) {
+		<div class="max-w-2xl mx-auto space-y-8">
+			<div>
+				<h1 class="text-3xl font-bold text-slate-100">Account settings</h1>
+				<p class="text-slate-400 mt-2">Update your profile and password.</p>
+			</div>
+			if data.HasError() {
+				@templates.ErrorAlert([]string{data.ErrorMessage})
+			}
+			if data.GetSettingsData().Saved == "profile" {
+				@templates.SuccessAlert("Profile saved.")
+			}
+			if data.GetSettingsData().Saved == "password" {
+				@templates.SuccessAlert("Password updated.")
+			}
+			<div class="bg-dark-200 rounded-xl shadow-lg p-6 border border-dark-400/30 space-y-6">
+				<h2 class="text-xl font-semibold text-slate-200">Profile</h2>
+				<form method="POST" action="/settings/profile" class="space-y-4">
+					<div>
+						<label for="first_name" class="block text-sm font-medium text-slate-300 mb-1">First name</label>
+						<input
+							id="first_name"
+							name="first_name"
+							type="text"
+							required
+							value={ data.GetSettingsData().FirstName }
+							class="w-full px-3 py-2 rounded-lg bg-dark-300 border border-dark-400 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+						/>
+						for _, err := range templates.FieldMsgs(data.GetSettingsData().FieldErrors, "first_name") {
+							<p class="text-sm text-red-400 mt-1">{ err }</p>
+						}
+					</div>
+					<div>
+						<label for="last_name" class="block text-sm font-medium text-slate-300 mb-1">Last name</label>
+						<input
+							id="last_name"
+							name="last_name"
+							type="text"
+							value={ data.GetSettingsData().LastName }
+							class="w-full px-3 py-2 rounded-lg bg-dark-300 border border-dark-400 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+						/>
+					</div>
+					<div>
+						<label for="email" class="block text-sm font-medium text-slate-300 mb-1">Email</label>
+						<input
+							id="email"
+							name="email"
+							type="email"
+							required
+							value={ data.GetSettingsData().Email }
+							class="w-full px-3 py-2 rounded-lg bg-dark-300 border border-dark-400 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+						/>
+						for _, err := range templates.FieldMsgs(data.GetSettingsData().FieldErrors, "email") {
+							<p class="text-sm text-red-400 mt-1">{ err }</p>
+						}
+					</div>
+					<button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-sm font-medium">
+						Save profile
+					</button>
+				</form>
+			</div>
+			<div class="bg-dark-200 rounded-xl shadow-lg p-6 border border-dark-400/30 space-y-6">
+				<h2 class="text-xl font-semibold text-slate-200">Password</h2>
+				<form method="POST" action="/settings/password" class="space-y-4">
+					<div>
+						<label for="current_password" class="block text-sm font-medium text-slate-300 mb-1">Current password</label>
+						<input
+							id="current_password"
+							name="current_password"
+							type="password"
+							required
+							autocomplete="current-password"
+							class="w-full px-3 py-2 rounded-lg bg-dark-300 border border-dark-400 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+						/>
+						for _, err := range templates.FieldMsgs(data.GetSettingsData().FieldErrors, "current_password") {
+							<p class="text-sm text-red-400 mt-1">{ err }</p>
+						}
+					</div>
+					<div>
+						<label for="new_password" class="block text-sm font-medium text-slate-300 mb-1">New password</label>
+						<input
+							id="new_password"
+							name="new_password"
+							type="password"
+							required
+							minlength="8"
+							autocomplete="new-password"
+							class="w-full px-3 py-2 rounded-lg bg-dark-300 border border-dark-400 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+						/>
+						for _, err := range templates.FieldMsgs(data.GetSettingsData().FieldErrors, "new_password") {
+							<p class="text-sm text-red-400 mt-1">{ err }</p>
+						}
+					</div>
+					<div>
+						<label for="confirm_password" class="block text-sm font-medium text-slate-300 mb-1">Confirm new password</label>
+						<input
+							id="confirm_password"
+							name="confirm_password"
+							type="password"
+							required
+							minlength="8"
+							autocomplete="new-password"
+							class="w-full px-3 py-2 rounded-lg bg-dark-300 border border-dark-400 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+						/>
+						for _, err := range templates.FieldMsgs(data.GetSettingsData().FieldErrors, "confirm_password") {
+							<p class="text-sm text-red-400 mt-1">{ err }</p>
+						}
+					</div>
+					<button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-sm font-medium">
+						Update password
+					</button>
+				</form>
+			</div>
+		</div>
+	}
+}
