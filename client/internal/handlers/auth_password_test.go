@@ -23,9 +23,21 @@ func (f *fakeIdentities) ByEmail(context.Context, string) (coreauth.Identity, st
 	return f.identity, f.hash, f.err
 }
 
+func (f *fakeIdentities) ByID(context.Context, string) (coreauth.Identity, string, error) {
+	return f.identity, f.hash, f.err
+}
+
 func (f *fakeIdentities) Create(context.Context, string, string, string, string) (coreauth.Identity, error) {
 	return f.identity, f.err
 }
+
+func (f *fakeIdentities) UpdatePassword(context.Context, string, string) error { return f.err }
+
+func (f *fakeIdentities) UpdateProfile(context.Context, string, string, string, string) error {
+	return f.err
+}
+
+func (f *fakeIdentities) SetActive(context.Context, string, bool) error { return f.err }
 
 func TestLoginHydratesSessionProfile(t *testing.T) {
 	sm := auth.NewInMemorySessionManager()
@@ -38,10 +50,11 @@ func TestLoginHydratesSessionProfile(t *testing.T) {
 			Email:     "ada@example.com",
 			FirstName: "Ada",
 			LastName:  "Lovelace",
+			Active:    true,
 			Kind:      coreauth.PrincipalUser,
 		},
 		hash: hash,
-	}, sm)
+	}, nil, nil, sm)
 
 	mux := http.NewServeMux()
 	mux.Handle("/auth/login", sm.GetSessionManager().LoadAndSave(http.HandlerFunc(h.Login)))

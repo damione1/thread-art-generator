@@ -93,6 +93,7 @@ func TestShouldSkipAuthRequirement(t *testing.T) {
 	require.True(t, shouldSkipAuthRequirement("/"))
 	require.True(t, shouldSkipAuthRequirement("/login"))
 	require.True(t, shouldSkipAuthRequirement("/logout"))
+	require.True(t, shouldSkipAuthRequirement("/forgot-password"))
 	require.True(t, shouldSkipAuthRequirement("/auth/login"))
 	require.False(t, shouldSkipAuthRequirement("/dashboard"))
 }

@@ -19,6 +19,8 @@ import (
 	"github.com/Damione1/thread-art-generator/client/internal/middleware"
 	"github.com/Damione1/thread-art-generator/client/internal/services"
 	coreauth "github.com/Damione1/thread-art-generator/core/auth"
+	"github.com/Damione1/thread-art-generator/core/clock"
+	"github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/Damione1/thread-art-generator/core/pb/pbconnect"
 	"github.com/Damione1/thread-art-generator/core/util"
 	"github.com/go-chi/chi/v5"
@@ -75,7 +77,16 @@ func main() {
 	)
 
 	generatorService := services.NewGeneratorService(artGeneratorClient, sessionManager)
-	passwordAuth := handlers.NewPasswordAuthHandler(&coreauth.PGIdentities{DB: db}, sessionManager)
+	mailCfg := mail.ConfigFromUtil(config)
+	mailer, err := mail.NewMailer(mailCfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create mailer")
+	}
+	emails := mail.NewEmails(mailer, mail.Address{Name: mailCfg.FromName, Email: mailCfg.FromAddr}, config.FrontendUrl)
+	identities := &coreauth.PGIdentities{DB: db}
+	tokens := &coreauth.PGTokens{DB: db, Clock: clock.Real{}}
+	passwordAuth := handlers.NewPasswordAuthHandler(identities, tokens, emails, sessionManager)
+	settingsHandler := handlers.NewSettingsHandler(identities, sessionManager)
 	pageHandler := handlers.NewPageHandler(generatorService)
 	artHandler := handlers.NewArtHandler(generatorService)
 	compositionHandler := handlers.NewCompositionHandler(generatorService)
@@ -97,18 +108,29 @@ func main() {
 			r.Post("/logout", passwordAuth.Logout)
 			r.Get("/logout", passwordAuth.Logout)
 			r.Get("/status", passwordAuth.Status)
+			r.Post("/forgot-password", passwordAuth.ForgotPassword)
+			r.Post("/reset-password", passwordAuth.ResetPassword)
+			r.Post("/resend-verification", passwordAuth.ResendVerification)
 		})
+		r.Post("/logout", passwordAuth.Logout)
+		r.Get("/logout", passwordAuth.Logout)
 
 		r.Get("/", pageHandler.HomePage)
 		r.Get("/login", pageHandler.LoginPage)
 		r.Get("/signup", pageHandler.SignupPage)
-		r.Post("/logout", passwordAuth.Logout)
-		r.Get("/logout", passwordAuth.Logout)
+		r.Get("/forgot-password", pageHandler.ForgotPasswordPage)
+		r.Get("/reset-password", pageHandler.ResetPasswordPage)
+		r.Get("/check-email", pageHandler.CheckEmailPage)
+		r.Get("/verify", passwordAuth.Verify)
 
 		mountRPCProxy(r, config.ApiURL)
 	})
 
 	r.Group(func(r chi.Router) {
+		r.Get("/settings", settingsHandler.Page)
+		r.Post("/settings/profile", settingsHandler.UpdateProfile)
+		r.Post("/settings/password", settingsHandler.UpdatePassword)
+
 		r.Route("/dashboard", func(r chi.Router) {
 			r.Get("/", pageHandler.DashboardPage)
 			r.Route("/arts", func(r chi.Router) {

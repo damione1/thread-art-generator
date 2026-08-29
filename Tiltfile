@@ -272,7 +272,7 @@ dc_resource(
 dc_resource(
   'client',
   labels=['application'],
-  resource_deps=['frontend-build', 'frontend-assets-build', 'api'],
+  resource_deps=['frontend-build', 'frontend-assets-build', 'api', 'mailhog'],
   auto_init=True,
   links=[
     link('http://localhost:8080', 'Go+HTMX Frontend'),
@@ -299,4 +299,13 @@ dc_resource(
   'redis',
   labels=['cache'],
   auto_init=True,
+)
+
+dc_resource(
+  'mailhog',
+  labels=['mail'],
+  auto_init=True,
+  links=[
+    link('http://localhost:8025', 'Mailhog'),
+  ]
 )

@@ -9,6 +9,7 @@ type Identity struct {
 	Email     string
 	FirstName string
 	LastName  string
+	Active    bool
 	Kind      PrincipalKind
 }
 

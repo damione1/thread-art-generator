@@ -15,6 +15,11 @@ func TestApplyDefaultsStorage(t *testing.T) {
 	require.Equal(t, "http://localhost:9000/thread-art", c.Storage.PublicBaseURL)
 	require.False(t, c.Storage.ForcePathStyle)
 	require.Empty(t, c.Storage.Endpoint)
+	require.Equal(t, 587, c.SMTP.Port)
+	require.Equal(t, "none", c.SMTP.TLSMode)
+	require.Equal(t, "ThreadArt", c.SMTP.FromName)
+	require.Equal(t, "noreply@localhost", c.SMTP.FromAddr)
+	require.Equal(t, "http://localhost:8080", c.FrontendUrl)
 }
 
 func TestApplyDefaultsDoesNotOverrideHMAC(t *testing.T) {

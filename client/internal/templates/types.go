@@ -207,6 +207,25 @@ func (d *DashboardPageData) GetArts() []*pb.Art {
 	return []*pb.Art{}
 }
 
+// SettingsPageData is the account settings form.
+type SettingsPageData struct {
+	FirstName   string
+	LastName    string
+	Email       string
+	Saved       string
+	FieldErrors map[string][]string
+}
+
+func (pd *PageData) GetSettingsData() *SettingsPageData {
+	if pd.Data == nil {
+		return &SettingsPageData{}
+	}
+	if data, ok := pd.Data.(*SettingsPageData); ok {
+		return data
+	}
+	return &SettingsPageData{}
+}
+
 // ArtPageData contains data specific to art-related pages
 type ArtPageData struct {
 	Art       interface{} // Will be the actual art type from pb

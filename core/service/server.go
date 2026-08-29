@@ -8,7 +8,7 @@ import (
 	"github.com/Damione1/thread-art-generator/core/auth"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	pbErrors "github.com/Damione1/thread-art-generator/core/errors"
-	mailService "github.com/Damione1/thread-art-generator/core/mail"
+	"github.com/Damione1/thread-art-generator/core/mail"
 	"github.com/Damione1/thread-art-generator/core/middleware"
 	"github.com/Damione1/thread-art-generator/core/queue"
 	"github.com/Damione1/thread-art-generator/core/storage"
@@ -21,7 +21,7 @@ type Server struct {
 	config        util.Config
 	bucket        storage.Bucket
 	publicBaseURL string
-	mailService   mailService.MailService
+	mailer        mail.Mailer
 	queueClient   queue.Queue
 }
 
@@ -32,9 +32,9 @@ func NewServer(config util.Config) (*Server, error) {
 		publicBaseURL: config.Storage.PublicBaseURL,
 	}
 
-	server.mailService, err = mailService.NewSendInBlueMailService(config.SendInBlueAPIKey)
+	server.mailer, err = mail.NewMailer(mail.ConfigFromUtil(config))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create mail service. %v", err)
+		return nil, fmt.Errorf("failed to create mailer: %w", err)
 	}
 
 	ctx := context.Background()
