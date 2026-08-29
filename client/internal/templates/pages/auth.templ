@@ -215,7 +215,12 @@ templ ResetPasswordPage(data *templates.PageData) {
 						Choose a new password
 					</h2>
 				</div>
-				<form id="reset-password-form" method="POST" action="/auth/reset-password" class="mt-8 space-y-6">
+				if data.Meta["error"] != "" {
+					<div class="p-4 border border-red-300 rounded-md bg-red-50">
+						<p class="text-sm text-red-700">{ data.Meta["error"] }</p>
+					</div>
+				}
+				<form id="reset-password-form" method="POST" class="mt-8 space-y-6">
 					<input type="hidden" name="token" value={ data.Meta["token"] }/>
 					<div class="rounded-md shadow-sm -space-y-px">
 						<input

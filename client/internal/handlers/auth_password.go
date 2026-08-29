@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Damione1/thread-art-generator/client/internal/auth"
@@ -166,11 +167,55 @@ func (h *PasswordAuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *PasswordAuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	req, err := decodeResetPassword(r)
+	if err != nil {
+		h.resetPasswordError(w, r, req.Token, err.Error())
+		return
+	}
+	if req.Token == "" {
+		h.resetPasswordError(w, r, "", "reset token is required")
+		return
+	}
+	if len(req.Password) < 8 {
+		h.resetPasswordError(w, r, req.Token, "password must be at least 8 characters")
+		return
+	}
+	if req.ConfirmPassword != "" && req.ConfirmPassword != req.Password {
+		h.resetPasswordError(w, r, req.Token, "passwords do not match")
+		return
+	}
+	userID, err := h.tokens.Consume(r.Context(), req.Token, coreauth.TokenReset)
+	if err != nil {
+		h.resetPasswordError(w, r, req.Token, "this reset link is invalid or expired")
+		return
+	}
+	hash, err := h.passwords.Hash(req.Password)
+	if err != nil {
+		h.resetPasswordError(w, r, req.Token, "failed to hash password")
+		return
+	}
+	if err := h.identities.UpdatePassword(r.Context(), userID, hash); err != nil {
+		log.Error().Err(err).Str("user_id", userID).Msg("reset password update failed")
+		h.resetPasswordError(w, r, req.Token, "failed to update password")
+		return
+	}
+	if err := h.identities.SetActive(r.Context(), userID, true); err != nil {
+		log.Warn().Err(err).Str("user_id", userID).Msg("reset password activate failed")
+	}
+	log.Info().Str("user_id", userID).Msg("password reset")
+	h.finishAuth(w, r, http.StatusOK, true, "Password updated", "/login")
+}
+
+func decodeResetPassword(r *http.Request) (passwordAuthRequest, error) {
 	var req passwordAuthRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	ct := r.Header.Get("Content-Type")
+	if strings.Contains(ct, "application/json") {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return req, errors.New("invalid request")
+		}
+	} else {
 		if err := r.ParseForm(); err != nil {
-			writeAuthJSON(w, http.StatusBadRequest, false, "invalid request")
-			return
+			return req, errors.New("invalid form")
 		}
 		req.Token = r.FormValue("token")
 		req.Password = r.FormValue("password")
@@ -178,36 +223,21 @@ func (h *PasswordAuthHandler) ResetPassword(w http.ResponseWriter, r *http.Reque
 	}
 	req.Token = strings.TrimSpace(req.Token)
 	if req.Token == "" {
-		writeAuthJSON(w, http.StatusBadRequest, false, "reset token is required")
+		req.Token = strings.TrimSpace(r.URL.Query().Get("token"))
+	}
+	return req, nil
+}
+
+func (h *PasswordAuthHandler) resetPasswordError(w http.ResponseWriter, r *http.Request, token, msg string) {
+	if wantsAuthJSON(r) {
+		writeAuthJSON(w, http.StatusBadRequest, false, msg)
 		return
 	}
-	if len(req.Password) < 8 {
-		writeAuthJSON(w, http.StatusBadRequest, false, "password must be at least 8 characters")
-		return
+	u := "/reset-password?error=" + url.QueryEscape(msg)
+	if token != "" {
+		u = "/reset-password?token=" + url.QueryEscape(token) + "&error=" + url.QueryEscape(msg)
 	}
-	if req.ConfirmPassword != "" && req.ConfirmPassword != req.Password {
-		writeAuthJSON(w, http.StatusBadRequest, false, "passwords do not match")
-		return
-	}
-	userID, err := h.tokens.Consume(r.Context(), req.Token, coreauth.TokenReset)
-	if err != nil {
-		writeAuthJSON(w, http.StatusBadRequest, false, "this reset link is invalid or expired")
-		return
-	}
-	hash, err := h.passwords.Hash(req.Password)
-	if err != nil {
-		writeAuthJSON(w, http.StatusInternalServerError, false, "failed to hash password")
-		return
-	}
-	if err := h.identities.UpdatePassword(r.Context(), userID, hash); err != nil {
-		log.Error().Err(err).Str("user_id", userID).Msg("reset password update failed")
-		writeAuthJSON(w, http.StatusInternalServerError, false, "failed to update password")
-		return
-	}
-	if err := h.identities.SetActive(r.Context(), userID, true); err != nil {
-		log.Warn().Err(err).Str("user_id", userID).Msg("reset password activate failed")
-	}
-	h.finishAuth(w, r, http.StatusOK, true, "Password updated", "/login")
+	http.Redirect(w, r, u, http.StatusSeeOther)
 }
 
 func (h *PasswordAuthHandler) Verify(w http.ResponseWriter, r *http.Request) {

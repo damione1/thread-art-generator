@@ -126,7 +126,9 @@ func main() {
 		r.Get("/login", pageHandler.LoginPage)
 		r.Get("/signup", pageHandler.SignupPage)
 		r.Get("/forgot-password", pageHandler.ForgotPasswordPage)
+		r.Post("/forgot-password", passwordAuth.ForgotPassword)
 		r.Get("/reset-password", pageHandler.ResetPasswordPage)
+		r.Post("/reset-password", passwordAuth.ResetPassword)
 		r.Get("/check-email", pageHandler.CheckEmailPage)
 		r.Get("/verify", passwordAuth.Verify)
 
