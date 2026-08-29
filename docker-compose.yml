@@ -139,6 +139,8 @@ services:
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - ./Infra/minio/cors.xml:/cors.xml:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -150,24 +152,7 @@ services:
         done
         mc mb --ignore-existing local/thread-art
         mc anonymous set download local/thread-art
-        cat >/tmp/cors.xml <<'EOF'
-<CORSConfiguration>
-  <CORSRule>
-    <AllowedOrigin>http://localhost:8080</AllowedOrigin>
-    <AllowedOrigin>http://127.0.0.1:8080</AllowedOrigin>
-    <AllowedMethod>GET</AllowedMethod>
-    <AllowedMethod>PUT</AllowedMethod>
-    <AllowedMethod>HEAD</AllowedMethod>
-    <AllowedMethod>POST</AllowedMethod>
-    <AllowedHeader>*</AllowedHeader>
-    <ExposeHeader>ETag</ExposeHeader>
-    <ExposeHeader>Content-Length</ExposeHeader>
-    <ExposeHeader>Content-Type</ExposeHeader>
-    <MaxAgeSeconds>3600</MaxAgeSeconds>
-  </CORSRule>
-</CORSConfiguration>
-EOF
-        mc cors set local/thread-art /tmp/cors.xml || true
+        mc cors set local/thread-art /cors.xml || true
 
 volumes:
   threadmachine:
