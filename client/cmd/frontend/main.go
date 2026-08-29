@@ -83,6 +83,13 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create mailer")
 	}
 	emails := mail.NewEmails(mailer, mail.Address{Name: mailCfg.FromName, Email: mailCfg.FromAddr}, config.FrontendUrl)
+	log.Info().
+		Str("smtp_host", mailCfg.Host).
+		Int("smtp_port", mailCfg.Port).
+		Str("smtp_tls", mailCfg.TLSMode).
+		Str("smtp_from", mailCfg.FromAddr).
+		Bool("smtp_noop", mailCfg.Host == "").
+		Msg("mailer configured")
 	identities := &coreauth.PGIdentities{DB: db}
 	tokens := &coreauth.PGTokens{DB: db, Clock: clock.Real{}}
 	passwordAuth := handlers.NewPasswordAuthHandler(identities, tokens, emails, sessionManager)

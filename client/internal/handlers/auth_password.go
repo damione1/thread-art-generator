@@ -139,22 +139,30 @@ func (h *PasswordAuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Requ
 	const generic = "If that email exists, we sent a reset link"
 	identity, hash, err := h.identities.ByEmail(r.Context(), req.Email)
 	if err != nil || hash == "" {
-		writeAuthJSON(w, http.StatusOK, true, generic)
+		if err != nil && !errors.Is(err, coreauth.ErrIdentityNotFound) {
+			log.Error().Err(err).Str("email", req.Email).Msg("forgot password lookup failed")
+		} else {
+			log.Info().Str("email", req.Email).Bool("found", err == nil).Bool("has_password", hash != "").Msg("forgot password skipped")
+		}
+		h.finishAuth(w, r, http.StatusOK, true, generic, "/forgot-password?sent=1")
 		return
 	}
 	token, err := h.tokens.Issue(r.Context(), identity.UserID, coreauth.TokenReset, coreauth.ResetTTL)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", identity.UserID).Msg("reset token issue failed")
-		writeAuthJSON(w, http.StatusOK, true, generic)
+		h.finishAuth(w, r, http.StatusOK, true, generic, "/forgot-password?sent=1")
 		return
 	}
 	if err := h.emails.SendPasswordReset(r.Context(), mail.Address{
 		Name:  displayName(identity),
 		Email: identity.Email,
 	}, token); err != nil {
-		log.Error().Err(err).Str("user_id", identity.UserID).Msg("reset email failed")
+		log.Error().Err(err).Str("user_id", identity.UserID).Str("email", identity.Email).Msg("reset email failed")
+		h.finishAuth(w, r, http.StatusOK, true, generic, "/forgot-password?sent=1")
+		return
 	}
-	writeAuthJSON(w, http.StatusOK, true, generic)
+	log.Info().Str("user_id", identity.UserID).Str("email", identity.Email).Msg("reset email sent")
+	h.finishAuth(w, r, http.StatusOK, true, generic, "/forgot-password?sent=1")
 }
 
 func (h *PasswordAuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -199,7 +207,7 @@ func (h *PasswordAuthHandler) ResetPassword(w http.ResponseWriter, r *http.Reque
 	if err := h.identities.SetActive(r.Context(), userID, true); err != nil {
 		log.Warn().Err(err).Str("user_id", userID).Msg("reset password activate failed")
 	}
-	writeAuthJSON(w, http.StatusOK, true, "Password updated")
+	h.finishAuth(w, r, http.StatusOK, true, "Password updated", "/login")
 }
 
 func (h *PasswordAuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
@@ -240,13 +248,16 @@ func (h *PasswordAuthHandler) ResendVerification(w http.ResponseWriter, r *http.
 	const generic = "If that email exists, we sent a confirmation link"
 	identity, _, err := h.identities.ByEmail(r.Context(), req.Email)
 	if err != nil || identity.Active {
-		writeAuthJSON(w, http.StatusOK, true, generic)
+		h.finishAuth(w, r, http.StatusOK, true, generic, "/check-email?sent=1")
 		return
 	}
 	if err := h.sendVerify(r, identity); err != nil {
 		log.Error().Err(err).Str("user_id", identity.UserID).Msg("resend verification failed")
+		h.finishAuth(w, r, http.StatusOK, true, generic, "/check-email?sent=1")
+		return
 	}
-	writeAuthJSON(w, http.StatusOK, true, generic)
+	log.Info().Str("user_id", identity.UserID).Str("email", identity.Email).Msg("verification email sent")
+	h.finishAuth(w, r, http.StatusOK, true, generic, "/check-email?sent=1")
 }
 
 func (h *PasswordAuthHandler) sendVerify(r *http.Request, identity coreauth.Identity) error {
@@ -359,6 +370,20 @@ func writeAuthJSON(w http.ResponseWriter, status int, success bool, message stri
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(AuthSyncResponse{Success: success, Message: message})
+}
+
+func wantsAuthJSON(r *http.Request) bool {
+	accept := r.Header.Get("Accept")
+	ct := r.Header.Get("Content-Type")
+	return strings.Contains(accept, "application/json") || strings.Contains(ct, "application/json") || r.Header.Get("X-Requested-With") == "XMLHttpRequest"
+}
+
+func (h *PasswordAuthHandler) finishAuth(w http.ResponseWriter, r *http.Request, status int, success bool, message, redirect string) {
+	if wantsAuthJSON(r) {
+		writeAuthJSON(w, status, success, message)
+		return
+	}
+	http.Redirect(w, r, redirect, http.StatusSeeOther)
 }
 
 type AuthSyncResponse struct {
