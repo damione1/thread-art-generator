@@ -170,7 +170,13 @@ templ ForgotPasswordPage(data *templates.PageData) {
 						We'll email you a reset link if that account exists.
 					</p>
 				</div>
-				<form id="forgot-password-form" class="mt-8 space-y-6">
+				if data.Meta["sent"] == "1" {
+					<div class="p-4 border border-green-300 rounded-md bg-green-50">
+						<p class="text-sm text-green-700">If that email exists, we sent a reset link. In local dev, open Mailhog at localhost:8025.</p>
+					</div>
+				}
+				<form id="forgot-password-form" method="POST" action="/auth/forgot-password" class="mt-8 space-y-6">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<input
 						id="forgot-email"
 						name="email"
@@ -210,7 +216,13 @@ templ ResetPasswordPage(data *templates.PageData) {
 						Choose a new password
 					</h2>
 				</div>
-				<form id="reset-password-form" class="mt-8 space-y-6">
+				if data.Meta["error"] != "" {
+					<div class="p-4 border border-red-300 rounded-md bg-red-50">
+						<p class="text-sm text-red-700">{ data.Meta["error"] }</p>
+					</div>
+				}
+				<form id="reset-password-form" method="POST" class="mt-8 space-y-6">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<input type="hidden" name="token" value={ data.Meta["token"] }/>
 					<div class="rounded-md shadow-sm -space-y-px">
 						<input
@@ -258,7 +270,8 @@ templ CheckEmailPage(data *templates.PageData) {
 					We sent a confirmation link. Open it to activate your account.
 				</p>
 				<p class="text-sm text-gray-500">In local dev, open Mailhog at localhost:8025.</p>
-				<form id="resend-verification-form" class="space-y-4 text-left">
+				<form id="resend-verification-form" method="POST" action="/auth/resend-verification" class="space-y-4 text-left">
+					<input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
 					<input
 						name="email"
 						type="email"
