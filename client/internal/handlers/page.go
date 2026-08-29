@@ -185,6 +185,9 @@ func (h *PageHandler) ForgotPasswordPage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	pageData := templates.NewPageData("Forgot password - ThreadArt", "forgot")
+	if r.URL.Query().Get("sent") == "1" {
+		pageData = pageData.WithMeta("sent", "1")
+	}
 	if err := pages.ForgotPasswordPage(pageData).Render(r.Context(), w); err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render forgot password page")
@@ -204,6 +207,9 @@ func (h *PageHandler) ResetPasswordPage(w http.ResponseWriter, r *http.Request) 
 	}
 	pageData := templates.NewPageData("Reset password - ThreadArt", "reset").
 		WithMeta("token", token)
+	if errMsg := r.URL.Query().Get("error"); errMsg != "" {
+		pageData = pageData.WithMeta("error", errMsg)
+	}
 	if err := pages.ResetPasswordPage(pageData).Render(r.Context(), w); err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		log.Error().Err(err).Msg("Failed to render reset password page")

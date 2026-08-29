@@ -94,24 +94,6 @@ function bindAuthForms(): void {
     }
   });
 
-  document.getElementById('reset-password-form')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const token = (form.elements.namedItem('token') as HTMLInputElement)?.value ?? '';
-    const password = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? '';
-    const confirm = (form.elements.namedItem('confirm_password') as HTMLInputElement)?.value ?? '';
-    if (password !== confirm) {
-      showError('Passwords do not match');
-      return;
-    }
-    try {
-      await postAuth('/auth/reset-password', { token, password, confirm_password: confirm });
-      window.location.href = '/login';
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Reset failed');
-    }
-  });
-
   document.getElementById('resend-verification-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.target as HTMLFormElement;

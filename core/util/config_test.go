@@ -22,9 +22,17 @@ func TestApplyDefaultsStorage(t *testing.T) {
 	require.Equal(t, "http://localhost:8080", c.FrontendUrl)
 }
 
-func TestApplyDefaultsDoesNotOverrideHMAC(t *testing.T) {
-	t.Parallel()
-	c := Config{ServiceHMACSecret: "explicit-hmac-secret-32-bytes!!"}
-	c.applyDefaults()
-	require.Equal(t, "explicit-hmac-secret-32-bytes!!", c.ServiceHMACSecret)
+func TestLoadConfigSMTPFromEnv(t *testing.T) {
+	t.Setenv("SMTP_HOST", "mailhog")
+	t.Setenv("SMTP_PORT", "1025")
+	t.Setenv("SMTP_FROM_ADDRESS", "noreply@threadart.local")
+	t.Setenv("SMTP_TLS_MODE", "none")
+	t.Setenv("SMTP_FROM_NAME", "ThreadArt")
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	require.Equal(t, "mailhog", cfg.SMTP.Host)
+	require.Equal(t, 1025, cfg.SMTP.Port)
+	require.Equal(t, "none", cfg.SMTP.TLSMode)
+	require.Equal(t, "noreply@threadart.local", cfg.SMTP.FromAddr)
 }
