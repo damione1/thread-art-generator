@@ -332,7 +332,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 				<div class="field">
 					<label class="label" for="image_contrast">Contrast</label>
 					<div class="flex items-baseline justify-between gap-3">
-						<span class="hint">Live on the photograph, applied before solving</span>
+						<span class="hint">CLAHE on the hoop, then a light unsharp and edge mix</span>
 						<span class="font-mono text-[13px] text-ink" data-contrast-readout x-text="contrast + '%'"></span>
 					</div>
 					<input
@@ -346,7 +346,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 						x-model.number="contrast"
 						value={ fmt.Sprint(int(formData.ImageContrast)) }
 					/>
-					<p class="hint">Each composition can try a different punch. 28% is a solid start; raise it on a flat photo, lower it if shadows crush.</p>
+					<p class="hint">CLAHE local contrast, applied before solving. 28% is a solid start; raise it on a flat photo, lower it if shadows crush.</p>
 					for _, err := range FieldMsgs(formData.Errors, "composition.image_contrast") {
 						<p class="msg-error">{ err }</p>
 					}
