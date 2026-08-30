@@ -61,5 +61,3 @@ client/public/css/tailwind.css
 
 # leftover Firebase Functions compile output (source already deleted)
 functions/
-
-.design/
