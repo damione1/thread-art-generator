@@ -209,6 +209,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket storage
 	config.BrightnessFactor = composition.BrightnessFactor
 	config.ImageContrast = composition.ImageContrast
 	config.PhysicalRadius = composition.PhysicalRadius
+	config.Algorithm = threadGenerator.Kind(composition.Algorithm)
 
 	// Log the configuration settings being used
 	log.Info().
@@ -220,6 +221,7 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket storage
 		Int("brightnessFactor", composition.BrightnessFactor).
 		Float64("imageContrast", composition.ImageContrast).
 		Float64("physicalRadius", composition.PhysicalRadius).
+		Int("algorithm", composition.Algorithm).
 		Msg("Applying thread generator settings")
 
 	generator := threadGenerator.NewThreadGenerator(config)

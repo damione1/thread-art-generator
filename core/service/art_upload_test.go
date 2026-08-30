@@ -3,6 +3,11 @@ package service
 import (
 	"bytes"
 	"context"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
+	"io"
 	"net/http"
 	"testing"
 
@@ -211,4 +216,63 @@ func TestSignCompositionDownloadsNilSafe(t *testing.T) {
 	s := &Server{}
 	require.NoError(t, s.signCompositionDownloads(context.Background(), nil))
 	require.NoError(t, s.signCompositionDownloads(context.Background(), &pb.Composition{}))
+}
+
+func TestHoopOriginalJPEGGrayscaleCircle(t *testing.T) {
+	t.Parallel()
+	src := image.NewNRGBA(image.Rect(0, 0, 8, 8))
+	red := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			src.SetNRGBA(x, y, red)
+		}
+	}
+	var pngBuf bytes.Buffer
+	require.NoError(t, png.Encode(&pngBuf, src))
+
+	out, err := hoopOriginalJPEG(pngBuf.Bytes())
+	require.NoError(t, err)
+	img, err := jpeg.Decode(bytes.NewReader(out))
+	require.NoError(t, err)
+
+	center := color.NRGBAModel.Convert(img.At(4, 4)).(color.NRGBA)
+	require.Equal(t, center.R, center.G)
+	require.Equal(t, center.G, center.B)
+	require.InDelta(t, 76, center.R, 8)
+
+	corner := color.NRGBAModel.Convert(img.At(0, 0)).(color.NRGBA)
+	require.Greater(t, int(corner.R), 250)
+	require.Equal(t, corner.R, corner.G)
+	require.Equal(t, corner.G, corner.B)
+}
+
+func TestStoreHoopOriginalOverwritesColorUpload(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	b := storage.NewMemoryBucket()
+	src := image.NewNRGBA(image.Rect(0, 0, 4, 4))
+	for y := 0; y < 4; y++ {
+		for x := 0; x < 4; x++ {
+			src.SetNRGBA(x, y, color.NRGBA{R: 0, G: 255, B: 0, A: 255})
+		}
+	}
+	var pngBuf bytes.Buffer
+	require.NoError(t, png.Encode(&pngBuf, src))
+	require.NoError(t, b.Put(ctx, "k", bytes.NewReader(pngBuf.Bytes()), storage.PutOptions{ContentType: "image/png"}))
+
+	require.NoError(t, storeHoopOriginal(ctx, b, "k"))
+
+	reader, info, err := b.Get(ctx, "k")
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, "image/jpeg", info.ContentType)
+	data, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	require.True(t, bytes.HasPrefix(data, []byte{0xff, 0xd8, 0xff}))
+
+	img, err := jpeg.Decode(bytes.NewReader(data))
+	require.NoError(t, err)
+	center := color.NRGBAModel.Convert(img.At(2, 2)).(color.NRGBA)
+	require.Equal(t, center.R, center.G)
+	require.Equal(t, center.G, center.B)
 }

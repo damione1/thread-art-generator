@@ -205,11 +205,25 @@ function rasterizeToCanvas(source: CanvasImageSource & { width: number; height: 
   }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
+  ctx.filter = 'grayscale(1)';
   ctx.drawImage(source, 0, 0, width, height);
+  ctx.filter = 'none';
+  const pixels = ctx.getImageData(0, 0, width, height);
+  applyGrayscale(pixels.data);
+  ctx.putImageData(pixels, 0, 0);
   if ('close' in source && typeof source.close === 'function') {
     source.close();
   }
   return canvas;
+}
+
+function applyGrayscale(data: Uint8ClampedArray): void {
+  for (let i = 0; i < data.length; i += 4) {
+    const y = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    data[i] = y;
+    data[i + 1] = y;
+    data[i + 2] = y;
+  }
 }
 
 export function createArtUpload(config: ArtUploadConfig): ArtUpload {
@@ -266,6 +280,7 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
         height: `${this.imgHeight}px`,
         transform: `translate(${this.offsetX}px, ${this.offsetY}px) scale(${this.scale})`,
         transformOrigin: '0 0',
+        filter: 'grayscale(1)',
       };
     },
 
@@ -547,6 +562,12 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
       ctx.imageSmoothingQuality = 'high';
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.filter = 'grayscale(1)';
       ctx.drawImage(
         this.workingCanvas,
         sourceX,
@@ -558,6 +579,11 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
         OUTPUT_SIZE,
         OUTPUT_SIZE,
       );
+      ctx.restore();
+
+      const pixels = ctx.getImageData(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      applyGrayscale(pixels.data);
+      ctx.putImageData(pixels, 0, 0);
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(

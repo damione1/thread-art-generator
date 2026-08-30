@@ -3,22 +3,58 @@ package templates
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/Damione1/thread-art-generator/core/pb"
+	"github.com/Damione1/thread-art-generator/threadGenerator"
 )
 
 // CompositionFormData represents the form data for creating compositions
 type CompositionFormData struct {
-	NailsQuantity     int32   // Default: 300
+	NailsQuantity     int32   // Default: 280
 	ImgSize           int32   // Default: 800
-	MaxPaths          int32   // Default: 10000
+	MaxPaths          int32   // Default: 4500
 	StartingNail      int32   // Default: 0
-	MinimumDifference int32   // Default: 10
-	BrightnessFactor  int32   // Default: 50
-	ImageContrast     float32 // Default: 40.0
-	PhysicalRadius    float32 // Default: 609.6
+	MinimumDifference int32   // Default: 22
+	BrightnessFactor  int32   // Default: 40
+	ImageContrast     float32 // Default: 28 (AdjustContrast percent)
+	PhysicalRadius    float32 // Default: 304.8 (24-inch hoop diameter)
+	Algorithm         pb.CompositionAlgorithm
 	Errors            map[string][]string
 	Success           bool
+}
+
+func algorithmOf(a pb.CompositionAlgorithm) threadGenerator.Algorithm {
+	return threadGenerator.Lookup(threadGenerator.Kind(a))
+}
+
+func algorithmValue(a pb.CompositionAlgorithm) string {
+	return algorithmOf(a).FormValue()
+}
+
+func algorithmLabel(a pb.CompositionAlgorithm) string {
+	return algorithmOf(a).Label()
+}
+
+func solverUsesBrightness(a pb.CompositionAlgorithm) bool {
+	return algorithmOf(a).UsesBrightness()
+}
+
+func compositionAlpineData(formData *CompositionFormData) string {
+	var b strings.Builder
+	b.WriteString("{ contrast: ")
+	b.WriteString(fmt.Sprint(int(formData.ImageContrast)))
+	b.WriteString(", algorithm: '")
+	b.WriteString(algorithmValue(formData.Algorithm))
+	b.WriteString("', brightness: {")
+	for i, algo := range threadGenerator.Algorithms() {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		fmt.Fprintf(&b, "'%s':%t", algo.FormValue(), algo.UsesBrightness())
+	}
+	b.WriteString("} }")
+	return b.String()
 }
 
 // nailSpacingMM returns the arc distance between two adjacent nails, in
@@ -38,6 +74,10 @@ func errClass(errs map[string][]string, field string) string {
 	return ""
 }
 
+func solverContrastCSS(pct float32) string {
+	return fmt.Sprintf("--solver-contrast: %.4f", (100+float64(pct))/100)
+}
+
 // NewCompositionPage renders the composition creation form
 templ NewCompositionPage(data *PageData, art *pb.Art, formData *CompositionFormData) {
 	@Layout(data) {
@@ -51,35 +91,50 @@ templ NewCompositionPage(data *PageData, art *pb.Art, formData *CompositionFormD
 			</div>
 			<h1 class="display text-[36px] leading-[1.05] mt-3.5">New composition</h1>
 			<p class="hint mt-2.5 text-[13.5px]">Eight numbers decide what the thread does. Every run is kept, so try more than one.</p>
-			<div class="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-12 items-start py-[30px] pb-10">
-				<aside>
-					<div class="disc">
-						<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
-						@NailRing("")
-					</div>
-					<div class="card mt-6 px-[22px] pt-[22px] pb-[18px]">
-						<h3 class="text-[13px] font-semibold">The hoop, as configured</h3>
-						<svg viewBox="0 0 100 100" class="w-full mt-3.5" aria-hidden="true">
-							<circle cx="50" cy="50" r="41" fill="none" stroke="#C79A4B" stroke-width="2.2" stroke-dasharray=".45 2.6" stroke-linecap="round" opacity=".7"></circle>
-							<g stroke="#EDEDEE" stroke-opacity=".34" stroke-width=".55" fill="none">
-								<path d="M50 9 L18.7 76.5 M50 9 L84.6 71.5 M50 9 L9.5 62 M18.7 76.5 L88 40 M84.6 71.5 L14 33"></path>
-							</g>
-							<path d="M50 9 A41 41 0 0 1 64.9 12.8" fill="none" stroke="#E0B463" stroke-width="1.1"></path>
-							<circle cx="50" cy="9" r="2.4" fill="#E0B463"></circle>
-							<circle cx="64.9" cy="12.8" r="1.8" fill="#E0B463" opacity=".65"></circle>
-						</svg>
-						<div class="mt-2">
-							<div class="kv"><span class="kv-k">Nails</span><span class="kv-v">{ fmt.Sprint(formData.NailsQuantity) }</span></div>
-							<div class="kv"><span class="kv-k">Hoop radius</span><span class="kv-v">{ fmt.Sprintf("%.1f mm", formData.PhysicalRadius) }</span></div>
-							<div class="kv"><span class="kv-k">Spacing between nails</span><span class="kv-v">{ fmt.Sprintf("%.1f mm", nailSpacingMM(formData.PhysicalRadius, formData.NailsQuantity)) }</span></div>
-						</div>
-					</div>
-					<p class="hint mt-3">Rendering runs in the background and takes a few minutes. You can close this page.</p>
-				</aside>
-				@CompositionForm(art, formData)
-			</div>
+			@CompositionEditor(art, formData)
 		}
 	}
+}
+
+// CompositionEditor is the photo preview + settings form. HTMX replaces this
+// whole block on validation errors so the live contrast preview stays wired.
+templ CompositionEditor(art *pb.Art, formData *CompositionFormData) {
+	<div
+		id="composition-editor"
+		class="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-12 items-start py-[30px] pb-10"
+		x-data={ compositionAlpineData(formData) }
+	>
+		<aside>
+			<div
+				class="disc disc-photo"
+				style={ solverContrastCSS(formData.ImageContrast) }
+				x-bind:style="'--solver-contrast:' + ((100 + contrast) / 100)"
+			>
+				<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
+				@NailRing("")
+			</div>
+			<p class="hint mt-2.5 text-center">How the solver reads the hoop · <span class="font-mono text-ink-muted" data-contrast-readout x-text="contrast + '%'"></span> contrast</p>
+			<div class="card mt-6 px-[22px] pt-[22px] pb-[18px]">
+				<h3 class="text-[13px] font-semibold">The hoop, as configured</h3>
+				<svg viewBox="0 0 100 100" class="w-full mt-3.5" aria-hidden="true">
+					<circle cx="50" cy="50" r="41" fill="none" stroke="#C79A4B" stroke-width="2.2" stroke-dasharray=".45 2.6" stroke-linecap="round" opacity=".7"></circle>
+					<g stroke="#EDEDEE" stroke-opacity=".34" stroke-width=".55" fill="none">
+						<path d="M50 9 L18.7 76.5 M50 9 L84.6 71.5 M50 9 L9.5 62 M18.7 76.5 L88 40 M84.6 71.5 L14 33"></path>
+					</g>
+					<path d="M50 9 A41 41 0 0 1 64.9 12.8" fill="none" stroke="#E0B463" stroke-width="1.1"></path>
+					<circle cx="50" cy="9" r="2.4" fill="#E0B463"></circle>
+					<circle cx="64.9" cy="12.8" r="1.8" fill="#E0B463" opacity=".65"></circle>
+				</svg>
+				<div class="mt-2">
+					<div class="kv"><span class="kv-k">Nails</span><span class="kv-v">{ fmt.Sprint(formData.NailsQuantity) }</span></div>
+					<div class="kv"><span class="kv-k">Hoop radius</span><span class="kv-v">{ fmt.Sprintf("%.1f mm", formData.PhysicalRadius) }</span></div>
+					<div class="kv"><span class="kv-k">Spacing between nails</span><span class="kv-v">{ fmt.Sprintf("%.1f mm", nailSpacingMM(formData.PhysicalRadius, formData.NailsQuantity)) }</span></div>
+				</div>
+			</div>
+			<p class="hint mt-3">Rendering runs in the background and takes a few minutes. You can close this page.</p>
+		</aside>
+		@CompositionForm(art, formData)
+	</div>
 }
 
 // CompositionForm renders the composition creation form
@@ -88,6 +143,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 		method="POST"
 		action={ templ.SafeURL("/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new") }
 		hx-post={ "/dashboard/arts/" + extractArtID(art.GetName()) + "/composition/new" }
+		hx-target="#composition-editor"
 		hx-swap="outerHTML"
 		hx-indicator="#submit-spinner"
 		class="card p-0"
@@ -99,6 +155,19 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 			</div>
 		}
 		<div class="px-[26px] pt-[26px] pb-1.5">
+			<div class="flex items-baseline gap-3 mb-5">
+				<h3 class="text-sm font-semibold">The solver</h3>
+				<span class="text-[12.5px] text-ink-faint">How lines are chosen. G-code stays the same.</span>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-6">
+				for _, algo := range threadGenerator.Algorithms() {
+					<label class="card px-[18px] py-4 cursor-pointer border transition-colors" :class={ "algorithm === '" + algo.FormValue() + "' ? 'border-brass' : 'border-line'" }>
+						<input type="radio" name="algorithm" value={ algo.FormValue() } class="sr-only" x-model="algorithm"/>
+						<div class="text-[13px] font-semibold">{ algo.Label() }</div>
+						<p class="hint mt-1.5">{ algo.Hint() }</p>
+					</label>
+				}
+			</div>
 			<div class="flex items-baseline gap-3 mb-5">
 				<h3 class="text-sm font-semibold">The hoop</h3>
 				<span class="text-[12.5px] text-ink-faint">Physical geometry of the frame</span>
@@ -137,7 +206,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 						required
 						class={ "input input-num " + errClass(formData.Errors, "composition.starting_nail") }
 					/>
-					<p class="hint">Nail 0 sits at the top and numbering runs clockwise. Changing it shifts the pattern slightly.</p>
+					<p class="hint">Nail 0 sits at the top and numbering runs clockwise. Must be less than the nail count.</p>
 					for _, err := range FieldMsgs(formData.Errors, "composition.starting_nail") {
 						<p class="msg-error">{ err }</p>
 					}
@@ -160,7 +229,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 						value={ fmt.Sprint(formData.MinimumDifference) }
 						x-model.number="v"
 					/>
-					<p class="hint">Stops the thread bunching at the rim. Higher values give longer, cleaner lines and lose fine detail.</p>
+					<p class="hint">Stops the thread bunching at the rim. Must stay below half the nail count. Higher values give longer, cleaner lines and lose fine detail.</p>
 					for _, err := range FieldMsgs(formData.Errors, "composition.minimum_difference") {
 						<p class="msg-error">{ err }</p>
 					}
@@ -181,7 +250,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 						/>
 						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-faint">mm</span>
 					</div>
-					<p class="hint">Your real frame, used for the G-code coordinates and the thread length. 609.6 mm is a 24-inch hoop.</p>
+					<p class="hint">Your real frame radius, used for G-code and thread length. 304.8 mm is a 24-inch (diameter) hoop.</p>
 					for _, err := range FieldMsgs(formData.Errors, "composition.physical_radius") {
 						<p class="msg-error">{ err }</p>
 					}
@@ -237,7 +306,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 					}
 				</div>
 				<!-- Thread weight -->
-				<div class="field" x-data={ "{v: " + fmt.Sprint(formData.BrightnessFactor) + "}" }>
+				<div class="field" x-show="brightness[algorithm]" x-data={ "{v: " + fmt.Sprint(formData.BrightnessFactor) + "}" }>
 					<label class="label" for="brightness_factor">Thread weight</label>
 					<div class="flex items-baseline justify-between gap-3">
 						<span class="hint">How much each line darkens the image</span>
@@ -260,11 +329,11 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 					}
 				</div>
 				<!-- Contrast -->
-				<div class="field" x-data={ "{v: " + fmt.Sprint(int(formData.ImageContrast*10)) + "}" }>
+				<div class="field">
 					<label class="label" for="image_contrast">Contrast</label>
 					<div class="flex items-baseline justify-between gap-3">
-						<span class="hint">Applied before solving</span>
-						<span class="font-mono text-[13px] text-ink" x-text="(v/10).toFixed(1) + '×'"></span>
+						<span class="hint">Live on the photograph, applied before solving</span>
+						<span class="font-mono text-[13px] text-ink" data-contrast-readout x-text="contrast + '%'"></span>
 					</div>
 					<input
 						id="image_contrast"
@@ -274,10 +343,10 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 						min="1"
 						max="100"
 						step="1"
-						value={ fmt.Sprint(int(formData.ImageContrast * 10)) }
-						x-model.number="v"
+						x-model.number="contrast"
+						value={ fmt.Sprint(int(formData.ImageContrast)) }
 					/>
-					<p class="hint">Pushes edges apart before the first line is drawn. 4.0 works for most photographs.</p>
+					<p class="hint">Each composition can try a different punch. 28% is a solid start; raise it on a flat photo, lower it if shadows crush.</p>
 					for _, err := range FieldMsgs(formData.Errors, "composition.image_contrast") {
 						<p class="msg-error">{ err }</p>
 					}

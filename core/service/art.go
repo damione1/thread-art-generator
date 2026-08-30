@@ -398,7 +398,7 @@ func (server *Server) completeArtUpload(ctx context.Context, req *pb.CompleteArt
 		return nil, err
 	}
 	key := resource.ArtOriginalObjectKey(user.ID, artDb.ID)
-	if err := inspectUploadedOriginal(ctx, server.bucket, key); err != nil {
+	if err := storeHoopOriginal(ctx, server.bucket, key); err != nil {
 		return nil, err
 	}
 	artDb.Status = models.ArtStatusEnumCOMPLETE
