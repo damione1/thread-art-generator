@@ -23,6 +23,7 @@ import (
 	database "github.com/Damione1/thread-art-generator/core/db"
 	"github.com/Damione1/thread-art-generator/core/db/models"
 	"github.com/Damione1/thread-art-generator/core/queue"
+	"github.com/Damione1/thread-art-generator/core/rembg"
 	"github.com/Damione1/thread-art-generator/core/resource"
 	"github.com/Damione1/thread-art-generator/core/storage"
 	"github.com/Damione1/thread-art-generator/core/util"
@@ -87,7 +88,7 @@ func startPostgresProcessing(ctx context.Context, config util.Config, bucket sto
 	go func() {
 		log.Info().Str("queue", queue.TopicCompositionProcessing).Str("consumer", consumer).Msg("🧵 Worker is waiting for postgres jobs")
 		err := q.Subscribe(ctx, queue.TopicCompositionProcessing, consumer, func(ctx context.Context, body []byte) error {
-			return processMessage(ctx, body, config.DB, bucket)
+			return processMessage(ctx, body, config.DB, bucket, config.RembgURL)
 		})
 		errCh <- err
 	}()
@@ -102,7 +103,7 @@ func startPostgresProcessing(ctx context.Context, config util.Config, bucket sto
 }
 
 // processMessage processes a single message from the queue
-func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket storage.Bucket) error {
+func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket storage.Bucket, rembgURL string) error {
 	processingStartTime := time.Now()
 
 	// Parse the message
@@ -197,6 +198,23 @@ func processMessage(ctx context.Context, body []byte, db *sql.DB, bucket storage
 		log.Info().
 			Int64("size", fi.Size()).
 			Msg("Source image file verified")
+	}
+
+	if err := sourceFile.Close(); err != nil {
+		setCompositionError(ctx, db, composition, fmt.Sprintf("failed to close source image: %v", err))
+		return fmt.Errorf("failed to close source image: %w", err)
+	}
+
+	if composition.StripBackground {
+		if rembgURL == "" {
+			setCompositionError(ctx, db, composition, "strip_background is set but REMBG_URL is empty")
+			return fmt.Errorf("rembg url is not configured")
+		}
+		log.Info().Str("rembg", rembgURL).Msg("Stripping background via rembg sidecar")
+		if err := rembg.New(rembgURL).StripToWhite(ctx, sourceImagePath); err != nil {
+			setCompositionError(ctx, db, composition, fmt.Sprintf("background removal failed: %v", err))
+			return fmt.Errorf("rembg: %w", err)
+		}
 	}
 
 	// Initialize thread generator with composition settings

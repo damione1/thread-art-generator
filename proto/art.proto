@@ -217,6 +217,9 @@ message Composition {
 
     // Black thread on white vs white thread on black
     CompositionPolarity polarity = 21;
+
+    // Run rembg on the worker before solving (for uploads that skipped the crop toggle)
+    bool strip_background = 22;
 }
 
 message CreateCompositionRequest {

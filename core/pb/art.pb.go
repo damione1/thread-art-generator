@@ -402,9 +402,11 @@ type Composition struct {
 	// Path-selection algorithm
 	Algorithm CompositionAlgorithm `protobuf:"varint,20,opt,name=algorithm,proto3,enum=pb.CompositionAlgorithm" json:"algorithm,omitempty"`
 	// Black thread on white vs white thread on black
-	Polarity      CompositionPolarity `protobuf:"varint,21,opt,name=polarity,proto3,enum=pb.CompositionPolarity" json:"polarity,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Polarity CompositionPolarity `protobuf:"varint,21,opt,name=polarity,proto3,enum=pb.CompositionPolarity" json:"polarity,omitempty"`
+	// Run rembg on the worker before solving (for uploads that skipped the crop toggle)
+	StripBackground bool `protobuf:"varint,22,opt,name=strip_background,json=stripBackground,proto3" json:"strip_background,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Composition) Reset() {
@@ -575,6 +577,13 @@ func (x *Composition) GetPolarity() CompositionPolarity {
 		return x.Polarity
 	}
 	return CompositionPolarity_COMPOSITION_POLARITY_UNSPECIFIED
+}
+
+func (x *Composition) GetStripBackground() bool {
+	if x != nil {
+		return x.StripBackground
+	}
+	return false
 }
 
 type CreateCompositionRequest struct {
@@ -1409,7 +1418,7 @@ const file_art_proto_rawDesc = "" +
 	"createTime\x12@\n" +
 	"\vupdate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime:1\xeaA.\n" +
-	"\x13art.example.com/Art\x12\x17users/{user}/arts/{art}\"\xe6\v\n" +
+	"\x13art.example.com/Art\x12\x17users/{user}/arts/{art}\"\x91\f\n" +
 	"\vComposition\x127\n" +
 	"\x04name\x18\x01 \x01(\tB#\xe0A\x03\xfaA\x1d\n" +
 	"\x1bart.example.com/CompositionR\x04name\x122\n" +
@@ -1447,7 +1456,8 @@ const file_art_proto_rawDesc = "" +
 	"\vupdate_time\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x126\n" +
 	"\talgorithm\x18\x14 \x01(\x0e2\x18.pb.CompositionAlgorithmR\talgorithm\x123\n" +
-	"\bpolarity\x18\x15 \x01(\x0e2\x17.pb.CompositionPolarityR\bpolarity:T\xeaAQ\n" +
+	"\bpolarity\x18\x15 \x01(\x0e2\x17.pb.CompositionPolarityR\bpolarity\x12)\n" +
+	"\x10strip_background\x18\x16 \x01(\bR\x0fstripBackground:T\xeaAQ\n" +
 	"\x1bart.example.com/Composition\x122users/{user}/arts/{art}/compositions/{composition}\"\xc1\x02\n" +
 	"\x18CreateCompositionRequest\x12\xe6\x01\n" +
 	"\x06parent\x18\x01 \x01(\tB\xcd\x01\xe0A\x02\xfaA\x15\n" +

@@ -111,6 +111,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 			formData.PhysicalRadius = sourceComposition.GetPhysicalRadius()
 			formData.Algorithm = sourceComposition.GetAlgorithm()
 			formData.Polarity = sourceComposition.GetPolarity()
+			formData.StripBackground = sourceComposition.GetStripBackground()
 		}
 	}
 
@@ -154,6 +155,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	physicalRadius, _ := strconv.ParseFloat(r.FormValue("physical_radius"), 32)
 	algorithm := pb.CompositionAlgorithm(threadGenerator.LookupForm(r.FormValue("algorithm")).ID())
 	polarity := templates.PolarityFromForm(r.FormValue("polarity"))
+	stripBackground := r.FormValue("strip_background") == "1"
 
 	// Initialize form data
 	formData := &templates.CompositionFormData{
@@ -167,6 +169,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		PhysicalRadius:    float32(physicalRadius),
 		Algorithm:         algorithm,
 		Polarity:          polarity,
+		StripBackground:   stripBackground,
 		Errors:            make(map[string][]string),
 		Success:           false,
 	}
@@ -214,6 +217,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 			PhysicalRadius:    formData.PhysicalRadius,
 			Algorithm:         formData.Algorithm,
 			Polarity:          formData.Polarity,
+			StripBackground:   formData.StripBackground,
 		},
 	}
 

@@ -51,6 +51,7 @@ type Config struct {
 	Storage             StorageConfig `mapstructure:",squash"`
 	SMTP                SMTPConfig    `mapstructure:",squash"`
 	ServiceHMACSecret   string        `mapstructure:"SERVICE_HMAC_SECRET"`
+	RembgURL            string        `mapstructure:"REMBG_URL"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -88,6 +89,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindEnv("SMTP_FROM_NAME")
 	viper.BindEnv("SMTP_FROM_ADDRESS")
 	viper.BindEnv("SMTP_TLS_MODE")
+	viper.BindEnv("REMBG_URL")
 
 	if err = viper.Unmarshal(&config); err != nil {
 		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
