@@ -94,6 +94,7 @@ func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompo
 		ImageContrast:     float64(req.GetComposition().GetImageContrast()),
 		PhysicalRadius:    float64(req.GetComposition().GetPhysicalRadius()),
 		Algorithm:         int(normalizeCompositionAlgorithm(req.GetComposition().GetAlgorithm())),
+		Polarity:          int(normalizeCompositionPolarity(req.GetComposition().GetPolarity())),
 	}
 
 	// Insert the composition
@@ -342,6 +343,13 @@ func (server *Server) deleteComposition(ctx context.Context, req *pb.DeleteCompo
 
 func normalizeCompositionAlgorithm(a pb.CompositionAlgorithm) pb.CompositionAlgorithm {
 	return pb.CompositionAlgorithm(threadGenerator.Lookup(threadGenerator.Kind(a)).ID())
+}
+
+func normalizeCompositionPolarity(p pb.CompositionPolarity) pb.CompositionPolarity {
+	if p == pb.CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK {
+		return p
+	}
+	return pb.CompositionPolarity_COMPOSITION_POLARITY_DARK_ON_LIGHT
 }
 
 func validateCompositionParams(comp *pb.Composition) error {

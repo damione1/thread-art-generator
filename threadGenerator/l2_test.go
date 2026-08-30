@@ -165,7 +165,30 @@ func TestPercentile(t *testing.T) {
 
 func TestDefaultConfigAlgorithm(t *testing.T) {
 	t.Parallel()
-	if DefaultConfig().Algorithm != KindVrellis {
-		t.Fatal("default algorithm should be Vrellis")
+	if DefaultConfig().Algorithm != KindL2 {
+		t.Fatal("default algorithm should be L2")
+	}
+}
+
+func TestLightOnDarkPreviewIsBright(t *testing.T) {
+	t.Parallel()
+	path := writePNG(t, darkCenter(96, 96))
+	cfg := smallTestConfig()
+	cfg.Algorithm = KindL2
+	cfg.MaxPaths = 50
+	cfg.Polarity = PolarityLightOnDark
+	tg := NewThreadGenerator(cfg)
+	if _, err := tg.Generate(Args{ImageName: path}); err != nil {
+		t.Fatal(err)
+	}
+	preview, err := tg.GeneratePathsImage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if maxGray(preview) < 80 {
+		t.Fatalf("white thread on black should reach a bright pixel, max=%d", maxGray(preview))
+	}
+	if minGray(preview) > 40 {
+		t.Fatalf("canvas should stay dark, min=%d", minGray(preview))
 	}
 }

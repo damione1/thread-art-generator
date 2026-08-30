@@ -16,10 +16,11 @@ type CompositionFormData struct {
 	MaxPaths          int32   // Default: 4500
 	StartingNail      int32   // Default: 0
 	MinimumDifference int32   // Default: 22
-	BrightnessFactor  int32   // Default: 40
-	ImageContrast     float32 // Default: 28 (AdjustContrast percent)
-	PhysicalRadius    float32 // Default: 304.8 (24-inch hoop diameter)
+	BrightnessFactor  int32   // Default: 28
+	ImageContrast     float32 // Default: 28 (CLAHE clip via percent)
+	PhysicalRadius    float32 // Default: 600
 	Algorithm         pb.CompositionAlgorithm
+	Polarity          pb.CompositionPolarity
 	Errors            map[string][]string
 	Success           bool
 }
@@ -40,12 +41,35 @@ func solverUsesBrightness(a pb.CompositionAlgorithm) bool {
 	return algorithmOf(a).UsesBrightness()
 }
 
+func polarityValue(p pb.CompositionPolarity) string {
+	if p == pb.CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK {
+		return "LIGHT_ON_DARK"
+	}
+	return "DARK_ON_LIGHT"
+}
+
+func polarityLabel(p pb.CompositionPolarity) string {
+	if p == pb.CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK {
+		return "White on black"
+	}
+	return "Black on white"
+}
+
+func PolarityFromForm(v string) pb.CompositionPolarity {
+	if v == "LIGHT_ON_DARK" {
+		return pb.CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK
+	}
+	return pb.CompositionPolarity_COMPOSITION_POLARITY_DARK_ON_LIGHT
+}
+
 func compositionAlpineData(formData *CompositionFormData) string {
 	var b strings.Builder
 	b.WriteString("{ contrast: ")
 	b.WriteString(fmt.Sprint(int(formData.ImageContrast)))
 	b.WriteString(", algorithm: '")
 	b.WriteString(algorithmValue(formData.Algorithm))
+	b.WriteString("', polarity: '")
+	b.WriteString(polarityValue(formData.Polarity))
 	b.WriteString("', brightness: {")
 	for i, algo := range threadGenerator.Algorithms() {
 		if i > 0 {
@@ -108,7 +132,7 @@ templ CompositionEditor(art *pb.Art, formData *CompositionFormData) {
 			<div
 				class="disc disc-photo"
 				style={ solverContrastCSS(formData.ImageContrast) }
-				x-bind:style="'--solver-contrast:' + ((100 + contrast) / 100)"
+				x-bind:style="'--solver-contrast:' + ((100 + contrast) / 100) + ';--solver-invert:' + (polarity === 'LIGHT_ON_DARK' ? '1' : '0')"
 			>
 				<img src={ art.GetImageUrl() } alt={ art.GetTitle() }/>
 				@NailRing("")
@@ -167,6 +191,22 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 						<p class="hint mt-1.5">{ algo.Hint() }</p>
 					</label>
 				}
+			</div>
+			<div class="flex items-baseline gap-3 mb-5">
+				<h3 class="text-sm font-semibold">The thread</h3>
+				<span class="text-[12.5px] text-ink-faint">Same solver target, inverted preview</span>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-6">
+				<label class="card px-[18px] py-4 cursor-pointer border transition-colors" :class="polarity === 'DARK_ON_LIGHT' ? 'border-brass' : 'border-line'">
+					<input type="radio" name="polarity" value="DARK_ON_LIGHT" class="sr-only" x-model="polarity"/>
+					<div class="text-[13px] font-semibold">Black on white</div>
+					<p class="hint mt-1.5">Dark thread on a light hoop. The usual polyester-on-paper look.</p>
+				</label>
+				<label class="card px-[18px] py-4 cursor-pointer border transition-colors" :class="polarity === 'LIGHT_ON_DARK' ? 'border-brass' : 'border-line'">
+					<input type="radio" name="polarity" value="LIGHT_ON_DARK" class="sr-only" x-model="polarity"/>
+					<div class="text-[13px] font-semibold">White on black</div>
+					<p class="hint mt-1.5">Light thread on a dark hoop. Same chords, inverted render.</p>
+				</label>
 			</div>
 			<div class="flex items-baseline gap-3 mb-5">
 				<h3 class="text-sm font-semibold">The hoop</h3>
@@ -250,7 +290,7 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 						/>
 						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-faint">mm</span>
 					</div>
-					<p class="hint">Your real frame radius, used for G-code and thread length. 304.8 mm is a 24-inch (diameter) hoop.</p>
+					<p class="hint">Your real frame radius, used for G-code and thread length. 600 mm is a 1.2 m hoop.</p>
 					for _, err := range FieldMsgs(formData.Errors, "composition.physical_radius") {
 						<p class="msg-error">{ err }</p>
 					}

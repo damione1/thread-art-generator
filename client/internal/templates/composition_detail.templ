@@ -135,6 +135,7 @@ templ CompositionAside(composition *pb.Composition) {
 		<h3 class="text-[15px] font-semibold mt-[30px] mb-1.5">Settings used</h3>
 		<div class="card px-5">
 			<div class="kv"><span class="kv-k">Algorithm</span><span class="kv-v">{ algorithmLabel(composition.GetAlgorithm()) }</span></div>
+			<div class="kv"><span class="kv-k">Thread</span><span class="kv-v">{ polarityLabel(composition.GetPolarity()) }</span></div>
 			<div class="kv"><span class="kv-k">Nails</span><span class="kv-v">{ fmt.Sprint(composition.GetNailsQuantity()) }</span></div>
 			<div class="kv"><span class="kv-k">Starting nail</span><span class="kv-v">{ fmt.Sprint(composition.GetStartingNail()) }</span></div>
 			<div class="kv"><span class="kv-k">Minimum gap</span><span class="kv-v">{ fmt.Sprint(composition.GetMinimumDifference()) }</span></div>

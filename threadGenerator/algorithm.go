@@ -18,6 +18,15 @@ const (
 	KindL2 Kind = 2
 )
 
+// Polarity is black-on-white vs white-on-black for the rendered hoop.
+type Polarity int
+
+const (
+	PolarityUnspecified Polarity = 0
+	PolarityDarkOnLight Polarity = 1
+	PolarityLightOnDark Polarity = 2
+)
+
 // Algorithm selects how paths are chosen. G-code emission is shared.
 type Algorithm interface {
 	ID() Kind

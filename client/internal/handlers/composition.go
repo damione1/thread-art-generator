@@ -81,7 +81,8 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 		BrightnessFactor:  int32(cfg.BrightnessFactor),
 		ImageContrast:     float32(cfg.ImageContrast),
 		PhysicalRadius:    float32(cfg.PhysicalRadius),
-		Algorithm:         pb.CompositionAlgorithm_COMPOSITION_ALGORITHM_VRELLIS,
+		Algorithm:         pb.CompositionAlgorithm(cfg.Algorithm),
+		Polarity:          pb.CompositionPolarity(cfg.Polarity),
 		Errors:            make(map[string][]string),
 		Success:           false,
 	}
@@ -109,6 +110,7 @@ func (h *CompositionHandler) NewCompositionForm(w http.ResponseWriter, r *http.R
 			formData.ImageContrast = sourceComposition.GetImageContrast()
 			formData.PhysicalRadius = sourceComposition.GetPhysicalRadius()
 			formData.Algorithm = sourceComposition.GetAlgorithm()
+			formData.Polarity = sourceComposition.GetPolarity()
 		}
 	}
 
@@ -151,6 +153,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 	imageContrast, _ := strconv.ParseFloat(r.FormValue("image_contrast"), 32)
 	physicalRadius, _ := strconv.ParseFloat(r.FormValue("physical_radius"), 32)
 	algorithm := pb.CompositionAlgorithm(threadGenerator.LookupForm(r.FormValue("algorithm")).ID())
+	polarity := templates.PolarityFromForm(r.FormValue("polarity"))
 
 	// Initialize form data
 	formData := &templates.CompositionFormData{
@@ -163,6 +166,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 		ImageContrast:     float32(imageContrast),
 		PhysicalRadius:    float32(physicalRadius),
 		Algorithm:         algorithm,
+		Polarity:          polarity,
 		Errors:            make(map[string][]string),
 		Success:           false,
 	}
@@ -209,6 +213,7 @@ func (h *CompositionHandler) CreateComposition(w http.ResponseWriter, r *http.Re
 			ImageContrast:     formData.ImageContrast,
 			PhysicalRadius:    formData.PhysicalRadius,
 			Algorithm:         formData.Algorithm,
+			Polarity:          formData.Polarity,
 		},
 	}
 

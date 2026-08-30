@@ -155,7 +155,7 @@
   }
   /* Original photograph discs: N&B always. Contrast is a composition knob. */
   .disc-photo > img {
-    filter: grayscale(1) contrast(var(--solver-contrast, 1));
+    filter: grayscale(1) contrast(var(--solver-contrast, 1)) invert(var(--solver-invert, 0));
   }
 
   /* --- key/value rows --- */

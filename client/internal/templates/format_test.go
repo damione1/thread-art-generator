@@ -37,7 +37,7 @@ func TestCompositionParamsLineContrastPercent(t *testing.T) {
 		MinimumDifference: 22,
 		ImageContrast:     28,
 	})
-	want := "Vrellis · 280 nails · 4 500 paths · 800 px · gap 22 · contrast 28%"
+	want := "Vrellis · Black on white · 280 nails · 4 500 paths · 800 px · gap 22 · contrast 28%"
 	if got != want {
 		t.Errorf("compositionParamsLine = %q, want %q", got, want)
 	}
@@ -50,7 +50,7 @@ func TestCompositionParamsLineContrastPercent(t *testing.T) {
 		MinimumDifference: 22,
 		ImageContrast:     28,
 	})
-	want = "L2 residual · 280 nails · 4 500 paths · 800 px · gap 22 · contrast 28%"
+	want = "L2 residual · Black on white · 280 nails · 4 500 paths · 800 px · gap 22 · contrast 28%"
 	if got != want {
 		t.Errorf("compositionParamsLine L2 = %q, want %q", got, want)
 	}
@@ -62,6 +62,12 @@ func TestSolverModelHelpers(t *testing.T) {
 	}
 	if algorithmLabel(pb.CompositionAlgorithm_COMPOSITION_ALGORITHM_L2) != "L2 residual" {
 		t.Fatal("L2 label")
+	}
+	if polarityLabel(pb.CompositionPolarity_COMPOSITION_POLARITY_UNSPECIFIED) != "Black on white" {
+		t.Fatal("default polarity label")
+	}
+	if polarityLabel(pb.CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK) != "White on black" {
+		t.Fatal("inverted polarity label")
 	}
 	if solverUsesBrightness(pb.CompositionAlgorithm_COMPOSITION_ALGORITHM_L2) {
 		t.Fatal("L2 should hide thread weight")

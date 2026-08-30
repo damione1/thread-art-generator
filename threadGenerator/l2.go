@@ -337,8 +337,13 @@ func (tg *ThreadGenerator) l2PreviewImage() image.Image {
 		}
 	}
 	out := image.NewGray(image.Rect(0, 0, w, w))
+	if tg.lightOnDark() {
+		for i, v := range recon {
+			out.Pix[i] = uint8(math.Round(255 * v))
+		}
+		return out
+	}
 	for i, v := range recon {
-		// invertOutput: thread is dark on white
 		out.Pix[i] = uint8(math.Round(255 * (1 - v)))
 	}
 	return out
