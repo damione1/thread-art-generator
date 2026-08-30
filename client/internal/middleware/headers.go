@@ -37,13 +37,16 @@ func contentSecurityPolicy(frontendURL, publicBaseURL string) string {
 	if origin := originOf(frontendURL); origin != "" {
 		connect = append(connect, origin)
 	}
+	// ONNX / WASM assets for in-browser background removal.
+	connect = append(connect, "https://staticimgly.com")
 	return strings.Join([]string{
 		"default-src 'self'",
 		"base-uri 'self'",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
 		"object-src 'none'",
-		"script-src 'self' 'unsafe-eval'",
+		"script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
+		"worker-src 'self' blob:",
 		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
 		"font-src 'self' https://fonts.gstatic.com",
 		fmt.Sprintf("img-src %s", strings.Join(img, " ")),

@@ -24,7 +24,9 @@ func TestSecurityHeaders(t *testing.T) {
 	csp := rec.Header().Get("Content-Security-Policy")
 	require.Contains(t, csp, "frame-ancestors 'none'")
 	require.Contains(t, csp, "http://localhost:9000")
-	require.Contains(t, csp, "script-src 'self' 'unsafe-eval'")
+	require.Contains(t, csp, "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'")
+	require.Contains(t, csp, "worker-src 'self' blob:")
+	require.Contains(t, csp, "https://staticimgly.com")
 }
 
 func TestOriginOf(t *testing.T) {

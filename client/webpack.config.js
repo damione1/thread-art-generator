@@ -12,13 +12,24 @@ module.exports = (env, argv) => {
     },
     output: {
       filename: '[name].js',
+      chunkFilename: '[name].js',
       path: path.resolve(__dirname, 'public/js'),
+      publicPath: '/static/js/',
       clean: false
     },
     mode: argv.mode || 'development',
     devtool: isProduction ? 'source-map' : 'eval-source-map',
     resolve: {
-      extensions: ['.ts', '.js']
+      extensions: ['.ts', '.js'],
+      fallback: {
+        fs: false,
+        path: false,
+        crypto: false,
+        os: false,
+      },
+    },
+    experiments: {
+      asyncWebAssembly: true,
     },
     module: {
       rules: [
@@ -36,7 +47,7 @@ module.exports = (env, argv) => {
           vendor: {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
-            chunks: 'all',
+            chunks: 'initial',
           },
           rpc: {
             test: /[\\/]src[\\/](ts[\\/]rpc\.ts|gen[\\/])/,
