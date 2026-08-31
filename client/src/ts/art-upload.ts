@@ -55,6 +55,8 @@ export interface ArtUploadState {
   workingCanvas: HTMLCanvasElement | null;
   previewObjectUrl: string;
   originalName: string;
+  removeBackground: boolean;
+  strippingBackground: boolean;
 }
 
 export interface ArtUploadActions {
@@ -205,12 +207,7 @@ function rasterizeToCanvas(source: CanvasImageSource & { width: number; height: 
   }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.filter = 'grayscale(1)';
   ctx.drawImage(source, 0, 0, width, height);
-  ctx.filter = 'none';
-  const pixels = ctx.getImageData(0, 0, width, height);
-  applyGrayscale(pixels.data);
-  ctx.putImageData(pixels, 0, 0);
   if ('close' in source && typeof source.close === 'function') {
     source.close();
   }
@@ -224,6 +221,32 @@ function applyGrayscale(data: Uint8ClampedArray): void {
     data[i + 1] = y;
     data[i + 2] = y;
   }
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error('Failed to encode image'))),
+      type,
+      quality,
+    );
+  });
+}
+
+function blobToImage(blob: Blob): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read the cutout'));
+    };
+    img.src = url;
+  });
 }
 
 export function createArtUpload(config: ArtUploadConfig): ArtUpload {
@@ -254,6 +277,8 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
     workingCanvas: null,
     previewObjectUrl: '',
     originalName: 'art.jpg',
+    removeBackground: true,
+    strippingBackground: false,
 
     init() {
       const onKeyDown = (event: KeyboardEvent) => {
@@ -524,15 +549,18 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
       this.error = false;
       this.cropError = '';
       this.uploadProgress = 0;
+      this.strippingBackground = this.removeBackground;
 
       try {
         const file = await this.exportSquare();
+        this.strippingBackground = false;
         await this.uploadFile(file);
         this.cropping = false;
         document.body.style.overflow = '';
         this.releasePreview();
       } catch (err) {
         this.uploading = false;
+        this.strippingBackground = false;
         this.cropError = err instanceof Error ? err.message : 'Upload failed';
       }
     },
@@ -551,6 +579,39 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
       sourceY = clamp(sourceY, 0, Math.max(0, this.imgHeight - sourceSize));
       sourceSize = Math.min(sourceSize, this.imgWidth, this.imgHeight);
 
+      const color = document.createElement('canvas');
+      color.width = OUTPUT_SIZE;
+      color.height = OUTPUT_SIZE;
+      const colorCtx = color.getContext('2d', { alpha: false });
+      if (!colorCtx) {
+        throw new Error('Failed to crop image');
+      }
+      colorCtx.imageSmoothingEnabled = true;
+      colorCtx.imageSmoothingQuality = 'high';
+      colorCtx.drawImage(
+        this.workingCanvas,
+        sourceX,
+        sourceY,
+        sourceSize,
+        sourceSize,
+        0,
+        0,
+        OUTPUT_SIZE,
+        OUTPUT_SIZE,
+      );
+
+      let sourceCanvas: CanvasImageSource = color;
+      if (this.removeBackground) {
+        const colorBlob = await canvasToBlob(color, 'image/png');
+        const { stripBackground } = await import(
+          /* webpackChunkName: "bg-remove" */ './bg-remove'
+        );
+        const cutout = await stripBackground(colorBlob, (pct) => {
+          this.uploadProgress = Math.min(90, pct);
+        });
+        sourceCanvas = await blobToImage(cutout);
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = OUTPUT_SIZE;
       canvas.height = OUTPUT_SIZE;
@@ -567,32 +628,14 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
       ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
-      ctx.filter = 'grayscale(1)';
-      ctx.drawImage(
-        this.workingCanvas,
-        sourceX,
-        sourceY,
-        sourceSize,
-        sourceSize,
-        0,
-        0,
-        OUTPUT_SIZE,
-        OUTPUT_SIZE,
-      );
+      ctx.drawImage(sourceCanvas, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
       ctx.restore();
 
       const pixels = ctx.getImageData(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
       applyGrayscale(pixels.data);
       ctx.putImageData(pixels, 0, 0);
 
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (result) => (result ? resolve(result) : reject(new Error('Failed to crop image'))),
-          'image/jpeg',
-          JPEG_QUALITY,
-        );
-      });
-
+      const blob = await canvasToBlob(canvas, 'image/jpeg', JPEG_QUALITY);
       const base = this.originalName.replace(/\.[^.]+$/, '') || 'art';
       return new File([blob], `${base}.jpg`, { type: 'image/jpeg' });
     },
@@ -664,6 +707,8 @@ export function createArtUpload(config: ArtUploadConfig): ArtUpload {
       this.uploaded = false;
       this.uploadProgress = 0;
       this.cropError = '';
+      this.removeBackground = true;
+      this.strippingBackground = false;
       this.releasePreview();
     },
 

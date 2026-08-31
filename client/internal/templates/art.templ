@@ -244,7 +244,7 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 					@NailRing("opacity-45")
 				</div>
 				<h3 class="text-[19px] font-semibold tracking-[-0.01em] mt-8">Drop a photograph here</h3>
-				<p class="hint mt-2.5 max-w-[380px] text-[13px]">Crop a circle in black and white. Contrast is chosen later, per composition. JPEG or PNG, 1000 × 1000 px or larger.</p>
+				<p class="hint mt-2.5 max-w-[380px] text-[13px]">Crop a circle in black and white. Backgrounds can be stripped in the crop step. Contrast is chosen later, per composition. JPEG or PNG, 1000 × 1000 px or larger.</p>
 				<input
 					type="file"
 					id="file-input"
@@ -314,7 +314,7 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 				<div class="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
 					<div>
 						<h3 class="text-[17px] font-semibold tracking-[-0.01em]">Frame your photograph</h3>
-						<p class="hint mt-1.5">Black and white, as the solver sees it. Drag to pan, pinch or scroll to zoom. Contrast comes later, on each composition.</p>
+						<p class="hint mt-1.5">Black and white, as the solver sees it. Drag to pan, pinch or scroll to zoom. Strip a busy background before the hoop is cropped.</p>
 					</div>
 					<button
 						type="button"
@@ -361,7 +361,7 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 							class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-ground/70 backdrop-blur-[2px]"
 						>
 							@Spinner("w-7 h-7 text-brass")
-							<p class="text-ink text-sm">Uploading cropped image…</p>
+							<p class="text-ink text-sm" x-text="strippingBackground ? 'Removing background…' : 'Uploading cropped image…'"></p>
 							<div class="w-2/3 bg-surface-high rounded-full h-[3px]">
 								<div class="bg-brass h-[3px] rounded-full transition-all duration-300" :style="`width: ${Math.max(uploadProgress, 10)}%`"></div>
 							</div>
@@ -384,6 +384,19 @@ templ ImageUploadDropzone(internalUserId, artId string) {
 							aria-label="Zoom"
 						/>
 						@Icon("zoom-in", "text-ink-faint")
+					</div>
+					<div class="flex items-start gap-3">
+						<input
+							id="remove-background"
+							type="checkbox"
+							class="mt-1"
+							x-model="removeBackground"
+							:disabled="uploading"
+						/>
+						<label for="remove-background" class="text-left">
+							<div class="text-[13px] font-medium">Remove background</div>
+							<p class="hint mt-0.5">Composites the subject on white so the solver does not waste thread on the room. First run downloads a ~40 MB model, then it is cached.</p>
+						</label>
 					</div>
 					<div class="flex items-center justify-between gap-3">
 						<div class="flex items-center gap-3">
