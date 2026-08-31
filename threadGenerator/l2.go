@@ -9,7 +9,6 @@ import (
 	"os"
 	"sort"
 
-	"github.com/disintegration/imaging"
 	_ "golang.org/x/image/webp"
 )
 
@@ -165,18 +164,7 @@ func (tg *ThreadGenerator) generateL2() error {
 }
 
 func (tg *ThreadGenerator) l2TargetAndNails(src image.Image, w int) ([]float64, []Nail) {
-	gray := imaging.Grayscale(src)
-	if tg.imageContrast != 0 {
-		gray = imaging.AdjustContrast(gray, tg.imageContrast)
-	}
-	b := gray.Bounds()
-	side := b.Dx()
-	if dy := b.Dy(); dy < side {
-		side = dy
-	}
-	square := imaging.CropAnchor(gray, side, side, imaging.Center)
-	resized := imaging.Resize(square, w, w, imaging.Lanczos)
-	nrgba := imaging.Clone(resized)
+	nrgba := tg.prepareGraySquare(src, w)
 
 	pix := make([]float64, w*w)
 	for y := 0; y < w; y++ {

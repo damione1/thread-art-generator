@@ -101,7 +101,7 @@ func DefaultConfig() Config {
 		StartingNail:        0,
 		MinimumDifference:   22,
 		BrightnessFactor:    40,
-		ImageContrast:       28,    // percent for imaging.AdjustContrast
+		ImageContrast:       28,    // percent → CLAHE clip 1 + contrast/50
 		PhysicalRadius:      304.8, // 24-inch hoop diameter
 		RotationAxis:        "A",
 		NeedleAxis:          "X",
@@ -259,18 +259,7 @@ func (tg *ThreadGenerator) getSourceImage() (*image.NRGBA, error) {
 		return nil, err
 	}
 
-	imgGray := imaging.Grayscale(img)
-	imgGray = imaging.AdjustContrast(imgGray, tg.imageContrast)
-
-	bounds := imgGray.Bounds()
-	side := bounds.Dx()
-	if dy := bounds.Dy(); dy < side {
-		side = dy
-	}
-	square := imaging.CropAnchor(imgGray, side, side, imaging.Center)
-	resized := imaging.Resize(square, tg.imgSize, tg.imgSize, imaging.Lanczos)
-
-	return maskCircle(resized), nil
+	return tg.prepareGraySquare(img, tg.imgSize), nil
 }
 
 func maskCircle(img *image.NRGBA) *image.NRGBA {
