@@ -7,6 +7,7 @@ import (
 	_ "image/png"
 	"math"
 	"os"
+	"sort"
 
 	"github.com/disintegration/imaging"
 	_ "golang.org/x/image/webp"
@@ -178,35 +179,21 @@ func (tg *ThreadGenerator) l2TargetAndNails(src image.Image, w int) ([]float64, 
 	nrgba := imaging.Clone(resized)
 
 	pix := make([]float64, w*w)
-	minV, maxV := 1.0, 0.0
 	for y := 0; y < w; y++ {
 		for x := 0; x < w; x++ {
-			v := float64(nrgba.NRGBAAt(x, y).R) / 255
-			pix[y*w+x] = v
-			if v < minV {
-				minV = v
-			}
-			if v > maxV {
-				maxV = v
-			}
+			pix[y*w+x] = float64(nrgba.NRGBAAt(x, y).R) / 255
 		}
 	}
-	rangeV := maxV - minV
-	cx, cy := float64(w)/2-0.5, float64(w)/2-0.5
-	r2 := float64(w) * float64(w) / 4
-	for i := range pix {
-		x := float64(i%w) - cx
-		y := float64(i/w) - cy
-		if x*x+y*y > r2 {
+	// Stretch only the disc. Min-max is wrecked by a single black corner or
+	// grey backdrop; 2–98 percentiles ignore those outliers.
+	percentileStretchInside(pix, w, 0.02, 0.98)
+	// invertInput: dark photograph → high target (thread wanted).
+	// Outside the circle must stay 0 so chords are not pulled to the rim.
+	for i, v := range pix {
+		if !insideCircle(i, w) {
 			pix[i] = 0
 			continue
 		}
-		if rangeV >= 1e-9 {
-			pix[i] = (pix[i] - minV) / rangeV
-		}
-	}
-	// invertInput: dark photograph → high target (thread wanted)
-	for i, v := range pix {
 		pix[i] = 1 - v
 	}
 
@@ -224,6 +211,68 @@ func (tg *ThreadGenerator) l2TargetAndNails(src image.Image, w int) ([]float64, 
 		}
 	}
 	return pix, nails
+}
+
+func insideCircle(i, w int) bool {
+	cx, cy := float64(w)/2-0.5, float64(w)/2-0.5
+	r2 := float64(w) * float64(w) / 4
+	x := float64(i%w) - cx
+	y := float64(i/w) - cy
+	return x*x+y*y <= r2
+}
+
+// percentileStretchInside maps the disc to [0,1] using loP/hiP percentiles so
+// a dark corner or pale backdrop cannot set the black/white points.
+func percentileStretchInside(pix []float64, w int, loP, hiP float64) {
+	inside := make([]float64, 0, len(pix))
+	for i, v := range pix {
+		if insideCircle(i, w) {
+			inside = append(inside, v)
+		}
+	}
+	if len(inside) == 0 {
+		return
+	}
+	lo, hi := percentile(inside, loP), percentile(inside, hiP)
+	rangeV := hi - lo
+	if rangeV < 1e-9 {
+		return
+	}
+	for i, v := range pix {
+		if !insideCircle(i, w) {
+			continue
+		}
+		t := (v - lo) / rangeV
+		if t < 0 {
+			t = 0
+		}
+		if t > 1 {
+			t = 1
+		}
+		pix[i] = t
+	}
+}
+
+func percentile(values []float64, p float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	cp := append([]float64(nil), values...)
+	sort.Float64s(cp)
+	if p <= 0 {
+		return cp[0]
+	}
+	if p >= 1 {
+		return cp[len(cp)-1]
+	}
+	idx := p * float64(len(cp)-1)
+	lo := int(idx)
+	hi := lo + 1
+	if hi >= len(cp) {
+		return cp[lo]
+	}
+	frac := idx - float64(lo)
+	return cp[lo]*(1-frac) + cp[hi]*frac
 }
 
 func l2Delta(target, recon []float64, samples []wuSample) float64 {
