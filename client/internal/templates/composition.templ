@@ -21,6 +21,7 @@ type CompositionFormData struct {
 	PhysicalRadius    float32 // Default: 600
 	Algorithm         pb.CompositionAlgorithm
 	Polarity          pb.CompositionPolarity
+	StripBackground   bool
 	Errors            map[string][]string
 	Success           bool
 }
@@ -60,6 +61,13 @@ func PolarityFromForm(v string) pb.CompositionPolarity {
 		return pb.CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK
 	}
 	return pb.CompositionPolarity_COMPOSITION_POLARITY_DARK_ON_LIGHT
+}
+
+func stripBackgroundLabel(on bool) string {
+	if on {
+		return "rembg"
+	}
+	return "off"
 }
 
 func compositionAlpineData(formData *CompositionFormData) string {
@@ -208,6 +216,13 @@ templ CompositionForm(art *pb.Art, formData *CompositionFormData) {
 					<p class="hint mt-1.5">Light thread on a dark hoop. Same chords, inverted render.</p>
 				</label>
 			</div>
+			<label class="flex items-start gap-3 pb-6 cursor-pointer">
+				<input type="checkbox" name="strip_background" value="1" class="mt-1" checked?={ formData.StripBackground }/>
+				<span>
+					<span class="text-[13px] font-semibold">Strip background on the server</span>
+					<p class="hint mt-1">Runs rembg in the worker before solving. Use it when the crop step skipped the WASM cutout, or to reprocess an old upload.</p>
+				</span>
+			</label>
 			<div class="flex items-baseline gap-3 mb-5">
 				<h3 class="text-sm font-semibold">The hoop</h3>
 				<span class="text-[12.5px] text-ink-faint">Physical geometry of the frame</span>

@@ -50,11 +50,13 @@ services:
       S3_PUBLIC_BASE_URL: http://localhost:9000/thread-art
       S3_FORCE_PATH_STYLE: "true"
       S3_USE_TLS: "false"
+      REMBG_URL: ${REMBG_URL:-http://rembg:7000}
     depends_on:
       - db
       - api
       - minio
       - minio-init
+      - rembg
     restart: unless-stopped
 
   client:
@@ -157,6 +159,13 @@ services:
         mc mb --ignore-existing local/thread-art
         mc anonymous set none local/thread-art
         mc cors set local/thread-art /cors.xml || true
+
+  rembg:
+    image: danielgatis/rembg:latest
+    command: ["s", "--host", "0.0.0.0", "--port", "7000"]
+    ports:
+      - "127.0.0.1:7000:7000"
+    restart: unless-stopped
 
 volumes:
   threadmachine:

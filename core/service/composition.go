@@ -95,6 +95,7 @@ func (server *Server) createComposition(ctx context.Context, req *pb.CreateCompo
 		PhysicalRadius:    float64(req.GetComposition().GetPhysicalRadius()),
 		Algorithm:         int(normalizeCompositionAlgorithm(req.GetComposition().GetAlgorithm())),
 		Polarity:          int(normalizeCompositionPolarity(req.GetComposition().GetPolarity())),
+		StripBackground:   req.GetComposition().GetStripBackground(),
 	}
 
 	// Insert the composition

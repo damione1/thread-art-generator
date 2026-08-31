@@ -30,7 +30,7 @@ proto-clean:
 
 .PHONY: test
 test: generate-templ
-	go test ./core/storage/ ./core/auth/ ./core/mail/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/ ./core/pbx/ ./client/internal/auth/ ./client/internal/middleware/ ./client/internal/templates/ ./client/internal/handlers/ ./threadGenerator/
+	go test ./core/storage/ ./core/auth/ ./core/mail/ ./core/queue/ ./core/interceptors/ ./core/resource/ ./core/clock/ ./core/id/ ./core/errors/ ./core/util/ ./core/service/ ./core/pbx/ ./core/rembg/ ./client/internal/auth/ ./client/internal/middleware/ ./client/internal/templates/ ./client/internal/handlers/ ./threadGenerator/
 
 .PHONY: psql
 psql:

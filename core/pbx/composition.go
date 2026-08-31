@@ -35,6 +35,7 @@ func CompositionDbToProto(_ string, artDb *models.Art, composition *models.Compo
 		PhysicalRadius:    float32(composition.PhysicalRadius),
 		Algorithm:         pb.CompositionAlgorithm(composition.Algorithm),
 		Polarity:          pb.CompositionPolarity(composition.Polarity),
+		StripBackground:   composition.StripBackground,
 		Status:            status,
 		CreateTime:        timestamppb.New(composition.CreatedAt),
 		UpdateTime:        timestamppb.New(composition.UpdatedAt),
@@ -77,6 +78,7 @@ func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 		PhysicalRadius:    float64(comp.GetPhysicalRadius()),
 		Algorithm:         int(comp.GetAlgorithm()),
 		Polarity:          int(polarityOrDefault(comp.GetPolarity())),
+		StripBackground:   comp.GetStripBackground(),
 	}
 
 	if comp.GetName() != "" {

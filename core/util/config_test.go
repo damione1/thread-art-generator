@@ -52,3 +52,10 @@ func TestLoadConfigSMTPFromEnv(t *testing.T) {
 	require.Equal(t, "none", cfg.SMTP.TLSMode)
 	require.Equal(t, "noreply@threadart.local", cfg.SMTP.FromAddr)
 }
+
+func TestLoadConfigRembgURL(t *testing.T) {
+	t.Setenv("REMBG_URL", "http://rembg:7000")
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	require.Equal(t, "http://rembg:7000", cfg.RembgURL)
+}

@@ -62,6 +62,8 @@ type Composition struct {
 	Algorithm int `boil:"algorithm" json:"algorithm" toml:"algorithm" yaml:"algorithm"`
 	// 1=dark thread on light canvas, 2=light thread on dark canvas
 	Polarity int `boil:"polarity" json:"polarity" toml:"polarity" yaml:"polarity"`
+	// If true, the worker runs rembg and composites the subject on white before solving
+	StripBackground bool `boil:"strip_background" json:"strip_background" toml:"strip_background" yaml:"strip_background"`
 
 	R *compositionR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L compositionL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -89,6 +91,7 @@ var CompositionColumns = struct {
 	UpdatedAt         string
 	Algorithm         string
 	Polarity          string
+	StripBackground   string
 }{
 	ID:                "id",
 	ArtID:             "art_id",
@@ -111,6 +114,7 @@ var CompositionColumns = struct {
 	UpdatedAt:         "updated_at",
 	Algorithm:         "algorithm",
 	Polarity:          "polarity",
+	StripBackground:   "strip_background",
 }
 
 var CompositionTableColumns = struct {
@@ -135,6 +139,7 @@ var CompositionTableColumns = struct {
 	UpdatedAt         string
 	Algorithm         string
 	Polarity          string
+	StripBackground   string
 }{
 	ID:                "compositions.id",
 	ArtID:             "compositions.art_id",
@@ -157,6 +162,7 @@ var CompositionTableColumns = struct {
 	UpdatedAt:         "compositions.updated_at",
 	Algorithm:         "compositions.algorithm",
 	Polarity:          "compositions.polarity",
+	StripBackground:   "compositions.strip_background",
 }
 
 // Generated where
@@ -263,6 +269,15 @@ func (w whereHelpernull_Int) NIN(slice []int) qm.QueryMod {
 func (w whereHelpernull_Int) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_Int) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
+type whereHelperbool struct{ field string }
+
+func (w whereHelperbool) EQ(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperbool) NEQ(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperbool) LT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+
 var CompositionWhere = struct {
 	ID                whereHelperstring
 	ArtID             whereHelperstring
@@ -285,6 +300,7 @@ var CompositionWhere = struct {
 	UpdatedAt         whereHelpertime_Time
 	Algorithm         whereHelperint
 	Polarity          whereHelperint
+	StripBackground   whereHelperbool
 }{
 	ID:                whereHelperstring{field: "\"compositions\".\"id\""},
 	ArtID:             whereHelperstring{field: "\"compositions\".\"art_id\""},
@@ -307,6 +323,7 @@ var CompositionWhere = struct {
 	UpdatedAt:         whereHelpertime_Time{field: "\"compositions\".\"updated_at\""},
 	Algorithm:         whereHelperint{field: "\"compositions\".\"algorithm\""},
 	Polarity:          whereHelperint{field: "\"compositions\".\"polarity\""},
+	StripBackground:   whereHelperbool{field: "\"compositions\".\"strip_background\""},
 }
 
 // CompositionRels is where relationship names are stored.
@@ -337,9 +354,9 @@ func (r *compositionR) GetArt() *Art {
 type compositionL struct{}
 
 var (
-	compositionAllColumns            = []string{"id", "art_id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at", "algorithm", "polarity"}
+	compositionAllColumns            = []string{"id", "art_id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at", "algorithm", "polarity", "strip_background"}
 	compositionColumnsWithoutDefault = []string{"art_id"}
-	compositionColumnsWithDefault    = []string{"id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at", "algorithm", "polarity"}
+	compositionColumnsWithDefault    = []string{"id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at", "algorithm", "polarity", "strip_background"}
 	compositionPrimaryKeyColumns     = []string{"id"}
 	compositionGeneratedColumns      = []string{}
 )
