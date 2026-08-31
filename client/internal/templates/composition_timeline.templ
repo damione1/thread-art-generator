@@ -40,8 +40,8 @@ templ CompositionTimeline(userID, artID string, compositions []*pb.Composition) 
 // line shown under a composition's title.
 func compositionParamsLine(c *pb.Composition) string {
 	return fmt.Sprintf(
-		"%s · %s nails · %s paths · %s px · gap %d · contrast %.0f%%",
-		algorithmLabel(c.GetAlgorithm()), humanInt(c.GetNailsQuantity()), humanInt(c.GetMaxPaths()), humanInt(c.GetImgSize()), c.GetMinimumDifference(), c.GetImageContrast(),
+		"%s · %s · %s nails · %s paths · %s px · gap %d · contrast %.0f%%",
+		algorithmLabel(c.GetAlgorithm()), polarityLabel(c.GetPolarity()), humanInt(c.GetNailsQuantity()), humanInt(c.GetMaxPaths()), humanInt(c.GetImgSize()), c.GetMinimumDifference(), c.GetImageContrast(),
 	)
 }
 

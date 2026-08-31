@@ -12,14 +12,17 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	if cfg.NailsQuantity != 280 || cfg.ImgSize != 800 || cfg.MaxPaths != 4500 {
+	if cfg.NailsQuantity != 280 || cfg.ImgSize != 600 || cfg.MaxPaths != 4500 {
 		t.Fatalf("unexpected size defaults: %+v", cfg)
 	}
-	if cfg.MinimumDifference != 22 || cfg.BrightnessFactor != 40 || cfg.ImageContrast != 28 {
+	if cfg.MinimumDifference != 22 || cfg.BrightnessFactor != 28 || cfg.ImageContrast != 28 {
 		t.Fatalf("unexpected look defaults: %+v", cfg)
 	}
-	if cfg.PhysicalRadius != 304.8 || cfg.StopWeightThreshold != 10 || cfg.NailCooldown != 3 {
+	if cfg.PhysicalRadius != 600 || cfg.StopWeightThreshold != 10 || cfg.NailCooldown != 8 {
 		t.Fatalf("unexpected physics/solver defaults: %+v", cfg)
+	}
+	if cfg.Algorithm != KindL2 || cfg.Polarity != PolarityDarkOnLight {
+		t.Fatalf("unexpected algorithm/polarity defaults: %+v", cfg)
 	}
 }
 
@@ -283,4 +286,19 @@ func minGray(img image.Image) uint8 {
 		}
 	}
 	return minV
+}
+
+func maxGray(img image.Image) uint8 {
+	b := img.Bounds()
+	maxV := uint8(0)
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			r, _, _, _ := img.At(x, y).RGBA()
+			yv := uint8(r >> 8)
+			if yv > maxV {
+				maxV = yv
+			}
+		}
+	}
+	return maxV
 }

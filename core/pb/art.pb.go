@@ -144,6 +144,59 @@ func (CompositionAlgorithm) EnumDescriptor() ([]byte, []int) {
 	return file_art_proto_rawDescGZIP(), []int{1}
 }
 
+// Thread vs canvas polarity
+type CompositionPolarity int32
+
+const (
+	// Default unspecified; treated as dark thread on a light canvas
+	CompositionPolarity_COMPOSITION_POLARITY_UNSPECIFIED CompositionPolarity = 0
+	// Black thread on white (dark photograph features accumulate thread)
+	CompositionPolarity_COMPOSITION_POLARITY_DARK_ON_LIGHT CompositionPolarity = 1
+	// White thread on black (same target, inverted preview)
+	CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK CompositionPolarity = 2
+)
+
+// Enum value maps for CompositionPolarity.
+var (
+	CompositionPolarity_name = map[int32]string{
+		0: "COMPOSITION_POLARITY_UNSPECIFIED",
+		1: "COMPOSITION_POLARITY_DARK_ON_LIGHT",
+		2: "COMPOSITION_POLARITY_LIGHT_ON_DARK",
+	}
+	CompositionPolarity_value = map[string]int32{
+		"COMPOSITION_POLARITY_UNSPECIFIED":   0,
+		"COMPOSITION_POLARITY_DARK_ON_LIGHT": 1,
+		"COMPOSITION_POLARITY_LIGHT_ON_DARK": 2,
+	}
+)
+
+func (x CompositionPolarity) Enum() *CompositionPolarity {
+	p := new(CompositionPolarity)
+	*p = x
+	return p
+}
+
+func (x CompositionPolarity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CompositionPolarity) Descriptor() protoreflect.EnumDescriptor {
+	return file_art_proto_enumTypes[2].Descriptor()
+}
+
+func (CompositionPolarity) Type() protoreflect.EnumType {
+	return &file_art_proto_enumTypes[2]
+}
+
+func (x CompositionPolarity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CompositionPolarity.Descriptor instead.
+func (CompositionPolarity) EnumDescriptor() ([]byte, []int) {
+	return file_art_proto_rawDescGZIP(), []int{2}
+}
+
 // Status of the composition
 type CompositionStatus int32
 
@@ -189,11 +242,11 @@ func (x CompositionStatus) String() string {
 }
 
 func (CompositionStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_art_proto_enumTypes[2].Descriptor()
+	return file_art_proto_enumTypes[3].Descriptor()
 }
 
 func (CompositionStatus) Type() protoreflect.EnumType {
-	return &file_art_proto_enumTypes[2]
+	return &file_art_proto_enumTypes[3]
 }
 
 func (x CompositionStatus) Number() protoreflect.EnumNumber {
@@ -202,7 +255,7 @@ func (x CompositionStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CompositionStatus.Descriptor instead.
 func (CompositionStatus) EnumDescriptor() ([]byte, []int) {
-	return file_art_proto_rawDescGZIP(), []int{2}
+	return file_art_proto_rawDescGZIP(), []int{3}
 }
 
 type Art struct {
@@ -347,7 +400,9 @@ type Composition struct {
 	// Last update time
 	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	// Path-selection algorithm
-	Algorithm     CompositionAlgorithm `protobuf:"varint,20,opt,name=algorithm,proto3,enum=pb.CompositionAlgorithm" json:"algorithm,omitempty"`
+	Algorithm CompositionAlgorithm `protobuf:"varint,20,opt,name=algorithm,proto3,enum=pb.CompositionAlgorithm" json:"algorithm,omitempty"`
+	// Black thread on white vs white thread on black
+	Polarity      CompositionPolarity `protobuf:"varint,21,opt,name=polarity,proto3,enum=pb.CompositionPolarity" json:"polarity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -513,6 +568,13 @@ func (x *Composition) GetAlgorithm() CompositionAlgorithm {
 		return x.Algorithm
 	}
 	return CompositionAlgorithm_COMPOSITION_ALGORITHM_UNSPECIFIED
+}
+
+func (x *Composition) GetPolarity() CompositionPolarity {
+	if x != nil {
+		return x.Polarity
+	}
+	return CompositionPolarity_COMPOSITION_POLARITY_UNSPECIFIED
 }
 
 type CreateCompositionRequest struct {
@@ -1347,7 +1409,7 @@ const file_art_proto_rawDesc = "" +
 	"createTime\x12@\n" +
 	"\vupdate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime:1\xeaA.\n" +
-	"\x13art.example.com/Art\x12\x17users/{user}/arts/{art}\"\xb1\v\n" +
+	"\x13art.example.com/Art\x12\x17users/{user}/arts/{art}\"\xe6\v\n" +
 	"\vComposition\x127\n" +
 	"\x04name\x18\x01 \x01(\tB#\xe0A\x03\xfaA\x1d\n" +
 	"\x1bart.example.com/CompositionR\x04name\x122\n" +
@@ -1384,7 +1446,8 @@ const file_art_proto_rawDesc = "" +
 	"createTime\x12@\n" +
 	"\vupdate_time\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x126\n" +
-	"\talgorithm\x18\x14 \x01(\x0e2\x18.pb.CompositionAlgorithmR\talgorithm:T\xeaAQ\n" +
+	"\talgorithm\x18\x14 \x01(\x0e2\x18.pb.CompositionAlgorithmR\talgorithm\x123\n" +
+	"\bpolarity\x18\x15 \x01(\x0e2\x17.pb.CompositionPolarityR\bpolarity:T\xeaAQ\n" +
 	"\x1bart.example.com/Composition\x122users/{user}/arts/{art}/compositions/{composition}\"\xc1\x02\n" +
 	"\x18CreateCompositionRequest\x12\xe6\x01\n" +
 	"\x06parent\x18\x01 \x01(\tB\xcd\x01\xe0A\x02\xfaA\x15\n" +
@@ -1471,7 +1534,11 @@ const file_art_proto_rawDesc = "" +
 	"\x14CompositionAlgorithm\x12%\n" +
 	"!COMPOSITION_ALGORITHM_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dCOMPOSITION_ALGORITHM_VRELLIS\x10\x01\x12\x1c\n" +
-	"\x18COMPOSITION_ALGORITHM_L2\x10\x02*\xba\x01\n" +
+	"\x18COMPOSITION_ALGORITHM_L2\x10\x02*\x8b\x01\n" +
+	"\x13CompositionPolarity\x12$\n" +
+	" COMPOSITION_POLARITY_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"COMPOSITION_POLARITY_DARK_ON_LIGHT\x10\x01\x12&\n" +
+	"\"COMPOSITION_POLARITY_LIGHT_ON_DARK\x10\x02*\xba\x01\n" +
 	"\x11CompositionStatus\x12\"\n" +
 	"\x1eCOMPOSITION_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aCOMPOSITION_STATUS_PENDING\x10\x01\x12!\n" +
@@ -1492,56 +1559,58 @@ func file_art_proto_rawDescGZIP() []byte {
 	return file_art_proto_rawDescData
 }
 
-var file_art_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_art_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_art_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_art_proto_goTypes = []any{
 	(ArtStatus)(0),                   // 0: pb.ArtStatus
 	(CompositionAlgorithm)(0),        // 1: pb.CompositionAlgorithm
-	(CompositionStatus)(0),           // 2: pb.CompositionStatus
-	(*Art)(nil),                      // 3: pb.Art
-	(*Composition)(nil),              // 4: pb.Composition
-	(*CreateCompositionRequest)(nil), // 5: pb.CreateCompositionRequest
-	(*GetCompositionRequest)(nil),    // 6: pb.GetCompositionRequest
-	(*UpdateCompositionRequest)(nil), // 7: pb.UpdateCompositionRequest
-	(*ListCompositionsRequest)(nil),  // 8: pb.ListCompositionsRequest
-	(*ListCompositionsResponse)(nil), // 9: pb.ListCompositionsResponse
-	(*DeleteCompositionRequest)(nil), // 10: pb.DeleteCompositionRequest
-	(*CreateArtRequest)(nil),         // 11: pb.CreateArtRequest
-	(*UpdateArtRequest)(nil),         // 12: pb.UpdateArtRequest
-	(*GetArtRequest)(nil),            // 13: pb.GetArtRequest
-	(*ListArtsRequest)(nil),          // 14: pb.ListArtsRequest
-	(*ListArtsResponse)(nil),         // 15: pb.ListArtsResponse
-	(*DeleteArtRequest)(nil),         // 16: pb.DeleteArtRequest
-	(*StartArtUploadRequest)(nil),    // 17: pb.StartArtUploadRequest
-	(*StartArtUploadResponse)(nil),   // 18: pb.StartArtUploadResponse
-	(*CompleteArtUploadRequest)(nil), // 19: pb.CompleteArtUploadRequest
-	nil,                              // 20: pb.StartArtUploadResponse.HeadersEntry
-	(*timestamppb.Timestamp)(nil),    // 21: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),    // 22: google.protobuf.FieldMask
+	(CompositionPolarity)(0),         // 2: pb.CompositionPolarity
+	(CompositionStatus)(0),           // 3: pb.CompositionStatus
+	(*Art)(nil),                      // 4: pb.Art
+	(*Composition)(nil),              // 5: pb.Composition
+	(*CreateCompositionRequest)(nil), // 6: pb.CreateCompositionRequest
+	(*GetCompositionRequest)(nil),    // 7: pb.GetCompositionRequest
+	(*UpdateCompositionRequest)(nil), // 8: pb.UpdateCompositionRequest
+	(*ListCompositionsRequest)(nil),  // 9: pb.ListCompositionsRequest
+	(*ListCompositionsResponse)(nil), // 10: pb.ListCompositionsResponse
+	(*DeleteCompositionRequest)(nil), // 11: pb.DeleteCompositionRequest
+	(*CreateArtRequest)(nil),         // 12: pb.CreateArtRequest
+	(*UpdateArtRequest)(nil),         // 13: pb.UpdateArtRequest
+	(*GetArtRequest)(nil),            // 14: pb.GetArtRequest
+	(*ListArtsRequest)(nil),          // 15: pb.ListArtsRequest
+	(*ListArtsResponse)(nil),         // 16: pb.ListArtsResponse
+	(*DeleteArtRequest)(nil),         // 17: pb.DeleteArtRequest
+	(*StartArtUploadRequest)(nil),    // 18: pb.StartArtUploadRequest
+	(*StartArtUploadResponse)(nil),   // 19: pb.StartArtUploadResponse
+	(*CompleteArtUploadRequest)(nil), // 20: pb.CompleteArtUploadRequest
+	nil,                              // 21: pb.StartArtUploadResponse.HeadersEntry
+	(*timestamppb.Timestamp)(nil),    // 22: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),    // 23: google.protobuf.FieldMask
 }
 var file_art_proto_depIdxs = []int32{
 	0,  // 0: pb.Art.status:type_name -> pb.ArtStatus
-	21, // 1: pb.Art.create_time:type_name -> google.protobuf.Timestamp
-	21, // 2: pb.Art.update_time:type_name -> google.protobuf.Timestamp
-	2,  // 3: pb.Composition.status:type_name -> pb.CompositionStatus
-	21, // 4: pb.Composition.create_time:type_name -> google.protobuf.Timestamp
-	21, // 5: pb.Composition.update_time:type_name -> google.protobuf.Timestamp
+	22, // 1: pb.Art.create_time:type_name -> google.protobuf.Timestamp
+	22, // 2: pb.Art.update_time:type_name -> google.protobuf.Timestamp
+	3,  // 3: pb.Composition.status:type_name -> pb.CompositionStatus
+	22, // 4: pb.Composition.create_time:type_name -> google.protobuf.Timestamp
+	22, // 5: pb.Composition.update_time:type_name -> google.protobuf.Timestamp
 	1,  // 6: pb.Composition.algorithm:type_name -> pb.CompositionAlgorithm
-	4,  // 7: pb.CreateCompositionRequest.composition:type_name -> pb.Composition
-	4,  // 8: pb.UpdateCompositionRequest.composition:type_name -> pb.Composition
-	22, // 9: pb.UpdateCompositionRequest.update_mask:type_name -> google.protobuf.FieldMask
-	4,  // 10: pb.ListCompositionsResponse.compositions:type_name -> pb.Composition
-	3,  // 11: pb.CreateArtRequest.art:type_name -> pb.Art
-	3,  // 12: pb.UpdateArtRequest.art:type_name -> pb.Art
-	22, // 13: pb.UpdateArtRequest.update_mask:type_name -> google.protobuf.FieldMask
-	3,  // 14: pb.ListArtsResponse.arts:type_name -> pb.Art
-	20, // 15: pb.StartArtUploadResponse.headers:type_name -> pb.StartArtUploadResponse.HeadersEntry
-	21, // 16: pb.StartArtUploadResponse.expires_at:type_name -> google.protobuf.Timestamp
-	17, // [17:17] is the sub-list for method output_type
-	17, // [17:17] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	2,  // 7: pb.Composition.polarity:type_name -> pb.CompositionPolarity
+	5,  // 8: pb.CreateCompositionRequest.composition:type_name -> pb.Composition
+	5,  // 9: pb.UpdateCompositionRequest.composition:type_name -> pb.Composition
+	23, // 10: pb.UpdateCompositionRequest.update_mask:type_name -> google.protobuf.FieldMask
+	5,  // 11: pb.ListCompositionsResponse.compositions:type_name -> pb.Composition
+	4,  // 12: pb.CreateArtRequest.art:type_name -> pb.Art
+	4,  // 13: pb.UpdateArtRequest.art:type_name -> pb.Art
+	23, // 14: pb.UpdateArtRequest.update_mask:type_name -> google.protobuf.FieldMask
+	4,  // 15: pb.ListArtsResponse.arts:type_name -> pb.Art
+	21, // 16: pb.StartArtUploadResponse.headers:type_name -> pb.StartArtUploadResponse.HeadersEntry
+	22, // 17: pb.StartArtUploadResponse.expires_at:type_name -> google.protobuf.Timestamp
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_art_proto_init() }
@@ -1554,7 +1623,7 @@ func file_art_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_art_proto_rawDesc), len(file_art_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      4,
 			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   0,

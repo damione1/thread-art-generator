@@ -35,15 +35,18 @@ func (vrellis) RenderPreview(tg *ThreadGenerator) (image.Image, error) {
 
 	w := tg.imgSize
 	light := make([]float64, w*w)
-	for i := range light {
-		light[i] = 1
+	onDark := tg.lightOnDark()
+	if !onDark {
+		for i := range light {
+			light[i] = 1
+		}
 	}
 
 	halfW := tg.threadHalfWidthPx()
 	for _, path := range tg.pathsList {
 		a := tg.nailsList[path.StartingNail]
 		b := tg.nailsList[path.EndingNail]
-		stampThread(light, w, w, float64(a.X), float64(a.Y), float64(b.X), float64(b.Y), halfW, threadAbsorb)
+		stampThread(light, w, w, float64(a.X), float64(a.Y), float64(b.X), float64(b.Y), halfW, threadAbsorb, onDark)
 	}
 
 	out := image.NewGray(image.Rect(0, 0, w, w))

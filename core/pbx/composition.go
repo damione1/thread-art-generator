@@ -34,6 +34,7 @@ func CompositionDbToProto(_ string, artDb *models.Art, composition *models.Compo
 		ImageContrast:     float32(composition.ImageContrast),
 		PhysicalRadius:    float32(composition.PhysicalRadius),
 		Algorithm:         pb.CompositionAlgorithm(composition.Algorithm),
+		Polarity:          pb.CompositionPolarity(composition.Polarity),
 		Status:            status,
 		CreateTime:        timestamppb.New(composition.CreatedAt),
 		UpdateTime:        timestamppb.New(composition.UpdatedAt),
@@ -75,6 +76,7 @@ func ProtoCompositionToDb(comp *pb.Composition) *models.Composition {
 		ImageContrast:     float64(comp.GetImageContrast()),
 		PhysicalRadius:    float64(comp.GetPhysicalRadius()),
 		Algorithm:         int(comp.GetAlgorithm()),
+		Polarity:          int(polarityOrDefault(comp.GetPolarity())),
 	}
 
 	if comp.GetName() != "" {
@@ -101,4 +103,11 @@ func ParseCompositionResourceName(resourceName string) (string, string, string, 
 	}
 
 	return composition.UserID, composition.ArtID, composition.CompositionID, nil
+}
+
+func polarityOrDefault(p pb.CompositionPolarity) pb.CompositionPolarity {
+	if p == pb.CompositionPolarity_COMPOSITION_POLARITY_LIGHT_ON_DARK {
+		return p
+	}
+	return pb.CompositionPolarity_COMPOSITION_POLARITY_DARK_ON_LIGHT
 }

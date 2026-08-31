@@ -86,6 +86,16 @@ enum CompositionAlgorithm {
     COMPOSITION_ALGORITHM_L2 = 2;
 }
 
+// Thread vs canvas polarity
+enum CompositionPolarity {
+    // Default unspecified; treated as dark thread on a light canvas
+    COMPOSITION_POLARITY_UNSPECIFIED = 0;
+    // Black thread on white (dark photograph features accumulate thread)
+    COMPOSITION_POLARITY_DARK_ON_LIGHT = 1;
+    // White thread on black (same target, inverted preview)
+    COMPOSITION_POLARITY_LIGHT_ON_DARK = 2;
+}
+
 // Status of the composition
 enum CompositionStatus {
     // Default unspecified status
@@ -204,6 +214,9 @@ message Composition {
 
     // Path-selection algorithm
     CompositionAlgorithm algorithm = 20;
+
+    // Black thread on white vs white thread on black
+    CompositionPolarity polarity = 21;
 }
 
 message CreateCompositionRequest {

@@ -44,15 +44,13 @@ type Composition struct {
 	ImageContrast float64 `boil:"image_contrast" json:"image_contrast" toml:"image_contrast" yaml:"image_contrast"`
 	// Physical radius of the final artwork in mm
 	PhysicalRadius float64 `boil:"physical_radius" json:"physical_radius" toml:"physical_radius" yaml:"physical_radius"`
-	// 1=Vrellis consecutive darkness, 2=L2 residual (StringArt/Birsak)
-	Algorithm int `boil:"algorithm" json:"algorithm" toml:"algorithm" yaml:"algorithm"`
 	// URL to the preview image of the composition result
 	PreviewURL null.String `boil:"preview_url" json:"preview_url,omitempty" toml:"preview_url" yaml:"preview_url,omitempty"`
 	// URL to download the GCode file
 	GcodeURL null.String `boil:"gcode_url" json:"gcode_url,omitempty" toml:"gcode_url" yaml:"gcode_url,omitempty"`
 	// URL to download the paths list file
 	PathlistURL null.String `boil:"pathlist_url" json:"pathlist_url,omitempty" toml:"pathlist_url" yaml:"pathlist_url,omitempty"`
-	// Thread length in meters
+	// Thread length in millimetres
 	ThreadLength null.Int `boil:"thread_length" json:"thread_length,omitempty" toml:"thread_length" yaml:"thread_length,omitempty"`
 	// Total number of thread lines
 	TotalLines null.Int `boil:"total_lines" json:"total_lines,omitempty" toml:"total_lines" yaml:"total_lines,omitempty"`
@@ -60,6 +58,10 @@ type Composition struct {
 	ErrorMessage null.String `boil:"error_message" json:"error_message,omitempty" toml:"error_message" yaml:"error_message,omitempty"`
 	CreatedAt    time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt    time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	// 1=Vrellis consecutive darkness, 2=L2 residual (StringArt/Birsak)
+	Algorithm int `boil:"algorithm" json:"algorithm" toml:"algorithm" yaml:"algorithm"`
+	// 1=dark thread on light canvas, 2=light thread on dark canvas
+	Polarity int `boil:"polarity" json:"polarity" toml:"polarity" yaml:"polarity"`
 
 	R *compositionR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L compositionL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -77,7 +79,6 @@ var CompositionColumns = struct {
 	BrightnessFactor  string
 	ImageContrast     string
 	PhysicalRadius    string
-	Algorithm         string
 	PreviewURL        string
 	GcodeURL          string
 	PathlistURL       string
@@ -86,6 +87,8 @@ var CompositionColumns = struct {
 	ErrorMessage      string
 	CreatedAt         string
 	UpdatedAt         string
+	Algorithm         string
+	Polarity          string
 }{
 	ID:                "id",
 	ArtID:             "art_id",
@@ -98,7 +101,6 @@ var CompositionColumns = struct {
 	BrightnessFactor:  "brightness_factor",
 	ImageContrast:     "image_contrast",
 	PhysicalRadius:    "physical_radius",
-	Algorithm:         "algorithm",
 	PreviewURL:        "preview_url",
 	GcodeURL:          "gcode_url",
 	PathlistURL:       "pathlist_url",
@@ -107,6 +109,8 @@ var CompositionColumns = struct {
 	ErrorMessage:      "error_message",
 	CreatedAt:         "created_at",
 	UpdatedAt:         "updated_at",
+	Algorithm:         "algorithm",
+	Polarity:          "polarity",
 }
 
 var CompositionTableColumns = struct {
@@ -121,7 +125,6 @@ var CompositionTableColumns = struct {
 	BrightnessFactor  string
 	ImageContrast     string
 	PhysicalRadius    string
-	Algorithm         string
 	PreviewURL        string
 	GcodeURL          string
 	PathlistURL       string
@@ -130,6 +133,8 @@ var CompositionTableColumns = struct {
 	ErrorMessage      string
 	CreatedAt         string
 	UpdatedAt         string
+	Algorithm         string
+	Polarity          string
 }{
 	ID:                "compositions.id",
 	ArtID:             "compositions.art_id",
@@ -142,7 +147,6 @@ var CompositionTableColumns = struct {
 	BrightnessFactor:  "compositions.brightness_factor",
 	ImageContrast:     "compositions.image_contrast",
 	PhysicalRadius:    "compositions.physical_radius",
-	Algorithm:         "compositions.algorithm",
 	PreviewURL:        "compositions.preview_url",
 	GcodeURL:          "compositions.gcode_url",
 	PathlistURL:       "compositions.pathlist_url",
@@ -151,6 +155,8 @@ var CompositionTableColumns = struct {
 	ErrorMessage:      "compositions.error_message",
 	CreatedAt:         "compositions.created_at",
 	UpdatedAt:         "compositions.updated_at",
+	Algorithm:         "compositions.algorithm",
+	Polarity:          "compositions.polarity",
 }
 
 // Generated where
@@ -269,7 +275,6 @@ var CompositionWhere = struct {
 	BrightnessFactor  whereHelperint
 	ImageContrast     whereHelperfloat64
 	PhysicalRadius    whereHelperfloat64
-	Algorithm         whereHelperint
 	PreviewURL        whereHelpernull_String
 	GcodeURL          whereHelpernull_String
 	PathlistURL       whereHelpernull_String
@@ -278,6 +283,8 @@ var CompositionWhere = struct {
 	ErrorMessage      whereHelpernull_String
 	CreatedAt         whereHelpertime_Time
 	UpdatedAt         whereHelpertime_Time
+	Algorithm         whereHelperint
+	Polarity          whereHelperint
 }{
 	ID:                whereHelperstring{field: "\"compositions\".\"id\""},
 	ArtID:             whereHelperstring{field: "\"compositions\".\"art_id\""},
@@ -290,7 +297,6 @@ var CompositionWhere = struct {
 	BrightnessFactor:  whereHelperint{field: "\"compositions\".\"brightness_factor\""},
 	ImageContrast:     whereHelperfloat64{field: "\"compositions\".\"image_contrast\""},
 	PhysicalRadius:    whereHelperfloat64{field: "\"compositions\".\"physical_radius\""},
-	Algorithm:         whereHelperint{field: "\"compositions\".\"algorithm\""},
 	PreviewURL:        whereHelpernull_String{field: "\"compositions\".\"preview_url\""},
 	GcodeURL:          whereHelpernull_String{field: "\"compositions\".\"gcode_url\""},
 	PathlistURL:       whereHelpernull_String{field: "\"compositions\".\"pathlist_url\""},
@@ -299,6 +305,8 @@ var CompositionWhere = struct {
 	ErrorMessage:      whereHelpernull_String{field: "\"compositions\".\"error_message\""},
 	CreatedAt:         whereHelpertime_Time{field: "\"compositions\".\"created_at\""},
 	UpdatedAt:         whereHelpertime_Time{field: "\"compositions\".\"updated_at\""},
+	Algorithm:         whereHelperint{field: "\"compositions\".\"algorithm\""},
+	Polarity:          whereHelperint{field: "\"compositions\".\"polarity\""},
 }
 
 // CompositionRels is where relationship names are stored.
@@ -329,9 +337,9 @@ func (r *compositionR) GetArt() *Art {
 type compositionL struct{}
 
 var (
-	compositionAllColumns            = []string{"id", "art_id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "algorithm", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at"}
+	compositionAllColumns            = []string{"id", "art_id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at", "algorithm", "polarity"}
 	compositionColumnsWithoutDefault = []string{"art_id"}
-	compositionColumnsWithDefault    = []string{"id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "algorithm", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at"}
+	compositionColumnsWithDefault    = []string{"id", "status", "nails_quantity", "img_size", "max_paths", "starting_nail", "minimum_difference", "brightness_factor", "image_contrast", "physical_radius", "preview_url", "gcode_url", "pathlist_url", "thread_length", "total_lines", "error_message", "created_at", "updated_at", "algorithm", "polarity"}
 	compositionPrimaryKeyColumns     = []string{"id"}
 	compositionGeneratedColumns      = []string{}
 )

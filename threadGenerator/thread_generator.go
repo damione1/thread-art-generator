@@ -38,6 +38,7 @@ type (
 		nailCooldown        int
 		threadDiameterMM    float64
 		algorithm           Kind
+		polarity            Polarity
 	}
 
 	Path struct {
@@ -73,6 +74,7 @@ type (
 		NailCooldown        int     // Do not revisit a nail used in the last N steps
 		ThreadDiameterMM    float64 // Physical thread diameter in mm (ordinary polyester ≈ 0.3)
 		Algorithm           Kind    // Path-selection algorithm
+		Polarity            Polarity
 	}
 
 	OutputStats struct {
@@ -96,20 +98,21 @@ const (
 func DefaultConfig() Config {
 	return Config{
 		NailsQuantity:       280,
-		ImgSize:             800,
+		ImgSize:             600,
 		MaxPaths:            4500,
 		StartingNail:        0,
 		MinimumDifference:   22,
-		BrightnessFactor:    40,
-		ImageContrast:       28,    // percent → CLAHE clip 1 + contrast/50
-		PhysicalRadius:      304.8, // 24-inch hoop diameter
+		BrightnessFactor:    28,
+		ImageContrast:       28,  // percent → CLAHE clip 1 + contrast/50
+		PhysicalRadius:      600, // 60 cm radius, 1.2 m hoop
 		RotationAxis:        "A",
 		NeedleAxis:          "X",
 		SpindleAxis:         "Y",
 		StopWeightThreshold: 10,
-		NailCooldown:        3,
+		NailCooldown:        8,
 		ThreadDiameterMM:    defaultThreadDiameterMM,
-		Algorithm:           KindVrellis,
+		Algorithm:           KindL2,
+		Polarity:            PolarityDarkOnLight,
 	}
 }
 
@@ -159,8 +162,20 @@ func NewThreadGenerator(config Config) *ThreadGenerator {
 		nailCooldown:        config.NailCooldown,
 		threadDiameterMM:    diameter,
 		algorithm:           normalizeKind(config.Algorithm),
+		polarity:            normalizePolarity(config.Polarity),
 		pixelSize:           pixelSizeMM(config.PhysicalRadius, config.ImgSize),
 	}
+}
+
+func (tg *ThreadGenerator) lightOnDark() bool {
+	return tg.polarity == PolarityLightOnDark
+}
+
+func normalizePolarity(p Polarity) Polarity {
+	if p == PolarityLightOnDark {
+		return PolarityLightOnDark
+	}
+	return PolarityDarkOnLight
 }
 
 func pixelSizeMM(radius float64, imgSize int) float64 {
@@ -502,7 +517,7 @@ func (tg *ThreadGenerator) paintThread(canvas *image.Gray, p image.Point) {
 	}
 }
 
-func stampThread(buf []float64, w, h int, x0, y0, x1, y1, halfW, absorb float64) {
+func stampThread(buf []float64, w, h int, x0, y0, x1, y1, halfW, absorb float64, lightOnDark bool) {
 	pad := halfW + 1
 	minX := max(0, int(math.Floor(min(x0, x1)-pad)))
 	maxX := min(w-1, int(math.Ceil(max(x0, x1)+pad)))
@@ -519,7 +534,11 @@ func stampThread(buf []float64, w, h int, x0, y0, x1, y1, halfW, absorb float64)
 			if c > 1 {
 				c = 1
 			}
-			buf[y*w+x] *= 1 - absorb*c
+			if lightOnDark {
+				buf[y*w+x] += (1 - buf[y*w+x]) * absorb * c
+			} else {
+				buf[y*w+x] *= 1 - absorb*c
+			}
 		}
 	}
 }
